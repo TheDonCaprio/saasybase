@@ -6,7 +6,7 @@
  *
  * Notes:
  * - Webhook signature: `X-Signature` is an HMAC SHA256 hex digest of the raw request body.
- * - Discounts: Lemon Squeezy uses a single Discount object (with `code`) instead of Stripe's coupon + promotion code split.
+ * - Discounts: Lemon Squeezy uses a single Discount object (with `code`) instead of Stripe's coupon + promotion code split....
  */
 
 import crypto from 'crypto';

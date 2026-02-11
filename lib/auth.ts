@@ -1,0 +1,414 @@
+import { prisma } from './prisma';
+import { Logger } from './logger';
+import { asRecord, toError } from './runtime-guards';
+import { notifyExpiredSubscriptions, sendBillingNotification } from './notifications';
+import { syncOrganizationEligibilityForUser } from './organization-access';
+import { creditOrganizationSharedTokens } from './teams';
+import { getDefaultTokenLabel } from './settings';
+import {
+  buildAdminLikePermissions,
+  fetchModeratorPermissions,
+  moderatorHasAccess,
+  type ModeratorPermissions,
+  type ModeratorSection
+} from './moderator';
+import { raiseAuthGuardError } from './auth-guard-error';
+
+export { AuthGuardError, isAuthGuardError, toAuthGuardErrorResponse } from './auth-guard-error';
+
+export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR';
+
+async function tryImportClerk() {
+  try {
+    const clerkModule: unknown = await import('@clerk/nextjs/server');
+    return clerkModule as unknown;
+  } catch (e: unknown) {
+    Logger.info('Clerk not available', { error: toError(e).message });
+    return null;
+  }
+}
+
+export async function getAuthSafe(): Promise<{ userId: string | null }> {
+  const clerk = await tryImportClerk();
+  if (!clerk) return { userId: null };
+  const maybeClerk = clerk as Record<string, unknown>;
+  const maybeAuthFn = maybeClerk.auth;
+  if (typeof maybeAuthFn === 'function') {
+    try {
+      const result = await (maybeAuthFn as (...args: unknown[]) => unknown)();
+      // try to pull a userId if present
+      const rec = asRecord(result);
+      if (rec && typeof rec.userId === 'string') return { userId: rec.userId };
+      return { userId: null };
+    } catch (e: unknown) {
+      // Lower severity: failures here are common during static render / no-request contexts
+      // and should not spam WARN-level logs.
+      Logger.debug('getAuthSafe clerk.auth failed', { error: toError(e) });
+      return { userId: null };
+    }
+  }
+  return { userId: null };
+}
+
+export async function getCurrentUserSafe(): Promise<{ id: string } | null> {
+  const clerk = await tryImportClerk();
+  if (!clerk) return null;
+  const maybeClerk2 = clerk as Record<string, unknown>;
+  const maybeCurrentUser = maybeClerk2.currentUser;
+  if (typeof maybeCurrentUser === 'function') {
+    try {
+      const u = await (maybeCurrentUser as (...args: unknown[]) => Promise<unknown>)();
+      const rec = asRecord(u);
+      if (rec && typeof rec.id === 'string') return { id: rec.id };
+      return null;
+    } catch (e: unknown) {
+      // Lower severity: failures here are common during static render / no-request contexts
+      // and should not spam WARN-level logs. Downgrade to debug.
+      Logger.debug('getCurrentUserSafe failed', { error: toError(e) });
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function requireUser() {
+  const { userId } = await getAuthSafe();
+  if (!userId) {
+    raiseAuthGuardError('UNAUTHENTICATED', {
+      source: 'requireUser',
+      reason: 'missing-session'
+    });
+  }
+  return userId;
+}
+
+async function resolveUserRole(userId: string): Promise<UserRole | null> {
+  const record = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!record || typeof record.role !== 'string') return null;
+  const normalized = record.role.toUpperCase();
+  if (normalized === 'ADMIN' || normalized === 'MODERATOR' || normalized === 'USER') {
+    return normalized as UserRole;
+  }
+  return 'USER';
+}
+
+export async function getUserRole(userId: string): Promise<UserRole | null> {
+  return resolveUserRole(userId);
+}
+
+export async function requireAdmin() {
+  // Development-friendly bypass: allow a special header to authenticate as the
+  // DEV_ADMIN_ID when running locally. This keeps production behavior unchanged.
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      // `globalThis` is available in Node; Next's app router exposes the Request
+      // via runtime globals in edge-like contexts, but we can't access the
+      // current request here. Instead, allow callers to set DEV_ADMIN_BYPASS
+      // environment var for CLI testing or use the DEV_ADMIN_ID if present.
+      const devId = process.env.DEV_ADMIN_ID;
+      if (devId) {
+        const dbDev = await prisma.user.findUnique({ where: { id: devId } });
+        if (dbDev && dbDev.role === 'ADMIN') return devId;
+      }
+    } catch {
+      // ignore and fall through to normal auth
+    }
+  }
+
+  let userId: string | null = null;
+
+  const user = await getCurrentUserSafe();
+  if (user?.id) {
+    userId = user.id;
+  } else {
+    const auth = await getAuthSafe();
+    if (auth.userId) {
+      Logger.warn('requireAdmin falling back to auth() context');
+      userId = auth.userId;
+    }
+  }
+
+  if (!userId) {
+    raiseAuthGuardError('UNAUTHENTICATED', {
+      source: 'requireAdmin',
+      reason: 'missing-current-user'
+    });
+  }
+  const role = await resolveUserRole(userId);
+  if (role !== 'ADMIN') {
+    raiseAuthGuardError('FORBIDDEN', {
+      source: 'requireAdmin',
+      reason: 'role-mismatch',
+      userId,
+      extra: { resolvedRole: role ?? 'UNKNOWN' }
+    });
+  }
+  return userId;
+}
+
+export interface AdminOrModeratorContext {
+  userId: string;
+  role: UserRole;
+  permissions: ModeratorPermissions;
+}
+
+export async function requireAdminOrModerator(section?: ModeratorSection): Promise<AdminOrModeratorContext> {
+  if (process.env.NODE_ENV !== 'production') {
+    const devId = process.env.DEV_ADMIN_ID;
+    if (devId) {
+      try {
+        const devRecord = await prisma.user.findUnique({ where: { id: devId }, select: { role: true } });
+        if (devRecord?.role === 'ADMIN') {
+          return {
+            userId: devId,
+            role: 'ADMIN',
+            permissions: buildAdminLikePermissions()
+          };
+        }
+      } catch {
+        // Fall through to standard auth path when the lookup fails.
+      }
+    }
+  }
+
+  let userId: string | null = null;
+
+  const user = await getCurrentUserSafe();
+  if (user?.id) {
+    userId = user.id;
+  } else {
+    const auth = await getAuthSafe();
+    if (auth.userId) {
+      Logger.warn('requireAdminOrModerator falling back to auth() context', { section: section ?? 'none' });
+      userId = auth.userId;
+    }
+  }
+
+  if (!userId) {
+    raiseAuthGuardError('UNAUTHENTICATED', {
+      source: 'requireAdminOrModerator',
+      reason: 'missing-current-user',
+      section
+    });
+  }
+
+  const role = await resolveUserRole(userId);
+  if (!role) {
+    raiseAuthGuardError('FORBIDDEN', {
+      source: 'requireAdminOrModerator',
+      reason: 'role-lookup-failed',
+      userId,
+      section
+    });
+  }
+
+  if (role === 'ADMIN') {
+    return {
+      userId,
+      role,
+      permissions: buildAdminLikePermissions()
+    };
+  }
+
+  if (role === 'MODERATOR') {
+    const permissions = await fetchModeratorPermissions();
+    if (!section) {
+      if (Object.values(permissions).some(Boolean)) {
+        return { userId, role, permissions };
+      }
+      raiseAuthGuardError('FORBIDDEN', {
+        source: 'requireAdminOrModerator',
+        reason: 'moderator-no-permissions',
+        userId
+      });
+    } else if (moderatorHasAccess(permissions, section)) {
+      return { userId, role, permissions };
+    }
+
+    raiseAuthGuardError('FORBIDDEN', {
+      source: 'requireAdminOrModerator',
+      reason: 'moderator-section-denied',
+      userId,
+      section,
+      extra: { granted: permissions[section] ?? false }
+    });
+  }
+
+  raiseAuthGuardError('FORBIDDEN', {
+    source: 'requireAdminOrModerator',
+    reason: 'role-not-authorized',
+    userId,
+    section,
+    extra: { resolvedRole: role }
+  });
+}
+
+export async function getActiveSubscription(userId: string) {
+  const now = new Date();
+  
+  // First, activate any PENDING subscriptions whose start time has arrived
+  await activatePendingSubscriptions(userId);
+
+  // Return the active subscription (ACTIVE) if present
+  return prisma.subscription.findFirst({
+    where: { 
+      userId, 
+      status: 'ACTIVE',
+      startedAt: { lte: now },
+      expiresAt: { gt: now } 
+    },
+    include: { plan: true },
+    orderBy: { expiresAt: 'asc' } // Get the one expiring soonest
+  });
+}
+
+export async function activatePendingSubscriptions(
+  userId: string,
+  opts?: {
+    sendNotifications?: boolean;
+    source?: string;
+  }
+) {
+  const now = new Date();
+  const sendNotifications = opts?.sendNotifications === true;
+
+  // Find PENDING subscriptions whose start time has arrived
+  const subscriptionsToActivate = await prisma.subscription.findMany({
+    where: {
+      userId,
+      status: 'PENDING',
+      startedAt: { lte: now },
+      expiresAt: { gt: now },
+    },
+    include: { plan: true },
+  });
+
+  // Find PENDING subscriptions that have ended (need to expire and notify)
+  const expiredPendingSubs = await prisma.subscription.findMany({
+    where: {
+      userId,
+      status: 'PENDING',
+      expiresAt: { lte: now }
+    },
+    select: { id: true }
+  });
+
+  const expiredPendingResult = await prisma.subscription.updateMany({
+    where: {
+      userId,
+      status: 'PENDING',
+      expiresAt: { lte: now }
+    },
+    data: {
+      status: 'EXPIRED',
+      canceledAt: now
+    }
+  });
+
+  if (expiredPendingSubs.length > 0) {
+    notifyExpiredSubscriptions(expiredPendingSubs.map(s => s.id)).catch(err => {
+      Logger.warn('Failed to notify expired subscriptions', { error: toError(err).message });
+    });
+  }
+
+  if (subscriptionsToActivate.length === 0) {
+    if (expiredPendingResult.count > 0) {
+      try {
+        await syncOrganizationEligibilityForUser(userId);
+      } catch (err: unknown) {
+        Logger.warn('Failed to sync organization eligibility after pending subscription expiry', {
+          userId,
+          error: toError(err).message,
+          source: opts?.source,
+        });
+      }
+    }
+    return;
+  }
+
+  Logger.info('Activating pending subscriptions', {
+    userId,
+    subscriptionCount: subscriptionsToActivate.length,
+    source: opts?.source,
+  });
+
+  let activatedCount = 0;
+
+  for (const pending of subscriptionsToActivate) {
+    try {
+      // Transition guard: only activate once.
+      const transitioned = await prisma.subscription.updateMany({
+        where: { id: pending.id, status: 'PENDING' },
+        data: { status: 'ACTIVE' },
+      });
+
+      if (transitioned.count !== 1) continue;
+      activatedCount += 1;
+
+      const plan = pending.plan;
+      const tokenLimit = typeof plan.tokenLimit === 'number' ? plan.tokenLimit : 0;
+
+      // Grant tokens at activation time (PENDING subscriptions intentionally do not grant on purchase).
+      if (tokenLimit > 0) {
+        await prisma.$transaction(async (tx) => {
+          if (pending.organizationId) {
+            await creditOrganizationSharedTokens({
+              organizationId: pending.organizationId,
+              amount: tokenLimit,
+              tx,
+            });
+          } else {
+            await tx.user.update({
+              where: { id: userId },
+              data: { tokenBalance: { increment: tokenLimit } },
+            });
+          }
+        });
+      }
+
+      if (sendNotifications) {
+        try {
+          const tokenName = (plan.tokenName || '').trim() || await getDefaultTokenLabel();
+          const tokenInfo = tokenLimit ? ` with ${tokenLimit} ${tokenName}` : '';
+          await sendBillingNotification({
+            userId,
+            title: 'Subscription Activated',
+            message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
+            templateKey: 'subscription_activated',
+            variables: {
+              planName: plan.name,
+              tokenBalance: String(tokenLimit),
+              tokenName,
+              startedAt: pending.startedAt.toLocaleDateString(),
+              expiresAt: pending.expiresAt.toLocaleDateString(),
+            },
+          });
+        } catch (err) {
+          Logger.warn('Failed to send activation notification for pending subscription', {
+            userId,
+            subscriptionId: pending.id,
+            error: toError(err).message,
+          });
+        }
+      }
+    } catch (err) {
+      Logger.warn('Failed to activate pending subscription', {
+        userId,
+        subscriptionId: pending.id,
+        error: toError(err).message,
+      });
+    }
+  }
+
+  if (expiredPendingResult.count > 0 || activatedCount > 0) {
+    try {
+      await syncOrganizationEligibilityForUser(userId);
+    } catch (err: unknown) {
+      Logger.warn('Failed to sync organization eligibility after pending subscription updates', {
+        userId,
+        error: toError(err).message,
+        source: opts?.source,
+      });
+    }
+  }
+}

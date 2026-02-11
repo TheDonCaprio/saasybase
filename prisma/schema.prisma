@@ -1,0 +1,601 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NOTE: Using plain string fields for status/role because the SQLite connector
+// in this environment doesn't support native enums. In production (MySQL/Postgres)
+// you can switch these back to enums if desired.
+
+// Models
+model User {
+  id                     String   @id @default(cuid())
+  email                  String?  @unique
+  name                   String?
+  imageUrl               String?
+  role                   String   @default("USER")
+  // Denormalized number of payments made by this user. Backfilled by a script.
+  paymentsCount          Int      @default(0)
+  stripeCustomerId       String?  @unique
+  // Map of provider -> customer ID (multi-provider support). Stored as JSON string for SQLite compatibility.
+  externalCustomerIds    String?
+  // Paid token balance (from purchases/top-ups)
+  tokenBalance           Int      @default(0)
+  // Free token balance (managed by free plan settings and monthly resets)
+  freeTokenBalance       Int      @default(0)
+  // Track when free tokens were last reset for monthly renewals
+  freeTokensLastResetAt  DateTime?
+  // Legacy field (kept for backwards compatibility/migrations)
+  tokensLastResetAt      DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Generic Payment Provider Fields
+  paymentProvider        String?  // e.g. "stripe", "paypal"
+  externalCustomerId     String?  @unique // Generic ID for the customer in the provider's system (legacy single-provider)
+
+  subscriptions     Subscription[]
+  payments          Payment[]
+  paymentAuthorizations PaymentAuthorization[]
+  featureUsageLogs  FeatureUsageLog[]
+  tickets           SupportTicket[]
+  emails            EmailLog[]
+  ticketReplies     TicketReply[]
+  settings          UserSetting[]
+  notifications     Notification[]
+  visitLogs         VisitLog[]
+  couponRedemptions CouponRedemption[]
+  performedActions  AdminActionLog[]   @relation("AdminActionActor")
+  targetedActions   AdminActionLog[]   @relation("AdminActionTarget")
+  ownedOrganizations Organization[]    @relation("OrganizationOwner")
+  organizationMemberships OrganizationMembership[]
+  organizationInvitesSent OrganizationInvite[] @relation("OrganizationInvitesSent")
+
+  
+  @@index([createdAt, id], name: "users_createdAt_id_idx")
+  @@index([paymentsCount], name: "users_payments_count_idx")
+  @@index([externalCustomerId])
+}
+
+model Plan {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  shortDescription  String? // Plain text for Stripe checkout and billing summaries
+  description       String? // Full HTML description for detailed plan information
+  stripePriceId     String?  @unique
+  
+  // Generic Payment Provider Fields (legacy single-provider columns)
+  externalPriceId   String?  @unique
+  externalProductId String?
+  // Provider-aware ID maps stored as JSON string for SQLite compatibility
+  externalPriceIds   String?
+  externalProductIds String?
+
+  autoRenew         Boolean  @default(false)
+  // 'day' | 'week' | 'month' | 'year' - when `autoRenew` is true this controls the recurring interval unit
+  recurringInterval String?
+  // When `autoRenew` is true, this controls the provider interval_count (e.g. every 3 months).
+  // Note: Razorpay enforces a minimum count for some periods (e.g. daily requires >= 7).
+  recurringIntervalCount Int @default(1)
+  active            Boolean  @default(true)
+  durationHours     Int
+  priceCents        Int
+  sortOrder         Int      @default(0)
+  // Token system: nullable Int means unlimited if null, custom name overrides global setting
+  tokenLimit        Int?
+  tokenName         String?
+  scope             String   @default("INDIVIDUAL")
+  minSeats          Int      @default(1)
+  maxSeats          Int?
+  seatPriceCents    Int?
+  tokenPoolStrategy String?
+  supportsOrganizations Boolean @default(false)
+  organizationSeatLimit Int?
+  organizationTokenPoolStrategy String? @default("SHARED_FOR_ORG")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subscriptions      Subscription[]
+  couponRestrictions CouponPlan[]
+  payments           Payment[]
+  organizations      Organization[]
+  prices             PlanPrice[]
+}
+
+// Per-provider localized pricing for plans
+// Allows different prices in different currencies for each payment provider
+model PlanPrice {
+  id              String   @id @default(cuid())
+  planId          String
+  provider        String   // 'stripe' | 'paystack' | etc.
+  currency        String   // ISO currency code (e.g., 'usd', 'ngn')
+  amountCents     Int      // Price in smallest currency unit
+  externalPriceId String?  // Provider's price ID
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, provider, currency])
+  @@index([planId])
+  @@index([provider, currency])
+}
+
+model Organization {
+  id                   String   @id @default(cuid())
+  clerkOrganizationId  String?  @unique
+  name                 String
+  slug                 String   @unique
+  ownerUserId          String
+  planId               String?
+  billingEmail         String?
+  seatLimit            Int?
+  tokenPoolStrategy    String   @default("SHARED_FOR_ORG")
+  memberTokenCap       Int?
+  memberCapStrategy    String   @default("SOFT")
+  memberCapResetIntervalHours Int?
+  tokenBalance         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  owner         User         @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
+  plan          Plan?        @relation(fields: [planId], references: [id])
+  memberships   OrganizationMembership[]
+  invites       OrganizationInvite[]
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@index([ownerUserId])
+}
+
+model OrganizationMembership {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  role            String   @default("MEMBER")
+  status          String   @default("ACTIVE")
+  sharedTokenBalance Int   @default(0)
+  memberTokenCapOverride Int?
+  memberTokenUsageWindowStart DateTime?
+  memberTokenUsage Int   @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model OrganizationInvite {
+  id               String   @id @default(cuid())
+  organizationId   String
+  email            String
+  role             String   @default("MEMBER")
+  status           String   @default("PENDING")
+  invitedByUserId  String?
+  token            String   @unique
+  expiresAt        DateTime?
+  acceptedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("OrganizationInvitesSent", fields: [invitedByUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  planId               String
+  organizationId       String?
+  status               String    @default("ACTIVE")
+  startedAt            DateTime  @default(now())
+  expiresAt            DateTime
+  // Denormalized latest payment amount (in cents) to support server-side sorting
+  // and efficient keyset pagination by amount without expensive joins.
+  lastPaymentAmountCents Int?
+  canceledAt           DateTime?
+  stripeSubscriptionId String?   @unique
+  
+  // Generic Payment Provider Fields (legacy single-provider columns)
+  paymentProvider        String?  
+  externalSubscriptionId String?   @unique
+  // Provider-aware map of subscription IDs stored as JSON string for SQLite compatibility
+  externalSubscriptionIds String?
+
+  // When true, an admin has requested paid tokens be cleared when this subscription actually expires
+  clearPaidTokensOnExpiry Boolean  @default(false)
+  // For providers without native cancel-at-period-end (e.g., Paystack), we store intent here
+  // and cancel on next invoice.created webhook
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  plan     Plan      @relation(fields: [planId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  payments Payment[]
+
+  @@index([lastPaymentAmountCents], name: "subscriptions_last_payment_amount_idx")
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([organizationId])
+  @@index([externalSubscriptionId])
+}
+
+model Payment {
+  id                      String   @id @default(cuid())
+  userId                  String
+  subscriptionId          String?
+  planId                  String?
+  organizationId          String?
+  amountCents             Int
+  subtotalCents           Int?
+  discountCents           Int?
+  couponCode              String?
+  currency                String   @default("usd")
+  stripePaymentIntentId   String?  @unique
+  stripeCheckoutSessionId String?  @unique
+  stripeRefundId          String?  @unique
+  
+  // Generic Payment Provider Fields (legacy single-provider columns)
+  paymentProvider         String?  
+  externalPaymentId       String?  @unique // e.g. PaymentIntent ID
+  externalSessionId       String?  @unique // e.g. Checkout Session ID
+  externalRefundId        String?  @unique
+  // Provider-aware ID maps stored as JSON strings for SQLite compatibility
+  externalPaymentIds      String?
+  externalSessionIds      String?
+  externalRefundIds       String?
+
+  status                  String   @default("SUCCEEDED")
+  createdAt               DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  plan         Plan?         @relation(fields: [planId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt, id], name: "payments_createdAt_id_idx")
+  // Index to improve ORDER BY/WHERE performance when sorting or filtering by amount
+  @@index([amountCents], name: "payments_amount_idx")
+  @@index([organizationId])
+  @@index([externalPaymentId])
+}
+
+// Stores reusable payment authorizations (e.g., Paystack authorization_code)
+// so we can schedule subscriptions to start at renewal without charging immediately.
+model PaymentAuthorization {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String   // e.g. 'paystack'
+  customerId        String?  // Provider customer code/id when available
+  authorizationCode String
+  reusable          Boolean  @default(false)
+  channel           String?
+  brand             String?
+  bank              String?
+  last4             String?
+  expMonth          String?
+  expYear           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, authorizationCode])
+  @@index([userId, provider])
+  @@index([provider, customerId])
+  @@index([userId, provider, reusable, updatedAt])
+}
+
+model FeatureUsageLog {
+  id          String    @id @default(cuid())
+  userId      String
+  feature     String
+  count       Int       @default(1)
+  periodStart DateTime  @default(now())
+  periodEnd   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, feature])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id                    String    @id @default(cuid())
+  code                  String    @unique
+  description           String?
+  percentOff            Int?
+  amountOffCents        Int?
+  // Currency for amount-based discounts (prevents cross-currency application)
+  // If null, coupon can be used with any currency (typically for percent-off)
+  currency              String?
+  // Discount duration: 'once' | 'repeating' | 'forever'
+  duration              String    @default("once")
+  // For 'repeating' duration: number of months the discount applies
+  durationInMonths      Int?
+  // Minimum purchase amount required to use this coupon
+  minimumPurchaseCents  Int?
+  active                Boolean   @default(true)
+  maxRedemptions        Int?
+  redemptionCount       Int       @default(0)
+  startsAt              DateTime  @default(now())
+  endsAt                DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  stripeCouponId        String?
+  stripePromotionCodeId String?
+  
+  // Generic Payment Provider Fields
+  externalCouponId      String?
+  externalPromotionCodeId String?
+
+  // Provider ID maps (multi-provider support)
+  // JSON string map: { "stripe": "...", "paddle": "..." }
+  externalCouponIds       String?
+  externalPromotionCodeIds String?
+
+  redemptions     CouponRedemption[]
+  applicablePlans CouponPlan[]
+}
+
+model CouponRedemption {
+  id         String    @id @default(cuid())
+  couponId   String
+  userId     String
+  redeemedAt DateTime  @default(now())
+  consumedAt DateTime?
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([couponId, userId])
+  @@index([userId])
+}
+
+model CouponPlan {
+  id       String @id @default(cuid())
+  couponId String
+  planId   String
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, planId])
+  @@index([planId])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  subject   String
+  message   String
+  status    String   @default("OPEN")
+  createdByRole String @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User          @relation(fields: [userId], references: [id])
+  replies TicketReply[]
+
+  @@index([status])
+}
+
+model TicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String?
+  message   String
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+  user   User?         @relation(fields: [userId], references: [id])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  to        String
+  subject   String
+  template  String?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  key         String   @unique
+  description String?
+  subject     String
+  htmlBody    String
+  textBody    String?
+  variables   String? // JSON string of available variables with descriptions
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([active])
+}
+
+model UserSetting {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("GENERAL")
+  // Optional deep-link URL associated with this notification
+  url       String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+}
+
+model VisitLog {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  country   String?
+  city      String?
+  referrer  String?
+  path      String
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([country])
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String
+  message   String
+  meta      String?
+  context   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level])
+}
+
+model SitePage {
+  id          String    @id @default(cuid())
+  collection  String    @default("page")
+  slug        String
+  title       String
+  description String?
+  content     String
+  published   Boolean   @default(true)
+  system      Boolean   @default(false)
+  publishedAt DateTime?
+  trashedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  noIndex         Boolean @default(false)
+
+  // Open Graph fields
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  categories   BlogPostCategory[]
+
+  @@index([collection, slug], name: "sitepage_collection_slug_idx")
+  @@index([published, slug], name: "sitepage_published_slug_idx")
+  @@unique([collection, slug], map: "sitepage_collection_slug_unique")
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts BlogPostCategory[]
+}
+
+model BlogPostCategory {
+  id         String       @id @default(cuid())
+  postId     String
+  categoryId String
+  assignedAt DateTime     @default(now())
+
+  post     SitePage     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, categoryId], name: "blog_post_category_unique")
+  @@index([categoryId], name: "blog_post_category_category_idx")
+}
+
+model AdminActionLog {
+  id           String   @id @default(cuid())
+  actorId      String
+  actorRole    String
+  action       String
+  targetUserId String?
+  targetType   String?
+  details      String?
+  createdAt    DateTime @default(now())
+
+  actor  User  @relation("AdminActionActor", fields: [actorId], references: [id])
+  target User? @relation("AdminActionTarget", fields: [targetUserId], references: [id])
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([action])
+}
+
+model RateLimitBucket {
+  id             String   @id @default(cuid())
+  key            String
+  actorId        String?
+  route          String?
+  method         String?
+  ip             String?
+  userAgent      String?
+  windowStart    DateTime
+  windowEnd      DateTime
+  hits           Int      @default(0)
+  firstRequestAt DateTime @default(now())
+  lastRequestAt  DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([key, windowStart], name: "rate_limit_key_window_unique")
+  @@index([actorId, windowStart], name: "rate_limit_actor_window_idx")
+  @@index([route])
+}

@@ -1,0 +1,550 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { CheckoutSessionDetails } from '../../../../lib/payment/types';
+import { StandardizedCheckoutSession } from '../../../../lib/payment/types';
+import { prisma } from '../../../../lib/prisma';
+import { updateSubscriptionLastPaymentAmount } from '../../../../lib/payments';
+import { toError } from '../../../../lib/runtime-guards';
+import { Logger } from '../../../../lib/logger';
+import { shouldClearPaidTokensOnExpiry } from '../../../../lib/paidTokens';
+import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../../../../lib/paidTokenCleanup';
+import { syncOrganizationEligibilityForUser } from '../../../../lib/organization-access';
+import { resetOrganizationSharedTokens } from '../../../../lib/teams';
+import { paymentService } from '../../../../lib/payment/service';
+
+function jsonError(message: string, status: number, code: string) {
+  return NextResponse.json({ error: message, code }, { status });
+}
+
+export async function GET(req: NextRequest) {
+  const sessionId = req.nextUrl.searchParams.get('session_id');
+  const recent = req.nextUrl.searchParams.get('recent');
+  const sinceParam = req.nextUrl.searchParams.get('since');
+  if (!sessionId && !recent) return jsonError('Missing session_id', 400, 'CHECKOUT_SESSION_MISSING');
+
+  const { userId: clerkUserId } = await auth();
+  let actorUserId = clerkUserId ?? null;
+
+  if (!actorUserId && process.env.NODE_ENV !== 'production') {
+    const devAdminId = process.env.DEV_ADMIN_ID;
+    if (devAdminId) {
+      const fallback = await prisma.user.findUnique({ where: { id: devAdminId }, select: { id: true } });
+      if (fallback?.id) {
+        actorUserId = fallback.id;
+      }
+    }
+    if (!actorUserId) {
+      const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } });
+      if (admin?.id) {
+        actorUserId = admin.id;
+      }
+    }
+  }
+
+  if (!actorUserId) {
+    Logger.warn('Checkout confirm request without authentication', { sessionId, recent });
+    return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
+  }
+
+  const userId = actorUserId;
+  try {
+    const devLog = (...a: unknown[]) => { if (process.env.NODE_ENV !== 'production') Logger.debug?.('[checkout/confirm]', ...a); };
+    devLog('incoming', { sessionId, recent });
+
+    // Helpers to safely read nested values from unknown objects without using `any`.
+
+    let session: CheckoutSessionDetails | null = null;
+    let orgSyncNeeded = false;
+    let sessionUserId: string | undefined;
+
+    const provider = paymentService.provider;
+    const providerName = provider.name;
+    const isStripeProvider = providerName === 'stripe';
+
+    if (sessionId) {
+      session = await provider.getCheckoutSession(sessionId);
+      // Narrow and extract a few useful fields for logging / downstream logic without using `any`.
+      const sessionIdStr = session.id;
+      const clientRef = session.clientReferenceId;
+      const metaUser = session.metadata?.userId;
+      devLog('provider session', { provider: providerName, id: sessionIdStr, client_reference_id: clientRef, metadata_userId: metaUser });
+      sessionUserId = clientRef || metaUser;
+
+      // For redirect-only providers, require a userId marker in metadata/notes.
+      // This prevents confirming sessions we can't attribute.
+      if (!isStripeProvider && !sessionUserId) {
+        Logger.warn('Checkout confirm session missing user marker for non-stripe provider', {
+          provider: providerName,
+          sessionId: sessionIdStr,
+        });
+        return jsonError('Session missing user metadata', 400, 'SESSION_USER_MISSING');
+      }
+
+      if (sessionUserId && sessionUserId !== userId) {
+        Logger.warn('Checkout confirm session ownership mismatch', {
+          sessionId: sessionIdStr,
+          sessionUserId,
+          actorUserId: userId
+        });
+        return jsonError('Forbidden', 403, 'FORBIDDEN');
+      }
+
+      // If provider reports the session as not paid/active yet, return a pending response.
+      const paymentStatus = (session.paymentStatus || '').toLowerCase();
+      const isPaidLike = paymentStatus === 'paid' || paymentStatus === 'succeeded' || paymentStatus === 'success';
+      const isActiveLike = paymentStatus === 'active';
+      const isNoPaymentRequired = paymentStatus === 'no_payment_required';
+
+      const isSessionComplete = (() => {
+        // Stripe sessions typically use payment_status=paid.
+        if (isStripeProvider) return isPaidLike || isNoPaymentRequired;
+        // Non-Stripe redirect providers: payment links use paid; subscriptions map to active.
+        return isPaidLike || isActiveLike;
+      })();
+
+      if (!isSessionComplete) {
+        return NextResponse.json({ ok: true, completed: false, status: paymentStatus });
+      }
+
+      // For non-stripe providers, fulfill via PaymentService so token crediting and
+      // subscription handling stay consistent with webhook processing.
+      if (!isStripeProvider) {
+        const standardized: StandardizedCheckoutSession = {
+          id: session.id,
+          userId: sessionUserId || undefined,
+          mode: session.subscriptionId ? 'subscription' : 'payment',
+          subscriptionId: session.subscriptionId,
+          paymentIntentId: session.paymentIntentId,
+          amountTotal: session.amountTotal,
+          amountSubtotal: session.amountSubtotal,
+          currency: session.currency,
+          paymentStatus: 'paid',
+          metadata: session.metadata,
+          lineItems: session.lineItems,
+        };
+
+        await paymentService.processWebhookEvent({
+          type: 'checkout.completed',
+          payload: standardized,
+          originalEvent: { source: 'checkout.confirm', provider: providerName },
+        });
+
+        const payment = await prisma.payment.findFirst({
+          where: {
+            userId,
+            OR: [{ externalSessionId: session.id }, { stripeCheckoutSessionId: session.id }]
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            plan: true,
+            subscription: { include: { plan: true } }
+          }
+        });
+
+        if (!payment) {
+          return NextResponse.json({ ok: true, completed: false });
+        }
+
+        const isTokenTopupPayment = !payment.subscriptionId && payment.plan && payment.plan.autoRenew === false;
+        return NextResponse.json({
+          ok: true,
+          completed: true,
+          topup: isTokenTopupPayment,
+          paymentId: payment.id,
+          createdAt: payment.createdAt,
+          plan: payment.subscription?.plan?.name || payment.plan?.name || null,
+        });
+      }
+    }
+
+    // Fast path: recent=1 without session_id.
+    // - If `since` is provided, use it to check whether a new payment has been recorded after the given time.
+    //   This is used by hosted-checkout flows that can't reliably return a session id.
+    // - Otherwise, return active subscription state only.
+    if (!sessionId && recent) {
+      const sinceMs = sinceParam ? Number(sinceParam) : null;
+      const hasValidSince = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs > 0;
+
+      if (hasValidSince) {
+        const sinceDate = new Date(sinceMs);
+        const payment = await prisma.payment.findFirst({
+          where: {
+            userId,
+            status: 'SUCCEEDED',
+            createdAt: { gte: sinceDate }
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            plan: true,
+            subscription: { include: { plan: true } }
+          }
+        });
+
+        if (!payment) {
+          return NextResponse.json({ ok: true, completed: false });
+        }
+
+        const isTokenTopupPayment = !payment.subscriptionId && payment.plan && payment.plan.autoRenew === false;
+        return NextResponse.json({
+          ok: true,
+          completed: true,
+          topup: isTokenTopupPayment,
+          paymentId: payment.id,
+          createdAt: payment.createdAt,
+          plan: payment.subscription?.plan?.name || payment.plan?.name || null,
+        });
+      }
+
+      const activeSub = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } }, include: { plan: true } });
+      if (!activeSub) return NextResponse.json({ ok: true, active: false });
+      return NextResponse.json({ ok: true, active: true, plan: activeSub.plan.name, expiresAt: activeSub.expiresAt });
+    }
+
+    // Look for existing payment tied to this checkout session (idempotency)
+    const sessionLookupId = session?.id || sessionId || undefined;
+    const existingPayment = sessionLookupId
+      ? await prisma.payment.findFirst({
+        where: {
+          userId,
+          OR: [
+            { externalSessionId: sessionLookupId },
+            { stripeCheckoutSessionId: sessionLookupId }
+          ]
+        },
+        include: {
+          subscription: { include: { plan: true } },
+          plan: true
+        }
+      })
+      : null;
+    if (existingPayment) {
+      const expiresAt = existingPayment.subscription?.expiresAt;
+      const active = expiresAt ? new Date(expiresAt).getTime() > Date.now() : false;
+      const existingPlanName = existingPayment.subscription?.plan?.name || existingPayment.plan?.name || null;
+      devLog('existing payment found', { paymentId: existingPayment.id, subscriptionId: existingPayment.subscription?.id, active, existingPlanName });
+
+      const isTokenTopupPayment = !existingPayment.subscriptionId && existingPayment.plan && existingPayment.plan.autoRenew === false;
+      if (isTokenTopupPayment) {
+        const activeRecurring = await prisma.subscription.findFirst({
+          where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() }, plan: { autoRenew: true } },
+          include: { plan: true },
+          orderBy: { expiresAt: 'desc' }
+        });
+
+        if (activeRecurring?.plan) {
+          return NextResponse.json({
+            ok: true,
+            already: true,
+            topup: true,
+            active: true,
+            plan: activeRecurring.plan.name,
+            purchasedPlan: existingPayment.plan?.name || null,
+            tokensAdded: existingPayment.plan?.tokenLimit ?? 0,
+            expiresAt: activeRecurring.expiresAt
+          });
+        }
+
+        return NextResponse.json({
+          ok: true,
+          already: true,
+          topup: true,
+          active,
+          plan: existingPlanName,
+          purchasedPlan: existingPayment.plan?.name || null,
+          tokensAdded: existingPayment.plan?.tokenLimit ?? 0,
+          expiresAt
+        });
+      }
+
+      return NextResponse.json({ ok: true, already: true, active, plan: existingPlanName, expiresAt });
+    }
+
+    // Check if webhook already created a subscription for this specific session (webhook race condition)
+    const webhookCreatedSub = sessionLookupId
+      ? await prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+          payments: {
+            some: {
+              OR: [
+                { externalSessionId: sessionLookupId },
+                { stripeCheckoutSessionId: sessionLookupId }
+              ]
+            }
+          }
+        },
+        include: { plan: true }
+      })
+      : null;
+    if (webhookCreatedSub) {
+      devLog('webhook already created subscription for this session - returning existing');
+      return NextResponse.json({ ok: true, already: true, active: true, plan: webhookCreatedSub.plan.name, expiresAt: webhookCreatedSub.expiresAt });
+    }
+
+    // Derive plan via price id
+    const priceId = session?.lineItems?.[0]?.priceId || session?.metadata?.priceId;
+    if (!priceId) return jsonError('Missing price id', 400, 'PRICE_ID_MISSING');
+    const plan = await prisma.plan.findFirst({
+      where: {
+        OR: [
+          { externalPriceId: priceId },
+          { stripePriceId: priceId }
+        ]
+      }
+    });
+    if (!plan) return jsonError('Plan not found for price', 404, 'PLAN_NOT_FOUND');
+
+    const now = new Date();
+
+    // Check for existing active subscriptions to handle stacking
+    const existingActiveSubscriptions = await prisma.subscription.findMany({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        expiresAt: { gt: now }
+      },
+      include: { plan: true },
+      orderBy: { expiresAt: 'desc' }
+    });
+
+    const providerSubscriptionId = session?.subscriptionId || session?.metadata?.subscriptionId;
+    const subscriptionIdentifierData = providerSubscriptionId
+      ? {
+        externalSubscriptionId: providerSubscriptionId,
+        ...(providerName === 'stripe' ? { stripeSubscriptionId: providerSubscriptionId } : {})
+      }
+      : {};
+
+    let newStartDate = now;
+    let newExpiresAt = new Date(now.getTime() + plan.durationHours * 3600 * 1000);
+    let subscriptionStatus = 'ACTIVE';
+
+    // If user has an existing active subscription, do NOT create a stacked PENDING row.
+    // Instead:
+    // - If the existing latest active subscription is for the same plan, extend its expiresAt.
+    // - If the plan differs, expire prior active subs and create a fresh ACTIVE subscription for the new plan.
+    let effectiveSubscriptionId: string | undefined;
+    if (existingActiveSubscriptions.length > 0) {
+      const latestActive = existingActiveSubscriptions[0];
+      const latestExpiry = latestActive.expiresAt;
+      Logger.info('User has existing active subscription(s)', { userId, latestExpiry: latestExpiry?.toISOString() });
+
+      // If the most recent active subscription is a one-time plan (autoRenew === false),
+      // extend it by the purchased plan duration regardless of whether the plans match.
+      if (latestExpiry && latestExpiry > now && latestActive.plan?.autoRenew === false) {
+        const extendedExpires = new Date(latestExpiry.getTime() + plan.durationHours * 3600 * 1000);
+        const updated = await prisma.subscription.update({
+          where: { id: latestActive.id },
+          data: {
+            expiresAt: extendedExpires,
+            paymentProvider: providerName,
+            ...(providerSubscriptionId ? subscriptionIdentifierData : {})
+          }
+        });
+        effectiveSubscriptionId = updated.id;
+        newStartDate = updated.startedAt; // keep original start
+        newExpiresAt = updated.expiresAt;
+        subscriptionStatus = 'ACTIVE';
+        Logger.info('Extended one-time subscription', { subscriptionId: updated.id, newExpiresAt: updated.expiresAt.toISOString() });
+      } else if (latestActive.plan?.autoRenew === true && plan.autoRenew === false) {
+        // Token top-up: user has active recurring subscription and purchased non-recurring plan for tokens
+        // The webhook handles adding tokens; here we just return success with the recurring plan still active
+        Logger.info('Token top-up: user purchased non-recurring plan while on recurring subscription', {
+          userId,
+          recurringPlan: latestActive.plan.name,
+          purchasedPlan: plan.name
+        });
+
+        // Check if webhook already created payment record
+        const webhookPayment = sessionLookupId
+          ? await prisma.payment.findFirst({
+            where: {
+              userId,
+              OR: [
+                { externalSessionId: sessionLookupId },
+                { stripeCheckoutSessionId: sessionLookupId }
+              ]
+            }
+          })
+          : null;
+
+        if (webhookPayment) {
+          // Webhook processed it - return token top-up success
+          return NextResponse.json({
+            ok: true,
+            topup: true,
+            active: true,
+            plan: latestActive.plan.name,
+            purchasedPlan: plan.name,
+            tokensAdded: plan.tokenLimit || 0,
+            expiresAt: latestActive.expiresAt
+          });
+        }
+
+        // Webhook hasn't processed yet - return pending state
+        return NextResponse.json({
+          ok: true,
+          topup: true,
+          pending: true,
+          plan: latestActive.plan.name,
+          purchasedPlan: plan.name
+        });
+      } else {
+        // Either there are no active one-time subs, or the latest active is recurring.
+        // Expire prior actives and create a new ACTIVE subscription immediately for this purchase.
+        const priorActiveSubs = await prisma.subscription.findMany({
+          where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date(0) } },
+          select: { organizationId: true, plan: { select: { supportsOrganizations: true } } }
+        });
+        const priorActive = await prisma.subscription.updateMany({ where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date(0) } }, data: { status: 'EXPIRED', canceledAt: new Date() } });
+        if (priorActive.count > 0) {
+          // Respect operation-control setting before clearing paid tokens
+          const shouldClear = await shouldClearPaidTokensOnExpiry({ userId });
+          if (shouldClear) {
+            await prisma.user.update({ where: { id: userId }, data: { tokenBalance: 0 } });
+
+            const orgIds = priorActiveSubs
+              .filter(s => Boolean(s.organizationId) && Boolean(s.plan?.supportsOrganizations))
+              .map(s => s.organizationId)
+              .filter((id): id is string => typeof id === 'string' && id.length > 0);
+            if (orgIds.length > 0) {
+              const owned = await prisma.organization.findMany({
+                where: { id: { in: Array.from(new Set(orgIds)) }, ownerUserId: userId },
+                select: { id: true },
+              });
+              for (const org of owned) {
+                await resetOrganizationSharedTokens({ organizationId: org.id });
+              }
+            }
+          }
+          orgSyncNeeded = true;
+        }
+        newStartDate = now;
+        newExpiresAt = new Date(now.getTime() + plan.durationHours * 3600 * 1000);
+        subscriptionStatus = 'ACTIVE';
+        // We'll create a fresh subscription below and set effectiveSubscriptionId when created
+        Logger.info('Expiring prior actives and creating a new ACTIVE subscription', { userId, plan: plan.name });
+      }
+    }
+
+    // If the checkout session represents a subscription, try to capture the Stripe subscription id
+    // This block is now removed to avoid redeclaration error
+
+    // Expire prior active subs that have actually expired (safety cleanup)
+    const expiredCleanup = await prisma.subscription.updateMany({
+      where: { userId, status: 'ACTIVE', expiresAt: { lt: new Date() } },
+      data: { status: 'EXPIRED', canceledAt: new Date() }
+    });
+
+    if (expiredCleanup.count > 0) {
+      // Natural expiry: only clear paid tokens after the grace window.
+      await maybeClearPaidTokensAfterNaturalExpiryGrace({ userId });
+      orgSyncNeeded = true;
+    }
+
+    let subscription: unknown = null;
+    if (effectiveSubscriptionId) {
+      // We already updated an existing subscription to extend it
+      subscription = await prisma.subscription.findUnique({ where: { id: effectiveSubscriptionId }, include: { plan: true } });
+    } else {
+      subscription = await prisma.subscription.create({
+        data: {
+          userId,
+          planId: plan.id,
+          status: subscriptionStatus,
+          startedAt: newStartDate,
+          expiresAt: newExpiresAt,
+          paymentProvider: providerName,
+          ...(providerSubscriptionId ? subscriptionIdentifierData : {})
+        },
+        include: { plan: true }
+      });
+      // subscription is created by Prisma and should be an object; narrow safely
+      if (typeof subscription === 'object' && subscription !== null && 'id' in subscription) {
+        effectiveSubscriptionId = (subscription as Record<string, unknown>)['id'] as string;
+      }
+      orgSyncNeeded = true;
+    }
+
+    // If this purchase created a new ACTIVE one-time subscription (i.e. non-recurring)
+    // and the plan includes token allocations, add those tokens to the user's balance.
+    try {
+      const planTokenAmount = plan.tokenLimit || 0;
+      const isOneTimePlan = plan.autoRenew === false;
+      if (subscriptionStatus === 'ACTIVE' && isOneTimePlan && planTokenAmount > 0) {
+        await prisma.user.update({ where: { id: userId }, data: { tokenBalance: { increment: planTokenAmount } } });
+        Logger.info('Added tokens from one-time purchase (checkout.confirm)', { userId, tokensAdded: planTokenAmount, planName: plan.name });
+      }
+    } catch (err) {
+      Logger.warn('Failed to add tokens after checkout confirm (one-time purchase)', { error: toError(err).message });
+    }
+
+    // Try to attach the underlying PaymentIntent id when available so admin shows Stripe ids
+    const paymentIntentId = session?.paymentIntentId || session?.metadata?.paymentIntentId;
+    const sessIdForPayment = sessionLookupId;
+    const subscriptionIdForPayment = typeof subscription === 'object' && subscription !== null ? (subscription as Record<string, unknown>)['id'] as string : effectiveSubscriptionId as string;
+    const amountSubtotalCents = session?.amountSubtotal;
+    const amountTotalCents = session?.amountTotal;
+    const discountTotalCents = session?.amountDiscount;
+    const paymentIntentAmountReceived = session?.paymentIntent?.amountReceived;
+    const paymentIntentAmount = session?.paymentIntent?.amount;
+    const resolvedAmountCents = paymentIntentAmountReceived ?? paymentIntentAmount ?? amountTotalCents ?? plan.priceCents;
+    const resolvedSubtotalCents = amountSubtotalCents ?? (resolvedAmountCents != null && discountTotalCents != null ? resolvedAmountCents + discountTotalCents : undefined) ?? plan.priceCents;
+    const resolvedDiscountCents = discountTotalCents ?? (resolvedSubtotalCents != null ? Math.max(0, resolvedSubtotalCents - resolvedAmountCents) : undefined);
+    const couponCode = session?.metadata?.couponCode;
+
+      const payment = await prisma.$transaction(async (tx) => {
+        const paymentData = {
+          userId,
+          subscriptionId: subscriptionIdForPayment,
+          planId: plan.id,
+          amountCents: resolvedAmountCents ?? plan.priceCents,
+          subtotalCents: resolvedSubtotalCents,
+          discountCents: resolvedDiscountCents,
+          couponCode: couponCode || null,
+          status: 'SUCCEEDED',
+          paymentProvider: providerName,
+          ...(sessIdForPayment ? { externalSessionId: sessIdForPayment } : {}),
+          ...(paymentIntentId ? { externalPaymentId: paymentIntentId } : {}),
+          ...(isStripeProvider && sessIdForPayment ? { stripeCheckoutSessionId: sessIdForPayment } : {}),
+          ...(isStripeProvider && paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {})
+        };
+
+        const p = await tx.payment.create({
+          data: paymentData
+        });
+      // Increment denormalized payments count for the user
+      await tx.user.update({ where: { id: userId }, data: ({ paymentsCount: { increment: 1 } } as unknown) as import('@prisma/client').Prisma.UserUpdateInput });
+      return p;
+    });
+    // Update denormalized lastPaymentAmountCents for subscription if present
+    if (subscriptionIdForPayment) {
+      try {
+        await updateSubscriptionLastPaymentAmount(subscriptionIdForPayment);
+      } catch (err: unknown) {
+        const e = toError(err);
+        Logger.warn('Failed to update subscription.lastPaymentAmountCents after checkout confirm', { subscriptionId: subscriptionIdForPayment, error: e.message });
+      }
+    }
+    const loggedSubscriptionId = typeof subscription === 'object' && subscription !== null && 'id' in subscription ? (subscription as Record<string, unknown>)['id'] : effectiveSubscriptionId;
+    devLog('created subscription + payment', { subscriptionId: loggedSubscriptionId, paymentId: payment.id, plan: plan.name, status: subscriptionStatus });
+    if (orgSyncNeeded) {
+      try {
+        await syncOrganizationEligibilityForUser(userId);
+      } catch (err: unknown) {
+        Logger.warn('Failed to sync organization eligibility after checkout confirm subscription changes', {
+          userId,
+          error: toError(err).message
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true, active: subscriptionStatus === 'ACTIVE', pending: subscriptionStatus === 'PENDING', plan: plan.name, expiresAt: newExpiresAt });
+  } catch (e: unknown) {
+    const err = toError(e);
+    Logger.error('Confirm error', { error: err.message, stack: err.stack });
+    return jsonError(err.message || 'Checkout confirm failed', 500, 'CHECKOUT_CONFIRM_FAILED');
+  }
+}

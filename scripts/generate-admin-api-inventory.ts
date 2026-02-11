@@ -1,0 +1,178 @@
+#!/usr/bin/env node
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+type Access = 'admin' | 'user' | 'public';
+
+type InventoryEndpoint = {
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  path: string;
+  summary: string;
+  access: Access;
+  notes?: string[];
+  source: string;
+};
+
+const METHOD_RE = /export\s+async\s+function\s+(GET|POST|PATCH|PUT|DELETE)\b/g;
+
+function walk(dir: string): string[] {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...walk(fullPath));
+    } else if (entry.isFile()) {
+      if (/^route\.(ts|tsx|js|jsx)$/.test(entry.name)) {
+        files.push(fullPath);
+      }
+    }
+  }
+  return files;
+}
+
+function toApiPath(appApiRoot: string, routeFilePath: string): string {
+  const rel = path.relative(appApiRoot, routeFilePath);
+  const segments = rel.split(path.sep);
+  // Remove trailing route.ts(x)
+  segments.pop();
+  return `/api/${segments.join('/')}`;
+}
+
+function inferAccess(sourceText: string, apiPath: string): Access {
+  // Explicit guard usage wins.
+  if (/(requireAdminOrModerator|requireAdminAuth|requireAdmin)\s*\(/.test(sourceText)) return 'admin';
+  if (/(requireUserAuth|requireUser)\s*\(/.test(sourceText)) return 'user';
+
+  // Many user-scoped endpoints call `auth()` directly.
+  if (/\bauth\s*\(\)/.test(sourceText)) return 'user';
+
+  // Path-based fallbacks keep inventory usable even when guards are abstracted.
+  if (apiPath.startsWith('/api/admin')) return 'admin';
+
+  if (
+    apiPath.startsWith('/api/user') ||
+    apiPath.startsWith('/api/dashboard') ||
+    apiPath.startsWith('/api/team') ||
+    apiPath.startsWith('/api/billing') ||
+    apiPath.startsWith('/api/sessions') ||
+    apiPath.startsWith('/api/subscription') ||
+    apiPath.startsWith('/api/notifications')
+  ) {
+    return 'user';
+  }
+
+  // Webhooks are public ingress (signature verification happens inside).
+  if (apiPath.startsWith('/api/webhooks') || apiPath.includes('/webhook')) return 'public';
+
+  return 'public';
+}
+
+function inferNotes(apiPath: string, sourceText: string): string[] {
+  const notes: string[] = [];
+
+  if (apiPath.startsWith('/api/dev') || apiPath.startsWith('/api/debug') || apiPath.startsWith('/api/_debug')) {
+    notes.push('Internal/dev endpoint (not a stable public contract).');
+  }
+
+  if (apiPath.startsWith('/api/internal')) {
+    notes.push('Internal endpoint (used by the app runtime).');
+  }
+
+  if (apiPath.startsWith('/api/cron')) {
+    notes.push('Cron endpoint; protect via secret/token in production.');
+  }
+
+  if (apiPath.startsWith('/api/test') || apiPath.includes('/test')) {
+    notes.push('Test helper endpoint (do not expose publicly).');
+  }
+
+  if (apiPath.startsWith('/api/health')) {
+    notes.push('Health endpoint; detailed mode may require HEALTHCHECK_TOKEN.');
+  }
+
+  if (apiPath.startsWith('/api/webhooks')) {
+    notes.push('Webhook endpoint; verify signature headers per provider.');
+  }
+
+  if (/runtime\s*=\s*['"]edge['"]/.test(sourceText)) {
+    notes.push('Runs on Edge runtime.');
+  }
+
+  return notes;
+}
+
+function summarize(apiPath: string): string {
+  // Keep this intentionally plain; the curated catalog in lib/admin-api.ts provides richer docs.
+  return `Auto-discovered endpoint for ${apiPath}`;
+}
+
+function main() {
+  const repoRoot = path.resolve(__dirname, '..');
+  const appApiRoot = path.join(repoRoot, 'app', 'api');
+
+  if (!fs.existsSync(appApiRoot)) {
+    // eslint-disable-next-line no-console
+    console.error(`Could not find app/api root at ${appApiRoot}`);
+    process.exit(1);
+  }
+
+  const routeFiles = walk(appApiRoot).sort();
+
+  const endpoints: InventoryEndpoint[] = [];
+  for (const filePath of routeFiles) {
+    const text = fs.readFileSync(filePath, 'utf8');
+    const apiPath = toApiPath(appApiRoot, filePath);
+
+    const methods = new Set<InventoryEndpoint['method']>();
+    let match: RegExpExecArray | null;
+    while ((match = METHOD_RE.exec(text))) {
+      methods.add(match[1] as InventoryEndpoint['method']);
+    }
+
+    if (methods.size === 0) continue;
+
+    const source = `app/api/${path.relative(appApiRoot, filePath).split(path.sep).join('/')}`;
+    const access = inferAccess(text, apiPath);
+    const notes = inferNotes(apiPath, text);
+
+    for (const method of Array.from(methods).sort()) {
+      endpoints.push({
+        method,
+        path: apiPath,
+        access,
+        summary: summarize(apiPath),
+        notes: notes.length ? notes : undefined,
+        source,
+      });
+    }
+  }
+
+  endpoints.sort((a, b) => {
+    if (a.path !== b.path) return a.path.localeCompare(b.path);
+    return a.method.localeCompare(b.method);
+  });
+
+  const outPath = path.join(repoRoot, 'lib', 'admin-api.inventory.ts');
+  const banner = `/* eslint-disable */\n// Auto-generated by scripts/generate-admin-api-inventory.ts\n// Do not edit by hand. Run: npx tsx scripts/generate-admin-api-inventory.ts\n\n`;
+
+  const content =
+    banner +
+    `export type AdminApiInventoryEndpoint = {\n` +
+    `  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';\n` +
+    `  path: string;\n` +
+    `  summary: string;\n` +
+    `  access: 'admin' | 'user' | 'public';\n` +
+    `  notes?: string[];\n` +
+    `  source: string;\n` +
+    `};\n\n` +
+    `export const ADMIN_API_INVENTORY: AdminApiInventoryEndpoint[] = ${JSON.stringify(endpoints, null, 2)} as const;\n`;
+
+  fs.writeFileSync(outPath, content, 'utf8');
+
+  // eslint-disable-next-line no-console
+  console.log(`Wrote ${endpoints.length} endpoints to ${outPath}`);
+}
+
+main();

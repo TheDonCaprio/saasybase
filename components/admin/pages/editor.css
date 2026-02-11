@@ -1,0 +1,337 @@
+/* TipTap Editor Image Overrides */
+.editor-content .ProseMirror img.editor-image {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper {
+  position: relative;
+  display: block;
+  user-select: none;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper.is-resizing {
+  user-select: none !important;
+  cursor: nwse-resize !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper.is-resizing * {
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper.is-resizing .image-resize-handle {
+  pointer-events: auto !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper img {
+  pointer-events: none;
+  user-select: none;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-selected='true'] .image-resize-handle {
+  opacity: 1;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper:hover .image-resize-handle {
+  opacity: 0.7;
+}
+
+.editor-content .ProseMirror .image-resize-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background-color: #7c3aed;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.25);
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+  z-index: 10;
+  cursor: inherit;
+}
+
+.editor-content .ProseMirror .image-resize-handle:active {
+  background-color: #6d28d9;
+  box-shadow: 0 8px 16px rgba(109, 40, 217, 0.35);
+  scale: 1.1;
+}
+
+.editor-content .ProseMirror .image-resize-handle:hover {
+  background-color: #6d28d9;
+}
+
+/* Placeholder styles */
+.editor-content .ProseMirror.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+.editor-content .ProseMirror p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Image Alignment Styles - using data attributes for more reliable detection */
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-align="left"],
+.editor-content .ProseMirror img.editor-image[data-align="left"] {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-align="center"],
+.editor-content .ProseMirror img.editor-image[data-align="center"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-align="right"],
+.editor-content .ProseMirror img.editor-image[data-align="right"] {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-align="float-left"],
+.editor-content .ProseMirror img.editor-image[data-align="float-left"] {
+  float: left !important;
+  margin: 0 1rem 1rem 0 !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror [data-node-view-wrapper].editor-image-wrapper[data-align="float-right"],
+.editor-content .ProseMirror img.editor-image[data-align="float-right"] {
+  float: right !important;
+  margin: 0 0 1rem 1rem !important;
+  display: block !important;
+}
+
+.editor-content .ProseMirror blockquote {
+  border-left: 4px solid rgba(99, 102, 241, 0.35);
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: inherit;
+}
+
+/* Center Twitter embeds inside the editor so pasted tweet URLs render centered while editing */
+.editor-content .ProseMirror blockquote.twitter-tweet,
+.editor-content .ProseMirror .twitter-tweet {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+}
+
+/* Highlight Twitter/X URLs with a block-level preview so editors know it will render as an embed */
+.editor-content .ProseMirror p > a[href*="twitter.com"],
+.editor-content .ProseMirror p > a[href*="x.com"] {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(29, 155, 240, 0.12);
+  border: 1px solid rgba(29, 155, 240, 0.28);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1.4;
+  position: relative;
+}
+
+.editor-content .ProseMirror p > a[href*="twitter.com"]::before,
+.editor-content .ProseMirror p > a[href*="x.com"]::before {
+  content: 'Twitter/X embed preview';
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(15, 23, 42, 0.55);
+  margin-bottom: 0.35rem;
+}
+
+.editor-content .ProseMirror pre {
+  background-color: rgba(15, 23, 42, 0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-size: 0.95rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.editor-content .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95rem;
+  background-color: rgba(15, 23, 42, 0.08);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* List Styles */
+.editor-content .ProseMirror ul,
+.editor-content .ProseMirror ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.editor-content .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.editor-content .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.editor-content .ProseMirror li {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.editor-content .ProseMirror ul ul {
+  list-style-type: circle;
+  margin: 0.5rem 0;
+}
+
+.editor-content .ProseMirror ul ul ul {
+  list-style-type: square;
+}
+
+.editor-content .ProseMirror ol ol {
+  list-style-type: lower-alpha;
+  margin: 0.5rem 0;
+}
+
+.editor-content .ProseMirror ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.editor-content .ProseMirror pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  white-space: inherit;
+}
+
+/* Frontend image overrides - ensure images on the public side also respect dimensions */
+.prose img.editor-image {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+}
+
+/* Iframe / embed styling inside the editor: center and enforce a sensible minimum width on desktop */
+.editor-content .ProseMirror .iframe-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100%;
+}
+
+.editor-content .ProseMirror .iframe-wrapper iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  /* Try to present a reasonable minimum width on desktop */
+  min-width: 600px !important;
+  aspect-ratio: 16 / 9 !important;
+  height: auto !important;
+  border: none !important;
+}
+
+/* On narrow viewports, allow embeds to shrink below 600px */
+@media (max-width: 640px) {
+  .editor-content .ProseMirror .iframe-wrapper iframe {
+    min-width: 0 !important;
+  }
+}
+
+/* Frontend List Styles */
+.prose ul,
+.prose ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.prose ul ul {
+  list-style-type: circle;
+  margin: 0.5rem 0;
+}
+
+.prose ul ul ul {
+  list-style-type: square;
+}
+
+.prose ol ol {
+  list-style-type: lower-alpha;
+  margin: 0.5rem 0;
+}
+
+.prose ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.prose img.editor-image[data-align="left"] {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+.prose img.editor-image[data-align="center"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+.prose img.editor-image[data-align="right"] {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  display: block !important;
+}
+
+.prose img.editor-image[data-align="float-left"] {
+  float: left !important;
+  margin: 0 1rem 1rem 0 !important;
+  display: block !important;
+}
+
+.prose img.editor-image[data-align="float-right"] {
+  float: right !important;
+  margin: 0 0 1rem 1rem !important;
+  display: block !important;
+}
+
+.editor-content::after,
+.editor-content .ProseMirror::after {
+  content: '';
+  display: block;
+  clear: both;
+}

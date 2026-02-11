@@ -1,0 +1,98 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '../../../../../lib/prisma';
+import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { adminRateLimit } from '../../../../../lib/rateLimit';
+
+// Small runtime helpers to avoid `any` and safely narrow `unknown` inputs
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+}
+
+function getString(obj: Record<string, unknown>, key: string): string | undefined {
+  const val = obj[key];
+  return typeof val === 'string' ? val : undefined;
+}
+
+function toErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  try { return JSON.stringify(e); } catch { return String(e); }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const actor = await requireAdminOrModerator('notifications');
+    const actorId = actor.userId;
+    const rl = await adminRateLimit(actorId, request, 'admin-notifications:create', { limit: 40, windowMs: 120_000 });
+    if (!rl.success && !rl.allowed) {
+      return NextResponse.json({ error: 'Service temporarily unavailable. Please retry shortly.' }, { status: 503 });
+    }
+    if (!rl.allowed) {
+      const retryAfterSeconds = Math.max(0, Math.ceil((rl.reset - Date.now()) / 1000));
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
+    }
+  } catch (error: unknown) {
+    const guard = toAuthGuardErrorResponse(error);
+    if (guard) return guard;
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+  const body: unknown = await request.json();
+  const raw = asRecord(body);
+
+  // Narrow and validate the minimal expected fields
+  const title = getString(raw, 'title') || '';
+  const message = getString(raw, 'message') || '';
+  const type = getString(raw, 'type');
+  const target = getString(raw, 'target');
+  const targetEmail = getString(raw, 'targetEmail');
+
+    if (!title || !message) {
+      return NextResponse.json({ error: 'Title and message are required' }, { status: 400 });
+    }
+
+    if (target === 'all') {
+      // Send to all users
+      const users = await prisma.user.findMany({ select: { id: true } });
+      const notifications = users.map((user) => {
+        return type
+          ? { userId: user.id, title, message, type }
+          : { userId: user.id, title, message };
+      });
+
+      await prisma.notification.createMany({ data: notifications });
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Notification sent to ${users.length} users` 
+      });
+    } else {
+      // Send to specific user
+      const user = await prisma.user.findUnique({
+        where: { email: targetEmail },
+        select: { id: true }
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      const data: { userId: string; title: string; message: string; type?: string } = {
+        userId: user.id,
+        title,
+        message
+      };
+      if (type) data.type = type;
+
+      await prisma.notification.create({ data });
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Notification sent to ${targetEmail}` 
+      });
+    }
+  } catch (error) {
+    console.error('Error creating notification:', toErrorMessage(error));
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

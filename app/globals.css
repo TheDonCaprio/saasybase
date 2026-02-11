@@ -1,0 +1,1116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure consistent box sizing so borders/padding don't change element widths unexpectedly */
+:root, * , *::before, *::after { box-sizing: border-box; }
+
+/* Theme Variables */
+:root {
+  --bg-primary: 10 10 10; /* neutral-950 */
+  --bg-secondary: 23 23 23; /* neutral-900 */
+  --bg-tertiary: 38 38 38; /* neutral-800 */
+  --bg-quaternary: 64 64 64; /* neutral-700 */
+  --text-primary: 245 245 245; /* neutral-100 */
+  --text-secondary: 163 163 163; /* neutral-400 */
+  --text-tertiary: 115 115 115; /* neutral-500 */
+  --border-primary: 64 64 64; /* neutral-700 */
+  --border-secondary: 82 82 82; /* neutral-600 */
+  --accent-primary: 59 130 246; /* blue-500 */
+  --accent-hover: 37 99 235; /* blue-600 */
+}
+
+.light {
+  --bg-primary: 255 255 255; /* white */
+  --bg-secondary: 249 250 251; /* gray-50 */
+  --bg-tertiary: 243 244 246; /* gray-100 */
+  --bg-quaternary: 229 231 235; /* gray-200 */
+  --text-primary: 17 24 39; /* gray-900 */
+  --text-secondary: 75 85 99; /* gray-600 */
+  --text-tertiary: 107 114 128; /* gray-500 */
+  --border-primary: 209 213 219; /* gray-300 */
+  --border-secondary: 156 163 175; /* gray-400 */
+  --accent-primary: 59 130 246; /* blue-500 */
+  --accent-hover: 37 99 235; /* blue-600 */
+}
+
+.dark {
+  --bg-primary: 10 10 10; /* neutral-950 */
+  --bg-secondary: 23 23 23; /* neutral-900 */
+  --bg-tertiary: 38 38 38; /* neutral-800 */
+  --bg-quaternary: 64 64 64; /* neutral-700 */
+  --text-primary: 245 245 245; /* neutral-100 */
+  --text-secondary: 163 163 163; /* neutral-400 */
+  --text-tertiary: 115 115 115; /* neutral-500 */
+  --border-primary: 64 64 64; /* neutral-700 */
+  --border-secondary: 82 82 82; /* neutral-600 */
+  --accent-primary: 59 130 246; /* blue-500 */
+  --accent-hover: 37 99 235; /* blue-600 */
+}
+
+html, body { height: 100%; }
+body { 
+  /* Prevent horizontal overflow on small devices */
+  overflow-x: hidden;
+  background-color: rgb(var(--bg-primary));
+  color: rgb(var(--text-primary));
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Update component styles to use CSS variables */
+.bg-neutral-950 { background-color: rgb(var(--bg-primary)) !important; }
+.bg-neutral-900 { background-color: rgb(var(--bg-secondary)) !important; }
+.bg-neutral-800 { background-color: rgb(var(--bg-tertiary)) !important; }
+.bg-neutral-700 { background-color: rgb(var(--bg-quaternary)) !important; }
+.text-neutral-100 { color: rgb(var(--text-primary)) !important; }
+.text-neutral-400 { color: rgb(var(--text-secondary)) !important; }
+.text-neutral-500 { color: rgb(var(--text-tertiary)) !important; }
+.text-white { color: rgb(var(--text-primary)) !important; }
+.text-black { color: rgb(var(--text-primary)) !important; }
+.border-neutral-700 { border-color: rgb(var(--border-primary)) !important; }
+.border-neutral-600 { border-color: rgb(var(--border-secondary)) !important; }
+.border-neutral-800 { border-color: rgb(var(--border-primary)) !important; }
+
+/* Divide utilities for table borders */
+.divide-neutral-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--border-primary)) !important;
+}
+
+.divide-neutral-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--border-primary)) !important;
+}
+
+/* Light mode text overrides */
+.light .text-white { color: rgb(var(--text-primary)) !important; }
+.light .text-neutral-300 { color: rgb(var(--text-secondary)) !important; }
+.light .text-neutral-400 { color: rgb(var(--text-secondary)) !important; }
+.light .text-neutral-500 { color: rgb(var(--text-tertiary)) !important; }
+
+/* Modal overlay fixes */
+.bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.4) !important;
+}
+
+.light .bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.3) !important;
+}
+
+/* Hover text states */
+.hover\:text-white:hover {
+  color: rgb(var(--text-primary)) !important;
+}
+
+/* Button styles with proper contrast */
+.bg-blue-600 { 
+  background-color: rgb(var(--accent-primary)) !important; 
+  color: white !important;
+}
+.bg-blue-600:hover, .hover\:bg-blue-700:hover { 
+  background-color: rgb(var(--accent-hover)) !important; 
+}
+
+/* Blue buttons always have white text */
+.bg-blue-600, .bg-blue-600 *, .hover\:bg-blue-700:hover, .hover\:bg-blue-700:hover * {
+  color: white !important;
+}
+
+/* Force white text on blue backgrounds in all modes */
+.light .bg-blue-600, .light .bg-blue-600 * {
+  color: white !important;
+}
+
+.light .hover\:bg-blue-700:hover, .light .hover\:bg-blue-700:hover * {
+  color: white !important;
+}
+
+/* Ensure bg-blue-500 buttons have white text (covers most primary button variants) */
+.bg-blue-500 {
+  background-color: rgb(var(--accent-primary)) !important;
+  color: white !important;
+}
+.bg-blue-500 *, .hover\:bg-blue-600:hover, .hover\:bg-blue-600:hover * {
+  color: white !important;
+}
+.bg-blue-700, .bg-blue-700 * {
+  color: white !important;
+}
+.hover\:bg-blue-800:hover, .hover\:bg-blue-800:hover * {
+  color: white !important;
+}
+.light .bg-blue-500, .light .bg-blue-500 *,
+.light .hover\:bg-blue-600:hover, .light .hover\:bg-blue-600:hover *,
+.light .bg-blue-700, .light .bg-blue-700 *,
+.light .hover\:bg-blue-800:hover, .light .hover\:bg-blue-800:hover * {
+  color: white !important;
+}
+
+/* Red destructive buttons always have white text */
+.bg-red-500, .bg-red-500 * {
+  color: white !important;
+}
+.bg-red-600, .bg-red-600 * {
+  color: white !important;
+}
+.bg-red-700, .bg-red-700 * {
+  color: white !important;
+}
+.bg-red-800, .bg-red-800 * {
+  color: white !important;
+}
+.hover\:bg-red-700:hover, .hover\:bg-red-700:hover * {
+  color: white !important;
+}
+.hover\:bg-red-800:hover, .hover\:bg-red-800:hover * {
+  color: white !important;
+}
+.bg-yellow-600, .bg-yellow-600 * {
+  color: white !important;
+}
+.bg-yellow-700, .bg-yellow-700 * {
+  color: white !important;
+}
+.bg-green-600, .bg-green-600 * {
+  color: white !important;
+}
+.bg-green-700, .bg-green-700 * {
+  color: white !important;
+}
+.hover\:bg-green-700:hover, .hover\:bg-green-700:hover * {
+  color: white !important;
+}
+
+/* Ensure indigo, amber, rose, and emerald button utilities always render white text (including in .light) */
+.bg-indigo-600, .bg-indigo-600 * {
+  color: white !important;
+}
+.bg-indigo-700, .bg-indigo-700 * {
+  color: white !important;
+}
+.hover\:bg-indigo-700:hover, .hover\:bg-indigo-700:hover * {
+  color: white !important;
+}
+.light .bg-indigo-600, .light .bg-indigo-600 * {
+  color: white !important;
+}
+.light .hover\:bg-indigo-700:hover, .light .hover\:bg-indigo-700:hover * {
+  color: white !important;
+}
+
+/* TipTap editor typography alignment */
+.ProseMirror {
+  max-width: none;
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
+@media (min-width: 640px) {
+  .ProseMirror {
+    font-size: 1.0625rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ProseMirror {
+    font-size: 1.125rem;
+  }
+}
+
+.ProseMirror h1 {
+  font-size: 2.25rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror p {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  line-height: 1.75;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.ProseMirror li {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.ProseMirror a {
+  color: rgb(129, 140, 248);
+  text-decoration: underline;
+}
+
+.ProseMirror a:hover {
+  color: rgb(99, 102, 241);
+}
+
+.ProseMirror img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.12);
+}
+
+.dark .ProseMirror img {
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: none;
+}
+
+/* Purple button utilities must retain white text for contrast */
+.bg-violet-500, .bg-violet-500 *,
+.bg-violet-600, .bg-violet-600 *,
+.bg-violet-700, .bg-violet-700 *,
+.bg-purple-500, .bg-purple-500 *,
+.bg-purple-600, .bg-purple-600 *,
+.bg-purple-700, .bg-purple-700 * {
+  color: white !important;
+}
+
+.hover\:bg-violet-600:hover, .hover\:bg-violet-600:hover *,
+.hover\:bg-violet-700:hover, .hover\:bg-violet-700:hover *,
+.hover\:bg-purple-600:hover, .hover\:bg-purple-600:hover *,
+.hover\:bg-purple-700:hover, .hover\:bg-purple-700:hover * {
+  color: white !important;
+}
+
+.light .bg-violet-500, .light .bg-violet-500 *,
+.light .bg-violet-600, .light .bg-violet-600 *,
+.light .bg-violet-700, .light .bg-violet-700 *,
+.light .bg-purple-500, .light .bg-purple-500 *,
+.light .bg-purple-600, .light .bg-purple-600 *,
+.light .bg-purple-700, .light .bg-purple-700 * {
+  color: white !important;
+}
+
+.light .hover\:bg-violet-600:hover, .light .hover\:bg-violet-600:hover *,
+.light .hover\:bg-violet-700:hover, .light .hover\:bg-violet-700:hover *,
+.light .hover\:bg-purple-600:hover, .light .hover\:bg-purple-600:hover *,
+.light .hover\:bg-purple-700:hover, .light .hover\:bg-purple-700:hover * {
+  color: white !important;
+}
+
+.site-page-content {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgb(var(--text-secondary));
+  display: block;
+}
+
+.site-page-content > * {
+  margin-bottom: 1.5rem;
+}
+
+.site-page-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.site-page-content h1,
+.site-page-content h2,
+.site-page-content h3,
+.site-page-content h4,
+.site-page-content h5,
+.site-page-content h6 {
+  color: rgb(var(--text-primary));
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 0.5rem;
+}
+
+.site-page-content h1 { font-size: 2.25rem; }
+.site-page-content h2 { font-size: 1.875rem; }
+.site-page-content h3 { font-size: 1.5rem; }
+
+/* Paragraphs should have natural spacing (don't reset to 0) */
+.site-page-content p {
+  margin: 0 0 1rem 0;
+  line-height: 1.7;
+}
+
+/* Lists should use normal flow so markers render correctly */
+.site-page-content ul,
+.site-page-content ol {
+  margin: 0 0 1rem 0;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.site-page-content ul {
+  list-style-type: disc;
+}
+
+.site-page-content ol {
+  list-style-type: decimal;
+}
+
+.site-page-content li {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.site-page-content ul ul {
+  list-style-type: circle;
+  margin: 0.5rem 0;
+}
+
+.site-page-content ul ul ul {
+  list-style-type: square;
+}
+
+.site-page-content ol ol {
+  list-style-type: lower-alpha;
+  margin: 0.5rem 0;
+}
+
+.site-page-content ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.site-page-content blockquote {
+  border-left: 4px solid rgba(99, 102, 241, 0.35);
+  padding-left: 1rem;
+  font-style: italic;
+}
+
+.sidebar-preview {
+  background-color: transparent;
+}
+
+.sidebar-preview .site-page-content {
+  margin: 0;
+  max-width: none;
+}
+
+.sidebar-editor-modal [data-editor-region="hero"],
+.sidebar-editor-modal [data-editor-region="meta"],
+.sidebar-editor-modal [data-editor-region="categories"],
+.sidebar-editor-modal [data-editor-region="search-preview"],
+.sidebar-editor-modal [data-editor-region="actions"],
+.sidebar-editor-modal [data-editor-region="drafts"],
+.sidebar-editor-modal [data-editor-region="seo"],
+.sidebar-editor-modal [data-editor-region="social"] {
+  display: none !important;
+}
+
+.sidebar-editor-modal .ProseMirror {
+  min-height: 480px;
+}
+
+/* Center Twitter embeds on frontend pages so tweet blockquotes are centered inside article content */
+.site-page-content blockquote.twitter-tweet,
+.site-page-content .twitter-tweet {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Iframe/embed wrapper styles for frontend pages
+   - center embeds
+   - make embedded iframe responsive
+   - on larger screens ensure a sensible minimum width so video embeds are not tiny
+*/
+.site-page-content .iframe-wrapper {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.site-page-content .iframe-wrapper iframe {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  border: 0;
+}
+
+/* Keep embeds responsive but prefer a 16:9 aspect ratio so they don't render as strips.
+   We avoid forcing a large min-width so embeds can shrink on narrow containers. */
+.site-page-content .iframe-wrapper { width: 100%; max-width: 100%; }
+.site-page-content .iframe-wrapper iframe { aspect-ratio: 16/9; }
+
+.site-page-content a {
+  color: rgb(99, 102, 241);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.dark .site-page-content a {
+  color: rgb(165, 180, 252);
+}
+
+.site-page-content code {
+  font-size: 0.95rem;
+  background-color: rgba(15, 23, 42, 0.08);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark .site-page-content code {
+  background-color: rgba(148, 163, 184, 0.16);
+}
+
+.site-page-content pre {
+  background-color: rgba(15, 23, 42, 0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark .site-page-content pre {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.site-page-content pre code {
+  display: block;
+  background: transparent;
+  padding: 0;
+  white-space: inherit;
+}
+
+/* Image alignment and sizing for frontend content */
+.site-page-content img {
+  display: block;
+  height: auto;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.12);
+  /* Default center alignment - width will be set by inline styles */
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
+.dark .site-page-content img {
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: none;
+}
+
+/* Left alignment */
+.site-page-content img[data-align="left"] {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Right alignment */
+.site-page-content img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* Center alignment (default) */
+.site-page-content img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Float left with text wrapping */
+.site-page-content img[data-align="float-left"] {
+  float: left !important;
+  margin: 0 1.5rem 1.5rem 0 !important;
+}
+
+/* Float right with text wrapping */
+.site-page-content img[data-align="float-right"] {
+  float: right !important;
+  margin: 0 0 1.5rem 1.5rem !important;
+}
+
+/* More specific overrides for editor-generated images */
+.site-page-content img.editor-image[data-align="float-left"] {
+  float: left !important;
+  margin: 0 1.5rem 1.5rem 0 !important;
+}
+
+.site-page-content img.editor-image[data-align="float-right"] {
+  float: right !important;
+  margin: 0 0 1.5rem 1.5rem !important;
+}
+
+.site-page-content::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+.bg-amber-500, .bg-amber-500 * {
+  color: white !important;
+}
+.bg-amber-600, .bg-amber-600 * {
+  color: white !important;
+}
+.hover\:bg-amber-600:hover, .hover\:bg-amber-600:hover * {
+  color: white !important;
+}
+.light .bg-amber-500, .light .bg-amber-500 * {
+  color: white !important;
+}
+.light .hover\:bg-amber-600:hover, .light .hover\:bg-amber-600:hover * {
+  color: white !important;
+}
+
+.bg-rose-500, .bg-rose-500 * {
+  color: white !important;
+}
+.bg-rose-600, .bg-rose-600 * {
+  color: white !important;
+}
+.hover\:bg-rose-600:hover, .hover\:bg-rose-600:hover * {
+  color: white !important;
+}
+.light .bg-rose-500, .light .bg-rose-500 * {
+  color: white !important;
+}
+
+.bg-emerald-500, .bg-emerald-500 * {
+  color: white !important;
+}
+.bg-emerald-600, .bg-emerald-600 * {
+  color: white !important;
+}
+.hover\:bg-emerald-600:hover, .hover\:bg-emerald-600:hover * {
+  color: white !important;
+}
+.light .bg-emerald-500, .light .bg-emerald-500 * {
+  color: white !important;
+}
+
+/* Force white text on red backgrounds in light mode as well */
+.light .bg-red-600, .light .bg-red-600 *,
+.light .bg-red-600, .light .bg-red-600 *,
+.light .bg-red-700, .light .bg-red-700 *,
+.light .bg-red-800, .light .bg-red-800 *,
+.light .hover\:bg-red-700:hover, .light .hover\:bg-red-700:hover *,
+.light .hover\:bg-red-800:hover, .light .hover\:bg-red-800:hover * {
+  color: white !important;
+}
+.light .bg-red-500, .light .bg-red-500 *,
+.light .bg-yellow-600, .light .bg-yellow-600 *,
+.light .bg-yellow-700, .light .bg-yellow-700 *,
+.light .bg-green-600, .light .bg-green-600 *,
+.light .bg-green-700, .light .bg-green-700 *,
+.light .hover\:bg-green-700:hover, .light .hover\:bg-green-700:hover * {
+  color: white !important;
+}
+.text-actual-white {
+  color: #ffffff !important;
+}
+/* Ensure .text-actual-white wins in .light theme where .light .text-white has higher specificity */
+.light .text-actual-white {
+  color: #ffffff !important;
+}
+
+/* Ensure SVG icons inside .text-actual-white also render white (stroke/fill) */
+.text-actual-white svg, .text-actual-white svg * {
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.light .text-actual-white svg, .light .text-actual-white svg * {
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+/* Sidebar NEW badge overrides */
+.sidebar-new-badge {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+.dark .sidebar-new-badge {
+  color: #ffffff !important;
+}
+
+/* Input and form elements */
+input, textarea, select {
+  background-color: rgb(var(--bg-tertiary)) !important;
+  border-color: rgb(var(--border-primary)) !important;
+  color: rgb(var(--text-primary)) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgb(var(--accent-primary)) !important;
+  outline: 2px solid rgb(var(--accent-primary) / 0.2) !important;
+  outline-offset: -1px !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+  background-color: rgb(var(--bg-quaternary)) !important;
+  color: rgb(var(--text-tertiary)) !important;
+  cursor: not-allowed !important;
+}
+
+/* Placeholder text */
+input::placeholder, textarea::placeholder {
+  color: rgb(var(--text-tertiary)) !important;
+}
+
+/* Card and container backgrounds */
+.bg-neutral-800\/50 {
+  background-color: rgb(var(--bg-tertiary) / 0.5) !important;
+}
+
+.bg-neutral-900\/50 {
+  background-color: rgb(var(--bg-secondary) / 0.3) !important;
+}
+
+.bg-neutral-900\/40 {
+  background-color: rgb(var(--bg-secondary) / 0.25) !important;
+}
+
+.bg-neutral-900\/20 {
+  background-color: rgb(var(--bg-secondary) / 0.15) !important;
+}
+
+.bg-neutral-900\/10 {
+  background-color: rgb(var(--bg-secondary) / 0.08) !important;
+}
+
+.bg-neutral-900\/60 {
+  background-color: rgb(var(--bg-secondary) / 0.35) !important;
+}
+
+/* Hover states */
+.hover\:bg-neutral-800:hover {
+  background-color: rgb(var(--bg-tertiary)) !important;
+}
+
+.hover\:bg-neutral-700:hover {
+  background-color: rgb(var(--bg-quaternary)) !important;
+}
+
+.hover\:bg-neutral-900\/60:hover {
+  background-color: rgb(var(--bg-secondary) / 0.35) !important;
+}
+
+.hover\:bg-neutral-800\/50:hover {
+  background-color: rgb(var(--bg-tertiary) / 0.3) !important;
+}
+
+.hover\:bg-neutral-900\/20:hover {
+  background-color: rgb(var(--bg-secondary) / 0.2) !important;
+}
+
+/* Option elements in selects */
+option {
+  background-color: rgb(var(--bg-tertiary)) !important;
+  color: rgb(var(--text-primary)) !important;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  background-color: rgb(var(--bg-tertiary)) !important;
+  border-color: rgb(var(--border-secondary)) !important;
+}
+
+input[type="checkbox"]:checked {
+  background-color: rgb(var(--accent-primary)) !important;
+  border-color: rgb(var(--accent-primary)) !important;
+}
+
+/* Focus ring for checkboxes */
+input[type="checkbox"]:focus {
+  box-shadow: 0 0 0 2px rgb(var(--accent-primary) / 0.2) !important;
+}
+
+/* Table and card hover effects */
+.hover\:bg-gray-50:hover {
+  background-color: rgb(var(--bg-secondary)) !important;
+}
+
+/* Light mode specific adjustments */
+.light .bg-neutral-800 {
+  background-color: rgb(var(--bg-tertiary)) !important;
+}
+
+.light .bg-neutral-900 {
+  background-color: rgb(var(--bg-secondary)) !important;
+}
+
+.light .bg-neutral-900\/50 {
+  background-color: rgb(var(--bg-secondary) / 0.4) !important;
+}
+
+.light .bg-neutral-900\/40 {
+  background-color: rgb(var(--bg-secondary) / 0.3) !important;
+}
+
+.light .bg-neutral-900\/20 {
+  background-color: rgb(var(--bg-secondary) / 0.2) !important;
+}
+
+.light .bg-neutral-900\/10 {
+  background-color: rgb(var(--bg-secondary) / 0.1) !important;
+}
+
+.light .bg-neutral-900\/60 {
+  background-color: rgb(var(--bg-secondary) / 0.4) !important;
+}
+
+/*
+  Target Clerk's absolute OTP overlay input (the invisible/positioned input that Clerk uses
+  to capture the one-time-code). It's visible in some browsers due to its inline styles.
+  Make it fully transparent while keeping it interactive so the OTP flow still works.
+*/
+input[data-input-otp] {
+  opacity: 0 !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* OTP segments: force dark background and white text so digits/caret remain visible
+   even when the page is in light mode. Targets common test-id attributes and
+   clerk-provided helper classes. */
+[data-test-id="otp-input-segment"],
+[data-testid="otp-input-segment"],
+[data-test="otp-input-segment"],
+.cl-otpCodeFieldInput[data-test-id="otp-input-segment"],
+.cl-otpCodeFieldInput[data-testid="otp-input-segment"] {
+  background-color: rgb(37 37 37) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Re-enforce overlay input invisibility (some clients set inline styles after mount) */
+input[data-input-otp][type="text"],
+input[autocomplete="one-time-code"] {
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: transparent !important;
+}
+
+/* More robust OTP rules using Clerk's public classnames. These are less likely
+   to change across builds than transient internal classnames. */
+
+
+/* Style each visible OTP segment (the boxes users see) */
+.cl-otpCodeFieldInput.cl-input,
+.cl-otpCodeFieldInput {
+  background-color: rgb(95, 95, 95) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+/* Ensure the inputs don't collapse to fit-content in production builds */
+.cl-otpCodeFieldInputs,
+.cl-otpCodeFieldInputContainer {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Keep Clerk's invisible overlay input interactive but visually invisible.
+   Don't set pointer-events:none because the overlay is responsible for capturing
+   the typed/pasted one-time-code. */
+input[data-input-otp],
+input[data-input-otp][type="text"],
+input[autocomplete="one-time-code"] {
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: transparent !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Gradient primary buttons for Clerk widgets (login / signup) */
+[data-clerk-root] .cl-formButtonPrimary,
+[data-clerk-root] [data-clerk-elem="formButtonPrimary"],
+.cl-formButtonPrimary,
+[data-clerk-root] .cl-button--primary,
+[data-clerk-root] .cl-button[type="submit"] {
+  background-image: linear-gradient(90deg,#7c3aed 0%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: 0 6px 18px rgba(59,130,246,0.18) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+[data-clerk-root] .cl-formButtonPrimary:hover,
+[data-clerk-root] [data-clerk-elem="formButtonPrimary"]:hover,
+.cl-formButtonPrimary:hover,
+[data-clerk-root] .cl-button--primary:hover {
+  filter: brightness(1.03) !important;
+  box-shadow: 0 10px 26px rgba(59,130,246,0.22) !important;
+}
+
+/* Accessible focus state */
+[data-clerk-root] .cl-formButtonPrimary:focus,
+[data-clerk-root] [data-clerk-elem="formButtonPrimary"]:focus,
+.cl-formButtonPrimary:focus,
+[data-clerk-root] .cl-button--primary:focus {
+  outline: 3px solid rgba(124,58,237,0.12) !important;
+  outline-offset: 2px !important;
+}
+
+/* Clerk card/footer light-mode fixes
+   Some Clerk widgets render a separate footer/card-box which remained dark in light mode.
+   These selectors try to target common Clerk footer/card wrapper classes and the
+   data-clerk-root container. We only force a light background in the `.light` theme
+   so dark mode remains unchanged.
+*/
+.light .clerk-card,
+.light .clerk-card__box,
+.light .clerk-cardBox,
+.light [data-clerk-root] .clerk-card,
+.light [data-clerk-root] .clerk-card__box {
+  background-color: #ffffff !important;
+  color: rgb(var(--text-primary)) !important;
+  border-radius: 10px;
+}
+
+.light .clerk-card__footer,
+.light .clerk-footer,
+.light .clerk-cardFooter,
+.light [data-clerk-root] footer,
+.light [data-clerk-root] .footer {
+  background-color: #ffffff !important;
+  color: rgb(var(--text-secondary)) !important;
+  border-top-color: rgb(var(--border-primary)) !important;
+  border-radius: 10px;
+}
+
+/* Prefer stable Clerk selectors for the sign-in card/footer so production builds
+   aren't affected by transient internal class names. Targets both direct and
+   [data-clerk-root]-scoped variants. */
+.light .cl-rootBox,
+.light .cl-card,
+.light .cl-cardBox,
+.light .cl-footer,
+.light [data-clerk-root] .cl-rootBox,
+.light [data-clerk-root] .cl-card,
+.light [data-clerk-root] .cl-cardBox,
+.light [data-clerk-root] .cl-footer {
+  background-color: #ffffff !important;
+  color: rgb(var(--text-primary)) !important;
+  /* Reset clerk variables that produce dark gradients */
+  --clerk-color-neutral: rgba(255,255,255,0) !important;
+  --clerk-color-muted: transparent !important;
+  border-radius: 10px;
+}
+
+/* Make Clerk profile components take full width in both light and dark modes */
+.cl-internal-fqc41u,
+.cl-internal-pi1e7y {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Prefer stable Clerk public classes for production builds. These are more resilient
+   than transient `cl-internal-*` classnames emitted by Clerk's runtime.
+   Target both plain and `[data-clerk-root]`-scoped variants. */
+.cl-rootBox,
+.cl-cardBox,
+.cl-userProfile-root,
+[data-clerk-root] .cl-rootBox,
+[data-clerk-root] .cl-cardBox,
+[data-clerk-root] .cl-userProfile-root {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Force a light background for Clerk card containers when the app is in the .light theme.
+   Also reset clerk color variables that may introduce dark gradients. */
+.light .cl-rootBox,
+.light .cl-cardBox,
+.light .cl-userProfile-root,
+.light [data-clerk-root] .cl-rootBox,
+.light [data-clerk-root] .cl-cardBox,
+.light [data-clerk-root] .cl-userProfile-root {
+  background-color: #ffffff !important;
+  color: rgb(var(--text-primary)) !important;
+  --clerk-color-neutral: rgba(255,255,255,0) !important;
+  --clerk-color-muted: transparent !important;
+  border-radius: 10px;
+}
+
+.light .hover\:bg-neutral-900\/60:hover {
+  background-color: rgb(var(--bg-secondary) / 0.45) !important;
+}
+
+.light .hover\:bg-neutral-800\/50:hover {
+  background-color: rgb(var(--bg-tertiary) / 0.4) !important;
+}
+
+.light .hover\:bg-neutral-900\/20:hover {
+  background-color: rgb(var(--bg-secondary) / 0.25) !important;
+}
+
+/* Navigation sidebar fixes for light mode */
+.light .hover\:bg-neutral-800\/60:hover {
+  background-color: rgb(var(--bg-tertiary) / 0.4) !important;
+}
+
+/* Table header overrides */
+thead.bg-neutral-900 {
+  background-color: rgb(var(--bg-secondary)) !important;
+}
+
+.light thead.bg-neutral-900 {
+  background-color: rgb(var(--bg-tertiary)) !important;
+}
+
+/* Status badge fixes for light mode */
+.light .bg-emerald-600\/20 {
+  background-color: rgb(16 185 129 / 0.15) !important;
+}
+
+.light .text-emerald-200 {
+  color: rgb(16 185 129) !important;
+}
+
+.light .text-emerald-400 {
+  color: rgb(16 185 129) !important;
+}
+
+/* Blue announcement banner fix */
+.light .bg-blue-600\/10 {
+  background-color: rgb(59 130 246 / 0.1) !important;
+}
+
+.light .border-blue-600\/20 {
+  border-color: rgb(59 130 246 / 0.2) !important;
+}
+
+.light .text-blue-100 {
+  color: rgb(59 130 246) !important;
+}
+
+.light .text-blue-300 {
+  color: rgb(37 99 235) !important;
+}
+
+.light .hover\:text-blue-100:hover {
+  color: rgb(59 130 246) !important;
+}
+
+.light input, .light textarea, .light select {
+  border-color: rgb(var(--border-primary)) !important;
+}
+
+.light option {
+  background-color: white !important;
+  color: rgb(var(--text-primary)) !important;
+}
+
+.gradient-text {
+  /* Gradient text utility (expanded instead of @apply for parser compatibility) */
+  background-image: linear-gradient(to right, var(--brand, #7c3aed), #c026d3);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Mobile responsive utilities */
+@layer utilities {
+  /* Prevent horizontal scroll on mobile */
+  .no-scroll-x {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  /* Responsive flex containers */
+  .flex-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem; /* gap-2 */
+  }
+  
+  /* Button group responsive */
+  .btn-group-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem; /* gap-2 */
+  }
+  
+  /* Table container with proper scrolling */
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(64 64 64) transparent;
+  }
+  
+  .table-container::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background: rgb(64 64 64);
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background: rgb(82 82 82);
+  }
+}
+
+/* Global mobile improvements */
+@media (max-width: 768px) {
+  /* Ensure all containers don't exceed viewport */
+  .space-y-6 > * {
+    max-width: 100%;
+  }
+  
+  /* Improve button wrapping */
+  .flex.gap-2, .flex.gap-4 {
+    flex-wrap: wrap;
+  }
+  
+  /* Make filter buttons more mobile-friendly */
+  button {
+    word-break: keep-all;
+    white-space: nowrap;
+  }
+}

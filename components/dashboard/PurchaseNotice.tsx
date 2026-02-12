@@ -103,14 +103,14 @@ export function PurchaseNotice() {
 
         const tokenLabel = lookup.tokenName || 'tokens';
         const tokenInfo = typeof lookup.tokenLimit === 'number'
-          ? `${lookup.tokenLimit.toLocaleString()} ${tokenLabel} added.`
-          : 'Tokens updated.';
-        const planInfo = lookup.planName ? ` Plan: ${lookup.planName}.` : '';
-        const providerInfo = provider ? ` via ${provider}.` : '';
+          ? `${lookup.tokenLimit.toLocaleString()} ${tokenLabel}`
+          : 'your tokens';
+        const planInfo = lookup.planName ? ` for the ${lookup.planName} plan` : '';
+        const providerInfo = provider ? ` Paid via ${provider}.` : '';
 
         setMessage({
           title: 'Payment confirmed.',
-          body: `${tokenInfo}${planInfo}${providerInfo}`.trim(),
+          body: `All set! We added ${tokenInfo} to your account${planInfo}.${providerInfo}`.trim(),
           tone: 'success',
         });
       } catch {
@@ -147,7 +147,7 @@ export function PurchaseNotice() {
       : 'border-amber-300/70 bg-amber-50/80 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100';
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${toneClasses}`}>
+    <div className={`rounded-2xl border px-4 py-3 text-sm shadow-sm mb-4 ${toneClasses}`}>
       <span className="font-semibold">{message.title}</span> {message.body}
     </div>
   );

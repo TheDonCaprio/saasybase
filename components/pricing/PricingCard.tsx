@@ -1123,7 +1123,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
                           }
 
                           applyProrationFallback(checkoutOverridesRef, 'PROVIDER_PRORATION_UNSUPPORTED');
-                          showToast('Complete checkout, then activate to switch immediately.', 'info');
+                          showToast('Complete checkout, then activate to switch immediately.', 'success');
                           void beginCheckoutFlow();
                         }}
                       >

@@ -11,16 +11,39 @@ import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../../../../lib/pai
 import { syncOrganizationEligibilityForUser } from '../../../../lib/organization-access';
 import { resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { paymentService } from '../../../../lib/payment/service';
+import { PaymentProviderFactory } from '../../../../lib/payment/factory';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
 }
 
+async function resolveRazorpaySessionId(paymentId: string): Promise<string | null> {
+  const keyId = process.env.RAZORPAY_KEY_ID || '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+  if (!keyId || !keySecret) return null;
+
+  try {
+    const auth = Buffer.from(`${keyId}:${keySecret}`, 'utf8').toString('base64');
+    const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null) as Record<string, unknown> | null;
+    if (!data || typeof data !== 'object') return null;
+    if (typeof data.subscription_id === 'string' && data.subscription_id) return data.subscription_id;
+    if (typeof data.payment_link_id === 'string' && data.payment_link_id) return data.payment_link_id;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
-  const sessionId = req.nextUrl.searchParams.get('session_id');
+  let sessionId = req.nextUrl.searchParams.get('session_id');
+  const paymentId = req.nextUrl.searchParams.get('payment_id');
   const recent = req.nextUrl.searchParams.get('recent');
   const sinceParam = req.nextUrl.searchParams.get('since');
-  if (!sessionId && !recent) return jsonError('Missing session_id', 400, 'CHECKOUT_SESSION_MISSING');
+  if (!sessionId && !recent && !paymentId) return jsonError('Missing session_id', 400, 'CHECKOUT_SESSION_MISSING');
 
   const { userId: clerkUserId } = await auth();
   let actorUserId = clerkUserId ?? null;
@@ -57,7 +80,35 @@ export async function GET(req: NextRequest) {
     let orgSyncNeeded = false;
     let sessionUserId: string | undefined;
 
-    const provider = paymentService.provider;
+    if (paymentId) {
+      const existing = await prisma.payment.findFirst({
+        where: { userId, externalPaymentId: paymentId },
+        include: { plan: true, subscription: { include: { plan: true } } }
+      });
+      if (existing) {
+        const isTokenTopupPayment = !existing.subscriptionId && existing.plan && existing.plan.autoRenew === false;
+        return NextResponse.json({
+          ok: true,
+          completed: true,
+          topup: isTokenTopupPayment,
+          paymentId: existing.id,
+          createdAt: existing.createdAt,
+          plan: existing.subscription?.plan?.name || existing.plan?.name || null,
+        });
+      }
+    }
+
+    if (!sessionId && paymentId) {
+      sessionId = await resolveRazorpaySessionId(paymentId);
+      if (!sessionId) {
+        Logger.warn('Checkout confirm could not resolve Razorpay session from payment_id', { paymentId });
+        return NextResponse.json({ ok: true, completed: false, pending: true });
+      }
+    }
+
+    const provider = paymentId
+      ? (PaymentProviderFactory.getProviderByName('razorpay') || paymentService.provider)
+      : paymentService.provider;
     const providerName = provider.name;
     const isStripeProvider = providerName === 'stripe';
 

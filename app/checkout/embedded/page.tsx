@@ -215,7 +215,7 @@ function EmbeddedCheckoutContent() {
 
         if (externalWaiting) {
             return (
-                <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 min-h-screen flex items-center justify-center mx-auto max-w-[1440px]">
+                <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-6 px-4 min-h-[80vh] flex items-center justify-center mx-auto max-w-[1440px]">
                     <div className="w-full max-w-xl">
                         <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-slate-200/20 dark:shadow-slate-950/40 overflow-hidden">
                             <div className="px-8 py-6 border-b border-slate-200/60 dark:border-slate-800/60">
@@ -486,7 +486,7 @@ function EmbeddedCheckoutContent() {
 
     if (loading) {
         return (
-            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 min-h-screen flex items-center justify-center mx-auto max-w-[1440px]">
+            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-6 px-4 min-h-[80vh] flex items-center justify-center mx-auto max-w-[1440px]">
                 <div className="w-full flex items-center justify-center">
                     <div className="relative">
                         <div className="h-16 w-16 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-800 border-t-blue-600 dark:border-t-blue-500"></div>
@@ -499,7 +499,7 @@ function EmbeddedCheckoutContent() {
 
     if (error) {
         return (
-            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 min-h-screen flex items-center justify-center mx-auto my-auto max-w-[1440px]">
+            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-6 px-4 min-h-[80vh] flex items-center justify-center mx-auto my-auto max-w-[1440px]">
                 <div className="w-full flex items-center justify-center">
                     <div className="max-w-md w-full">
                         <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-white dark:bg-slate-900 shadow-xl shadow-red-100/50 dark:shadow-red-950/50 overflow-hidden">
@@ -548,7 +548,7 @@ function EmbeddedCheckoutContent() {
 
     if (!clientSecret || !CheckoutComponent) {
         return (
-            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 min-h-screen flex items-center justify-center mx-auto max-w-[1440px]">
+            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-6 px-4 min-h-[80vh] flex items-center justify-center mx-auto max-w-[1440px]">
                 <div className="w-full flex items-center justify-center">
                     <div className="text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
@@ -566,8 +566,8 @@ function EmbeddedCheckoutContent() {
     }
 
     return (
-        <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 sm:px-6 lg:px-8 min-h-screen mx-auto max-w-[1440px]">
-            <div>
+        <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 px-4 sm:px-6 lg:px-8 min-h-[80vh] mx-auto max-w-[1440px] flex items-center justify-center">
+            <div className="w-full py-8">
                 {/* Header */}
                 <div className="mb-8 text-center">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 dark:shadow-blue-500/20 mb-4">
@@ -585,10 +585,10 @@ function EmbeddedCheckoutContent() {
                 </div>
 
                 {/* Main Content */}
-                <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+                <div className="grid lg:grid-cols-5 gap-6 lg:gap-8 lg:items-stretch">
                     {/* Order Summary */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 overflow-hidden">
+                    <div className="lg:col-span-2 space-y-6 flex flex-col">
+                        <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 overflow-hidden flex-1">
                             <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60">
                                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                                     <svg className="w-5 h-5 text-blue-600 dark:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -667,19 +667,11 @@ function EmbeddedCheckoutContent() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Security Badge */}
-                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-500">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                            <span>Secure 256-bit SSL encrypted payment</span>
-                        </div>
                     </div>
 
                     {/* Payment Form */}
-                    <div className="lg:col-span-3">
-                        <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 overflow-hidden">
+                    <div className="lg:col-span-3 flex flex-col">
+                        <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 overflow-hidden flex-1 flex flex-col">
                             <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60">
                                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                                     <svg className="w-5 h-5 text-blue-600 dark:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -689,7 +681,7 @@ function EmbeddedCheckoutContent() {
                                 </h2>
                             </div>
                             
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-8 flex-1 flex flex-col justify-center">
                                 <CheckoutComponent
                                     clientSecret={clientSecret}
                                     email={email || undefined}
@@ -699,6 +691,16 @@ function EmbeddedCheckoutContent() {
                                 />
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Security Badge - Centered below both sections */}
+                <div className="mt-6 flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-500">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span>Secure 256-bit SSL encrypted payment</span>
                     </div>
                 </div>
             </div>

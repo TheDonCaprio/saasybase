@@ -92,6 +92,10 @@ function getProviderScripts(providerId: string): ProviderScript[] {
             return [
                 { src: 'https://js.paystack.co/v1/inline.js', strategy: 'lazyOnload' }
             ];
+        case 'razorpay':
+            return [
+                { src: 'https://checkout.razorpay.com/v1/checkout.js', strategy: 'lazyOnload' }
+            ];
         default:
             return [];
     }

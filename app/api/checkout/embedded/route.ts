@@ -678,8 +678,8 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             });
         }
 
-        // Razorpay integration is redirect-only in this app (Payment Links / subscription short_url).
-        if (providerName === 'razorpay') {
+        // Razorpay one-time payments use Payment Links (redirect-only).
+        if (providerName === 'razorpay' && normalizedMode !== 'subscription') {
             const session = await paymentService.provider.createCheckoutSession(typedOpts);
             return NextResponse.json({
                 redirect: true,

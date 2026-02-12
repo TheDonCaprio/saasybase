@@ -186,6 +186,7 @@ export interface CheckoutSessionDetails {
     amountTotal?: number;
     amountSubtotal?: number;
     amountDiscount?: number;
+    currency?: string;
     paymentStatus: string;
     lineItems?: {
         priceId?: string;

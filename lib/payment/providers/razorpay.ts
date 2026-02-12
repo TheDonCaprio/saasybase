@@ -1130,8 +1130,57 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 	}
 
 	async createSubscriptionIntent(_opts: CheckoutOptions): Promise<{ clientSecret: string; subscriptionId: string }> {
-		void _opts;
-		throw new PaymentProviderError('Razorpay embedded checkout is not implemented yet');
+		const opts = _opts;
+		if (!opts.priceId) {
+			throw new PaymentProviderError('Razorpay subscription checkout requires a priceId (plan_id)');
+		}
+
+		const metadata: Record<string, string> = {
+			userId: opts.userId,
+			...(opts.metadata || {}),
+		};
+		if (opts.dedupeKey) metadata.dedupeKey = opts.dedupeKey;
+		if (opts.mode) metadata.checkoutMode = opts.mode;
+		if (opts.priceId) metadata.priceId = opts.priceId;
+
+		const payload: Record<string, unknown> = {
+			plan_id: opts.priceId,
+			// Razorpay requires total_count. Use a large number as "until canceled" semantics.
+			total_count: 1200,
+			quantity: 1,
+			customer_notify: 1,
+			notes: metadata,
+		};
+
+		const offerId = typeof opts.metadata?.razorpayOfferId === 'string' ? opts.metadata.razorpayOfferId.trim() : '';
+		const enableOffers = process.env.RAZORPAY_ENABLE_OFFERS === 'true';
+		if (enableOffers && offerId && /^offer_[A-Za-z0-9]+$/.test(offerId)) {
+			payload.offer_id = offerId;
+		}
+
+		let res: RazorpayEnvelope<RazorpaySubscription>;
+		try {
+			res = await this.request<RazorpayEnvelope<RazorpaySubscription>>('/subscriptions', {
+				method: 'POST',
+				body: JSON.stringify(payload),
+			});
+		} catch (err) {
+			if (payload.offer_id && this.isOfferIdFieldUnsupported(err)) {
+				const retryPayload: Record<string, unknown> = { ...payload };
+				delete retryPayload['offer_id'];
+				res = await this.request<RazorpayEnvelope<RazorpaySubscription>>('/subscriptions', {
+					method: 'POST',
+					body: JSON.stringify(retryPayload),
+				});
+			} else {
+				throw err;
+			}
+		}
+
+		return {
+			clientSecret: res.id,
+			subscriptionId: res.id,
+		};
 	}
 
 	async getPaymentIntent(_paymentIntentId: string): Promise<PaymentIntentDetails> {

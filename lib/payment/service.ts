@@ -758,7 +758,13 @@ export class PaymentService {
             }
 
             if (existingSub) {
-                await this.linkPendingPaymentToSubscription(existingSub);
+                const linked = await this.linkPendingPaymentToSubscription(existingSub);
+                // If Paystack webhooks arrive out-of-order (subscription.create before charge.success),
+                // we may end up linking the pending payment here instead of in handleSubscriptionCreated.
+                // In that case, we still need to fulfill (tokens/eligibility) and notify.
+                if (linked) {
+                    await this.grantSubscriptionAccess(existingSub);
+                }
             }
         } catch (err) {
             Logger.error('Failed to record pending subscription payment', { 
@@ -1969,6 +1975,9 @@ export class PaymentService {
                 isNewlyCreated = true;
             }
 
+            const previousStatus = dbSub.status;
+            const previousPlan = dbSub.plan;
+
             // Update status and expiry
             const normalizedStatus = status === 'active' || status === 'trialing'
                 ? 'ACTIVE'
@@ -2082,12 +2091,112 @@ export class PaymentService {
 				}
             }
 
+            if (!dbSub) {
+                Logger.warn('Subscription became unavailable during update handling', { subscriptionId });
+                return;
+            }
+
+            const transitionedToActive = previousStatus !== 'ACTIVE' && effectiveStatus === 'ACTIVE';
+            if (transitionedToActive && !isNewlyCreated) {
+                const changeType = (() => {
+                    if (!previousPlan || previousPlan.id === dbSub.planId) return null;
+                    if (previousPlan.priceCents < dbSub.plan.priceCents) return 'upgrade' as const;
+                    if (previousPlan.priceCents > dbSub.plan.priceCents) return 'downgrade' as const;
+                    return null;
+                })();
+
+                await this.sendActivationNotificationsFromSubscriptionUpdate(dbSub, subscriptionId, changeType);
+            }
+
+            if (effectiveStatus === 'ACTIVE' && this.providerKey === 'razorpay') {
+                const subForRazorpay = dbSub;
+                try {
+                    const existingPayment = await prisma.payment.findFirst({
+                        where: {
+                            OR: [
+                                { subscriptionId: subForRazorpay.id },
+                                { externalPaymentId: subscriptionId },
+                                { externalSessionId: subscriptionId },
+                            ],
+                            status: 'SUCCEEDED',
+                        },
+                        select: { id: true },
+                    });
+
+                    if (!existingPayment) {
+                        const amountCents = typeof subForRazorpay.plan?.priceCents === 'number' ? subForRazorpay.plan.priceCents : 0;
+                        await prisma.$transaction(async (tx) => {
+                            await tx.payment.create({
+                                data: {
+                                    userId: subForRazorpay.userId,
+                                    subscriptionId: subForRazorpay.id,
+                                    planId: subForRazorpay.planId,
+                                    organizationId: subForRazorpay.organizationId ?? null,
+                                    amountCents,
+                                    subtotalCents: amountCents,
+                                    discountCents: 0,
+                                    status: 'SUCCEEDED',
+                                    externalPaymentId: subscriptionId,
+                                    externalSessionId: subscriptionId,
+                                    externalPaymentIds: this.mergeIdMap(null, this.providerKey, subscriptionId) ?? undefined,
+                                    externalSessionIds: this.mergeIdMap(null, this.providerKey, subscriptionId) ?? undefined,
+                                    paymentProvider: this.providerKey,
+                                } satisfies Prisma.PaymentUncheckedCreateInput,
+                            });
+
+                            await tx.user.update({
+                                where: { id: subForRazorpay.userId },
+                                data: { paymentsCount: { increment: 1 } },
+                            });
+                        });
+
+                        await updateSubscriptionLastPaymentAmount(subForRazorpay.id);
+                        Logger.info('Created fallback Razorpay subscription payment on update', {
+                            subscriptionId: subForRazorpay.id,
+                            providerSubscriptionId: subscriptionId,
+                        });
+                    }
+                } catch (err) {
+                    Logger.warn('Failed to create fallback Razorpay payment on subscription update', {
+                        subscriptionId,
+                        error: toError(err).message,
+                    });
+                }
+            }
+
             // For newly created subscriptions (Paystack flow), link pending payment and grant access
             if (isNewlyCreated && normalizedStatus === 'ACTIVE') {
                 const linked = await this.linkPendingPaymentToSubscription(dbSub);
                 if (linked) {
                     await this.grantSubscriptionAccess(dbSub);
                 } else {
+                    if (this.providerKey === 'stripe' && status === 'active') {
+                        const hasSuccessfulPayment = await prisma.payment.findFirst({
+                            where: {
+                                subscriptionId: dbSub.id,
+                                status: 'SUCCEEDED',
+                            },
+                            select: { id: true },
+                        });
+
+                        if (!hasSuccessfulPayment) {
+                            await prisma.subscription.update({
+                                where: { id: dbSub.id },
+                                data: { status: 'PENDING' },
+                            });
+                            dbSub = {
+                                ...dbSub,
+                                status: 'PENDING',
+                            } as SubscriptionWithPlan;
+
+                            Logger.info('Demoted newly-created Stripe ACTIVE subscription to PENDING (no payment evidence yet)', {
+                                subscriptionId,
+                                dbSubscriptionId: dbSub.id,
+                                userId: dbSub.userId,
+                            });
+                        }
+                    }
+
                     Logger.info('Skipping grantSubscriptionAccess for newly created ACTIVE subscription (no pending payment to link)', {
                         subscriptionId,
                         dbSubscriptionId: dbSub.id,
@@ -2100,6 +2209,124 @@ export class PaymentService {
 
         } catch (err) {
             Logger.error('Error handling subscription update', { subscriptionId, error: toError(err).message });
+        }
+    }
+
+    private async sendActivationNotificationsFromSubscriptionUpdate(
+        dbSub: SubscriptionWithPlan,
+        providerSubscriptionId: string,
+        changeType: 'upgrade' | 'downgrade' | null
+    ) {
+        try {
+            // Dedupe: if the checkout handler (or grantSubscriptionAccess) already sent a
+            // subscription notification for this user within the last 3 minutes, skip entirely
+            // to avoid duplicate or conflicting emails.
+            const recentBillingNotification = await prisma.notification.findFirst({
+                where: {
+                    userId: dbSub.userId,
+                    title: {
+                        in: [
+                            'Subscription Active',
+                            'Subscription Activated',
+                            'Subscription Upgraded',
+                            'Subscription Changed',
+                        ],
+                    },
+                    createdAt: { gte: new Date(Date.now() - 3 * 60 * 1000) },
+                },
+            });
+
+            if (recentBillingNotification) {
+                Logger.info('Skipping activation notification from subscription.updated (recent notification already exists)', {
+                    subscriptionId: dbSub.id,
+                    providerSubscriptionId,
+                    userId: dbSub.userId,
+                    existingNotificationId: recentBillingNotification.id,
+                    existingTitle: recentBillingNotification.title,
+                });
+                return;
+            }
+
+            // Only use the changeType derived from the in-memory previousPlan comparison.
+            // We intentionally do NOT fall back to a DB heuristic (querying recently-cancelled
+            // subscriptions) because it produces false positives: checkout cancels existing
+            // subscriptions when creating new ones, making ordinary new purchases look like
+            // upgrades.  The checkout handler and handleInvoicePaid already cover upgrade/downgrade
+            // classification for their respective flows; this path is the safety net for
+            // in-place Stripe plan changes where previousPlan comparison is definitive.
+            const resolvedChangeType = changeType;
+
+            const planTokenName = typeof dbSub.plan?.tokenName === 'string' ? dbSub.plan.tokenName.trim() : '';
+            const tokenName = planTokenName || await getDefaultTokenLabel();
+            const startedAt = dbSub.startedAt
+                ? dbSub.startedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const expiresAt = dbSub.expiresAt
+                ? dbSub.expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : '';
+
+            const templateKey = resolvedChangeType === 'upgrade'
+                ? 'subscription_upgraded_recurring'
+                : resolvedChangeType === 'downgrade'
+                    ? 'subscription_downgraded'
+                    : 'subscription_activated';
+            const title = resolvedChangeType === 'upgrade'
+                ? 'Subscription Upgraded'
+                : resolvedChangeType === 'downgrade'
+                    ? 'Subscription Changed'
+                    : 'Subscription Active';
+            const message = resolvedChangeType === 'upgrade'
+                ? `Your subscription has been upgraded to ${dbSub.plan.name}.`
+                : resolvedChangeType === 'downgrade'
+                    ? `Your subscription has been changed to ${dbSub.plan.name}.`
+                    : `Your subscription to ${dbSub.plan.name} is now active.`;
+
+            await sendBillingNotification({
+                userId: dbSub.userId,
+                title,
+                message,
+                templateKey,
+                variables: {
+                    planName: dbSub.plan.name,
+                    tokenBalance: String(dbSub.plan.tokenLimit || 0),
+                    tokenName,
+                    startedAt,
+                    expiresAt,
+                },
+            });
+
+            await sendAdminNotificationEmail({
+                userId: dbSub.userId,
+                title: resolvedChangeType === 'upgrade'
+                    ? 'Subscription upgraded'
+                    : resolvedChangeType === 'downgrade'
+                        ? 'Subscription downgraded'
+                        : 'Subscription activated',
+                message: resolvedChangeType === 'upgrade'
+                    ? `User ${dbSub.userId} upgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`
+                    : resolvedChangeType === 'downgrade'
+                        ? `User ${dbSub.userId} downgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`
+                        : `User ${dbSub.userId} subscription ${providerSubscriptionId} is now active on ${dbSub.plan.name}.`,
+                templateKey: 'admin_notification',
+                variables: {
+                    planName: dbSub.plan.name,
+                    startedAt: new Date().toLocaleString(),
+                    transactionId: providerSubscriptionId,
+                },
+            });
+
+            Logger.info('Sent activation notifications from subscription.updated transition', {
+                subscriptionId: dbSub.id,
+                providerSubscriptionId,
+                userId: dbSub.userId,
+            });
+        } catch (err) {
+            Logger.warn('Failed to send activation notifications from subscription.updated transition', {
+                subscriptionId: dbSub.id,
+                providerSubscriptionId,
+                userId: dbSub.userId,
+                error: toError(err).message,
+            });
         }
     }
 
@@ -2472,6 +2699,23 @@ export class PaymentService {
 
             await updateSubscriptionLastPaymentAmount(dbSub.id);
 
+            if (dbSub.status === 'PENDING' && paymentResult.created) {
+                await prisma.subscription.update({
+                    where: { id: dbSub.id },
+                    data: { status: 'ACTIVE' },
+                });
+                dbSub = {
+                    ...dbSub,
+                    status: 'ACTIVE',
+                } as SubscriptionWithPlan;
+
+                Logger.info('Activated pending subscription after successful invoice payment', {
+                    subscriptionId,
+                    paymentIntentId,
+                    dbSubscriptionId: dbSub.id,
+                });
+            }
+
             // Refresh subscription expiry from the provider so renewal emails include an accurate next
             // renewal date even if our local record is stale.
             let refreshedExpiresAt: Date | null = dbSub.expiresAt ?? null;
@@ -2596,6 +2840,21 @@ export class PaymentService {
                             startedAt: new Date().toLocaleDateString(),
                             expiresAt: dbSub.expiresAt ? dbSub.expiresAt.toLocaleDateString() : undefined,
                         }
+                    });
+
+                    await sendAdminNotificationEmail({
+                        userId: dbSub.userId,
+                        title: changeType === 'upgrade' ? 'Subscription upgraded' : 'Subscription downgraded',
+                        message: changeType === 'upgrade'
+                            ? `User ${dbSub.userId} upgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`
+                            : `User ${dbSub.userId} downgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`,
+                        templateKey: 'admin_notification',
+                        variables: {
+                            planName: dbSub.plan.name,
+                            amount: `$${(invoice.amountPaid / 100).toFixed(2)}`,
+                            transactionId: paymentResult.payment.externalPaymentId || paymentIntentId || invoice.id,
+                            startedAt: new Date().toLocaleString(),
+                        },
                     });
                 } else {
                     Logger.info('Skipping duplicate change notification', {

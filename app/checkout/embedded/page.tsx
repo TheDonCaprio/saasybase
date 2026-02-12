@@ -157,6 +157,12 @@ function EmbeddedCheckoutContent() {
                         shortDescription: data.shortDescription,
                     });
                 } else {
+                    // When Stripe auto-pays the first invoice (e.g. customer credit covers the
+                    // amount after a cancellation), no PaymentElement is needed. Redirect directly.
+                    if (data.clientSecret === '__instant_activation__') {
+                        window.location.href = '/dashboard?purchase=success&provider=' + encodeURIComponent(data.provider || 'stripe');
+                        return;
+                    }
                     setClientSecret(data.clientSecret);
                     setProvider(data.provider || 'stripe');
                     setEmail(data.email || null);

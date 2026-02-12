@@ -1131,9 +1131,20 @@ export class StripePaymentProvider implements PaymentProvider {
             }, opts.dedupeKey ? { idempotencyKey: opts.dedupeKey } : undefined);
 
             const invoice = subscription.latest_invoice as Stripe.Invoice;
-            const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+            const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent | null;
 
+            // When customer credit covers the entire invoice (e.g. after a force-cancelled
+            // subscription with remaining credit), Stripe auto-pays the invoice and the
+            // PaymentIntent is null.  In that case the subscription is already active and
+            // there is nothing for the customer to confirm. Return a sentinel client secret
+            // so the frontend can detect this and redirect to success.
             if (!paymentIntent?.client_secret) {
+                if (subscription.status === 'active' || subscription.status === 'trialing') {
+                    return {
+                        clientSecret: '__instant_activation__',
+                        subscriptionId: subscription.id,
+                    };
+                }
                 throw new PaymentProviderError('Failed to generate client secret for subscription intent');
             }
 

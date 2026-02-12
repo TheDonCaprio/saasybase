@@ -153,24 +153,6 @@ export async function sendBillingNotification(
   // Send email if template specified
   if (templateKey && variables) {
     try {
-      const recentEmail = await prisma.emailLog.findFirst({
-        where: {
-          userId,
-          template: templateKey,
-          status: 'SENT',
-          createdAt: { gte: dedupeSince },
-        },
-        select: { id: true },
-      });
-      if (recentEmail) {
-        Logger.info('Skipping duplicate billing email (recent match)', {
-          userId,
-          templateKey,
-          emailLogId: recentEmail.id,
-        });
-        return { notificationCreated, emailSent: true };
-      }
-
       // Fetch user email
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -215,6 +197,29 @@ export async function sendBillingNotification(
 
       const siteName = emailVariables.siteName || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
 
+      const expectedSubject = `${siteName}: ${title}`;
+      const recentEmail = await prisma.emailLog.findFirst({
+        where: {
+          userId,
+          to: resolvedEmail,
+          template: templateKey,
+          subject: expectedSubject,
+          status: 'SENT',
+          createdAt: { gte: dedupeSince },
+        },
+        select: { id: true },
+      });
+      if (recentEmail) {
+        Logger.info('Skipping duplicate billing email (recent match)', {
+          userId,
+          templateKey,
+          emailLogId: recentEmail.id,
+          to: resolvedEmail,
+          subject: expectedSubject,
+        });
+        return { notificationCreated, emailSent: true };
+      }
+
       if (!emailVariables.siteLogo) {
         emailVariables.siteLogo = await getSiteLogo();
       }
@@ -222,7 +227,7 @@ export async function sendBillingNotification(
       await sendEmail({
         to: resolvedEmail,
         userId,
-        subject: `${siteName}: ${title}`, // Fallback subject
+        subject: expectedSubject, // Fallback subject
         text: message, // Fallback plain text
         templateKey,
         variables: emailVariables,
@@ -449,12 +454,18 @@ export async function sendAdminNotificationEmail(options: AdminNotificationOptio
     }
 
     const subjectTitle = emailVariables.eventTitle || options.title;
+    const rawTransactionId = typeof emailVariables.transactionId === 'string' ? emailVariables.transactionId.trim() : '';
+    const transactionSuffix = rawTransactionId ? ` [${rawTransactionId}]` : '';
+    const subjectWithContext = `${subjectTitle}${transactionSuffix}`;
 
     const dedupeSince = new Date(Date.now() - NOTIFICATION_DEDUPE_WINDOW_MS);
+    const expectedSubject = `${siteName}: ${subjectWithContext}`;
     const recentAdminEmail = await prisma.emailLog.findFirst({
       where: {
         to: adminEmail,
         template: options.templateKey || 'admin_notification',
+        subject: expectedSubject,
+        ...(options.userId ? { userId: options.userId } : null),
         status: 'SENT',
         createdAt: { gte: dedupeSince },
       },
@@ -471,7 +482,7 @@ export async function sendAdminNotificationEmail(options: AdminNotificationOptio
 
     await sendEmail({
       to: adminEmail,
-      subject: `${siteName}: ${subjectTitle}`,
+      subject: expectedSubject,
       text: options.message,
       templateKey: options.templateKey || 'admin_notification',
       variables: emailVariables,

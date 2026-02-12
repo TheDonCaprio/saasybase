@@ -8,7 +8,7 @@ import { getActiveCurrency } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
 import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../../lib/plans';
 import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
-import { sendBillingNotification } from '../../../../lib/notifications';
+import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
 import type { Prisma } from '@prisma/client';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
 import { findProviderByValue, getCurrentProviderKey, getIdByProvider } from '../../../../lib/utils/provider-ids';
@@ -435,6 +435,24 @@ export async function POST(req: NextRequest) {
             startedAt: now.toLocaleDateString(),
             expiresAt: expiresAtValue ? expiresAtValue.toLocaleDateString() : undefined,
             transactionId: (result.invoiceId || ctx.currentSubscription.id)
+          },
+        });
+
+        const adminTitle = isUpgrade ? 'Subscription upgraded' : 'Subscription downgraded';
+        const adminMessage = isUpgrade
+          ? `User ${ctx.userId} upgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`
+          : `User ${ctx.userId} downgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`;
+
+        await sendAdminNotificationEmail({
+          userId: ctx.userId,
+          title: adminTitle,
+          message: adminMessage,
+          templateKey: 'admin_notification',
+          variables: {
+            planName: ctx.targetPlan.name,
+            amount: formatCurrency(amountCents, getActiveCurrency()),
+            transactionId: result.invoiceId || ctx.currentSubscription.id,
+            startedAt: now.toLocaleString(),
           },
         });
       }

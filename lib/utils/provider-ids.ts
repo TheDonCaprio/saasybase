@@ -115,7 +115,7 @@ export function getCurrentProviderKey(): string {
  * Check if a provider supports one-time price creation.
  * Some providers don't use catalog price objects for one-time payments.
  * - Paystack: one-time payments pass amount directly (no price object)
- * - Razorpay: one-time payments use Payment Links (amount-based), not catalog prices/plans
+ * - Razorpay: one-time payments use Orders (amount-based), not catalog prices/plans
  */
 export function providerSupportsOneTimePrices(providerName: string): boolean {
 	const key = (providerName || '').toLowerCase();

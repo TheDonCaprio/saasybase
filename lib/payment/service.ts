@@ -231,6 +231,39 @@ export class PaymentService {
         // Check if this is a PaymentIntent from Elements
         // It should have metadata with userId and planId
         let userId = payload.userId || payload.metadata?.userId;
+        const orderId = payload.metadata?.orderId;
+
+        if (orderId) {
+            try {
+                const existingByOrder = await prisma.payment.findFirst({
+                    where: { externalSessionId: orderId },
+                    select: { id: true, externalPaymentId: true },
+                });
+                if (existingByOrder) {
+                    if (!existingByOrder.externalPaymentId || existingByOrder.externalPaymentId !== payload.id) {
+                        await prisma.payment.update({
+                            where: { id: existingByOrder.id },
+                            data: {
+                                externalPaymentId: payload.id,
+                                externalPaymentIds: this.mergeIdMap(null, this.providerKey, payload.id) ?? undefined,
+                            }
+                        });
+                    }
+                    Logger.info('Payment succeeded already recorded for order checkout', {
+                        id: payload.id,
+                        orderId,
+                        paymentId: existingByOrder.id,
+                    });
+                    return;
+                }
+            } catch (err) {
+                Logger.warn('Failed to resolve existing order payment on payment.succeeded', {
+                    id: payload.id,
+                    orderId,
+                    error: toError(err).message,
+                });
+            }
+        }
 
         // Fallback 1: resolve via provider customerId if present (e.g. Razorpay attaches customer_id).
         if (!userId) {
@@ -275,10 +308,12 @@ export class PaymentService {
             }
         }
 
-        // Fallback 3: use correlation IDs (e.g. Razorpay paymentLinkId/subscriptionId) to pull a checkout session
+        // Fallback 3: use correlation IDs (e.g. Razorpay paymentLinkId/subscriptionId/orderId) to pull a checkout session
         // and recover metadata/userId.
         if (!userId) {
-            const maybeSessionId = payload.metadata?.paymentLinkId || payload.metadata?.subscriptionId;
+            const maybeSessionId = payload.metadata?.paymentLinkId
+                || payload.metadata?.subscriptionId
+                || payload.metadata?.orderId;
             if (maybeSessionId) {
                 try {
                     const details = await this.provider.getCheckoutSession(maybeSessionId);
@@ -313,8 +348,9 @@ export class PaymentService {
         Logger.info('Handling payment.succeeded for Elements', { id: payload.id, userId });
 
         // Construct a fake session object to reuse handleCheckoutCompleted
+        const sessionId = typeof orderId === 'string' && orderId.trim().length > 0 ? orderId : payload.id;
         const session: StandardizedCheckoutSession = {
-            id: payload.id, // Use PI ID as session ID
+            id: sessionId, // Prefer order id for Razorpay to match checkout confirmations
             userId: userId,
             userEmail: undefined, // We might not have it easily here
             mode: 'payment', // Default to payment, subscriptions usually go through invoice.payment_succeeded
@@ -434,6 +470,20 @@ export class PaymentService {
         if (existing) {
             Logger.info('Skipping already-processed checkout', { sessionId: session.id, existingPaymentId: existing.id });
             return;
+        }
+        if (session.paymentIntentId) {
+            const existingByPaymentId = await prisma.payment.findFirst({
+                where: { externalPaymentId: session.paymentIntentId },
+                select: { id: true },
+            });
+            if (existingByPaymentId) {
+                Logger.info('Skipping already-processed checkout (payment id match)', {
+                    sessionId: session.id,
+                    paymentIntentId: session.paymentIntentId,
+                    existingPaymentId: existingByPaymentId.id,
+                });
+                return;
+            }
         }
 
         // Resolve Organization Context
@@ -876,9 +926,32 @@ export class PaymentService {
                     // Switch immediately (legacy behavior)
                     desiredStatus = 'ACTIVE';
 
+                    try {
+                        const existingProvider = this.getProviderForRecord(existingActive.paymentProvider);
+                        const existingProviderKey = existingActive.paymentProvider || existingProvider.name;
+                        const idMap = this.parseIdMap(existingActive.externalSubscriptionIds);
+                        const existingProviderSubId = idMap[existingProviderKey] || existingActive.externalSubscriptionId;
+
+                        if (existingProviderSubId) {
+                            await existingProvider.cancelSubscription(existingProviderSubId, true);
+                        } else {
+                            Logger.warn('Missing provider subscription id when performing immediate switch cancellation', {
+                                userId,
+                                dbSubscriptionId: existingActive.id,
+                                paymentProvider: existingActive.paymentProvider,
+                            });
+                        }
+                    } catch (err) {
+                        Logger.warn('Failed to cancel existing provider subscription during immediate switch', {
+                            userId,
+                            dbSubscriptionId: existingActive.id,
+                            error: toError(err).message,
+                        });
+                    }
+
                     await prisma.subscription.update({
                         where: { id: existingActive.id },
-                        data: { status: 'CANCELLED', canceledAt: new Date(), expiresAt: new Date() }
+                        data: { status: 'CANCELLED', canceledAt: new Date(), expiresAt: new Date(), cancelAtPeriodEnd: false }
                     });
                 }
             } else {
@@ -1398,6 +1471,7 @@ export class PaymentService {
         } else if (latestActive && latestActive.plan && latestActive.plan.autoRenew === true) {
             // Token top-up
             const tokensAdded = planToUse.tokenLimit || 0;
+            const isPlanSwitchFallback = Boolean(session.metadata?.prorationFallbackReason);
             const organizationContext = tokensAdded > 0 ? await this.resolveOrganizationContext(userId) : null;
             const workspaceTopupContext = organizationContext && organizationContext.role === 'OWNER' ? organizationContext : null;
 
@@ -1462,6 +1536,15 @@ export class PaymentService {
 
             // Send token top-up notification
             try {
+                if (isPlanSwitchFallback) {
+                    Logger.info('Skipping token top-up notifications for plan switch fallback', {
+                        userId,
+                        sessionId: session.id,
+                        reason: session.metadata?.prorationFallbackReason,
+                    });
+                    return;
+                }
+
                 const planTokenName = typeof planToUse.tokenName === 'string' ? planToUse.tokenName.trim() : '';
                 const tokenName = planTokenName || await getDefaultTokenLabel();
                 const tokenLabel = tokenName.charAt(0).toUpperCase() + tokenName.slice(1);
@@ -1658,12 +1741,28 @@ export class PaymentService {
             const transactionId = sub.latestInvoice?.paymentIntentId ?? sub.id;
             const formattedAmount = `$${(plan.priceCents / 100).toFixed(2)}`;
 
-            Logger.info('Sending admin notification email', { userId, planName: plan.name, amount: formattedAmount });
+            const adminTitle = isUpgrade
+                ? 'Subscription upgraded'
+                : isDowngrade
+                    ? 'Subscription downgraded'
+                    : 'New subscription purchase';
+            const adminMessage = isUpgrade
+                ? `User ${userId} upgraded to ${plan.name}. Subscription: ${sub.id}`
+                : isDowngrade
+                    ? `User ${userId} downgraded to ${plan.name}. Subscription: ${sub.id}`
+                    : `User ${userId} purchased recurring ${plan.name}. Subscription: ${sub.id}`;
+
+            Logger.info('Sending admin notification email', {
+                userId,
+                planName: plan.name,
+                amount: formattedAmount,
+                change: isUpgrade ? 'upgrade' : isDowngrade ? 'downgrade' : 'new',
+            });
 
             await sendAdminNotificationEmail({
                 userId,
-                title: 'New subscription purchase',
-                message: `User ${userId} purchased recurring ${plan.name}. Subscription: ${sub.id}`,
+                title: adminTitle,
+                message: adminMessage,
                 templateKey: 'admin_notification',
                 variables: {
                     planName: plan.name,
@@ -2088,6 +2187,18 @@ export class PaymentService {
         const userId = dbSub.userId;
 
         try {
+            const recentCancelledRecurring = await prisma.subscription.findFirst({
+                where: {
+                    userId,
+                    id: { not: dbSub.id },
+                    status: 'CANCELLED',
+                    canceledAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+                    plan: { autoRenew: true },
+                },
+                select: { id: true },
+            });
+            const suppressActivationNotifications = Boolean(recentCancelledRecurring);
+
             // Grant tokens if plan has a token limit
             if (plan.tokenLimit && plan.tokenLimit > 0) {
                 // Check if this is an organization subscription
@@ -2128,19 +2239,21 @@ export class PaymentService {
                 ? dbSub.expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
                 : '';
 
-            await sendBillingNotification({
-                userId,
-                title: 'Subscription Activated',
-                message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
-                templateKey: 'subscription_activated',
-                variables: {
-                    planName: plan.name,
-                    tokenBalance: String(plan.tokenLimit || 0),
-                    tokenName,
-                    startedAt,
-                    expiresAt
-                }
-            });
+            if (!suppressActivationNotifications) {
+                await sendBillingNotification({
+                    userId,
+                    title: 'Subscription Activated',
+                    message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
+                    templateKey: 'subscription_activated',
+                    variables: {
+                        planName: plan.name,
+                        tokenBalance: String(plan.tokenLimit || 0),
+                        tokenName,
+                        startedAt,
+                        expiresAt
+                    }
+                });
+            }
 
             // Send admin notification for new subscription
             // Note: sendAdminNotificationEmail internally checks SEND_ADMIN_BILLING_EMAILS
@@ -2149,11 +2262,13 @@ export class PaymentService {
                 select: { email: true, name: true }
             });
 
-            await sendAdminNotificationEmail({
-                title: `New Subscription: ${plan.name}`,
-                message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}\nStarted: ${startedAt}\nExpires: ${expiresAt}`,
-                userId
-            });
+            if (!suppressActivationNotifications) {
+                await sendAdminNotificationEmail({
+                    title: `New Subscription: ${plan.name}`,
+                    message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}\nStarted: ${startedAt}\nExpires: ${expiresAt}`,
+                    userId
+                });
+            }
 
             Logger.info('Granted subscription access', {
                 subscriptionId: dbSub.id,

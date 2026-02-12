@@ -286,7 +286,7 @@ You received this email because you created an account. You can manage your emai
         <strong>Details:</strong><br>
         Plan: {{planName}}<br>
         New expiry: {{newExpiry}}<br>
-        Tokens added: {{tokensAdded}}
+        {{tokenName}} added: {{tokensAdded}}
       </div>
       <p>If you have questions about this change, contact us at {{supportEmail}}.</p>
       <p><a href="{{dashboardUrl}}" class="button">Go to Dashboard</a></p>
@@ -304,7 +304,7 @@ You received this email because you created an account. You can manage your emai
 Your {{planName}} subscription has been extended.
 
 New expiry: {{newExpiry}}
-Tokens added: {{tokensAdded}}
+{{tokenName}} added: {{tokensAdded}}
 
 Visit your dashboard: {{dashboardUrl}}
 
@@ -452,9 +452,9 @@ Transaction ID: {{transactionId}}`,
     },
     {
       key: 'token_topup',
-      name: 'Token Top-Up',
-      description: 'Sent when user purchases additional tokens',
-      subject: '{{siteName}}: {{tokenAmount}} Tokens Added to Your Account',
+      name: 'Balance Top-Up',
+      description: 'Sent when a user purchases additional balance/credits',
+      subject: '{{siteName}}: {{tokenAmount}} {{tokenName}} Added to Your Account',
       active: true,
       htmlBody: `
 <!DOCTYPE html>
@@ -478,18 +478,18 @@ Transaction ID: {{transactionId}}`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>💎 Tokens Added!</h1>
+      <h1>💎 {{tokenName}} Added!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
-      <p>Your token purchase was successful! We've added <strong>{{tokenAmount}} {{tokenName}}</strong> to your account.</p>
+      <p>Your {{tokenName}} purchase was successful! We've added <strong>{{tokenAmount}} {{tokenName}}</strong> to your account.</p>
       <div class="highlight">
         <strong>Payment Details:</strong><br>
         Amount: {{amount}}<br>
         Transaction ID: {{transactionId}}
       </div>
-      <p>Your recurring subscription continues unchanged, and these tokens are ready to use immediately.</p>
-      <p><a href="{{dashboardUrl}}" class="button">Use Your Tokens</a></p>
+      <p>Your recurring subscription continues unchanged, and these {{tokenName}} are ready to use immediately.</p>
+      <p><a href="{{dashboardUrl}}" class="button">Use Your {{tokenName}}</a></p>
       <p>Thank you for your continued support!</p>
       <p>Best regards,<br>The {{siteName}} Team</p>
     </div>
@@ -502,13 +502,13 @@ Transaction ID: {{transactionId}}`,
       `,
       textBody: `Hi {{firstName}},
 
-Your token purchase was successful! We've added {{tokenAmount}} {{tokenName}} to your account.
+Your {{tokenName}} purchase was successful! We've added {{tokenAmount}} {{tokenName}} to your account.
 
 Payment Details:
 Amount: {{amount}}
 Transaction ID: {{transactionId}}
 
-Your recurring subscription continues unchanged, and these tokens are ready to use immediately.
+Your recurring subscription continues unchanged, and these {{tokenName}} are ready to use immediately.
 
 Visit your dashboard: {{dashboardUrl}}
 
@@ -531,8 +531,8 @@ The {{siteName}} Team`,
     },
     {
       key: 'tokens_credited',
-      name: 'Tokens Credited',
-      description: 'Sent when an admin credits tokens to a user account',
+      name: 'Balance Credited',
+      description: 'Sent when an admin credits balance/credits to a user account',
       subject: '{{siteName}}: {{tokenDelta}} {{tokenName}} Credited',
       active: true,
       htmlBody: `
@@ -618,8 +618,8 @@ Need help? Reach us at {{supportEmail}}.
     },
     {
       key: 'tokens_debited',
-      name: 'Tokens Debited',
-      description: 'Sent when an admin debits tokens from a user account',
+      name: 'Balance Debited',
+      description: 'Sent when an admin debits balance/credits from a user account',
       subject: '{{siteName}}: {{tokenDelta}} {{tokenName}} Debited',
       active: true,
       htmlBody: `
@@ -745,8 +745,8 @@ You can review your account activity anytime at {{dashboardUrl}}. If something l
         <div class="details">
           <div class="detail-row"><span>Plan duration</span><strong>{{durationHours}} hours</strong></div>
           <div class="detail-row"><span>Access through</span><strong>{{expiresAt}}</strong></div>
-          <div class="detail-row"><span>Tokens added</span><strong>{{tokenDelta}}</strong></div>
-          <div class="detail-row"><span>Current token balance</span><strong>{{tokenBalance}}</strong></div>
+          <div class="detail-row"><span>{{tokenName}} added</span><strong>{{tokenDelta}}</strong></div>
+          <div class="detail-row"><span>Current {{tokenName}} balance</span><strong>{{tokenBalance}}</strong></div>
         </div>
         <p>Jump back into the app to explore everything that comes with this plan.</p>
         <p><a href="{{dashboardUrl}}" class="button">Go to Dashboard</a></p>
@@ -767,8 +767,8 @@ An administrator just assigned the {{planName}} plan to your {{siteName}} accoun
 
 Duration: {{durationHours}} hours
 Access through: {{expiresAt}}
-Tokens added: {{tokenDelta}}
-Current balance: {{tokenBalance}}
+{{tokenName}} added: {{tokenDelta}}
+Current {{tokenName}} balance: {{tokenBalance}}
 
 You can start using your plan right away: {{dashboardUrl}}
 
@@ -780,6 +780,7 @@ Questions? Contact us at {{supportEmail}}.
         planName: 'Name of assigned plan',
         durationHours: 'Plan duration in hours',
         expiresAt: 'Plan expiry date/time',
+        tokenName: 'Name of the token/credit system (e.g., tokens, credits, points)',
         tokenDelta: 'Tokens granted during assignment',
         tokenBalance: 'User token balance after assignment',
         dashboardUrl: 'Link to dashboard',

@@ -520,8 +520,8 @@ async function handleEmbeddedCheckout(req: NextRequest) {
         const providerKey = getCurrentProviderKey();
         let customerId = getIdByProvider(user.externalCustomerIds, providerKey, user.externalCustomerId) ?? undefined;
 
-        // Razorpay checkout in this app is redirect-only (Payment Links / subscription short_url) and does not
-        // require creating/updating a Razorpay Customer. Skipping customer sync avoids failures like:
+        // Razorpay checkout.js (orders/subscriptions) does not require creating/updating a Razorpay Customer.
+        // Skipping customer sync avoids failures like:
         // - updateCustomer transient 5xx
         // - createCustomer 400 "Customer already exists for the merchant"
         const shouldManageCustomer = providerName !== 'razorpay';
@@ -579,6 +579,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
         const metadata: Record<string, string> = { userId };
         if (typeof planId === 'string') metadata.planId = planId;
         if (typeof priceId === 'string') metadata.priceId = priceId;
+        metadata.checkoutMode = mode === 'subscription' ? 'subscription' : 'payment';
 
         if (originalPriceIdForMetadata && discountedPriceIdForMetadata) {
             metadata.originalPriceId = originalPriceIdForMetadata;
@@ -607,11 +608,8 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             metadata.originalPriceCents = String(originalAmountCents);
         }
 
-        // Some hosted checkouts (notably Razorpay Payment Links and subscription short_url)
-        // can redirect back but do not provide a stable session/payment-intent identifier that
-        // our embedded-confirm flow understands. For these, redirect to a lightweight return page
-        // to avoid duplicate dashboard loads; the page can still link back to the dashboard where
-        // we do a recent-activation poll.
+        // Some providers (including Razorpay checkout.js) redirect back through a provider callback.
+        // Use a lightweight return page to finalize confirmation and avoid duplicate dashboard loads.
         const successUrl = providerName === 'razorpay'
             ? `${base}/checkout/razorpay/callback?provider=razorpay`
             : `${base}/dashboard?purchase=success&payment_intent=${encodeURIComponent(dedupeKey)}&provider=${paymentService.provider.name}`;
@@ -657,29 +655,6 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
         // Paddle integration is redirect-only (no embedded Elements/clientSecret flow).
         if (providerName === 'paddle') {
-            const session = await paymentService.provider.createCheckoutSession(typedOpts);
-            return NextResponse.json({
-                redirect: true,
-                url: session.url,
-                sessionId: session.id,
-                provider: providerName,
-                amount: resolvedAmount,
-                originalAmount: originalAmountCents,
-                discountCents: discountCentsApplied,
-                couponCode: appliedCoupon?.code ?? null,
-                currency: currency || 'USD',
-                planName,
-                email: user.email,
-                metadata,
-                tokenLimit,
-                tokenName,
-                durationHours,
-                shortDescription,
-            });
-        }
-
-        // Razorpay one-time payments use Payment Links (redirect-only).
-        if (providerName === 'razorpay' && normalizedMode !== 'subscription') {
             const session = await paymentService.provider.createCheckoutSession(typedOpts);
             return NextResponse.json({
                 redirect: true,

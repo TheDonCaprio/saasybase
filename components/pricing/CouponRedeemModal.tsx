@@ -19,8 +19,10 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
   const [success, setSuccess] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (typeof document === 'undefined') return;
     const el = document.createElement('div');
     el.className = 'coupon-modal-layer';
@@ -28,6 +30,7 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
     containerRef.current = el;
     setReady(true);
     return () => {
+      mountedRef.current = false;
       if (containerRef.current && containerRef.current.parentNode) {
         containerRef.current.parentNode.removeChild(containerRef.current);
       }
@@ -58,16 +61,23 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
         throw new Error(data.error || 'Failed to redeem coupon');
       }
 
-      setSuccess(true);
-      setCouponCode('');
+      if (mountedRef.current) {
+        setSuccess(true);
+        setCouponCode('');
+      }
       setTimeout(() => {
+        if (!mountedRef.current) return;
         onClose();
         setSuccess(false);
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

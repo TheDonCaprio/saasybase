@@ -2,8 +2,9 @@
  * Razorpay Payment Provider Implementation
  *
  * Goals ("minimum working" for this repo):
- * - Redirect checkout for one-time payments (Payment Links)
- * - Redirect checkout for subscriptions (Subscription short_url)
+ * - Embedded checkout for one-time payments (Orders + checkout.js)
+ * - Embedded checkout for subscriptions (Subscriptions + checkout.js)
+ * - Redirect checkout for legacy flows (Payment Links / subscription short_url)
  * - Webhook verification + normalization into our StandardizedWebhookEvent
  * - Subscription cancel/resume + refunds
  *
@@ -62,6 +63,15 @@ type RazorpaySubscription = {
 	current_start?: number;
 	current_end?: number;
 	paid_count?: number;
+	notes?: Record<string, string | number | boolean>;
+};
+
+type RazorpayOrder = {
+	id: string; // order_...
+	amount: number;
+	currency: string;
+	status?: string; // created/paid/attempted
+	receipt?: string;
 	notes?: Record<string, string | number | boolean>;
 };
 
@@ -471,6 +481,24 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			};
 		}
 
+		if (sessionId.startsWith('order_')) {
+			const order = await this.request<RazorpayOrder>(`/orders/${encodeURIComponent(sessionId)}`, { method: 'GET' });
+			const metadata = toStringRecord(order.notes);
+			const status = (order.status || '').toLowerCase();
+			return {
+				id: order.id,
+				clientReferenceId: metadata?.userId,
+				metadata,
+				paymentIntentId: order.id,
+				subscriptionId: undefined,
+				amountTotal: typeof order.amount === 'number' ? order.amount : undefined,
+				amountSubtotal: typeof order.amount === 'number' ? order.amount : undefined,
+				currency: order.currency,
+				paymentStatus: status === 'paid' ? 'paid' : 'unpaid',
+				lineItems: metadata?.priceId ? [{ priceId: metadata.priceId }] : undefined,
+			};
+		}
+
 		if (sessionId.startsWith('sub_')) {
 			const sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(sessionId)}`, { method: 'GET' });
 			const metadata = toStringRecord(sub.notes);
@@ -637,11 +665,13 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			|| toStringRecord(subscriptionEntity?.notes)
 			|| undefined;
 
-		// Razorpay doesn't always include payment_link/subscription entities on payment.captured.
+		const paymentLinkId = typeof paymentEntity?.payment_link_id === 'string' ? paymentEntity.payment_link_id : undefined;
+		const subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
+		const orderId = typeof paymentEntity?.order_id === 'string' ? paymentEntity.order_id : undefined;
+
+		// Razorpay doesn't always include payment_link/subscription/order entities on payment.captured.
 		// When notes are missing, fetch the related object to recover notes/userId.
 		if (!notes && (eventName === 'payment.captured' || eventName === 'payment.failed')) {
-			const paymentLinkId = typeof paymentEntity?.payment_link_id === 'string' ? paymentEntity.payment_link_id : undefined;
-			const subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
 
 			if (paymentLinkId) {
 				try {
@@ -664,11 +694,19 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 					// Best-effort only.
 				}
 			}
+
+			if (!notes && orderId) {
+				try {
+					const order = await this.request<unknown>(`/orders/${encodeURIComponent(orderId)}`, { method: 'GET' });
+					const orderRecord = asRecord(order);
+					const orderNotes = toStringRecord(orderRecord?.notes);
+					if (orderNotes) notes = orderNotes;
+				} catch {
+					// Best-effort only.
+				}
+			}
 		}
 
-		const paymentLinkId = typeof paymentEntity?.payment_link_id === 'string' ? paymentEntity.payment_link_id : undefined;
-		const subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
-		const orderId = typeof paymentEntity?.order_id === 'string' ? paymentEntity.order_id : undefined;
 		const invoiceId = typeof paymentEntity?.invoice_id === 'string' ? paymentEntity.invoice_id : undefined;
 		const customerId = typeof paymentEntity?.customer_id === 'string' ? paymentEntity.customer_id : undefined;
 
@@ -1125,8 +1163,40 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 	// ============== Elements / Embedded Checkout ==============
 
 	async createPaymentIntent(_opts: CheckoutOptions): Promise<{ clientSecret: string; paymentIntentId: string }> {
-		void _opts;
-		throw new PaymentProviderError('Razorpay embedded checkout is not implemented yet');
+		const opts = _opts;
+		if (!opts.amount || !Number.isFinite(opts.amount) || opts.amount <= 0) {
+			throw new PaymentProviderError('Razorpay payment checkout requires a positive amount');
+		}
+
+		const currency = String(opts.currency || process.env.RAZORPAY_CURRENCY || 'INR')
+			.trim()
+			.replace(/^['"]|['"]$/g, '')
+			.toUpperCase();
+		const metadata: Record<string, string> = {
+			userId: opts.userId,
+			checkoutMode: 'payment',
+			...(opts.metadata || {}),
+		};
+		if (opts.dedupeKey) metadata.dedupeKey = opts.dedupeKey;
+		if (opts.priceId) metadata.priceId = opts.priceId;
+
+		const payload: Record<string, unknown> = {
+			amount: Math.round(opts.amount),
+			currency,
+			receipt: opts.dedupeKey || metadata.dedupeKey || undefined,
+			payment_capture: 1,
+			notes: metadata,
+		};
+
+		const res = await this.request<RazorpayEnvelope<RazorpayOrder>>('/orders', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+
+		return {
+			clientSecret: res.id,
+			paymentIntentId: res.id,
+		};
 	}
 
 	async createSubscriptionIntent(_opts: CheckoutOptions): Promise<{ clientSecret: string; subscriptionId: string }> {
@@ -1184,7 +1254,19 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 	}
 
 	async getPaymentIntent(_paymentIntentId: string): Promise<PaymentIntentDetails> {
-		void _paymentIntentId;
-		throw new PaymentProviderError('Razorpay embedded checkout is not implemented yet');
+		if (!_paymentIntentId) throw new PaymentProviderError('Missing Razorpay order id');
+		const order = await this.request<RazorpayOrder>(`/orders/${encodeURIComponent(_paymentIntentId)}`, { method: 'GET' });
+		const status = (order.status || '').toLowerCase();
+		return {
+			id: order.id,
+			status: status === 'paid'
+				? 'succeeded'
+				: status === 'attempted'
+					? 'processing'
+					: 'requires_payment_method',
+			amount: typeof order.amount === 'number' ? order.amount : 0,
+			currency: order.currency || 'INR',
+			metadata: toStringRecord(order.notes),
+		};
 	}
 }

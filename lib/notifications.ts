@@ -6,6 +6,7 @@ import { SETTING_DEFAULTS, SETTING_KEYS } from './settings';
 import { EmailVariables } from './email-templates';
 
 const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {
@@ -101,9 +102,27 @@ export async function sendBillingNotification(
 
   let notificationCreated = false;
   let emailSent = false;
+  const dedupeSince = new Date(Date.now() - NOTIFICATION_DEDUPE_WINDOW_MS);
 
   try {
     Logger.info('sendBillingNotification invoked', { userId, title, templateKey, variablesProvided: !!variables });
+    const existing = await prisma.notification.findFirst({
+      where: {
+        userId,
+        title,
+        message,
+        createdAt: { gte: dedupeSince },
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      Logger.info('Skipping duplicate billing notification (recent match)', {
+        userId,
+        title,
+        notificationId: existing.id,
+      });
+      notificationCreated = true;
+    } else {
     // Create in-app notification
     const notification = await prisma.notification.create({
       data: {
@@ -123,6 +142,7 @@ export async function sendBillingNotification(
       title,
       templateKey,
     });
+    }
   } catch (error) {
     Logger.error('Failed to create billing notification', {
       userId,
@@ -133,6 +153,24 @@ export async function sendBillingNotification(
   // Send email if template specified
   if (templateKey && variables) {
     try {
+      const recentEmail = await prisma.emailLog.findFirst({
+        where: {
+          userId,
+          template: templateKey,
+          status: 'SENT',
+          createdAt: { gte: dedupeSince },
+        },
+        select: { id: true },
+      });
+      if (recentEmail) {
+        Logger.info('Skipping duplicate billing email (recent match)', {
+          userId,
+          templateKey,
+          emailLogId: recentEmail.id,
+        });
+        return { notificationCreated, emailSent: true };
+      }
+
       // Fetch user email
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -411,6 +449,25 @@ export async function sendAdminNotificationEmail(options: AdminNotificationOptio
     }
 
     const subjectTitle = emailVariables.eventTitle || options.title;
+
+    const dedupeSince = new Date(Date.now() - NOTIFICATION_DEDUPE_WINDOW_MS);
+    const recentAdminEmail = await prisma.emailLog.findFirst({
+      where: {
+        to: adminEmail,
+        template: options.templateKey || 'admin_notification',
+        status: 'SENT',
+        createdAt: { gte: dedupeSince },
+      },
+      select: { id: true },
+    });
+    if (recentAdminEmail) {
+      Logger.info('Skipping duplicate admin email (recent match)', {
+        adminEmail,
+        templateKey: options.templateKey || 'admin_notification',
+        emailLogId: recentAdminEmail.id,
+      });
+      return true;
+    }
 
     await sendEmail({
       to: adminEmail,

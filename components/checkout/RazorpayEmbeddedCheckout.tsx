@@ -11,7 +11,8 @@ declare global {
 
 interface RazorpayOptions {
     key: string;
-    subscription_id: string;
+    subscription_id?: string;
+    order_id?: string;
     name?: string;
     description?: string;
     image?: string;
@@ -40,6 +41,7 @@ export default function RazorpayEmbeddedCheckout({
 }: CheckoutComponentProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const isSubscription = metadata?.checkoutMode === 'subscription' || clientSecret.startsWith('sub_');
 
     const handleCheckout = () => {
         const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -54,7 +56,7 @@ export default function RazorpayEmbeddedCheckout({
         }
 
         if (!clientSecret) {
-            setError('Missing subscription details');
+            setError('Missing checkout details');
             return;
         }
 
@@ -65,11 +67,13 @@ export default function RazorpayEmbeddedCheckout({
 
         const options: RazorpayOptions = {
             key: keyId,
-            subscription_id: clientSecret,
-            name: metadata?.planName || metadata?.planId || 'Subscription',
-            description: 'Complete your subscription',
+            subscription_id: isSubscription ? clientSecret : undefined,
+            order_id: isSubscription ? undefined : clientSecret,
+            name: metadata?.planName || metadata?.planId || (isSubscription ? 'Subscription' : 'Payment'),
+            description: isSubscription ? 'Complete your subscription' : 'Complete your payment',
             callback_url: callbackUrl,
             prefill: {
+                name: metadata?.customerName || undefined,
                 email: email || undefined,
             },
             notes: metadata,
@@ -96,7 +100,11 @@ export default function RazorpayEmbeddedCheckout({
     return (
         <div className="w-full space-y-6">
             <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                <p>Click below to authorize your subscription with Razorpay.</p>
+                <p>
+                    {isSubscription
+                        ? 'Click below to authorize your subscription with Razorpay.'
+                        : 'Click below to complete your payment with Razorpay.'}
+                </p>
             </div>
 
             <button

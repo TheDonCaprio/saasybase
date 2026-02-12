@@ -402,6 +402,9 @@ export async function PATCH(
       const assignedUser = result.updatedUser;
 
       const siteName = (await getSiteName()) || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+      const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
+      const tokenName = planTokenName || await getDefaultTokenLabel();
+
       await sendBillingNotification({
         userId: params.userId,
         title: 'Plan Assigned',
@@ -411,6 +414,7 @@ export async function PATCH(
           planName: plan.name,
           durationHours: String(plan.durationHours),
           expiresAt: result.subscription.expiresAt.toISOString(),
+          tokenName,
           tokenDelta: String(plan.tokenLimit ?? 0),
           tokenBalance: String(assignedUser.tokenBalance),
           siteName,

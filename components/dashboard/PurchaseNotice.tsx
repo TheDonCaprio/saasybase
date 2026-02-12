@@ -35,6 +35,7 @@ export function PurchaseNotice() {
   const router = useRouter();
   const pathname = usePathname();
   const [message, setMessage] = useState<PurchaseMessage | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const hasShownRef = useRef(false);
 
   const purchase = (params?.get('purchase') || '').toLowerCase();
@@ -88,6 +89,7 @@ export function PurchaseNotice() {
         return;
       }
 
+      setIsLoading(true);
       try {
         const res = await fetch(`/api/dashboard/payments?search=${encodeURIComponent(paymentId)}&limit=1&count=false`);
         const data = await res.json().catch(() => null) as { payments?: Array<Record<string, unknown>> } | null;
@@ -115,6 +117,8 @@ export function PurchaseNotice() {
         });
       } catch {
         if (!cancelled) setMessage(baseMessage);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -137,6 +141,20 @@ export function PurchaseNotice() {
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     router.replace(nextUrl);
   }, [message, params, pathname, router]);
+
+  // Loading state while fetching payment details
+  if (isLoading && shouldShow && !message) {
+    return (
+      <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 dark:border-slate-800/70 dark:bg-slate-950/40 px-4 py-3 text-sm shadow-sm mb-4 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 rounded-full border-2 border-slate-300 dark:border-slate-700 border-t-blue-600 dark:border-t-blue-400 animate-spin" />
+          <span className="text-slate-700 dark:text-slate-300">
+            <span className="font-semibold">Confirming your payment...</span> Please wait while we verify your purchase details.
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (!message) return null;
 

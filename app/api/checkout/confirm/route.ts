@@ -20,20 +20,46 @@ function jsonError(message: string, status: number, code: string) {
 async function resolveRazorpaySessionId(paymentId: string): Promise<string | null> {
   const keyId = process.env.RAZORPAY_KEY_ID || '';
   const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
-  if (!keyId || !keySecret) return null;
+  if (!keyId || !keySecret) {
+    Logger.warn('Razorpay credentials missing for session resolution', { paymentId });
+    return null;
+  }
 
   try {
     const auth = Buffer.from(`${keyId}:${keySecret}`, 'utf8').toString('base64');
     const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Basic ${auth}` },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      Logger.warn('Razorpay API returned non-OK status', { paymentId, status: res.status });
+      return null;
+    }
     const data = await res.json().catch(() => null) as Record<string, unknown> | null;
-    if (!data || typeof data !== 'object') return null;
+    if (!data || typeof data !== 'object') {
+      Logger.warn('Razorpay API returned invalid data', { paymentId });
+      return null;
+    }
+    
+    Logger.debug('Razorpay payment data fetched', { 
+      paymentId, 
+      hasSubscriptionId: !!data.subscription_id,
+      hasPaymentLinkId: !!data.payment_link_id,
+      hasOrderId: !!data.order_id,
+      status: data.status,
+      method: data.method,
+    });
+    
     if (typeof data.subscription_id === 'string' && data.subscription_id) return data.subscription_id;
     if (typeof data.payment_link_id === 'string' && data.payment_link_id) return data.payment_link_id;
+    if (typeof data.order_id === 'string' && data.order_id) return data.order_id;
+    
+    Logger.warn('Razorpay payment missing subscription_id, payment_link_id, and order_id', { 
+      paymentId,
+      dataKeys: Object.keys(data).slice(0, 20)
+    });
     return null;
-  } catch {
+  } catch (err) {
+    Logger.warn('Razorpay session resolution failed', { paymentId, error: toError(err).message });
     return null;
   }
 }
@@ -81,6 +107,7 @@ export async function GET(req: NextRequest) {
     let sessionUserId: string | undefined;
 
     if (paymentId) {
+      // First check: exact match by externalPaymentId
       const existing = await prisma.payment.findFirst({
         where: { userId, externalPaymentId: paymentId },
         include: { plan: true, subscription: { include: { plan: true } } }
@@ -96,9 +123,53 @@ export async function GET(req: NextRequest) {
           plan: existing.subscription?.plan?.name || existing.plan?.name || null,
         });
       }
+      
+      // Second check: recent payment fallback (check BEFORE attempting API resolution)
+      // This catches payments created by webhook while we're polling
+      if (sinceParam) {
+        const sinceMs = Number(sinceParam);
+        if (Number.isFinite(sinceMs) && sinceMs > 0) {
+          const sinceDate = new Date(sinceMs);
+          const recentPayment = await prisma.payment.findFirst({
+            where: {
+              userId,
+              createdAt: { gte: sinceDate },
+              paymentProvider: 'razorpay',
+              OR: [
+                { externalPaymentId: paymentId },
+                { externalPaymentId: null },
+              ],
+            },
+            orderBy: { createdAt: 'desc' },
+            include: { plan: true, subscription: { include: { plan: true } } }
+          });
+          
+          if (recentPayment) {
+            // FALLBACK: Using recent payment since exact match not found yet
+            // This might happen if webhook hasn't created Payment record with exact externalPaymentId
+            Logger.warn('Using recent payment fallback - exact payment_id match not found', { 
+              paymentId: recentPayment.id, 
+              externalPaymentId: recentPayment.externalPaymentId,
+              searchedForPaymentId: paymentId,
+              riskLevel: recentPayment.externalPaymentId === paymentId ? 'LOW' : 'MEDIUM',
+            });
+            const isTokenTopupPayment = !recentPayment.subscriptionId && recentPayment.plan && recentPayment.plan.autoRenew === false;
+            return NextResponse.json({
+              ok: true,
+              completed: true,
+              topup: isTokenTopupPayment,
+              paymentId: recentPayment.id,
+              createdAt: recentPayment.createdAt,
+              plan: recentPayment.subscription?.plan?.name || recentPayment.plan?.name || null,
+            });
+          }
+        }
+      }
     }
 
     if (!sessionId && paymentId) {
+      // Third check: attempt to resolve session from Razorpay API
+      // (This often fails for subscription payments as they don't include subscription_id/payment_link_id)
       sessionId = await resolveRazorpaySessionId(paymentId);
       if (!sessionId) {
         Logger.warn('Checkout confirm could not resolve Razorpay session from payment_id', { paymentId });

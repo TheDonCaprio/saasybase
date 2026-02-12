@@ -221,7 +221,7 @@ function EmbeddedCheckoutContent() {
                             <div className="px-8 py-6 border-b border-slate-200/60 dark:border-slate-800/60">
                                 <h1 className="text-xl font-bold text-slate-900 dark:text-white">Complete payment in Razorpay</h1>
                                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                                    Razorpay doesn’t always redirect back after subscription checkout. Keep this tab open — we’ll detect activation.
+                                    Razorpay doesn’t always redirect back after checkout. Keep this tab open — we’ll detect your payment status.
                                 </p>
                             </div>
                             <div className="px-8 py-6 space-y-4">

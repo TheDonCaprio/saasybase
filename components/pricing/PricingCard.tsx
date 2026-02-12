@@ -192,7 +192,21 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
   const { isSignedIn } = useUser();
   const wasSignedInRef = useRef(isSignedIn);
   const authFlowActiveRef = useRef(false);
+  const mountedRef = useRef(false);
   const [oneTimeRenewalResetsTokens, setOneTimeRenewalResetsTokens] = useState<boolean>(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const setIfMounted = useCallback(<T,>(setter: React.Dispatch<React.SetStateAction<T>>) => {
+    return (value: React.SetStateAction<T>) => {
+      if (mountedRef.current) setter(value);
+    };
+  }, []);
 
   const loadOneTimeRenewalTokenPolicy = useCallback(async (): Promise<boolean> => {
     try {
@@ -201,10 +215,10 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
       const j: unknown = await res.json();
       const r = asRecord(j);
       const value = r?.oneTimeRenewalResetsTokens === true;
-      setOneTimeRenewalResetsTokens(value);
+      setIfMounted(setOneTimeRenewalResetsTokens)(value);
       return value;
     } catch {
-      setOneTimeRenewalResetsTokens(false);
+      setIfMounted(setOneTimeRenewalResetsTokens)(false);
       return false;
     }
   }, []);
@@ -249,15 +263,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
 
   async function fetchAvailableCoupons(): Promise<CouponOption[]> {
     if (couponsCache.current) return couponsCache.current;
-    setLoadingCoupons(true);
-    setCouponError(null);
+    setIfMounted(setLoadingCoupons)(true);
+    setIfMounted(setCouponError)(null);
     try {
       const res = await fetch('/api/dashboard/coupons');
       const json = await res.json().catch(() => null) as unknown;
       if (!res.ok) {
         const obj = asRecord(json);
         const message = typeof obj?.error === 'string' ? obj.error : 'Failed to load coupons';
-        setCouponError(message);
+        setIfMounted(setCouponError)(message);
         showToast(message, 'error');
         couponsCache.current = [];
         return [];
@@ -293,10 +307,10 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
       return usable;
     } catch (error) {
       console.error('Failed to fetch coupons', error);
-      setCouponError('Unable to load coupons right now.');
+      setIfMounted(setCouponError)('Unable to load coupons right now.');
       return [];
     } finally {
-      setLoadingCoupons(false);
+      setIfMounted(setLoadingCoupons)(false);
     }
   }
 
@@ -306,9 +320,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
       checkout();
       return;
     }
-    setCouponOptions(coupons);
-    setSelectedCouponId(coupons[0]?.id ?? null);
-    setShowCouponModal(true);
+    setIfMounted(setCouponOptions)(coupons);
+    setIfMounted(setSelectedCouponId)(coupons[0]?.id ?? null);
+    setIfMounted(setShowCouponModal)(true);
   }
 
   // Animate extend modal visibility to avoid flash on mount
@@ -466,9 +480,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
   }
 
   async function openProrationFlow() {
-    setProrationError(null);
-    setProrationPreview(null);
-    setProrationLoading(true);
+    setIfMounted(setProrationError)(null);
+    setIfMounted(setProrationPreview)(null);
+    setIfMounted(setProrationLoading)(true);
     checkoutOverridesRef.current = null;
     try {
       const res = await fetch(`/api/subscription/proration?planId=${plan.id}`);
@@ -481,7 +495,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
           return;
         }
         const message = typeof obj?.error === 'string' ? obj.error : 'Unable to build proration preview.';
-        setProrationError(message);
+        setIfMounted(setProrationError)(message);
         showToast(message, 'error');
         return;
       }
@@ -522,15 +536,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         },
         currentPeriodEnd: typeof obj.currentPeriodEnd === 'string' ? obj.currentPeriodEnd : null,
       };
-      setProrationPreview(preview);
-      setShowProrationModal(true);
+      setIfMounted(setProrationPreview)(preview);
+      setIfMounted(setShowProrationModal)(true);
     } catch (error) {
       console.error('Failed to load proration preview', error);
       const message = 'Unable to calculate proration right now.';
-      setProrationError(message);
+      setIfMounted(setProrationError)(message);
       showToast(message, 'error');
     } finally {
-      setProrationLoading(false);
+      setIfMounted(setProrationLoading)(false);
     }
   }
 
@@ -542,8 +556,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
 
   async function confirmProration() {
     if (prorationConfirming) return;
-    setProrationConfirming(true);
-    setProrationError(null);
+    setIfMounted(setProrationConfirming)(true);
+    setIfMounted(setProrationError)(null);
     try {
       const res = await fetch('/api/subscription/proration', {
         method: 'POST',
@@ -554,7 +568,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
       if (!res.ok) {
         const obj = asRecord(json);
         const message = typeof obj?.error === 'string' ? obj.error : 'Failed to update subscription.';
-        setProrationError(message);
+        setIfMounted(setProrationError)(message);
         showToast(message, 'error');
         return;
       }
@@ -575,10 +589,10 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
     } catch (error) {
       console.error('Proration confirmation failed', error);
       const message = 'Failed to update subscription.';
-      setProrationError(message);
+      setIfMounted(setProrationError)(message);
       showToast(message, 'error');
     } finally {
-      setProrationConfirming(false);
+      setIfMounted(setProrationConfirming)(false);
     }
   }
 
@@ -593,14 +607,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
     }
 
     try {
-      setCheckingExisting(true);
+      setIfMounted(setCheckingExisting)(true);
       const res = await fetch('/api/subscription');
       const json = await res.json().catch(() => null) as unknown;
       const sub = asRecord(json);
 
       if (res.status === 401 || res.status === 403) {
-        setAuthReturnPath(determineReturnPath());
-        setAuthView('sign-in');
+        setIfMounted(setAuthReturnPath)(determineReturnPath());
+        setIfMounted(setAuthView)('sign-in');
         authFlowActiveRef.current = true;
         if (typeof window !== 'undefined') {
           try {
@@ -609,8 +623,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
             console.warn('Unable to persist auth flow flag', error);
           }
         }
-        setShowAuthModal(true);
-        setCheckingExisting(false);
+        setIfMounted(setShowAuthModal)(true);
+        setIfMounted(setCheckingExisting)(false);
         return;
       }
 
@@ -622,10 +636,10 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         // Scenario 1: Active non-recurring + purchasing recurring
         // Show modal warning that recurring will replace existing access
         if (!hasRecurring && buyingRecurring) {
-          setExistingExpiresAt(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-          setExistingPlanName(typeof sub.plan === 'string' ? sub.plan : null);
-          setShowReplaceModal(true);
-          setCheckingExisting(false);
+          setIfMounted(setExistingExpiresAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+          setIfMounted(setExistingPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
+          setIfMounted(setShowReplaceModal)(true);
+          setIfMounted(setCheckingExisting)(false);
           return;
         }
 
@@ -633,36 +647,36 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         // Tokens are added without extending expiry (handled by backend)
         // Show info modal but proceed
         if (hasRecurring && !buyingRecurring) {
-          setRecurringPlanName(typeof sub.plan === 'string' ? sub.plan : null);
-          setRecurringRenewsAt(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-          setShowRecurringTopupModal(true);
-          setCheckingExisting(false);
+          setIfMounted(setRecurringPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
+          setIfMounted(setRecurringRenewsAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+          setIfMounted(setShowRecurringTopupModal)(true);
+          setIfMounted(setCheckingExisting)(false);
           return;
         }
 
         // Scenario 3: Active non-recurring + purchasing non-recurring
         // Extend time + add tokens
         if (!hasRecurring && !buyingRecurring) {
-          setExistingExpiresAt(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-          setExistingPlanName(typeof sub.plan === 'string' ? sub.plan : null);
+          setIfMounted(setExistingExpiresAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+          setIfMounted(setExistingPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
           await loadOneTimeRenewalTokenPolicy();
-          setShowExtendModal(true);
-          setCheckingExisting(false);
+          setIfMounted(setShowExtendModal)(true);
+          setIfMounted(setCheckingExisting)(false);
           return;
         }
 
         // Scenario 4: Active recurring + purchasing recurring
-        setCheckingExisting(false);
-        setRecurringPlanName(typeof sub.plan === 'string' ? sub.plan : null);
-        setRecurringRenewsAt(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-        setShowPlanSwitchModal(true);
+        setIfMounted(setCheckingExisting)(false);
+        setIfMounted(setRecurringPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
+        setIfMounted(setRecurringRenewsAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+        setIfMounted(setShowPlanSwitchModal)(true);
         return;
       }
     } catch (e) {
       // Ignore errors and fall back to normal checkout
       console.error('Error checking existing subscription', e);
     } finally {
-      setCheckingExisting(false);
+      setIfMounted(setCheckingExisting)(false);
     }
 
     // No active subscription or error -> proceed normally

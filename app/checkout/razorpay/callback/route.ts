@@ -28,6 +28,11 @@ function verifySubscriptionSignature(subscriptionId: string, paymentId: string, 
   );
 }
 
+function verifyOrderSignature(orderId: string, paymentId: string, signature: string, secret: string) {
+  const payload = `${orderId}|${paymentId}`;
+  return verifyPaymentLinkSignature(payload, signature, secret);
+}
+
 async function fetchPaymentContext(paymentId: string) {
   const keyId = process.env.RAZORPAY_KEY_ID || '';
   const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
@@ -66,6 +71,7 @@ async function handleCallback(
   let linkStatus = getParam(params, 'razorpay_payment_link_status') || '';
   const signature = getParam(params, 'razorpay_signature') || '';
   let subscriptionId = getParam(params, 'razorpay_subscription_id');
+  let orderId = getParam(params, 'razorpay_order_id');
 
   const provider = 'razorpay';
   const since = String(Date.now());
@@ -76,6 +82,8 @@ async function handleCallback(
       subscriptionId = context.subscriptionId;
     } else if (context?.paymentLinkId) {
       paymentLinkId = context.paymentLinkId;
+    } else if (context?.orderId) {
+      orderId = context.orderId;
     }
   }
 
@@ -116,17 +124,64 @@ async function handleCallback(
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (!paymentLinkId || !paymentId || !linkStatus || !signature) {
-    const keys = params instanceof URLSearchParams ? Array.from(params.keys()) : Array.from(params.keys());
-    const keysList = keys.join(',');
-    Logger.warn('Razorpay callback missing required fields', {
-      paymentId: Boolean(paymentId),
-      paymentLinkId: Boolean(paymentLinkId),
-      subscriptionId: Boolean(subscriptionId),
-      linkStatus: Boolean(linkStatus),
-      signature: Boolean(signature),
-      keysList,
+  if (!paymentLinkId && !subscriptionId && orderId && paymentId && signature) {
+    const secret = process.env.RAZORPAY_KEY_SECRET || '';
+    if (!secret) {
+      Logger.warn('Razorpay order callback missing secret', { orderId, paymentId });
+      const fallbackUrl = buildRedirectUrl(req, {
+        provider,
+        status: 'error',
+        since,
+      });
+      return NextResponse.redirect(fallbackUrl);
+    }
+
+    const valid = verifyOrderSignature(orderId, paymentId, signature, secret);
+    if (!valid) {
+      Logger.warn('Razorpay order callback signature mismatch', {
+        orderId,
+        paymentId,
+      });
+      const failUrl = buildRedirectUrl(req, {
+        provider,
+        status: 'error',
+        since,
+      });
+      return NextResponse.redirect(failUrl);
+    }
+
+    const redirectUrl = buildRedirectUrl(req, {
+      provider,
+      status: 'success',
+      session_id: orderId,
+      payment_id: paymentId,
+      since,
     });
+
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (!paymentLinkId || !paymentId || !linkStatus || !signature) {
+    // For subscription payments, we only get payment_id and signature (no payment_link fields)
+    // This is expected behavior, so we log at DEBUG level to reduce noise
+    if (paymentId && signature && subscriptionId) {
+      Logger.debug('Razorpay subscription callback handled without payment link fields', {
+        paymentId: Boolean(paymentId),
+        subscriptionId: Boolean(subscriptionId),
+      });
+    } else {
+      const keys = params instanceof URLSearchParams ? Array.from(params.keys()) : Array.from(params.keys());
+      const keysList = keys.join(',');
+      Logger.debug('Razorpay callback missing some fields', {
+        paymentId: Boolean(paymentId),
+        paymentLinkId: Boolean(paymentLinkId),
+        subscriptionId: Boolean(subscriptionId),
+        orderId: Boolean(orderId),
+        linkStatus: Boolean(linkStatus),
+        signature: Boolean(signature),
+        keysList,
+      });
+    }
 
     if (paymentId && signature) {
       const pendingUrl = buildRedirectUrl(req, {

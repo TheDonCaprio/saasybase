@@ -824,20 +824,26 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		if (eventName === 'payment.captured') {
 			let subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
 
-			// Razorpay may not include subscription_id in the webhook payload for the first
-			// subscription payment (timing / eventual consistency).  If the app-set notes
-			// indicate this was a subscription checkout, try one API fetch to resolve it.
-			if (!subscriptionId && notes?.checkoutMode === 'subscription') {
+			// Razorpay may not include subscription_id in the webhook payload for:
+			//   1. The first subscription payment (timing / eventual consistency)
+			//   2. Subscription renewals (payment.captured often lacks subscription_id)
+			// Try one API fetch to resolve it when:
+			//   - The checkout notes indicate subscription mode, OR
+			//   - The payment has a customer_id (likely a renewal for a known customer)
+			if (!subscriptionId) {
+				const shouldTryResolve = notes?.checkoutMode === 'subscription'
+					|| typeof paymentEntity?.customer_id === 'string';
 				const payId = typeof paymentEntity?.id === 'string' ? paymentEntity.id : undefined;
-				if (payId) {
+				if (shouldTryResolve && payId) {
 					try {
 						const detail = await this.request<unknown>(`/payments/${encodeURIComponent(payId)}`, { method: 'GET' });
 						const detailRec = asRecord(detail);
 						if (typeof detailRec?.subscription_id === 'string' && detailRec.subscription_id) {
 							subscriptionId = detailRec.subscription_id;
-							Logger.info('Resolved subscription_id from Razorpay API for subscription checkout', {
+							Logger.info('Resolved subscription_id from Razorpay API for payment', {
 								paymentId: payId,
 								subscriptionId,
+								trigger: notes?.checkoutMode === 'subscription' ? 'checkoutMode' : 'customer_id',
 							});
 						}
 					} catch {
@@ -1139,10 +1145,43 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 	async refundPayment(paymentId: string, amount?: number, _reason?: string): Promise<{ id: string; amount: number; status: string; created: Date }> {
 		void _reason;
 		if (!paymentId) throw new PaymentProviderError('Missing payment id');
+
+		// Razorpay refund API only accepts pay_ prefixed payment IDs.
+		// Payments created via the subscription fallback path may have stored a
+		// subscription (sub_) or order (order_) ID instead. Attempt resolution.
+		let resolvedPaymentId = paymentId;
+
+		if (!paymentId.startsWith('pay_')) {
+			if (paymentId.startsWith('order_')) {
+				// Fetch payments associated with this order and pick the captured one.
+				try {
+					const orderPayments = await this.request<{ items?: Array<{ id: string; status?: string }> }>(
+						`/orders/${encodeURIComponent(paymentId)}/payments`,
+						{ method: 'GET' },
+					);
+					const items = Array.isArray(orderPayments?.items) ? orderPayments.items : (Array.isArray(orderPayments) ? (orderPayments as unknown as Array<{ id: string; status?: string }>) : []);
+					const captured = items.find(p => p.status === 'captured') || items[0];
+					if (captured?.id?.startsWith('pay_')) {
+						resolvedPaymentId = captured.id;
+					}
+				} catch {
+					// Best-effort; fall through to validation below.
+				}
+			}
+
+			if (!resolvedPaymentId.startsWith('pay_')) {
+				throw new PaymentProviderError(
+					`Cannot refund: "${paymentId}" is not a valid Razorpay payment ID (expected pay_ prefix). ` +
+					'The stored payment reference may be a subscription or order ID. ' +
+					'Please locate the actual Razorpay payment ID (pay_xxx) for this transaction.',
+				);
+			}
+		}
+
 		const payload: Record<string, unknown> = {};
 		if (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) payload.amount = Math.round(amount);
 
-		const refund = await this.request<RazorpayRefund>(`/payments/${encodeURIComponent(paymentId)}/refund`, {
+		const refund = await this.request<RazorpayRefund>(`/payments/${encodeURIComponent(resolvedPaymentId)}/refund`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 		});

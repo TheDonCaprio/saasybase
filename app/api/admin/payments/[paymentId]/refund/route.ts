@@ -154,6 +154,47 @@ export async function POST(
       }
     }
 
+    // Razorpay refund API requires a pay_ prefixed payment ID. Some payment records
+    // may have stored a subscription (sub_) or session ID instead. Try to resolve
+    // the actual Razorpay payment ID from sibling payment records.
+    if (provider.name === 'razorpay' && paymentIntentId && !paymentIntentId.startsWith('pay_')) {
+      Logger.info('Razorpay externalPaymentId is not a pay_ ID, attempting resolution', {
+        actorId,
+        paymentId: params.paymentId,
+        storedId: paymentIntentId,
+      });
+
+      // Look for another payment record on the same subscription with a valid pay_ ID
+      if (payment.subscriptionId) {
+        try {
+          const sibling = await prisma.payment.findFirst({
+            where: {
+              subscriptionId: payment.subscriptionId,
+              NOT: { id: payment.id },
+              externalPaymentId: { not: null },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { externalPaymentId: true },
+          });
+          if (sibling?.externalPaymentId?.startsWith('pay_')) {
+            Logger.info('Resolved Razorpay pay_ ID from sibling payment record', {
+              actorId,
+              paymentId: params.paymentId,
+              originalId: paymentIntentId,
+              resolvedId: sibling.externalPaymentId,
+            });
+            paymentIntentId = sibling.externalPaymentId;
+          }
+        } catch (err: unknown) {
+          Logger.warn('Failed to look up sibling payment for Razorpay pay_ ID resolution', {
+            actorId,
+            paymentId: params.paymentId,
+            error: toError(err).message,
+          });
+        }
+      }
+    }
+
     if (paymentIntentId && !paymentIntentId.startsWith('pi_test_')) {
       try {
         refund = await provider.refundPayment(paymentIntentId, undefined, refundReason);

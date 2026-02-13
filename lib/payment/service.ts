@@ -61,6 +61,26 @@ export class PaymentService {
         return mapContainsValue(value, target);
     }
 
+    /**
+     * Compute the subscription period in milliseconds for a plan.
+     * For auto-renew plans, use recurringInterval × recurringIntervalCount
+     * (which matches the provider billing cycle) instead of durationHours.
+     * Falls back to durationHours when interval metadata is unavailable.
+     */
+    private static computePlanPeriodMs(plan: Plan): number {
+        if (plan.autoRenew && plan.recurringInterval) {
+            const count = plan.recurringIntervalCount ?? 1;
+            switch (plan.recurringInterval) {
+                case 'day':   return count * 24 * 3600 * 1000;
+                case 'week':  return count * 7 * 24 * 3600 * 1000;
+                case 'month': return count * 30 * 24 * 3600 * 1000;
+                case 'year':  return count * 365 * 24 * 3600 * 1000;
+                default:      break; // fall through to durationHours
+            }
+        }
+        return plan.durationHours * 3600 * 1000;
+    }
+
     private async resetOwnedOrganizationTokenPools(userId: string, organizationIds: Array<string | null | undefined>) {
         const uniqueIds = Array.from(
             new Set(
@@ -375,6 +395,68 @@ export class PaymentService {
                     });
                 }
             }
+        }
+
+        // Fallback for subscription renewals: if the user has an active Razorpay subscription
+        // in our DB, this payment is likely a renewal. Resolve the subscription so it goes
+        // through the correct invoice/subscription flow rather than the one-time checkout path
+        // (which silently drops the event when priceId is missing from metadata).
+        if (!resolvedSubscriptionId && userId && this.providerKey === 'razorpay') {
+            try {
+                const activeRazorpaySub = await prisma.subscription.findFirst({
+                    where: {
+                        userId,
+                        status: 'ACTIVE',
+                        paymentProvider: 'razorpay',
+                        externalSubscriptionId: { not: null },
+                        plan: { autoRenew: true },
+                    },
+                    select: { externalSubscriptionId: true },
+                    orderBy: { expiresAt: 'desc' },
+                });
+                if (activeRazorpaySub?.externalSubscriptionId) {
+                    resolvedSubscriptionId = activeRazorpaySub.externalSubscriptionId;
+                    Logger.info('Resolved subscriptionId from active DB subscription for Razorpay renewal', {
+                        id: payload.id,
+                        subscriptionId: resolvedSubscriptionId,
+                        userId,
+                    });
+                }
+            } catch (err) {
+                Logger.warn('Failed to look up active Razorpay subscription for renewal resolution', {
+                    id: payload.id,
+                    userId,
+                    error: toError(err).message,
+                });
+            }
+        }
+
+        // If we resolved a subscription ID, route through the invoice flow for proper
+        // renewal handling (expiry extension, token grants, etc.) instead of checkout flow.
+        if (resolvedSubscriptionId && !isSubscriptionCheckout) {
+            Logger.info('Routing Razorpay renewal payment through invoice flow', {
+                id: payload.id,
+                subscriptionId: resolvedSubscriptionId,
+                userId,
+            });
+            const invoice: StandardizedInvoice = {
+                id: payload.id,
+                providerId: payload.id,
+                invoiceIdsByProvider: { [this.providerKey]: payload.id },
+                amountPaid: payload.amount ?? 0,
+                amountDue: 0,
+                amountDiscount: 0,
+                subtotal: payload.amount ?? 0,
+                total: payload.amount ?? 0,
+                currency: payload.currency ?? 'INR',
+                status: 'paid',
+                paymentIntentId: payload.id,
+                subscriptionId: resolvedSubscriptionId,
+                customerId: payload.metadata?.customerId,
+                metadata: payload.metadata,
+            };
+            await this.handleInvoicePaid(invoice);
+            return;
         }
 
         // Construct a fake session object to reuse handleCheckoutCompleted
@@ -968,7 +1050,7 @@ export class PaymentService {
                     // Queue activation to begin when the current subscription expires.
                     // NOTE: This assumes the new subscription was paid for at checkout time.
                     effectiveStartedAt = existingActive.expiresAt;
-                    const periodMs = planToUse.durationHours * 3600 * 1000;
+                    const periodMs = PaymentService.computePlanPeriodMs(planToUse);
                     effectiveExpiresAt = new Date(effectiveStartedAt.getTime() + periodMs);
 
                     // Schedule cancellation of the existing subscription at period end.
@@ -1267,11 +1349,17 @@ export class PaymentService {
             const resolvedAmountCents = planToUse.priceCents;
             const resolvedSubtotalCents = planToUse.priceCents;
             const resolvedDiscountCents = 0;
-            const fallbackPaymentId = paymentId || session.id;
+            // Only store actual Razorpay payment IDs (pay_) as externalPaymentId.
+            // Using sub_ or order_ IDs here causes refund failures later.
+            const fallbackPaymentId = (paymentId && paymentId.startsWith('pay_')) ? paymentId : null;
 
             try {
+                const findConditions: Prisma.PaymentWhereInput[] = [{ externalSessionId: session.id }];
+                if (fallbackPaymentId) {
+                    findConditions.push({ externalPaymentId: fallbackPaymentId });
+                }
                 const existing = await prisma.payment.findFirst({
-                    where: { OR: [{ externalPaymentId: fallbackPaymentId }, { externalSessionId: session.id }] }
+                    where: { OR: findConditions }
                 });
 
                 if (!existing) {
@@ -1289,7 +1377,7 @@ export class PaymentService {
                                 status: 'SUCCEEDED',
                                 externalPaymentId: fallbackPaymentId,
                                 externalSessionId: session.id,
-                                externalPaymentIds: this.mergeIdMap(null, this.providerKey, fallbackPaymentId) ?? undefined,
+                                externalPaymentIds: fallbackPaymentId ? (this.mergeIdMap(null, this.providerKey, fallbackPaymentId) ?? undefined) : undefined,
                                 externalSessionIds: this.mergeIdMap(null, this.providerKey, session.id) ?? undefined,
                                 paymentProvider: this.providerKey
                             } satisfies Prisma.PaymentUncheckedCreateInput
@@ -1374,7 +1462,7 @@ export class PaymentService {
         await this.consumeCouponRedemptionFromMetadata(session.metadata);
 
         const now = new Date();
-        const periodMs = planToUse.durationHours * 3600 * 1000;
+        const periodMs = PaymentService.computePlanPeriodMs(planToUse);
         const sessionSubtotalCents = session.amountSubtotal;
         const sessionTotalCents = session.amountTotal;
         

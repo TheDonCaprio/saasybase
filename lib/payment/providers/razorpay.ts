@@ -822,7 +822,30 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		}
 
 		if (eventName === 'payment.captured') {
-			const subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
+			let subscriptionId = typeof paymentEntity?.subscription_id === 'string' ? paymentEntity.subscription_id : undefined;
+
+			// Razorpay may not include subscription_id in the webhook payload for the first
+			// subscription payment (timing / eventual consistency).  If the app-set notes
+			// indicate this was a subscription checkout, try one API fetch to resolve it.
+			if (!subscriptionId && notes?.checkoutMode === 'subscription') {
+				const payId = typeof paymentEntity?.id === 'string' ? paymentEntity.id : undefined;
+				if (payId) {
+					try {
+						const detail = await this.request<unknown>(`/payments/${encodeURIComponent(payId)}`, { method: 'GET' });
+						const detailRec = asRecord(detail);
+						if (typeof detailRec?.subscription_id === 'string' && detailRec.subscription_id) {
+							subscriptionId = detailRec.subscription_id;
+							Logger.info('Resolved subscription_id from Razorpay API for subscription checkout', {
+								paymentId: payId,
+								subscriptionId,
+							});
+						}
+					} catch {
+						// Best-effort; handlePaymentSucceeded will handle fallback.
+					}
+				}
+			}
+
 			const invoiceId =
 				typeof paymentEntity?.invoice_id === 'string'
 					? paymentEntity.invoice_id

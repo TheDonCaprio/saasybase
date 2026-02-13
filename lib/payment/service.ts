@@ -347,13 +347,45 @@ export class PaymentService {
 
         Logger.info('Handling payment.succeeded for Elements', { id: payload.id, userId });
 
+        // Detect subscription mode from checkout metadata (set during createCheckoutSession)
+        const isSubscriptionCheckout = payload.metadata?.checkoutMode === 'subscription';
+        let resolvedSubscriptionId: string | undefined = payload.metadata?.subscriptionId || undefined;
+
+        // If subscription mode but no subscription ID in metadata, try resolving from the
+        // provider (Razorpay may populate subscription_id on the payment after a short delay).
+        if (isSubscriptionCheckout && !resolvedSubscriptionId) {
+            const maybeRelatedSessionId = payload.metadata?.paymentLinkId
+                || payload.metadata?.orderId;
+            if (maybeRelatedSessionId) {
+                try {
+                    const details = await this.provider.getCheckoutSession(maybeRelatedSessionId);
+                    if (details.subscriptionId) {
+                        resolvedSubscriptionId = details.subscriptionId;
+                        Logger.info('Resolved subscriptionId via session lookup on payment.succeeded', {
+                            id: payload.id,
+                            subscriptionId: resolvedSubscriptionId,
+                            sessionId: maybeRelatedSessionId,
+                        });
+                    }
+                } catch (err) {
+                    Logger.debug('Session lookup for subscription resolution failed', {
+                        id: payload.id,
+                        sessionId: maybeRelatedSessionId,
+                        error: toError(err).message,
+                    });
+                }
+            }
+        }
+
         // Construct a fake session object to reuse handleCheckoutCompleted
         const sessionId = typeof orderId === 'string' && orderId.trim().length > 0 ? orderId : payload.id;
+        const detectedMode: 'payment' | 'subscription' = (isSubscriptionCheckout || resolvedSubscriptionId) ? 'subscription' : 'payment';
         const session: StandardizedCheckoutSession = {
             id: sessionId, // Prefer order id for Razorpay to match checkout confirmations
             userId: userId,
             userEmail: undefined, // We might not have it easily here
-            mode: 'payment', // Default to payment, subscriptions usually go through invoice.payment_succeeded
+            mode: detectedMode,
+            subscriptionId: resolvedSubscriptionId,
             paymentStatus: payload.status === 'succeeded' ? 'paid' : 'unpaid',
             amountTotal: payload.amount,
             currency: payload.currency,
@@ -474,9 +506,38 @@ export class PaymentService {
         if (session.paymentIntentId) {
             const existingByPaymentId = await prisma.payment.findFirst({
                 where: { externalPaymentId: session.paymentIntentId },
-                select: { id: true },
+                select: { id: true, subscriptionId: true },
             });
             if (existingByPaymentId) {
+                // If a later event (e.g. subscription.activated) carries the provider
+                // subscription ID that was missing when the payment was first recorded,
+                // back-fill it now so the admin subscription list shows the correct ID.
+                if (session.subscriptionId && existingByPaymentId.subscriptionId) {
+                    try {
+                        const sub = await prisma.subscription.findUnique({
+                            where: { id: existingByPaymentId.subscriptionId },
+                            select: { id: true, externalSubscriptionId: true },
+                        });
+                        if (sub && !sub.externalSubscriptionId) {
+                            await prisma.subscription.update({
+                                where: { id: sub.id },
+                                data: {
+                                    externalSubscriptionId: session.subscriptionId,
+                                    externalSubscriptionIds: this.mergeIdMap(null, this.providerKey, session.subscriptionId),
+                                },
+                            });
+                            Logger.info('Back-filled externalSubscriptionId from later event', {
+                                subscriptionId: sub.id,
+                                externalSubscriptionId: session.subscriptionId,
+                            });
+                        }
+                    } catch (err) {
+                        Logger.warn('Failed to back-fill externalSubscriptionId', {
+                            error: toError(err).message,
+                            subscriptionId: existingByPaymentId.subscriptionId,
+                        });
+                    }
+                }
                 Logger.info('Skipping already-processed checkout (payment id match)', {
                     sessionId: session.id,
                     paymentIntentId: session.paymentIntentId,
@@ -493,7 +554,7 @@ export class PaymentService {
             Logger.info('Processing as subscription checkout', { sessionId: session.id, userId });
             if (session.subscriptionId) {
                 await this.handleSubscriptionCheckout(session, userId, organizationContext);
-            } else {
+            } else if (this.providerKey === 'paystack') {
                 // Paystack subscription: charge.success fires before subscription.create
                 // Record the payment as pending subscription, let subscription.create event create the subscription
                 Logger.info('Subscription checkout without subscriptionId (Paystack flow), recording pending payment', { 
@@ -501,6 +562,17 @@ export class PaymentService {
                     userId 
                 });
                 await this.handlePendingSubscriptionPayment(session, userId);
+            } else {
+                // Razorpay (and other redirect providers): subscription_id may not be available
+                // yet on the payment.  Create an active subscription immediately so the user
+                // has access.  If subscription.activated fires later it will upsert with the
+                // provider subscription id.
+                Logger.info('Subscription checkout without subscriptionId – creating active subscription via one-time path', {
+                    sessionId: session.id,
+                    userId,
+                    provider: this.providerKey,
+                });
+                await this.handleOneTimeCheckout(session, userId, organizationContext);
             }
         } else {
             Logger.info('Processing as one-time checkout', { sessionId: session.id, userId });
@@ -1610,7 +1682,8 @@ export class PaymentService {
                             planId: planToUse.id,
                             status: 'ACTIVE',
                             startedAt: now,
-                            expiresAt: newExpires
+                            expiresAt: newExpires,
+                            paymentProvider: this.providerKey,
                         }
                     });
 
@@ -1625,7 +1698,10 @@ export class PaymentService {
                             couponCode: couponCode || null,
                             status: 'SUCCEEDED',
                             externalSessionId: session.id,
-                            externalPaymentId: finalPaymentIntent
+                            externalPaymentId: finalPaymentIntent,
+                            externalPaymentIds: this.mergeIdMap(null, this.providerKey, finalPaymentIntent) ?? undefined,
+                            externalSessionIds: this.mergeIdMap(null, this.providerKey, session.id) ?? undefined,
+                            paymentProvider: this.providerKey,
                         } satisfies Prisma.PaymentUncheckedCreateInput
                     });
 
@@ -1662,10 +1738,13 @@ export class PaymentService {
                         }
                     });
 
+                    const isRecurringFallback = session.metadata?.checkoutMode === 'subscription' || planToUse.autoRenew === true;
                     await sendAdminNotificationEmail({
                         userId,
-                        title: 'New one-time subscription purchase',
-                        message: `User ${userId} purchased ${planToUse.name}.`,
+                        title: isRecurringFallback ? 'New subscription purchase' : 'New one-time subscription purchase',
+                        message: isRecurringFallback
+                            ? `User ${userId} purchased recurring ${planToUse.name}.`
+                            : `User ${userId} purchased ${planToUse.name}.`,
                         templateKey: 'admin_notification',
                         variables: {
                             planName: planToUse.name,

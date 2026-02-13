@@ -52,7 +52,6 @@ export function CheckoutReturnClient() {
     const hasSince = Number.isFinite(sinceMs) && sinceMs > 0;
     const hasSession = Boolean(sessionId);
     const hasPaymentId = Boolean(paymentId);
-    const usePaymentId = hasPaymentId && provider === 'razorpay';
     const maxMs = 2 * 60 * 1000;
     const intervalMs = 3000;
     const startedAt = Date.now();
@@ -62,13 +61,12 @@ export function CheckoutReturnClient() {
     const tick = async () => {
       if (cancelled) return;
       try {
-        const url = hasSession
-          ? `/api/checkout/confirm?session_id=${encodeURIComponent(sessionId)}`
-          : (usePaymentId
-            ? `/api/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}${hasSince ? `&since=${encodeURIComponent(String(sinceMs))}` : ''}`
-            : (hasSince
-              ? `/api/checkout/confirm?recent=1&since=${encodeURIComponent(String(sinceMs))}`
-              : '/api/checkout/confirm?recent=1'));
+        const qp = new URLSearchParams();
+        if (hasSession) qp.set('session_id', sessionId);
+        if (hasPaymentId) qp.set('payment_id', paymentId);
+        if (hasSince) qp.set('since', String(sinceMs));
+        if (!hasSession && !hasPaymentId) qp.set('recent', '1');
+        const url = `/api/checkout/confirm?${qp.toString()}`;
         const res = await fetch(url);
         const data = await res.json().catch(() => null) as { completed?: boolean; ok?: boolean; active?: boolean; paymentId?: string } | null;
         const completed = Boolean(data?.completed) || (Boolean(data?.ok) && Boolean(data?.active));

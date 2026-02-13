@@ -71,6 +71,9 @@ export async function GET(req: NextRequest) {
   const sinceParam = req.nextUrl.searchParams.get('since');
   if (!sessionId && !recent && !paymentId) return jsonError('Missing session_id', 400, 'CHECKOUT_SESSION_MISSING');
 
+  // Determine provider hint early from payment_id prefix or session_id prefix
+  const looksLikeRazorpay = (paymentId && paymentId.startsWith('pay_')) || (sessionId && (sessionId.startsWith('order_') || sessionId.startsWith('sub_') || sessionId.startsWith('plink_')));
+
   const { userId: clerkUserId } = await auth();
   let actorUserId = clerkUserId ?? null;
 
@@ -106,53 +109,55 @@ export async function GET(req: NextRequest) {
     let orgSyncNeeded = false;
     let sessionUserId: string | undefined;
 
-    if (paymentId) {
-      // First check: exact match by externalPaymentId
-      const existing = await prisma.payment.findFirst({
-        where: { userId, externalPaymentId: paymentId },
-        include: { plan: true, subscription: { include: { plan: true } } }
-      });
-      if (existing) {
-        const isTokenTopupPayment = !existing.subscriptionId && existing.plan && existing.plan.autoRenew === false;
-        return NextResponse.json({
-          ok: true,
-          completed: true,
-          topup: isTokenTopupPayment,
-          paymentId: existing.id,
-          createdAt: existing.createdAt,
-          plan: existing.subscription?.plan?.name || existing.plan?.name || null,
-        });
+    // ── Fast-path: check DB for an already-processed payment (webhook may have beaten us) ──
+    // This runs for BOTH payment_id and session_id requests so we avoid expensive API calls.
+    {
+      const dbOr: Record<string, unknown>[] = [];
+      if (paymentId) dbOr.push({ externalPaymentId: paymentId });
+      if (sessionId) {
+        dbOr.push({ externalSessionId: sessionId });
+        dbOr.push({ stripeCheckoutSessionId: sessionId });
       }
-      
-      // Second check: recent payment fallback (check BEFORE attempting API resolution)
-      // This catches payments created by webhook while we're polling
+
+      if (dbOr.length > 0) {
+        const existing = await prisma.payment.findFirst({
+          where: { userId, OR: dbOr as any },
+          orderBy: { createdAt: 'desc' },
+          include: { plan: true, subscription: { include: { plan: true } } }
+        });
+        if (existing) {
+          devLog('fast-path: existing payment found in DB', { paymentId: existing.id });
+          const isTokenTopupPayment = !existing.subscriptionId && existing.plan && existing.plan.autoRenew === false;
+          return NextResponse.json({
+            ok: true,
+            completed: true,
+            topup: isTokenTopupPayment,
+            paymentId: existing.id,
+            createdAt: existing.createdAt,
+            plan: existing.subscription?.plan?.name || existing.plan?.name || null,
+          });
+        }
+      }
+
+      // Second check: recent payment fallback by timestamp
+      // This catches payments created by webhook before exact IDs are linked
       if (sinceParam) {
         const sinceMs = Number(sinceParam);
         if (Number.isFinite(sinceMs) && sinceMs > 0) {
           const sinceDate = new Date(sinceMs);
+          const providerFilter = looksLikeRazorpay ? 'razorpay' : undefined;
           const recentPayment = await prisma.payment.findFirst({
             where: {
               userId,
               createdAt: { gte: sinceDate },
-              paymentProvider: 'razorpay',
-              OR: [
-                { externalPaymentId: paymentId },
-                { externalPaymentId: null },
-              ],
+              ...(providerFilter ? { paymentProvider: providerFilter } : {}),
             },
             orderBy: { createdAt: 'desc' },
             include: { plan: true, subscription: { include: { plan: true } } }
           });
-          
+
           if (recentPayment) {
-            // FALLBACK: Using recent payment since exact match not found yet
-            // This might happen if webhook hasn't created Payment record with exact externalPaymentId
-            Logger.warn('Using recent payment fallback - exact payment_id match not found', { 
-              paymentId: recentPayment.id, 
-              externalPaymentId: recentPayment.externalPaymentId,
-              searchedForPaymentId: paymentId,
-              riskLevel: recentPayment.externalPaymentId === paymentId ? 'LOW' : 'MEDIUM',
-            });
+            devLog('fast-path: recent payment fallback', { paymentId: recentPayment.id });
             const isTokenTopupPayment = !recentPayment.subscriptionId && recentPayment.plan && recentPayment.plan.autoRenew === false;
             return NextResponse.json({
               ok: true,
@@ -177,7 +182,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const provider = paymentId
+    const provider = looksLikeRazorpay
       ? (PaymentProviderFactory.getProviderByName('razorpay') || paymentService.provider)
       : paymentService.provider;
     const providerName = provider.name;
@@ -185,6 +190,24 @@ export async function GET(req: NextRequest) {
 
     if (sessionId) {
       session = await provider.getCheckoutSession(sessionId);
+
+      // Razorpay order_ sessions auto-created for subscriptions/payment-links often lack
+      // app-set notes (no userId, no priceId).  When we also have a payment_id, try to
+      // resolve a richer session (plink_ or sub_) that carries the original metadata.
+      const sessionHasMetadata = Boolean(session.metadata?.userId || session.metadata?.priceId || session.lineItems?.length);
+      if (!isStripeProvider && !sessionHasMetadata && paymentId && sessionId.startsWith('order_')) {
+        devLog('order session lacks metadata – resolving richer session from payment_id', { sessionId, paymentId });
+        const betterSessionId = await resolveRazorpaySessionId(paymentId);
+        if (betterSessionId && betterSessionId !== sessionId) {
+          devLog('resolved richer session', { original: sessionId, resolved: betterSessionId });
+          const betterSession = await provider.getCheckoutSession(betterSessionId);
+          if (betterSession.metadata?.userId || betterSession.metadata?.priceId || betterSession.lineItems?.length) {
+            session = betterSession;
+            sessionId = betterSessionId;
+          }
+        }
+      }
+
       // Narrow and extract a few useful fields for logging / downstream logic without using `any`.
       const sessionIdStr = session.id;
       const clientRef = session.clientReferenceId;
@@ -192,14 +215,18 @@ export async function GET(req: NextRequest) {
       devLog('provider session', { provider: providerName, id: sessionIdStr, client_reference_id: clientRef, metadata_userId: metaUser });
       sessionUserId = clientRef || metaUser;
 
-      // For redirect-only providers, require a userId marker in metadata/notes.
-      // This prevents confirming sessions we can't attribute.
+      // For redirect-only providers, warn when the session doesn't carry a userId marker
+      // but do NOT hard-fail.  The authenticated user (from Clerk) is the source of truth.
+      // Auto-created Razorpay orders/subscriptions often lack app-set notes, so blocking on
+      // this check causes the confirmation page to spin indefinitely.
       if (!isStripeProvider && !sessionUserId) {
-        Logger.warn('Checkout confirm session missing user marker for non-stripe provider', {
+        Logger.info('Checkout confirm session has no user marker – using authenticated userId', {
           provider: providerName,
           sessionId: sessionIdStr,
+          authenticatedUserId: userId,
         });
-        return jsonError('Session missing user metadata', 400, 'SESSION_USER_MISSING');
+        // Trust the authenticated user for ownership
+        sessionUserId = userId;
       }
 
       if (sessionUserId && sessionUserId !== userId) {
@@ -251,11 +278,25 @@ export async function GET(req: NextRequest) {
           originalEvent: { source: 'checkout.confirm', provider: providerName },
         });
 
-        const payment = await prisma.payment.findFirst({
-          where: {
-            userId,
-            OR: [{ externalSessionId: session.id }, { stripeCheckoutSessionId: session.id }]
-          },
+        // Broad lookup: processWebhookEvent (or a prior webhook) may have stored the
+        // payment under a different column depending on the event type.  Build an OR
+        // that covers every reasonable variant so we don't accidentally miss it and
+        // fall through to an incomplete legacy path.
+        const paymentLookupOr: Record<string, unknown>[] = [
+          { externalSessionId: session.id },
+        ];
+        if (session.paymentIntentId) {
+          paymentLookupOr.push({ externalPaymentId: session.paymentIntentId });
+        }
+        if (session.subscriptionId) {
+          paymentLookupOr.push({ externalSessionId: session.subscriptionId });
+        }
+        if (paymentId) {
+          paymentLookupOr.push({ externalPaymentId: paymentId });
+        }
+
+        let payment = await prisma.payment.findFirst({
+          where: { userId, OR: paymentLookupOr as any },
           orderBy: { createdAt: 'desc' },
           include: {
             plan: true,
@@ -263,7 +304,26 @@ export async function GET(req: NextRequest) {
           }
         });
 
+        // Last-resort fallback: find a recent payment by this user from this provider
+        // (covers webhook-created payments with IDs that don't match our session exactly)
+        if (!payment && sinceParam) {
+          const sinceMs = Number(sinceParam);
+          if (Number.isFinite(sinceMs) && sinceMs > 0) {
+            payment = await prisma.payment.findFirst({
+              where: {
+                userId,
+                paymentProvider: providerName,
+                createdAt: { gte: new Date(sinceMs) },
+              },
+              orderBy: { createdAt: 'desc' },
+              include: { plan: true, subscription: { include: { plan: true } } }
+            });
+          }
+        }
+
         if (!payment) {
+          // processWebhookEvent may have been a no-op (idempotency) or still pending.
+          // Return pending — the client will retry in a few seconds.
           return NextResponse.json({ ok: true, completed: false });
         }
 

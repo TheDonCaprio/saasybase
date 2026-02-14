@@ -1210,15 +1210,23 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
                                   return;
                                 }
 
-                                // Provider did not support cycle-end scheduling; fall back to the legacy
-                                // checkout-then-queue flow.
-                                applyProrationFallback(checkoutOverridesRef, 'SWITCH_AT_PERIOD_END');
-                                showToast('Plan will be queued for your renewal (you can activate early anytime).', 'info');
-                                void beginCheckoutFlow();
+                                const fallbackCodes = new Set([
+                                  'PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED',
+                                  'PRORATION_DISABLED',
+                                ]);
+                                if (fallbackCodes.has(code)) {
+                                  applyProrationFallback(checkoutOverridesRef, 'SWITCH_AT_PERIOD_END');
+                                  showToast('Plan will be queued for your renewal (you can activate early anytime).', 'info');
+                                  void beginCheckoutFlow();
+                                  return;
+                                }
+
+                                const serverError = typeof obj?.error === 'string' && obj.error.trim().length > 0
+                                  ? obj.error
+                                  : 'Unable to schedule your plan switch right now. Please try again.';
+                                showToast(serverError, 'error');
                               } catch {
-                                applyProrationFallback(checkoutOverridesRef, 'SWITCH_AT_PERIOD_END');
-                                showToast('Plan will be queued for your renewal (you can activate early anytime).', 'info');
-                                void beginCheckoutFlow();
+                                showToast('Unable to schedule your plan switch right now. Please try again.', 'error');
                               }
                             })();
                             return undefined;

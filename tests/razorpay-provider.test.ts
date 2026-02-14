@@ -137,6 +137,15 @@ describe('razorpay-provider (minimum working)', () => {
 
 		global.fetch = vi.fn(async (url: any, init?: any) => {
 			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).includes('/subscriptions/sub_123') && method === 'GET') {
+				return jsonResponse({
+					id: 'sub_123',
+					status: 'active',
+					plan_id: 'plan_current',
+					remaining_count: 999,
+					current_end: Math.floor(Date.now() / 1000) + 86400,
+				});
+			}
 			if (String(url).includes('/subscriptions/sub_123') && method === 'PATCH') {
 				const body = JSON.parse(init?.body || '{}');
 				expect(body.plan_id).toBe('plan_next');
@@ -153,6 +162,53 @@ describe('razorpay-provider (minimum working)', () => {
 
 		const res = await provider.scheduleSubscriptionPlanChange?.('sub_123', 'plan_next', 'user_1');
 		expect(res?.success).toBe(true);
+	});
+
+	it('scheduleSubscriptionPlanChange retries with remaining_count when Razorpay requires it for different periods', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+		let patchCount = 0;
+
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).includes('/subscriptions/sub_789') && method === 'PATCH') {
+				patchCount += 1;
+				const body = JSON.parse(init?.body || '{}');
+				expect(body.plan_id).toBe('plan_yearly');
+				expect(body.schedule_change_at).toBe('cycle_end');
+
+				if (patchCount === 1) {
+					return jsonResponse(
+						{ error: { code: 'BAD_REQUEST_ERROR', description: 'remaining_count should be present to update to new plan which has different period' } },
+						{ ok: false, status: 400 }
+					);
+				}
+
+				expect(body.remaining_count).toBe(997);
+				return jsonResponse({
+					id: 'sub_789',
+					status: 'active',
+					has_scheduled_changes: true,
+					current_end: Math.floor(Date.now() / 1000) + 86400,
+				});
+			}
+
+			if (String(url).includes('/subscriptions/sub_789') && method === 'GET') {
+				return jsonResponse({
+					id: 'sub_789',
+					status: 'active',
+					plan_id: 'plan_monthly',
+					total_count: 1200,
+					paid_count: 203,
+					current_end: Math.floor(Date.now() / 1000) + 86400,
+				});
+			}
+
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		}) as any;
+
+		const res = await provider.scheduleSubscriptionPlanChange?.('sub_789', 'plan_yearly', 'user_1');
+		expect(res?.success).toBe(true);
+		expect(patchCount).toBe(2);
 	});
 
 	it('refundPayment POSTs /payments/:id/refund', async () => {

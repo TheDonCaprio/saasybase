@@ -64,6 +64,8 @@ type RazorpaySubscription = {
 	current_start?: number;
 	current_end?: number;
 	paid_count?: number;
+	total_count?: number;
+	remaining_count?: number;
 	notes?: Record<string, string | number | boolean>;
 };
 
@@ -351,6 +353,41 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		})();
 		// Only fall back when it's likely an API schema/field issue.
 		return /offer_id/i.test(text) && /(unknown|unexpected|not\s+allowed|invalid\s+parameter|extra\s+keys)/i.test(text);
+	}
+
+	private isRemainingCountRequiredForPlanChange(err: unknown): boolean {
+		if (!(err instanceof PaymentProviderError)) return false;
+		const original = err.originalError;
+		const record = asRecord(original);
+		const status = typeof record?.status === 'number' ? record.status : undefined;
+		const body = record?.body;
+		if (status !== 400 && status !== 422) return false;
+		const text = (() => {
+			try {
+				return JSON.stringify(body || {});
+			} catch {
+				return String(body || '');
+			}
+		})();
+		return /remaining_count/i.test(text) && /different\s+period/i.test(text);
+	}
+
+	private deriveRemainingCount(sub: RazorpaySubscription): number {
+		if (typeof sub.remaining_count === 'number' && Number.isFinite(sub.remaining_count) && sub.remaining_count > 0) {
+			return Math.floor(sub.remaining_count);
+		}
+
+		if (
+			typeof sub.total_count === 'number'
+			&& Number.isFinite(sub.total_count)
+			&& typeof sub.paid_count === 'number'
+			&& Number.isFinite(sub.paid_count)
+		) {
+			const remaining = Math.max(1, Math.floor(sub.total_count - sub.paid_count));
+			return remaining;
+		}
+
+		return 1;
 	}
 
 	// ============== Checkout (redirect-only) ==============
@@ -1129,10 +1166,28 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			schedule_change_at: 'cycle_end',
 		};
 
-		const sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
-			method: 'PATCH',
-			body: JSON.stringify(payload),
-		});
+		let sub: RazorpaySubscription;
+		try {
+			sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+				method: 'PATCH',
+				body: JSON.stringify(payload),
+			});
+		} catch (err) {
+			if (!this.isRemainingCountRequiredForPlanChange(err)) throw err;
+
+			const currentSub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+				method: 'GET',
+			});
+			const remainingCount = this.deriveRemainingCount(currentSub);
+
+			sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+				method: 'PATCH',
+				body: JSON.stringify({
+					...payload,
+					remaining_count: remainingCount,
+				}),
+			});
+		}
 
 		const newPeriodEnd = toSecondsDate(sub.current_end) || toSecondsDate(sub.end_at) || undefined;
 		return {

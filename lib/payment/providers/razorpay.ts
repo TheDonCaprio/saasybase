@@ -38,6 +38,7 @@ import {
 	UpdateProductOptions,
 } from '../types';
 import { asRecord } from '../../runtime-guards';
+import { Logger } from '../../logger';
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
 
 type RazorpayEnvelope<T> = T;

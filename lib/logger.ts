@@ -6,10 +6,18 @@ import { toError } from './runtime-guards'
 
 const MAX_PERSISTED_LOGS = 1000
 const PERSIST_PRUNE_PROBABILITY = 0.05
+let unmigratedDbHealthWarned = false
+
+export function emitUnmigratedDbHealthWarningOnce(missingTable: 'Setting' | 'SystemLog' | 'unknown' = 'unknown'): void {
+  if (unmigratedDbHealthWarned) return
+  unmigratedDbHealthWarned = true
+  console.warn(`[HEALTH WARNING] Unmigrated database detected (missing ${missingTable} table); running with fallback defaults and reduced persistence.`)
+}
 
 export class SecureLogger {
   private isDevelopment = process.env.NODE_ENV === 'development'
   private isProduction = process.env.NODE_ENV === 'production'
+  private systemLogUnavailable = false
 
   private sanitizeData(data: unknown): unknown {
     if (!data) return data
@@ -73,6 +81,10 @@ export class SecureLogger {
   }
 
   private async persistLog(level: 'WARN' | 'ERROR', message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
+    if (this.systemLogUnavailable) {
+      return
+    }
+
     const metaPayload = this.serializeForStorage(this.sanitizeData(data))
     const contextPayload = context ? this.serializeForStorage(this.sanitizeData(context)) : null
     const delegate = this.getSystemLogDelegate()
@@ -104,6 +116,11 @@ export class SecureLogger {
         }
       }
     } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err ?? '')
+      if (message.includes('P2021') || message.includes('main.SystemLog') || message.includes('table `main.SystemLog` does not exist')) {
+        this.systemLogUnavailable = true
+        emitUnmigratedDbHealthWarningOnce('SystemLog')
+      }
       if (this.isDevelopment) {
         console.warn('[LOGGER] Failed to persist log entry', err)
       }

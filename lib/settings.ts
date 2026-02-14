@@ -1,13 +1,37 @@
 import { prisma } from './prisma';
-import { Logger } from './logger';
+import { emitUnmigratedDbHealthWarningOnce, Logger } from './logger';
 
 export type AppFormatMode = 'short' | 'datetime' | 'iso' | 'locale';
 
 // Cache for settings to avoid database hits
 const settingsCache = new Map<string, { value: string; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let settingTableMissing = false;
+
+function isMissingSettingTableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('P2021') || message.includes('main.Setting') || message.includes('table `main.Setting` does not exist');
+}
+
+async function safeFindSettingKey(key: string): Promise<{ key: string } | null> {
+  if (settingTableMissing) return null;
+  try {
+    return await prisma.setting.findUnique({ where: { key }, select: { key: true } });
+  } catch (error) {
+    if (isMissingSettingTableError(error)) {
+      settingTableMissing = true;
+      emitUnmigratedDbHealthWarningOnce('Setting');
+      return null;
+    }
+    throw error;
+  }
+}
 
 export async function getSetting(key: string, defaultValue: string = ''): Promise<string> {
+  if (settingTableMissing) {
+    return defaultValue;
+  }
+
   const cached = settingsCache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.value;
@@ -19,12 +43,23 @@ export async function getSetting(key: string, defaultValue: string = ''): Promis
     settingsCache.set(key, { value, timestamp: Date.now() });
     return value;
   } catch (error) {
+    if (isMissingSettingTableError(error)) {
+      settingTableMissing = true;
+      emitUnmigratedDbHealthWarningOnce('Setting');
+      settingsCache.set(key, { value: defaultValue, timestamp: Date.now() });
+      return defaultValue;
+    }
     Logger.error('Error fetching setting', error);
     return defaultValue;
   }
 }
 
 export async function setSetting(key: string, value: string) {
+  if (settingTableMissing) {
+    settingsCache.set(key, { value, timestamp: Date.now() });
+    return { key, value };
+  }
+
   try {
     const existing = await prisma.setting.findUnique({ where: { key } });
     const result = existing
@@ -33,6 +68,12 @@ export async function setSetting(key: string, value: string) {
     settingsCache.set(key, { value: result.value, timestamp: Date.now() });
     return result;
   } catch (error) {
+    if (isMissingSettingTableError(error)) {
+      settingTableMissing = true;
+      emitUnmigratedDbHealthWarningOnce('Setting');
+      settingsCache.set(key, { value, timestamp: Date.now() });
+      return { key, value };
+    }
     Logger.error('Error setting setting', error);
     throw error;
   }
@@ -618,8 +659,8 @@ export async function getBlogSidebarSettings(): Promise<{
     getSetting(SETTING_KEYS.BLOG_SIDEBAR_CONTENT, SETTING_DEFAULTS[SETTING_KEYS.BLOG_SIDEBAR_CONTENT]),
     getSetting(SETTING_KEYS.BLOG_SIDEBAR_HTML, SETTING_DEFAULTS[SETTING_KEYS.BLOG_SIDEBAR_HTML]),
     getSetting(SETTING_KEYS.BLOG_SIDEBAR_WIDGET_ORDER, SETTING_DEFAULTS[SETTING_KEYS.BLOG_SIDEBAR_WIDGET_ORDER]),
-    prisma.setting.findUnique({ where: { key: SETTING_KEYS.BLOG_SIDEBAR_ENABLED_PAGES }, select: { key: true } }),
-    prisma.setting.findUnique({ where: { key: SETTING_KEYS.BLOG_SIDEBAR_ENABLED_ARCHIVE }, select: { key: true } })
+    safeFindSettingKey(SETTING_KEYS.BLOG_SIDEBAR_ENABLED_PAGES),
+    safeFindSettingKey(SETTING_KEYS.BLOG_SIDEBAR_ENABLED_ARCHIVE)
   ]);
 
   const idx = enabledIndex === 'true';

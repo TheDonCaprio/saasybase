@@ -68,20 +68,36 @@ export default function AccountMenu() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasAttemptedProfileFetch, setHasAttemptedProfileFetch] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isSignedIn && isOpen && !profile && !loading) {
+    if (isSignedIn && isOpen && !profile && !loading && !hasAttemptedProfileFetch) {
+      setHasAttemptedProfileFetch(true);
       setLoading(true);
       fetch('/api/user/profile')
-        .then((res) => res.json())
-        .then((data) => {
-          setProfile(data);
+        .then(async (res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to fetch profile: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then((data: unknown) => {
+          const candidate = data as Partial<UserProfile> | null;
+          const hasUser =
+            Boolean(candidate?.user)
+            && typeof candidate?.user?.id === 'string'
+            && typeof candidate?.user?.name === 'string'
+            && typeof candidate?.user?.email === 'string'
+            && typeof candidate?.user?.role === 'string';
+
+          setProfile(hasUser ? (candidate as UserProfile) : null);
         })
         .catch((err) => {
           console.error('Failed to fetch profile:', err);
+          setProfile(null);
         })
         .finally(() => {
           setLoading(false);
@@ -99,7 +115,13 @@ export default function AccountMenu() {
           console.error('Failed to fetch site info:', err);
         });
     }
-  }, [isSignedIn, isOpen, profile, loading, siteInfo]);
+  }, [isSignedIn, isOpen, profile, loading, siteInfo, hasAttemptedProfileFetch]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHasAttemptedProfileFetch(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -146,6 +168,7 @@ export default function AccountMenu() {
     setIsOpen(false);
     setProfile(null);
     setSiteInfo(null);
+    setHasAttemptedProfileFetch(false);
   };
 
   if (!isLoaded) {
@@ -190,7 +213,7 @@ export default function AccountMenu() {
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse w-3/4" />
             </div>
-          ) : profile ? (
+          ) : profile?.user ? (
             <>
               <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
                 <p className="font-semibold text-neutral-900 dark:text-neutral-100 truncate">

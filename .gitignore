@@ -1,2 +1,88 @@
-node_modules
+node_modules/
+
+# Next.js build output
 .next/
+out/
+dist/
+
+# Local env files (may contain secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports
+*.report
+
+# Testing
+/coverage/
+/.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Parcel cache
+.cache/
+
+# Next.js cache (Vercel/Other)
+.vercel/
+.now/
+
+# Docker
+docker-compose.override.yml
+Dockerfile.dev
+
+# SQLite DBs
+*.sqlite
+*.sqlite3
+/prisma/dev.db
+
+# Keys, certificates, and other secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# IDE local history and misc
+.history/
+*.swp
+*~
+
+# System files
+.vscode-server/
+
+# Ignore build artifacts from popular tools
+/build/
+/bundle/
+
+# Ignore generated type declarations from some tools
+/*.d.ts

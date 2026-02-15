@@ -9,15 +9,18 @@ import { persistEnvValue } from '@/lib/env-files';
 import { findPlanSeedByName } from '@/lib/plans';
 import { getProviderCurrency } from '@/lib/payment/registry';
 
-function getPlanId(context: unknown): string | null {
-  const params = (context as { params?: { planId?: string } } | undefined)?.params;
+async function getPlanId(context: unknown): Promise<string | null> {
+  const paramsOrPromise = (context as { params?: { planId?: string } | Promise<{ planId?: string }> } | undefined)?.params;
+  const params = paramsOrPromise && typeof (paramsOrPromise as Promise<unknown>).then === 'function'
+    ? await (paramsOrPromise as Promise<{ planId?: string }>)
+    : paramsOrPromise as { planId?: string } | undefined;
   return params?.planId ?? null;
 }
 
 export async function POST(request: NextRequest, context: unknown) {
   try {
     const adminId = await requireAdmin();
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
 
     if (!planId) {
       return NextResponse.json({ error: 'Missing planId' }, { status: 400 });
@@ -245,7 +248,7 @@ export async function POST(request: NextRequest, context: unknown) {
     if (authResponse) return authResponse;
 
     const err = toError(error);
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
     Logger.error('Create price error', {
       planId,
       error: err.message,

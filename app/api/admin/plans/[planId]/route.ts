@@ -15,8 +15,11 @@ import { PaymentProviderError } from '@/lib/payment/errors';
 import type { Prisma } from '@prisma/client';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
 
-function getPlanId(context: unknown): string | null {
-  const params = (context as { params?: { planId?: string } } | undefined)?.params;
+async function getPlanId(context: unknown): Promise<string | null> {
+  const paramsOrPromise = (context as { params?: { planId?: string } | Promise<{ planId?: string }> } | undefined)?.params;
+  const params = paramsOrPromise && typeof (paramsOrPromise as Promise<unknown>).then === 'function'
+    ? await (paramsOrPromise as Promise<{ planId?: string }>)
+    : paramsOrPromise as { planId?: string } | undefined;
   return params?.planId ?? null;
 }
 
@@ -32,7 +35,7 @@ export const PATCH = withValidation(apiSchemas.adminPlanToggle, async (request: 
       const retryAfterSeconds = Math.max(0, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
     }
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
     if (!planId) {
       return NextResponse.json({ error: 'Missing planId' }, { status: 400 });
     }
@@ -47,7 +50,7 @@ export const PATCH = withValidation(apiSchemas.adminPlanToggle, async (request: 
   } catch (err: unknown) {
     const guard = toAuthGuardErrorResponse(err);
     if (guard) return guard;
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
     const e = toError(err);
     Logger.error('Plan update error', { planId, error: e.message, stack: e.stack });
     return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 });
@@ -66,7 +69,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       const retryAfterSeconds = Math.max(0, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
     }
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
     if (!planId) {
       return NextResponse.json({ error: 'Missing planId' }, { status: 400 });
     }
@@ -653,7 +656,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
 
     return NextResponse.json({ success: true, plan });
   } catch (err: unknown) {
-    const planId = getPlanId(context);
+    const planId = await getPlanId(context);
     const e = toError(err);
     Logger.error('Plan PUT error', { planId, error: e.message, stack: e.stack });
     return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 });

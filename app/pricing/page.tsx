@@ -190,6 +190,9 @@ export default async function PricingPage() {
         priceCents: typeof currentSubscription.plan.priceCents === 'number'
           ? currentSubscription.plan.priceCents
           : null,
+        recurringInterval: typeof currentSubscription.plan.recurringInterval === 'string'
+          ? currentSubscription.plan.recurringInterval
+          : null,
       }
     : null;
 

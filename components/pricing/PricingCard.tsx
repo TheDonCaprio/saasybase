@@ -85,6 +85,7 @@ type CouponOption = {
 type ActiveRecurringPlan = {
   planId: string;
   priceCents: number | null;
+  recurringInterval: string | null;
 } | null;
 
 type ProrationLineItem = {
@@ -161,6 +162,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const [planSwitchVisible, setPlanSwitchVisible] = useState(false);
   const [planSwitchSupportsProration, setPlanSwitchSupportsProration] = useState<boolean | null>(null);
   const [planSwitchCapabilityLoading, setPlanSwitchCapabilityLoading] = useState(false);
+  const [planSwitchProrationPending, setPlanSwitchProrationPending] = useState(false);
   const [existingExpiresAt, setExistingExpiresAt] = useState<string | null>(null);
   const [existingPlanName, setExistingPlanName] = useState<string | null>(null);
   const [recurringPlanName, setRecurringPlanName] = useState<string | null>(null);
@@ -385,12 +387,23 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     const probe = async () => {
       setPlanSwitchCapabilityLoading(true);
       setPlanSwitchSupportsProration(null);
+      setPlanSwitchProrationPending(false);
       try {
         const res = await fetch(`/api/subscription/proration?planId=${encodeURIComponent(plan.id)}`,
           controller ? { signal: controller.signal } : undefined,
         );
         const json = await res.json().catch(() => null) as unknown;
         const obj = asRecord(json);
+
+        // Previous switch still processing
+        if (res.status === 409 && obj?.prorationPending === true) {
+          if (mounted) {
+            setPlanSwitchProrationPending(true);
+            setPlanSwitchSupportsProration(false);
+          }
+          return;
+        }
+
         // Full proration preview available
         const hasProration = Boolean(res.ok && obj?.prorationEnabled === true);
         // Provider supports inline update but can't show a proration preview
@@ -498,6 +511,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       const json = await res.json().catch(() => null) as unknown;
       if (!res.ok) {
         const obj = asRecord(json);
+        // Previous proration switch is still being processed (invoice not yet captured).
+        if (res.status === 409 && obj?.prorationPending === true) {
+          const message = typeof obj?.message === 'string'
+            ? obj.message
+            : 'Your previous plan change is still being processed. Please wait a moment.';
+          setIfMounted(setProrationError)(message);
+          showToast(message, 'info');
+          return;
+        }
         if (res.status === 409 && obj?.prorationEnabled === false) {
           applyProrationFallback(checkoutOverridesRef, obj?.reason ?? 'PRORATION_FALLBACK');
           await beginCheckoutFlow();
@@ -823,10 +845,26 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const isScheduledPlan = Boolean(scheduledPlanId && plan.id === scheduledPlanId);
   const isSwitchingAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && !isCurrentAutoRenewPlan && !isScheduledPlan);
   const comparisonPriceCents = activeRecurringPlan?.priceCents ?? null;
-  const planSwitchKind =
-    isSwitchingAutoRenewPlan && typeof comparisonPriceCents === 'number'
-      ? (plan.priceCents > comparisonPriceCents ? 'upgrade' : plan.priceCents < comparisonPriceCents ? 'downgrade' : 'change')
-      : 'change';
+
+  // Normalize prices to daily rates for fair cross-interval comparison
+  // (e.g. $300/month vs $100/day → $10/day vs $100/day → the daily plan is an upgrade).
+  const normalizeToDailyRate = (cents: number, interval: string | null) => {
+    switch (interval) {
+      case 'day':   return cents;
+      case 'week':  return cents / 7;
+      case 'month': return cents / 30;
+      case 'year':  return cents / 365;
+      default:      return cents;
+    }
+  };
+  const planSwitchKind = (() => {
+    if (!isSwitchingAutoRenewPlan || typeof comparisonPriceCents !== 'number') return 'change' as const;
+    const currentDaily = normalizeToDailyRate(comparisonPriceCents, activeRecurringPlan?.recurringInterval ?? null);
+    const targetDaily = normalizeToDailyRate(plan.priceCents, plan.recurringInterval ?? null);
+    if (targetDaily > currentDaily) return 'upgrade' as const;
+    if (targetDaily < currentDaily) return 'downgrade' as const;
+    return 'change' as const;
+  })();
 
   let buttonLabel: string;
   if (pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming) {
@@ -865,12 +903,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {badge.text}
               </span>
-              {isScheduledPlan && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-100">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  Upcoming
-                </span>
-              )}
+
               {isTeamPlan ? (
                 <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-100">
                   <FontAwesomeIcon icon={faUsers} className="h-2.5 w-2.5" />
@@ -1219,6 +1252,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                       <p className="mt-1 text-neutral-600 dark:text-neutral-300">
                         Checking what your payment provider supports…
                       </p>
+                    ) : planSwitchProrationPending ? (
+                      <>
+                        <p className="mt-1 text-amber-600 dark:text-amber-300">
+                          Your previous plan change is still being processed by the payment provider.
+                        </p>
+                        <p className="mt-2 text-neutral-500 dark:text-neutral-400">
+                          Please wait a moment for the invoice to be captured before switching again.
+                        </p>
+                      </>
                     ) : planSwitchSupportsProration ? (
                       <>
                         <p className="mt-1 text-neutral-600 dark:text-neutral-300">
@@ -1242,7 +1284,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                       <button
                         type="button"
                         className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={planSwitchCapabilityLoading || prorationLoading || prorationConfirming || checkingExisting || loadingCoupons || pending}
+                        disabled={planSwitchCapabilityLoading || planSwitchProrationPending || prorationLoading || prorationConfirming || checkingExisting || loadingCoupons || pending}
                         onClick={() => {
                           setShowPlanSwitchModal(false);
 

@@ -20,6 +20,7 @@ type DBPlan = {
 type ActiveRecurringPlan = {
   planId: string;
   priceCents: number | null;
+  recurringInterval: string | null;
 } | null;
 
 interface PricingListProps {

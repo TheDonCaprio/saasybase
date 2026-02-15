@@ -260,6 +260,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
     ? {
       planId: activeSub.plan.id,
       priceCents: typeof activeSub.plan.priceCents === 'number' ? activeSub.plan.priceCents : null,
+      recurringInterval: typeof activeSub.plan.recurringInterval === 'string' ? activeSub.plan.recurringInterval : null,
     }
     : null;
   return (

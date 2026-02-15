@@ -36,7 +36,8 @@ type SubscriptionWithPlan = {
   externalSubscriptionId: string | null;
   externalSubscriptionIds: string | null;
   paymentProvider: string | null;
-  plan: { id: string; name: string; priceCents: number; autoRenew: boolean };
+  prorationPendingSince: Date | null;
+  plan: { id: string; name: string; priceCents: number; autoRenew: boolean; recurringInterval: string | null; recurringIntervalCount: number };
 };
 
 type PlanRecord = {
@@ -44,10 +45,28 @@ type PlanRecord = {
   name: string;
   priceCents: number;
   autoRenew: boolean;
+  recurringInterval: string | null;
+  recurringIntervalCount: number;
   externalPriceId: string | null;
   stripePriceId: string | null;
   externalPriceIds: string | null;
 };
+
+/**
+ * Convert a plan price to a daily rate for fair cross-interval comparison.
+ * e.g. $300/month vs $100/day → $10/day vs $100/day → daily is an upgrade.
+ */
+function normalizePriceToDailyRate(priceCents: number, interval: string | null, intervalCount: number): number {
+  const count = intervalCount || 1;
+  const totalPerCycle = priceCents;
+  switch (interval) {
+    case 'day':   return totalPerCycle / (1 * count);
+    case 'week':  return totalPerCycle / (7 * count);
+    case 'month': return totalPerCycle / (30 * count);
+    case 'year':  return totalPerCycle / (365 * count);
+    default:      return totalPerCycle; // non-recurring or unknown
+  }
+}
 
 async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
   return prisma.subscription.findFirst({
@@ -68,8 +87,9 @@ async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWit
       externalSubscriptionId: true,
       externalSubscriptionIds: true,
       paymentProvider: true,
+      prorationPendingSince: true,
       plan: {
-        select: { id: true, name: true, priceCents: true, autoRenew: true },
+        select: { id: true, name: true, priceCents: true, autoRenew: true, recurringInterval: true, recurringIntervalCount: true },
       },
     },
     orderBy: { expiresAt: 'desc' },
@@ -84,6 +104,8 @@ async function fetchPlan(planId: string): Promise<PlanRecord | null> {
       name: true,
       priceCents: true,
       autoRenew: true,
+      recurringInterval: true,
+      recurringIntervalCount: true,
       externalPriceId: true,
       stripePriceId: true,
       externalPriceIds: true,
@@ -223,6 +245,29 @@ export async function GET(req: NextRequest) {
 
     const ctx = await resolveContext(planId, actorUserId);
 
+    // If a previous immediate proration switch is still being processed (invoice
+    // not yet captured), tell the frontend so it can show a processing state.
+    const PRORATION_PENDING_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+    if (ctx.currentSubscription.prorationPendingSince) {
+      const elapsed = Date.now() - ctx.currentSubscription.prorationPendingSince.getTime();
+      if (elapsed < PRORATION_PENDING_MAX_AGE_MS) {
+        return NextResponse.json({
+          prorationEnabled: false,
+          prorationPending: true,
+          reason: 'PRORATION_PENDING',
+          code: 'PRORATION_PENDING',
+          message: 'Your previous plan change is still being processed. Please wait a moment.',
+        }, { status: 409 });
+      }
+      // Stale flag — clear it silently and continue.
+      try {
+        await prisma.subscription.update({
+          where: { id: ctx.currentSubscription.id },
+          data: { prorationPendingSince: null },
+        });
+      } catch { /* best-effort */ }
+    }
+
     // Use the subscription's originating provider for proration preview
     const provider = paymentService.getProviderForRecord(ctx.providerKey);
     if (!provider.supportsFeature('proration')) {
@@ -247,10 +292,19 @@ export async function GET(req: NextRequest) {
 
           const currency = getActiveCurrency();
 
-          // Detect downgrades: Razorpay (and potentially other providers) can't
-          // perform immediate downgrades – they always schedule at cycle end.
-          // Tell the frontend upfront so the modal can inform the user.
-          const isDowngrade = targetPriceCents < currentPriceCents;
+          // Detect downgrades using normalized daily rates so that cross-interval
+          // switches are compared fairly (e.g. $300/month vs $100/day).
+          const currentDailyRate = normalizePriceToDailyRate(
+            currentPriceCents,
+            ctx.currentSubscription.plan.recurringInterval,
+            ctx.currentSubscription.plan.recurringIntervalCount,
+          );
+          const targetDailyRate = normalizePriceToDailyRate(
+            targetPriceCents,
+            ctx.targetPlan.recurringInterval,
+            ctx.targetPlan.recurringIntervalCount,
+          );
+          const isDowngrade = targetDailyRate < currentDailyRate;
           const downgradeScheduledAtCycleEnd = isDowngrade && ctx.providerKey === 'razorpay';
 
           return NextResponse.json({
@@ -494,6 +548,10 @@ export async function POST(req: NextRequest) {
       // Clear any previously scheduled plan switch since the immediate switch succeeded.
       scheduledPlanId: null,
       scheduledPlanDate: null,
+      // For Razorpay, the proration invoice must be captured before another
+      // switch is allowed.  Mark the subscription as having a pending proration
+      // so the GET handler can show a "processing" state.
+      prorationPendingSince: ctx.providerKey === 'razorpay' ? now : null,
     };
 
     await prisma.subscription.update({

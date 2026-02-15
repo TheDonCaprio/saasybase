@@ -222,6 +222,9 @@ model Subscription {
   // Scheduled plan switch at end of current billing cycle
   scheduledPlanId      String?
   scheduledPlanDate    DateTime?
+  // Set when an immediate proration switch succeeds; cleared by invoice.paid webhook.
+  // While set, further plan switches are blocked ("processing" state).
+  prorationPendingSince DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

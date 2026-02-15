@@ -1140,10 +1140,10 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			description: options.metadata?.description || undefined,
 		};
 
-		// If a provider-side Item exists, link it. Otherwise, let Razorpay create one.
-		if (typeof options.productId === 'string' && options.productId.trim()) {
-			item.id = options.productId;
-		}
+		// Razorpay's POST /plans does NOT accept item.id — it always creates a
+		// new item.  Passing an existing item ID triggers a BAD_REQUEST_ERROR
+		// ("id is/are not required and should not be sent").  We intentionally
+		// omit productId here and let Razorpay create the item automatically.
 
 		const payload: Record<string, unknown> = {
 			period,

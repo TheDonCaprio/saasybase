@@ -2213,6 +2213,8 @@ export class PaymentService {
                         canceledAt: nextCanceledAt,
                         cancelAtPeriodEnd: nextCancelAtPeriodEnd,
 						...(nextPlanId ? { planId: nextPlanId, scheduledPlanId: null, scheduledPlanDate: null } : null),
+                        // Clear pending proration flag — the subscription update confirms the switch settled.
+                        prorationPendingSince: null,
                     },
                     include: { plan: true }
                 });
@@ -2867,6 +2869,23 @@ export class PaymentService {
             });
 
             await updateSubscriptionLastPaymentAmount(dbSub.id);
+
+            // Clear the proration-pending flag now that the invoice is paid.
+            // This re-enables plan switching for the user.
+            if (dbSub.prorationPendingSince) {
+                try {
+                    await prisma.subscription.update({
+                        where: { id: dbSub.id },
+                        data: { prorationPendingSince: null },
+                    });
+                    Logger.info('Cleared prorationPendingSince after invoice payment', {
+                        subscriptionId,
+                        dbSubscriptionId: dbSub.id,
+                    });
+                } catch (err) {
+                    Logger.warn('Failed to clear prorationPendingSince', { error: toError(err).message });
+                }
+            }
 
             if (dbSub.status === 'PENDING' && paymentResult.created) {
                 await prisma.subscription.update({

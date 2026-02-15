@@ -220,4 +220,80 @@ describe('Paddle proration', () => {
 		expect(updateCall?.body?.items).toEqual([{ price_id: 'pri_new', quantity: 1 }]);
 		expect(updateCall?.body?.on_payment_failure).toBe('prevent_change');
 	});
+
+	it('getSubscription does NOT set cancelAtPeriodEnd when scheduled_change action is update', async () => {
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const u = String(url);
+			const method = String(init?.method || 'GET').toUpperCase();
+
+			if (u.includes('/subscriptions/sub_plan_change') && method === 'GET') {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						data: {
+							id: 'sub_plan_change',
+							status: 'active',
+							customer_id: 'ctm_123',
+							currency_code: 'USD',
+							current_billing_period: {
+								starts_at: '2026-01-01T00:00:00Z',
+								ends_at: '2026-02-01T00:00:00Z',
+							},
+							scheduled_change: {
+								action: 'update',
+								effective_at: '2026-02-01T00:00:00Z',
+							},
+							items: [{ quantity: 1, price: { id: 'pri_next' } }],
+						},
+					}),
+				};
+			}
+			throw new Error(`Unexpected fetch: ${u}`);
+		}) as any;
+
+		const provider = new PaddlePaymentProvider(apiKey);
+		const sub = await provider.getSubscription('sub_plan_change');
+
+		// A scheduled plan change should NOT be reported as a pending cancellation.
+		expect(sub.cancelAtPeriodEnd).toBe(false);
+	});
+
+	it('getSubscription DOES set cancelAtPeriodEnd when scheduled_change action is cancel', async () => {
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const u = String(url);
+			const method = String(init?.method || 'GET').toUpperCase();
+
+			if (u.includes('/subscriptions/sub_pending_cancel') && method === 'GET') {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						data: {
+							id: 'sub_pending_cancel',
+							status: 'active',
+							customer_id: 'ctm_456',
+							currency_code: 'USD',
+							current_billing_period: {
+								starts_at: '2026-01-01T00:00:00Z',
+								ends_at: '2026-02-01T00:00:00Z',
+							},
+							scheduled_change: {
+								action: 'cancel',
+								effective_at: '2026-02-01T00:00:00Z',
+							},
+							items: [{ quantity: 1, price: { id: 'pri_old' } }],
+						},
+					}),
+				};
+			}
+			throw new Error(`Unexpected fetch: ${u}`);
+		}) as any;
+
+		const provider = new PaddlePaymentProvider(apiKey);
+		const sub = await provider.getSubscription('sub_pending_cancel');
+
+		// A scheduled cancellation SHOULD be reported as cancelAtPeriodEnd.
+		expect(sub.cancelAtPeriodEnd).toBe(true);
+	});
 });

@@ -55,7 +55,8 @@ export default async function PlanPage({ searchParams }: PageProps) {
             supportsOrganizations: true,
             organizationTokenPoolStrategy: true,
           }
-        }
+        },
+        scheduledPlan: { select: { id: true, name: true, priceCents: true } }
       }
     }),
     prisma.subscription.findMany({
@@ -118,6 +119,9 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const formattedNextBilling = nextBillingDate ? await formatDateServer(nextBillingDate) : null;
   const formattedCanceledAt = activeSub?.canceledAt ? await formatDateServer(activeSub.canceledAt) : null;
   const isCancellationScheduled = !!activeSub?.canceledAt;
+  const scheduledPlan = activeSub?.scheduledPlan ?? null;
+  const formattedScheduledDate = activeSub?.scheduledPlanDate
+    ? await formatDateServer(activeSub.scheduledPlanDate) : null;
   const pendingSubsWithFormats = await Promise.all(
     allSubscriptions
       .filter(s => s.status === 'PENDING')
@@ -322,6 +326,20 @@ export default async function PlanPage({ searchParams }: PageProps) {
                 }
                 : undefined
             }
+            pendingSwitchNotice={
+              scheduledPlan
+                ? {
+                    heading: 'Plan switch scheduled',
+                    body: (
+                      <>
+                        Your subscription will switch to <span className="font-medium">{scheduledPlan.name}</span>
+                        {formattedScheduledDate ? <> on <span className="font-medium">{formattedScheduledDate}</span></> : <> at the end of your current billing period</>}.
+                        You&apos;ll keep your current plan until then.
+                      </>
+                    ),
+                  }
+                : undefined
+            }
             emptyState={workspaceOnly
               ? {
                 heading: 'Workspace plan active',
@@ -451,7 +469,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
                 Full pricing page
               </Link>
             </div>
-            <DashboardPricingListServerWrapper plans={plansForPricing} activeRecurringPlan={activeRecurringPlan} />
+            <DashboardPricingListServerWrapper plans={plansForPricing} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlan?.id ?? null} />
           </section>
         </div>
 

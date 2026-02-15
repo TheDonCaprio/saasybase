@@ -132,6 +132,137 @@ describe('razorpay-provider (minimum working)', () => {
 		expect(res.newPeriodEnd instanceof Date).toBe(true);
 	});
 
+	it('updateSubscriptionPlan retries with remaining_count when Razorpay requires it for different periods', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+		let patchCount = 0;
+
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).includes('/subscriptions/sub_456') && method === 'PATCH') {
+				patchCount += 1;
+				const body = JSON.parse(init?.body || '{}');
+				expect(body.plan_id).toBe('plan_yearly');
+				expect(body.schedule_change_at).toBe('now');
+
+				if (patchCount === 1) {
+					return jsonResponse(
+						{ error: { code: 'BAD_REQUEST_ERROR', description: 'remaining_count should be present to update to new plan which has different period' } },
+						{ ok: false, status: 400 }
+					);
+				}
+
+				expect(body.remaining_count).toBe(950);
+				return jsonResponse({
+					id: 'sub_456',
+					status: 'active',
+					plan_id: 'plan_yearly',
+					current_end: Math.floor(Date.now() / 1000) + 86400,
+				});
+			}
+
+			if (String(url).includes('/subscriptions/sub_456') && method === 'GET') {
+				return jsonResponse({
+					id: 'sub_456',
+					status: 'active',
+					plan_id: 'plan_monthly',
+					total_count: 1200,
+					paid_count: 250,
+					current_end: Math.floor(Date.now() / 1000) + 86400,
+				});
+			}
+
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		}) as any;
+
+		const res = await provider.updateSubscriptionPlan('sub_456', 'plan_yearly', 'user_1');
+		expect(res.success).toBe(true);
+		expect(patchCount).toBe(2);
+	});
+
+	it('updateSubscriptionPlan throws RAZORPAY_PENDING_INVOICE when proration invoice not captured', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).includes('/subscriptions/sub_pending') && method === 'PATCH') {
+				return jsonResponse(
+					{ error: { code: 'BAD_REQUEST_ERROR', description: 'inv_XXXXX does not have any captured payments' } },
+					{ ok: false, status: 400 }
+				);
+			}
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		}) as any;
+
+		await expect(provider.updateSubscriptionPlan('sub_pending', 'plan_new', 'user_1'))
+			.rejects
+			.toThrow('RAZORPAY_PENDING_INVOICE');
+	});
+
+	it('updateSubscriptionPlan throws RAZORPAY_CYCLE_NOT_STARTED when cycle start is in future', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).includes('/subscriptions/sub_future') && method === 'PATCH') {
+				return jsonResponse(
+					{ error: { code: 'BAD_REQUEST_ERROR', description: "Can't update subscription when cycle start is in future" } },
+					{ ok: false, status: 400 }
+				);
+			}
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		}) as any;
+
+		await expect(provider.updateSubscriptionPlan('sub_future', 'plan_new', 'user_1'))
+			.rejects
+			.toThrow('RAZORPAY_CYCLE_NOT_STARTED');
+	});
+
+	it('updateSubscriptionPlan caps remaining_count when it exceeds target plan max', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+		let patchCount = 0;
+
+		global.fetch = vi.fn(async (url: any, init?: any) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			const urlStr = String(url);
+
+			if (urlStr.includes('/subscriptions/sub_weekly') && method === 'PATCH') {
+				patchCount++;
+				const body = JSON.parse(init?.body || '{}');
+
+				// 1st PATCH: no remaining_count → needs remaining_count
+				if (patchCount === 1 && !body.remaining_count) {
+					return jsonResponse(
+						{ error: { code: 'BAD_REQUEST_ERROR', description: 'remaining_count is required when plan has different period' } },
+						{ ok: false, status: 400 }
+					);
+				}
+				// 2nd PATCH: remaining_count=1198 → exceeds max (300) for monthly
+				if (patchCount === 2 && body.remaining_count === 1198) {
+					return jsonResponse(
+						{ error: { code: 'BAD_REQUEST_ERROR', description: 'Exceeds the maximum remaining_count (300) allowed for the given period and interval' } },
+						{ ok: false, status: 400 }
+					);
+				}
+				// 3rd PATCH: capped to 300 → success
+				if (patchCount === 3 && body.remaining_count === 300) {
+					return jsonResponse({ id: 'sub_weekly', status: 'active', plan_id: 'plan_monthly', current_end: Math.floor(Date.now() / 1000) + 86400 * 30 });
+				}
+				return jsonResponse({ error: { description: 'Unexpected PATCH' } }, { ok: false, status: 400 });
+			}
+
+			// GET to fetch current sub for remaining_count derivation
+			if (urlStr.includes('/subscriptions/sub_weekly') && method === 'GET') {
+				return jsonResponse({ id: 'sub_weekly', status: 'active', plan_id: 'plan_weekly', remaining_count: 1198 });
+			}
+
+			throw new Error('Unexpected fetch: ' + method + ' ' + urlStr);
+		}) as any;
+
+		const res = await provider.updateSubscriptionPlan('sub_weekly', 'plan_monthly', 'user_1');
+		expect(res.success).toBe(true);
+		expect(patchCount).toBe(3);
+	});
+
 	it('scheduleSubscriptionPlanChange PATCHes /subscriptions/:id with schedule_change_at=cycle_end', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 

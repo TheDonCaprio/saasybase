@@ -1178,7 +1178,9 @@ export class PaymentService {
                 expiresAt: effectiveExpiresAt,
                 canceledAt: sub.canceledAt ?? null,
                 externalSubscriptionIds: mergedSubIds ?? existingSub?.externalSubscriptionIds,
-                paymentProvider: this.providerKey
+                paymentProvider: this.providerKey,
+                scheduledPlanId: null,
+                scheduledPlanDate: null,
             },
             create: {
                 userId,
@@ -2210,7 +2212,7 @@ export class PaymentService {
                         status: effectiveStatus,
                         canceledAt: nextCanceledAt,
                         cancelAtPeriodEnd: nextCancelAtPeriodEnd,
-						...(nextPlanId ? { planId: nextPlanId } : null),
+						...(nextPlanId ? { planId: nextPlanId, scheduledPlanId: null, scheduledPlanDate: null } : null),
                     },
                     include: { plan: true }
                 });
@@ -3692,7 +3694,9 @@ export class PaymentService {
                 expiresAt,
                 canceledAt: providerSubscription.canceledAt ?? null,
                 externalSubscriptionIds: mergedSubIds,
-                paymentProvider: this.providerKey
+                paymentProvider: this.providerKey,
+                scheduledPlanId: null,
+                scheduledPlanDate: null,
             },
             create: {
                 userId,

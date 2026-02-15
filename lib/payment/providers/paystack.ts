@@ -535,8 +535,15 @@ export class PaystackPaymentProvider implements PaymentProvider {
         } catch (err) {
             try {
                 await this.undoCancelSubscription(subscriptionId);
-            } catch {
-                // Best-effort rollback only; original error still surfaces to caller.
+            } catch (rollbackErr) {
+                // Rollback also failed — the user may have NO active subscription.
+                // Log prominently so admins can intervene.
+                console.error('[Paystack] CRITICAL: Scheduled plan change failed AND rollback failed. User may have no active subscription.', {
+                    subscriptionId,
+                    userId,
+                    originalError: err instanceof Error ? err.message : String(err),
+                    rollbackError: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
+                });
             }
 
             void err;

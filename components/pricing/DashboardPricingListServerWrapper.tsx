@@ -30,9 +30,10 @@ type ActiveRecurringPlan = {
 interface DashboardPricingListServerWrapperProps {
   plans: unknown[];
   activeRecurringPlan?: ActiveRecurringPlan;
+  scheduledPlanId?: string | null;
 }
 
-export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlan = null }: DashboardPricingListServerWrapperProps) {
+export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlan = null, scheduledPlanId }: DashboardPricingListServerWrapperProps) {
   // Localized cast: callers pass `unknown[]` to this server wrapper (from DB
   // layers); cast here to the client component's expected `DBPlan[]`.
   const typedPlans = plans as DBPlan[];
@@ -49,5 +50,5 @@ export default async function DashboardPricingListServerWrapper({ plans, activeR
   // Resolve currency on server and pass to client for consistent display
   const currency = getActiveCurrency();
   
-  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlan={activeRecurringPlan} gridClasses={gridClasses} currency={currency} />;
+  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlanId} gridClasses={gridClasses} currency={currency} />;
 }

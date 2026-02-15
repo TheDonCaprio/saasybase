@@ -35,7 +35,10 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan] = await Promise.all([
     prisma.subscription.findFirst({
       where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
-      include: { plan: true }
+      include: {
+        plan: true,
+        scheduledPlan: { select: { id: true, name: true, priceCents: true } }
+      }
     }),
     prisma.subscription.findMany({
       where: { userId, status: { in: ['PENDING'] } },
@@ -83,6 +86,9 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const canceledAt = subscription?.canceledAt ? subscription.canceledAt.toISOString() : null;
   const planAutoRenew = !!subscription?.plan?.autoRenew;
   const nextBillingDateISO = subscription?.expiresAt ? subscription.expiresAt.toISOString() : null;
+  const scheduledPlan = subscription?.scheduledPlan ?? null;
+  const formattedScheduledDate = subscription?.scheduledPlanDate
+    ? await formatDateServer(subscription.scheduledPlanDate) : null;
 
   // Pre-format values on the server using DB-backed settings to avoid
   // SSR/CSR hydration mismatches.
@@ -287,6 +293,20 @@ export default async function BillingPage({ searchParams }: PageProps) {
                     body: (
                       <>
                         Auto-renew is disabled. You&apos;ll keep access until {formattedNextBillingDate ?? 'the end of this period'}.
+                      </>
+                    ),
+                  }
+                : undefined
+            }
+            pendingSwitchNotice={
+              scheduledPlan
+                ? {
+                    heading: 'Plan switch scheduled',
+                    body: (
+                      <>
+                        Your subscription will switch to <span className="font-medium">{scheduledPlan.name}</span>
+                        {formattedScheduledDate ? <> on <span className="font-medium">{formattedScheduledDate}</span></> : <> at the end of your current billing period</>}.
+                        You&apos;ll keep your current plan until then.
                       </>
                     ),
                   }

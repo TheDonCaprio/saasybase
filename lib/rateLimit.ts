@@ -55,56 +55,36 @@ export async function rateLimit(
       userAgent: context.userAgent ? context.userAgent.slice(0, 255) : null
     };
 
-    const txResult = await prisma.$transaction(async (tx) => {
-      const existing = await tx.rateLimitBucket.findUnique({
-        where: { rate_limit_key_window_unique: { key, windowStart } }
-      });
-
-      if (!existing) {
-        const created = await tx.rateLimitBucket.create({
-          data: {
-            key,
-            windowStart,
-            windowEnd,
-            hits: 1,
-            firstRequestAt: nowDate,
-            lastRequestAt: nowDate,
-            ...contextData
-          }
-        });
-
-        return { bucket: created, hits: 1, allowed: true } as const;
-      }
-
-      const nextHits = existing.hits + 1;
-      const updatedMetadata = {
-        actorId: contextData.actorId ?? existing.actorId,
-        route: contextData.route ?? existing.route,
-        method: contextData.method ?? existing.method,
-        ip: contextData.ip ?? existing.ip,
-        userAgent: contextData.userAgent ?? existing.userAgent,
-        lastRequestAt: nowDate
-      };
-
-      if (nextHits > limit) {
-        await tx.rateLimitBucket.update({
-          where: { rate_limit_key_window_unique: { key, windowStart } },
-          data: updatedMetadata
-        });
-
-        return { bucket: existing, hits: existing.hits, allowed: false } as const;
-      }
-
-      const updated = await tx.rateLimitBucket.update({
-        where: { rate_limit_key_window_unique: { key, windowStart } },
-        data: {
-          hits: nextHits,
-          ...updatedMetadata
-        }
-      });
-
-      return { bucket: updated, hits: nextHits, allowed: true } as const;
+    // Use upsert instead of an interactive transaction to avoid timeout issues.
+    // Prisma's upsert is atomic at the DB level and avoids holding an open
+    // transaction while waiting for round-trips.
+    const bucket = await prisma.rateLimitBucket.upsert({
+      where: { rate_limit_key_window_unique: { key, windowStart } },
+      create: {
+        key,
+        windowStart,
+        windowEnd,
+        hits: 1,
+        firstRequestAt: nowDate,
+        lastRequestAt: nowDate,
+        ...contextData
+      },
+      update: {
+        hits: { increment: 1 },
+        lastRequestAt: nowDate,
+        ...(contextData.actorId ? { actorId: contextData.actorId } : {}),
+        ...(contextData.route ? { route: contextData.route } : {}),
+        ...(contextData.method ? { method: contextData.method } : {}),
+        ...(contextData.ip ? { ip: contextData.ip } : {}),
+        ...(contextData.userAgent ? { userAgent: contextData.userAgent } : {}),
+      },
     });
+
+    const txResult = {
+      bucket,
+      hits: bucket.hits,
+      allowed: bucket.hits <= limit,
+    };
 
     if (++cleanupCounter >= CLEANUP_THRESHOLD) {
       cleanupCounter = 0;

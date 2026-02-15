@@ -92,6 +92,11 @@ export interface CancellationNotice {
 	body: ReactNode;
 }
 
+export interface PendingSwitchNotice {
+	heading: ReactNode;
+	body: ReactNode;
+}
+
 
 export interface CurrentPlanStatusProps {
 	title?: ReactNode;
@@ -102,6 +107,7 @@ export interface CurrentPlanStatusProps {
 	infoTiles?: PlanInfoTile[];
 	progress?: PlanProgressSummary;
 	cancellationNotice?: CancellationNotice;
+	pendingSwitchNotice?: PendingSwitchNotice;
 	emptyState?: EmptyPlanState;
 	extra?: ReactNode;
 	className?: string;
@@ -128,6 +134,7 @@ export function CurrentPlanStatus({
 	infoTiles,
 	progress,
 	cancellationNotice,
+	pendingSwitchNotice,
 	emptyState,
 	extra,
 	className,
@@ -176,6 +183,13 @@ export function CurrentPlanStatus({
 						<div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
 							<div className="font-semibold text-amber-700 dark:text-amber-100">{cancellationNotice.heading}</div>
 							<p className="mt-1 text-amber-700/90 dark:text-amber-200/80">{cancellationNotice.body}</p>
+						</div>
+					) : null}
+
+					{pendingSwitchNotice ? (
+						<div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm shadow-sm dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100">
+							<div className="font-semibold text-blue-700 dark:text-blue-100">{pendingSwitchNotice.heading}</div>
+							<p className="mt-1 text-blue-700/90 dark:text-blue-200/80">{pendingSwitchNotice.body}</p>
 						</div>
 					) : null}
 

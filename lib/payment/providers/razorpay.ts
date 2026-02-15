@@ -37,7 +37,7 @@ import {
 	SubscriptionUpdateResult,
 	UpdateProductOptions,
 } from '../types';
-import { asRecord } from '../../runtime-guards';
+import { asRecord, toError } from '../../runtime-guards';
 import { Logger } from '../../logger';
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
 
@@ -272,14 +272,47 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		const requestPayloadSummary = requestPayloadParsed ? summarizeRazorpayRequestPayload(path, requestPayloadParsed) : null;
 		const requestPayloadFallback = !requestPayloadSummary && requestPayloadText ? truncateText(requestPayloadText, 400) : null;
 
-		const res = await fetch(url, {
-			...init,
-			headers: {
-				Authorization: this.authHeader(),
-				'Content-Type': 'application/json',
-				...(init.headers || {}),
-			},
-		});
+		// Retry transient network errors (DNS, connection reset, TLS) up to 2 times
+		// with exponential backoff.
+		const MAX_NETWORK_RETRIES = 2;
+		let lastNetworkError: unknown = null;
+		let res: Response | null = null;
+
+		for (let attempt = 0; attempt <= MAX_NETWORK_RETRIES; attempt++) {
+			try {
+				res = await fetch(url, {
+					...init,
+					headers: {
+						Authorization: this.authHeader(),
+						'Content-Type': 'application/json',
+						...(init.headers || {}),
+					},
+				});
+				lastNetworkError = null;
+				break;
+			} catch (fetchErr) {
+				lastNetworkError = fetchErr;
+				if (attempt < MAX_NETWORK_RETRIES) {
+					const delayMs = 500 * Math.pow(2, attempt); // 500ms, 1000ms
+					Logger.warn('Razorpay fetch failed, retrying', {
+						path,
+						method,
+						attempt: attempt + 1,
+						delayMs,
+						error: toError(fetchErr).message,
+					});
+					await new Promise(r => setTimeout(r, delayMs));
+				}
+			}
+		}
+
+		if (!res) {
+			const ne = toError(lastNetworkError);
+			throw new PaymentProviderError(
+				`Razorpay API network error: ${ne.message}`,
+				{ url, path, method, networkError: true, request: requestPayloadSummary ?? (requestPayloadFallback ? { raw: requestPayloadFallback } : null) }
+			);
+		}
 		const requestId = (() => {
 			const headers = (res as unknown as { headers?: { get?: (key: string) => string | null } }).headers;
 			if (!headers || typeof headers.get !== 'function') return null;
@@ -355,6 +388,34 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		return /offer_id/i.test(text) && /(unknown|unexpected|not\s+allowed|invalid\s+parameter|extra\s+keys)/i.test(text);
 	}
 
+	/**
+	 * Detects Razorpay's "invoice does not have any captured payments" error.
+	 * This occurs when a user tries to switch plans again before the proration
+	 * invoice from a previous switch has been captured.
+	 */
+	private extractErrorText(err: unknown): string {
+		if (err instanceof Error) return err.message;
+		if (typeof err === 'string') return err;
+		try {
+			return JSON.stringify(err);
+		} catch {
+			return String(err);
+		}
+	}
+
+	private isPendingInvoiceError(err: unknown): boolean {
+		return /does not have any captured payments/i.test(this.extractErrorText(err));
+	}
+
+	/**
+	 * Detects Razorpay's "Can't update subscription when cycle start is in future" error.
+	 * This occurs when a user tries to switch plans again before the new billing cycle
+	 * from a recent upgrade has started.
+	 */
+	private isCycleStartInFutureError(err: unknown): boolean {
+		return /cycle start is in future/i.test(this.extractErrorText(err));
+	}
+
 	private isRemainingCountRequiredForPlanChange(err: unknown): boolean {
 		if (!(err instanceof PaymentProviderError)) return false;
 		const original = err.originalError;
@@ -372,6 +433,31 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		return /remaining_count/i.test(text) && /different\s+period/i.test(text);
 	}
 
+	/**
+	 * Detects Razorpay's "Exceeds the maximum remaining_count (N) allowed for the
+	 * given period and interval" error.
+	 * This occurs when switching between plans with very different periods (e.g.
+	 * weekly → monthly) and the current subscription's remaining_count is too
+	 * high for the target plan's interval.
+	 */
+	private isExceedsMaxRemainingCountError(err: unknown): boolean {
+		return /exceeds the maximum remaining_count/i.test(this.extractErrorText(err));
+	}
+
+	/**
+	 * Extracts the maximum allowed remaining_count from a Razorpay error message.
+	 * E.g. "Exceeds the maximum remaining_count (1198)" → 1198.
+	 * Returns `null` if the value can't be parsed.
+	 */
+	private extractMaxRemainingCount(err: unknown): number | null {
+		const m = this.extractErrorText(err).match(/maximum remaining_count \((\d+)\)/i);
+		if (m) {
+			const n = parseInt(m[1], 10);
+			if (Number.isFinite(n) && n > 0) return n;
+		}
+		return null;
+	}
+
 	private deriveRemainingCount(sub: RazorpaySubscription): number {
 		if (typeof sub.remaining_count === 'number' && Number.isFinite(sub.remaining_count) && sub.remaining_count > 0) {
 			return Math.floor(sub.remaining_count);
@@ -387,6 +473,9 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			return remaining;
 		}
 
+		Logger.warn('Razorpay deriveRemainingCount: no remaining_count or total_count/paid_count available, defaulting to 1', {
+			subscriptionId: sub.id,
+		});
 		return 1;
 	}
 
@@ -829,6 +918,7 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		}
 
 		if (eventName === 'subscription.updated') {
+			const planId = typeof subscriptionEntity?.plan_id === 'string' ? subscriptionEntity.plan_id : notes?.priceId;
 			const sub: StandardizedSubscription = {
 				id: typeof subscriptionEntity?.id === 'string' ? subscriptionEntity.id : 'sub',
 				status: mapSubscriptionStatus(typeof subscriptionEntity?.status === 'string' ? subscriptionEntity.status : undefined),
@@ -840,8 +930,8 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 				cancelAtPeriodEnd: false,
 				customerId: typeof subscriptionEntity?.customer_id === 'string' ? subscriptionEntity.customer_id : undefined,
 				customerIdsByProvider: typeof subscriptionEntity?.customer_id === 'string' ? { razorpay: subscriptionEntity.customer_id } : undefined,
-				priceId: typeof subscriptionEntity?.plan_id === 'string' ? subscriptionEntity.plan_id : undefined,
-				priceIdsByProvider: typeof subscriptionEntity?.plan_id === 'string' ? { razorpay: subscriptionEntity.plan_id } : undefined,
+				priceId: planId,
+				priceIdsByProvider: planId ? { razorpay: planId } : undefined,
 				metadata: augmentedNotes,
 			};
 			return { type: 'subscription.updated', payload: sub, originalEvent: evt };
@@ -1144,15 +1234,74 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			schedule_change_at: 'now',
 		};
 
-		const sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
-			method: 'PATCH',
-			body: JSON.stringify(payload),
-		});
+		let sub: RazorpaySubscription;
+		try {
+			sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+				method: 'PATCH',
+				body: JSON.stringify(payload),
+			});
+		} catch (err) {
+			// Razorpay rejects plan changes while a proration invoice from a recent
+			// upgrade has not been captured yet. Surface a clear, retryable error.
+			if (this.isPendingInvoiceError(err)) {
+				throw new PaymentProviderError(
+					'RAZORPAY_PENDING_INVOICE: A recent plan change is still being processed. Please wait a few minutes and try again.',
+				);
+			}
+			if (this.isCycleStartInFutureError(err)) {
+				throw new PaymentProviderError(
+					'RAZORPAY_CYCLE_NOT_STARTED: Your new billing cycle has not started yet. Please wait a few minutes and try again.',
+				);
+			}
+			if (!this.isRemainingCountRequiredForPlanChange(err)) throw err;
+
+			const currentSub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+				method: 'GET',
+			});
+			const remainingCount = this.deriveRemainingCount(currentSub);
+
+			try {
+				sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+					method: 'PATCH',
+					body: JSON.stringify({
+						...payload,
+						remaining_count: remainingCount,
+					}),
+				});
+			} catch (retryErr) {
+				// The derived remaining_count from the current plan may exceed the
+				// maximum allowed for the TARGET plan's period/interval (e.g. weekly
+				// sub has 1198 remaining but monthly plan caps lower). Retry with
+				// the provider-reported maximum.
+				if (!this.isExceedsMaxRemainingCountError(retryErr)) throw retryErr;
+
+				const maxAllowed = this.extractMaxRemainingCount(retryErr);
+				const cappedCount = maxAllowed ?? Math.min(remainingCount, 600);
+				Logger.warn('Razorpay remaining_count exceeded target plan max, retrying with capped value', {
+					subscriptionId: _subscriptionId,
+					original: remainingCount,
+					capped: cappedCount,
+				});
+
+				sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+					method: 'PATCH',
+					body: JSON.stringify({
+						...payload,
+						remaining_count: cappedCount,
+					}),
+				});
+			}
+		}
 
 		const newPeriodEnd = toSecondsDate(sub.current_end) || toSecondsDate(sub.end_at) || undefined;
+		const subRec = sub as Record<string, unknown>;
+		const amountPaid = typeof subRec.charge_at === 'number' && typeof sub.plan_id === 'string'
+			? (typeof subRec.amount === 'number' ? subRec.amount as number : undefined)
+			: undefined;
 		return {
 			success: true,
 			newPeriodEnd,
+			...(typeof amountPaid === 'number' ? { amountPaid } : {}),
 		};
 	}
 
@@ -1180,13 +1329,33 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			});
 			const remainingCount = this.deriveRemainingCount(currentSub);
 
-			sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
-				method: 'PATCH',
-				body: JSON.stringify({
-					...payload,
-					remaining_count: remainingCount,
-				}),
-			});
+			try {
+				sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+					method: 'PATCH',
+					body: JSON.stringify({
+						...payload,
+						remaining_count: remainingCount,
+					}),
+				});
+			} catch (retryErr) {
+				if (!this.isExceedsMaxRemainingCountError(retryErr)) throw retryErr;
+
+				const maxAllowed = this.extractMaxRemainingCount(retryErr);
+				const cappedCount = maxAllowed ?? Math.min(remainingCount, 600);
+				Logger.warn('Razorpay remaining_count exceeded target plan max (schedule), retrying with capped value', {
+					subscriptionId: _subscriptionId,
+					original: remainingCount,
+					capped: cappedCount,
+				});
+
+				sub = await this.request<RazorpaySubscription>(`/subscriptions/${encodeURIComponent(_subscriptionId)}`, {
+					method: 'PATCH',
+					body: JSON.stringify({
+						...payload,
+						remaining_count: cappedCount,
+					}),
+				});
+			}
 		}
 
 		const newPeriodEnd = toSecondsDate(sub.current_end) || toSecondsDate(sub.end_at) || undefined;

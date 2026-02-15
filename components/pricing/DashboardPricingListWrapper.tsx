@@ -22,6 +22,7 @@ type ActiveRecurringPlan = {
 interface DashboardPricingListWrapperProps {
   plans: DBPlan[];
   activeRecurringPlan?: ActiveRecurringPlan;
+  scheduledPlanId?: string | null;
   gridClasses?: {
     oneTime?: string;
     recurring?: string;
@@ -29,6 +30,6 @@ interface DashboardPricingListWrapperProps {
   currency: string;
 }
 
-export default function DashboardPricingListWrapper({ plans, activeRecurringPlan = null, gridClasses, currency }: DashboardPricingListWrapperProps) {
-  return <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} gridClasses={gridClasses} currency={currency} />;
+export default function DashboardPricingListWrapper({ plans, activeRecurringPlan = null, scheduledPlanId, gridClasses, currency }: DashboardPricingListWrapperProps) {
+  return <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlanId} gridClasses={gridClasses} currency={currency} />;
 }

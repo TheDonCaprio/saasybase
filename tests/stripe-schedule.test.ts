@@ -216,4 +216,57 @@ describe('Stripe scheduled plan change', () => {
 			{ price: 'price_addon', quantity: 2 },
 		]);
 	});
+
+	it('creates a fresh schedule when the existing one is released', async () => {
+		const m = (globalThis as any).__stripeMock;
+
+		m.subscriptions.retrieve.mockResolvedValue({
+			id: 'sub_stale',
+			current_period_start: 1700000000,
+			current_period_end: 1702592000,
+			items: {
+				data: [
+					{
+						id: 'si_123',
+						quantity: 1,
+						price: {
+							id: 'price_old',
+							recurring: { interval: 'month', interval_count: 1 },
+						},
+					},
+				],
+			},
+			schedule: 'sub_sched_stale',
+		});
+
+		m.prices.retrieve.mockResolvedValue({
+			id: 'price_new',
+			type: 'recurring',
+			recurring: { interval: 'month', interval_count: 1 },
+		});
+
+		// The existing schedule is released (stale)
+		m.subscriptionSchedules.retrieve
+			.mockResolvedValueOnce({ id: 'sub_sched_stale', status: 'released' })
+			.mockResolvedValueOnce({
+				id: 'sub_sched_fresh',
+				current_phase: { start_date: 1700000000, end_date: 1702592000 },
+			});
+
+		m.subscriptionSchedules.create.mockResolvedValue({ id: 'sub_sched_fresh' });
+		m.subscriptionSchedules.update.mockResolvedValue({ id: 'sub_sched_fresh' });
+
+		const provider = new StripePaymentProvider('sk_test_dummy');
+		const res = await provider.scheduleSubscriptionPlanChange?.('sub_stale', 'price_new', 'user_1');
+
+		expect(res?.success).toBe(true);
+
+		// Should have retrieved the stale schedule, then created a fresh one
+		expect(m.subscriptionSchedules.retrieve).toHaveBeenCalledWith('sub_sched_stale');
+		expect(m.subscriptionSchedules.create).toHaveBeenCalledWith({ from_subscription: 'sub_stale' });
+
+		// Update should use the fresh schedule, not the stale one
+		const [scheduleId] = m.subscriptionSchedules.update.mock.calls[0];
+		expect(scheduleId).toBe('sub_sched_fresh');
+	});
 });

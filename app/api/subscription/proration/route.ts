@@ -226,6 +226,80 @@ export async function GET(req: NextRequest) {
     // Use the subscription's originating provider for proration preview
     const provider = paymentService.getProviderForRecord(ctx.providerKey);
     if (!provider.supportsFeature('proration')) {
+      // Provider can't generate a proration preview, but may still support
+      // inline subscription updates ("switch now" without preview).
+      if (provider.supportsFeature('subscription_updates')) {
+        // Attempt a local time-proportional proration estimate so the user
+        // sees an approximate breakdown before confirming.
+        const now = new Date();
+        const { startedAt, expiresAt } = ctx.currentSubscription;
+        if (startedAt && expiresAt && expiresAt > now) {
+          const totalCycleMs = expiresAt.getTime() - startedAt.getTime();
+          const remainingMs = expiresAt.getTime() - now.getTime();
+          const remainingFraction = totalCycleMs > 0 ? remainingMs / totalCycleMs : 0;
+
+          const currentPriceCents = ctx.currentSubscription.plan.priceCents;
+          const targetPriceCents = ctx.targetPlan.priceCents;
+
+          const unusedCredit = Math.round(currentPriceCents * remainingFraction);
+          const newPlanCharge = Math.round(targetPriceCents * remainingFraction);
+          const amountDue = newPlanCharge - unusedCredit;
+
+          const currency = getActiveCurrency();
+
+          // Detect downgrades: Razorpay (and potentially other providers) can't
+          // perform immediate downgrades – they always schedule at cycle end.
+          // Tell the frontend upfront so the modal can inform the user.
+          const isDowngrade = targetPriceCents < currentPriceCents;
+          const downgradeScheduledAtCycleEnd = isDowngrade && ctx.providerKey === 'razorpay';
+
+          return NextResponse.json({
+            prorationEnabled: true,
+            isEstimate: true,
+            supportsInlineSwitch: true,
+            isDowngrade,
+            downgradeScheduledAtCycleEnd,
+            amountDue: downgradeScheduledAtCycleEnd ? 0 : amountDue,
+            currency,
+            credit: unusedCredit,
+            lineItems: downgradeScheduledAtCycleEnd
+              ? [{ description: `Switch to ${ctx.targetPlan.name} at end of billing period`, amount: 0, proration: false }]
+              : [
+                  { description: `Unused time on ${ctx.currentSubscription.plan.name}`, amount: -unusedCredit, proration: true },
+                  { description: `Remaining time on ${ctx.targetPlan.name}`, amount: newPlanCharge, proration: true },
+                ],
+            currentPlan: {
+              id: ctx.currentSubscription.plan.id,
+              name: ctx.currentSubscription.plan.name,
+              priceCents: ctx.currentSubscription.plan.priceCents,
+            },
+            targetPlan: {
+              id: ctx.targetPlan.id,
+              name: ctx.targetPlan.name,
+              priceCents: ctx.targetPlan.priceCents,
+            },
+            currentPeriodEnd: expiresAt.toISOString(),
+          });
+        }
+
+        // Fallback when dates are unavailable — allow switch without preview.
+        return NextResponse.json({
+          prorationEnabled: false,
+          supportsInlineSwitch: true,
+          reason: 'PROVIDER_PRORATION_UNSUPPORTED',
+          code: 'PROVIDER_PRORATION_UNSUPPORTED',
+          currentPlan: {
+            id: ctx.currentSubscription.plan.id,
+            name: ctx.currentSubscription.plan.name,
+            priceCents: ctx.currentSubscription.plan.priceCents,
+          },
+          targetPlan: {
+            id: ctx.targetPlan.id,
+            name: ctx.targetPlan.name,
+            priceCents: ctx.targetPlan.priceCents,
+          },
+        });
+      }
       return prorationDisabledResponse('PROVIDER_PRORATION_UNSUPPORTED');
     }
     const preview = await provider.getProrationPreview(
@@ -285,9 +359,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  let actorUserId: string | null = null;
+  let planId: string | null = null;
+
   try {
     const { userId } = await auth();
-    let actorUserId = userId ?? null;
+    actorUserId = userId ?? null;
 
     if (!actorUserId && process.env.NODE_ENV !== 'production') {
       const fallback = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } });
@@ -302,11 +379,15 @@ export async function POST(req: NextRequest) {
     const payload = await req.json().catch(() => ({}));
     const body = asRecord(payload) || {};
     const planIdRaw = body['planId'];
-    const planId = typeof planIdRaw === 'string' ? planIdRaw : null;
+    planId = typeof planIdRaw === 'string' ? planIdRaw : null;
     if (!planId) return badRequest('Missing planId');
 
     const scheduleAtRaw = body['scheduleAt'];
     const scheduleAt = scheduleAtRaw === 'cycle_end' ? 'cycle_end' : null;
+
+    // Frontend signals that this is a downgrade that should be scheduled at
+    // cycle end directly (e.g. Razorpay can't do immediate downgrades).
+    const directDowngradeSchedule = body['downgradeScheduledAtCycleEnd'] === true;
 
     const ctx = await resolveContext(planId, actorUserId);
 
@@ -315,19 +396,14 @@ export async function POST(req: NextRequest) {
 
     // Schedule a cycle-end plan change when the provider supports it.
     // This is used by providers like Razorpay that can update plan_id at renewal.
-    if (scheduleAt === 'cycle_end') {
+    if (scheduleAt === 'cycle_end' || directDowngradeSchedule) {
       if (typeof provider.scheduleSubscriptionPlanChange !== 'function') {
         return prorationDisabledResponse('PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED');
       }
 
-      const result = await provider.scheduleSubscriptionPlanChange(
-        ctx.currentSubscription.externalSubscriptionId!,
-        ctx.targetExternalPriceId,
-        ctx.userId
-      );
-
       // Paystack implements pay-at-renewal by disabling the current subscription.
-      // Reflect that provider state locally so we can avoid repeated scheduling.
+      // Mark the local record BEFORE calling the provider so that a racing
+      // subscription.disable webhook does not set conflicting state.
       if (provider.name === 'paystack' && ctx.currentSubscription.cancelAtPeriodEnd !== true) {
         try {
           await prisma.subscription.update({
@@ -336,7 +412,7 @@ export async function POST(req: NextRequest) {
           });
         } catch (err) {
           const e = toError(err);
-          Logger.warn('Failed to mark subscription as non-renewing after Paystack schedule', {
+          Logger.warn('Failed to mark subscription as non-renewing before Paystack schedule', {
             userId: ctx.userId,
             subscriptionId: ctx.currentSubscription.id,
             error: e.message,
@@ -344,7 +420,27 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      const result = await provider.scheduleSubscriptionPlanChange(
+        ctx.currentSubscription.externalSubscriptionId!,
+        ctx.targetExternalPriceId,
+        ctx.userId
+      );
+
       const newPeriodEnd = result.newPeriodEnd || null;
+
+      // Persist the scheduled plan switch so pages can show a notice.
+      try {
+        await prisma.subscription.update({
+          where: { id: ctx.currentSubscription.id },
+          data: {
+            scheduledPlanId: ctx.targetPlan.id,
+            scheduledPlanDate: newPeriodEnd ?? ctx.currentSubscription.expiresAt ?? null,
+          },
+        });
+      } catch (dbErr) {
+        const de = toError(dbErr);
+        Logger.warn('Failed to persist scheduledPlanId', { error: de.message, subscriptionId: ctx.currentSubscription.id });
+      }
 
       return NextResponse.json({
         ok: true,
@@ -368,6 +464,22 @@ export async function POST(req: NextRequest) {
       ctx.userId
     );
 
+    // SCA / 3D Secure: payment requires customer authentication.
+    // Return the clientSecret so the frontend can complete the flow.
+    // The DB plan will be reconciled by the subscription.updated webhook once payment succeeds.
+    if (result.requiresAction && result.clientSecret) {
+      return NextResponse.json({
+        ok: true,
+        requiresAction: true,
+        clientSecret: result.clientSecret,
+        newPlan: {
+          id: ctx.targetPlan.id,
+          name: ctx.targetPlan.name,
+          priceCents: ctx.targetPlan.priceCents,
+        },
+      });
+    }
+
     const newPeriodEnd = result.newPeriodEnd || null;
 
     // Immediately replace the existing subscription with the new plan.
@@ -375,10 +487,13 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const expiresAtValue = newPeriodEnd ?? ctx.currentSubscription.expiresAt ?? undefined;
 
-    const updateData: Prisma.SubscriptionUpdateInput = {
-      plan: { connect: { id: ctx.targetPlan.id } },
+    const updateData: Prisma.SubscriptionUncheckedUpdateInput = {
+      planId: ctx.targetPlan.id,
       startedAt: now,
       ...(expiresAtValue ? { expiresAt: expiresAtValue } : {}),
+      // Clear any previously scheduled plan switch since the immediate switch succeeded.
+      scheduledPlanId: null,
+      scheduledPlanDate: null,
     };
 
     await prisma.subscription.update({
@@ -476,6 +591,130 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const error = toError(err);
+    const razorpayNeedsRemainingCount =
+      /razorpay api request failed/i.test(error.message)
+      && /remaining_count/i.test(error.message)
+      && /different\s+period/i.test(error.message);
+
+    const razorpaySubscriptionNotUpdatableState =
+      /razorpay api request failed/i.test(error.message)
+      && /can't update subscription/i.test(error.message)
+      && /not in authenticated or active state/i.test(error.message);
+
+    const razorpayPendingInvoice =
+      /RAZORPAY_PENDING_INVOICE/i.test(error.message)
+      || (/razorpay/i.test(error.message) && /does not have any captured payments/i.test(error.message));
+
+    const razorpayCycleNotStarted =
+      /RAZORPAY_CYCLE_NOT_STARTED/i.test(error.message)
+      || (/razorpay/i.test(error.message) && /cycle start is in future/i.test(error.message));
+
+    if (razorpayCycleNotStarted) {
+      return jsonError(
+        'Your new billing cycle hasn\'t started yet after a recent plan change. Please wait a few minutes for it to take effect, then try again.',
+        409,
+        'RAZORPAY_CYCLE_NOT_STARTED'
+      );
+    }
+
+    if (razorpayPendingInvoice) {
+      // Razorpay cannot process immediate downgrades — the proration invoice
+      // has nothing to capture. Automatically fall back to scheduling the
+      // plan change at cycle_end so the user isn't stuck.
+      try {
+        const ctx = await resolveContext(planId!, actorUserId!);
+        const fallbackProvider = paymentService.getProviderForRecord(ctx.providerKey);
+        if (typeof fallbackProvider.scheduleSubscriptionPlanChange === 'function') {
+          const fallbackResult = await fallbackProvider.scheduleSubscriptionPlanChange(
+            ctx.currentSubscription.externalSubscriptionId!,
+            ctx.targetExternalPriceId,
+            ctx.userId
+          );
+          const fbPeriodEnd = fallbackResult.newPeriodEnd || null;
+
+          // Persist the scheduled plan switch for the fallback path too.
+          try {
+            await prisma.subscription.update({
+              where: { id: ctx.currentSubscription.id },
+              data: {
+                scheduledPlanId: ctx.targetPlan.id,
+                scheduledPlanDate: fbPeriodEnd ?? ctx.currentSubscription.expiresAt ?? null,
+              },
+            });
+          } catch (dbErr) {
+            const de = toError(dbErr);
+            Logger.warn('Failed to persist scheduledPlanId (fallback)', { error: de.message, subscriptionId: ctx.currentSubscription.id });
+          }
+
+          return NextResponse.json({
+            ok: true,
+            scheduled: true,
+            scheduledFallback: true,
+            newPlan: {
+              id: ctx.targetPlan.id,
+              name: ctx.targetPlan.name,
+              priceCents: ctx.targetPlan.priceCents,
+            },
+            currentPeriodEnd: fbPeriodEnd ? fbPeriodEnd.toISOString() : null,
+          });
+        }
+      } catch (fallbackErr) {
+        const fe = toError(fallbackErr);
+        Logger.warn('Razorpay cycle_end fallback also failed', { error: fe.message });
+      }
+
+      return jsonError(
+        'Payment for your recent plan change is still being processed. Please wait a few minutes before switching plans again.',
+        409,
+        'RAZORPAY_PENDING_INVOICE'
+      );
+    }
+
+    if (razorpayNeedsRemainingCount) {
+      return jsonError(
+        'Razorpay requires remaining_count when switching between plans with different billing periods.',
+        409,
+        'RAZORPAY_REMAINING_COUNT_REQUIRED'
+      );
+    }
+
+    if (razorpaySubscriptionNotUpdatableState) {
+      return jsonError(
+        'Razorpay cannot update this subscription because it is not in an updatable state (Authenticated or Active).',
+        409,
+        'RAZORPAY_SUBSCRIPTION_NOT_UPDATABLE_STATE'
+      );
+    }
+
+    // Stripe-specific error classification.
+    const originalErr = (error as { originalError?: unknown }).originalError;
+    const stripeCode = typeof originalErr === 'object' && originalErr !== null
+      ? (originalErr as Record<string, unknown>).code
+      : undefined;
+    const stripeDeclineCode = typeof originalErr === 'object' && originalErr !== null
+      ? ((originalErr as Record<string, unknown>).decline_code ?? (originalErr as Record<string, unknown>).declineCode)
+      : undefined;
+
+    if (typeof stripeCode === 'string') {
+      if (stripeCode === 'card_declined' || stripeCode === 'expired_card' || stripeCode === 'insufficient_funds'
+        || stripeCode === 'processing_error' || typeof stripeDeclineCode === 'string') {
+        const reason = typeof stripeDeclineCode === 'string'
+          ? `Payment declined: ${stripeDeclineCode}`
+          : `Payment failed: ${stripeCode}`;
+        return jsonError(reason, 402, 'STRIPE_PAYMENT_FAILED');
+      }
+      if (stripeCode === 'authentication_required') {
+        return jsonError(
+          'This payment requires additional authentication. Please try again.',
+          402,
+          'STRIPE_AUTHENTICATION_REQUIRED'
+        );
+      }
+      if (stripeCode === 'rate_limit') {
+        return jsonError('Too many requests. Please try again in a moment.', 429, 'STRIPE_RATE_LIMIT');
+      }
+    }
+
     switch (error.message) {
       case 'USER_NOT_FOUND':
       case 'NO_ACTIVE_RECURRING_SUBSCRIPTION':
@@ -492,9 +731,21 @@ export async function POST(req: NextRequest) {
       case 'PAYSTACK_AUTHORIZATION_REQUIRED':
       case 'PAYSTACK_SCHEDULE_FAILED':
         return jsonError(error.message, 409, error.message);
-      default:
+      default: {
+        // Detect network-level failures (DNS, connection reset, TLS, timeout)
+        // and give users a friendlier message instead of a raw 500.
+        const isNetworkError = /fetch failed|network error|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket hang up/i.test(error.message);
+        if (isNetworkError) {
+          Logger.error('Proration update failed due to network error', { error: error.message });
+          return jsonError(
+            'Unable to reach the payment provider right now. Please check your connection and try again in a moment.',
+            502,
+            'PAYMENT_PROVIDER_NETWORK_ERROR'
+          );
+        }
         Logger.error('Proration update failed', { error: error.message, stack: error.stack });
         return jsonError('Failed to update subscription with proration', 500, 'PRORATION_UPDATE_FAILED');
+      }
     }
   }
 }

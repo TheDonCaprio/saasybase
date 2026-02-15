@@ -99,7 +99,8 @@ model Plan {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  subscriptions      Subscription[]
+  subscriptions      Subscription[] @relation("SubscriptionPlan")
+  scheduledBySubscriptions Subscription[] @relation("ScheduledPlan")
   couponRestrictions CouponPlan[]
   payments           Payment[]
   organizations      Organization[]
@@ -218,11 +219,15 @@ model Subscription {
   // For providers without native cancel-at-period-end (e.g., Paystack), we store intent here
   // and cancel on next invoice.created webhook
   cancelAtPeriodEnd    Boolean   @default(false)
+  // Scheduled plan switch at end of current billing cycle
+  scheduledPlanId      String?
+  scheduledPlanDate    DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   user     User      @relation(fields: [userId], references: [id])
-  plan     Plan      @relation(fields: [planId], references: [id])
+  plan     Plan      @relation("SubscriptionPlan", fields: [planId], references: [id])
+  scheduledPlan Plan? @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id])
   organization Organization? @relation(fields: [organizationId], references: [id])
   payments Payment[]
 

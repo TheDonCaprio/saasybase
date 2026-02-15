@@ -32,6 +32,9 @@ export default async function PricingPage() {
           tokenLimit: true,
           tokenName: true
         }
+      },
+      scheduledPlan: {
+        select: { id: true, name: true, priceCents: true }
       }
     }
   }) : null,
@@ -69,6 +72,9 @@ export default async function PricingPage() {
   const isCancellationScheduled = !!currentSubscription?.canceledAt;
   const formattedCanceledAt = currentSubscription?.canceledAt ? await formatDateServer(currentSubscription.canceledAt) : null;
   const isActive = !!currentSubscription;
+  const scheduledPlan = currentSubscription?.scheduledPlan ?? null;
+  const formattedScheduledDate = currentSubscription?.scheduledPlanDate
+    ? await formatDateServer(currentSubscription.scheduledPlanDate) : null;
   const planAutoRenew = !!currentSubscription?.plan?.autoRenew;
   const planPriceCents = currentSubscription?.plan?.priceCents ?? null;
   const planPriceDisplay = planPriceCents != null ? formatCurrency(planPriceCents, activeCurrency) : '—';
@@ -243,6 +249,20 @@ export default async function PricingPage() {
                   }
                 : undefined
             }
+            pendingSwitchNotice={
+              scheduledPlan
+                ? {
+                    heading: 'Plan switch scheduled',
+                    body: (
+                      <>
+                        Your subscription will switch to <span className="font-medium">{scheduledPlan.name}</span>
+                        {formattedScheduledDate ? <> on <span className="font-medium">{formattedScheduledDate}</span></> : <> at the end of your current billing period</>}.
+                        You&apos;ll keep your current plan until then.
+                      </>
+                    ),
+                  }
+                : undefined
+            }
             emptyState={{
               heading: "You're currently on the free tier",
               description: 'Upgrade to unlock premium features',
@@ -251,7 +271,7 @@ export default async function PricingPage() {
           />
         )}
         
-    <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} gridClasses={gridClasses} currency={activeCurrency} />
+    <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlan?.id ?? null} gridClasses={gridClasses} currency={activeCurrency} />
         <div className="text-xs text-neutral-500 space-y-1">
           <p>• <span className="text-blue-400">●</span> Auto-renewing plans will automatically charge and extend your access</p>
           <p>• <span className="text-yellow-400">●</span> One-time plans require manual renewal when they expire</p>

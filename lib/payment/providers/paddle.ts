@@ -73,7 +73,7 @@ type PaddleSubscription = {
 	currency_code: string;
 	canceled_at?: string | null;
 	current_billing_period?: { starts_at: string; ends_at: string } | null;
-	scheduled_change?: unknown | null;
+	scheduled_change?: { action?: string; effective_at?: string } | null;
 	custom_data?: Record<string, unknown> | null;
 	items?: Array<{ price?: { id?: string } }>; // simplified
 };
@@ -511,7 +511,7 @@ export class PaddlePaymentProvider implements PaymentProvider {
 				subscriptionIdsByProvider: { paddle: sub.id },
 				currentPeriodStart: start,
 				currentPeriodEnd: end,
-				cancelAtPeriodEnd: Boolean(sub.scheduled_change),
+				cancelAtPeriodEnd: sub.scheduled_change?.action === 'cancel',
 				canceledAt: sub.canceled_at ? new Date(sub.canceled_at) : null,
 				metadata: toStringRecord(sub.custom_data),
 				priceId: firstPriceId,
@@ -678,7 +678,7 @@ export class PaddlePaymentProvider implements PaymentProvider {
 					currentPeriodStart: start,
 					currentPeriodEnd: end,
 					canceledAt: sub.canceled_at ? new Date(sub.canceled_at) : null,
-					cancelAtPeriodEnd: Boolean(sub.scheduled_change),
+					cancelAtPeriodEnd: sub.scheduled_change?.action === 'cancel',
 					customerId: sub.customer_id,
 					customerIdsByProvider: { paddle: sub.customer_id },
 					priceId,
@@ -1062,10 +1062,16 @@ export class PaddlePaymentProvider implements PaymentProvider {
 				? new Date(endRaw)
 				: (typeof nextRaw === 'string' ? new Date(nextRaw) : undefined);
 
+			// Extract transaction ID from the immediate proration transaction.
+			const updatedRaw = asRecord(updateResponse.data as unknown) || {};
+			const immediateTxn = asRecord(updatedRaw.immediate_transaction);
+			const transactionId = typeof immediateTxn?.id === 'string' ? immediateTxn.id : undefined;
+
 			return {
 				success: true,
 				newPeriodEnd,
 				amountPaid: expectedAmountPaid,
+				invoiceId: transactionId,
 			};
 		} catch (err) {
 			if (err instanceof PaymentProviderError) throw err;

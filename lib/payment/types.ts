@@ -371,6 +371,10 @@ export interface SubscriptionUpdateResult {
     newPeriodEnd?: Date;
     invoiceId?: string;
     amountPaid?: number;
+    /** When true the payment requires additional customer authentication (e.g. SCA / 3D Secure). */
+    requiresAction?: boolean;
+    /** Stripe PaymentIntent client secret needed to complete SCA on the client. */
+    clientSecret?: string;
 }
 
 export interface SubscriptionDetails {

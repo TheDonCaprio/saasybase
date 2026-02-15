@@ -98,6 +98,12 @@ type ProrationPreview = {
   prorationEnabled: boolean;
   currency: string;
   amountDue: number;
+  /** When true, the amounts shown are a local estimate — the provider will calculate the final amount. */
+  isEstimate?: boolean;
+  /** When true, the target plan is cheaper than the current plan. */
+  isDowngrade?: boolean;
+  /** When true, the provider can't do an immediate downgrade — it will be scheduled at cycle end. */
+  downgradeScheduledAtCycleEnd?: boolean;
   nextPaymentAttempt?: number | null;
   lineItems: ProrationLineItem[];
   currentPlan: { id: string; name: string; priceCents: number };
@@ -142,7 +148,7 @@ function ModalPortal({ children }: { children: React.ReactNode }) {
   if (!ready || !containerRef.current) return null;
   return createPortal(children, containerRef.current);
 }
-export default function PricingCard({ plan, activeRecurringPlan = null, currency }: { plan: DBPlan; activeRecurringPlan?: ActiveRecurringPlan; currency: string }) {
+export default function PricingCard({ plan, activeRecurringPlan = null, scheduledPlanId, currency }: { plan: DBPlan; activeRecurringPlan?: ActiveRecurringPlan; scheduledPlanId?: string | null; currency: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -385,9 +391,12 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         );
         const json = await res.json().catch(() => null) as unknown;
         const obj = asRecord(json);
-        const supported = Boolean(res.ok && obj?.prorationEnabled === true);
+        // Full proration preview available
+        const hasProration = Boolean(res.ok && obj?.prorationEnabled === true);
+        // Provider supports inline update but can't show a proration preview
+        const hasInlineSwitch = Boolean(res.ok && obj?.supportsInlineSwitch === true);
         if (mounted) {
-          setPlanSwitchSupportsProration(supported);
+          setPlanSwitchSupportsProration(hasProration || hasInlineSwitch);
         }
       } catch {
         if (mounted) {
@@ -500,6 +509,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         return;
       }
       const obj = asRecord(json);
+
+      // Provider supports inline switch but not a proration preview.
+      // Skip the preview modal and go straight to confirmation.
+      if (obj?.supportsInlineSwitch === true && obj?.prorationEnabled !== true) {
+        setIfMounted(setProrationLoading)(false);
+        await confirmProration();
+        return;
+      }
+
       if (!obj || obj.prorationEnabled !== true) {
         applyProrationFallback(checkoutOverridesRef, obj?.reason ?? 'PRORATION_DISABLED');
         await beginCheckoutFlow();
@@ -512,6 +530,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         prorationEnabled: true,
         currency: typeof obj.currency === 'string' ? obj.currency : 'usd',
         amountDue: typeof obj.amountDue === 'number' ? obj.amountDue : 0,
+        isEstimate: obj.isEstimate === true,
+        isDowngrade: obj.isDowngrade === true,
+        downgradeScheduledAtCycleEnd: obj.downgradeScheduledAtCycleEnd === true,
         nextPaymentAttempt: typeof obj.nextPaymentAttempt === 'number' ? obj.nextPaymentAttempt : null,
         lineItems: Array.isArray(obj.lineItems)
           ? obj.lineItems.map((item) => {
@@ -559,10 +580,17 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
     setIfMounted(setProrationConfirming)(true);
     setIfMounted(setProrationError)(null);
     try {
+      const postBody: Record<string, unknown> = { planId: plan.id };
+      // When the proration preview already told us this downgrade will be
+      // scheduled at cycle end, signal the backend so it skips the doomed
+      // immediate-switch attempt and goes straight to scheduling.
+      if (prorationPreview?.downgradeScheduledAtCycleEnd) {
+        postBody.downgradeScheduledAtCycleEnd = true;
+      }
       const res = await fetch('/api/subscription/proration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: plan.id }),
+        body: JSON.stringify(postBody),
       });
       const json = await res.json().catch(() => null) as unknown;
       if (!res.ok) {
@@ -573,15 +601,67 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         return;
       }
 
-      // Extract actual amount charged for better user feedback
       const result = asRecord(json);
+
+      // The plan change was scheduled at cycle end — either because the
+      // frontend requested it (downgradeScheduledAtCycleEnd) or the backend
+      // fell back to it after an immediate switch failed (scheduledFallback).
+      if (result?.scheduled === true) {
+        const newPlanName = typeof result?.newPlan === 'object' && result.newPlan
+          ? (asRecord(result.newPlan)?.name as string) : plan.name;
+        const periodEnd = typeof result?.currentPeriodEnd === 'string'
+          ? new Date(result.currentPeriodEnd).toLocaleDateString() : null;
+        const msg = periodEnd
+          ? `Your plan will switch to ${newPlanName} at the end of your current billing period (${periodEnd}).`
+          : `Your plan will switch to ${newPlanName} at the end of your current billing period.`;
+        showToast(msg, 'success');
+        closeProrationModal();
+        router.refresh();
+        return;
+      }
+
+      // Stripe SCA / 3D Secure: payment requires additional customer authentication.
+      if (result?.requiresAction === true && typeof result?.clientSecret === 'string') {
+        try {
+          const { loadStripe } = await import('@stripe/stripe-js');
+          const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+          if (!stripeKey) throw new Error('Stripe public key not configured');
+          const stripe = await loadStripe(stripeKey);
+          if (!stripe) throw new Error('Failed to load Stripe');
+
+          const { error: scaError, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret as string);
+          if (scaError) {
+            const scaMessage = scaError.message || 'Payment authentication failed.';
+            setIfMounted(setProrationError)(scaMessage);
+            showToast(scaMessage, 'error');
+            return;
+          }
+          if (paymentIntent?.status === 'succeeded') {
+            const newPlanName = typeof result?.newPlan === 'object' && result.newPlan
+              ? (asRecord(result.newPlan)?.name as string) : plan.name;
+            showToast(`Subscription upgraded to ${newPlanName} successfully.`, 'success');
+            closeProrationModal();
+            router.refresh();
+            return;
+          }
+        } catch (scaErr) {
+          console.error('SCA confirmation failed', scaErr);
+          const scaMessage = 'Payment authentication could not be completed. Your plan was updated but payment is pending.';
+          showToast(scaMessage, 'error');
+          closeProrationModal();
+          router.refresh();
+          return;
+        }
+      }
+
+      // Extract actual amount charged for better user feedback
       const actualAmountCharged = typeof result?.actualAmountCharged === 'number' ? result.actualAmountCharged : null;
       const newPlanName = typeof result?.newPlan === 'object' && result.newPlan ?
         (asRecord(result.newPlan)?.name as string) : plan.name;
 
       const successMessage = actualAmountCharged !== null
-        ? `Subscription upgraded to ${newPlanName}. Charged: ${formatPrice(actualAmountCharged, currency)}`
-        : `Subscription upgraded to ${newPlanName} successfully.`;
+        ? `Subscription changed to ${newPlanName}. Charged: ${formatPrice(actualAmountCharged, currency)}`
+        : `Subscription changed to ${newPlanName} successfully.`;
 
       showToast(successMessage, 'success');
       closeProrationModal();
@@ -740,7 +820,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
         'border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-300/40 dark:bg-amber-400/10 dark:text-amber-200'
     };
   const isCurrentAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && activeRecurringPlan.planId === plan.id);
-  const isSwitchingAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && !isCurrentAutoRenewPlan);
+  const isScheduledPlan = Boolean(scheduledPlanId && plan.id === scheduledPlanId);
+  const isSwitchingAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && !isCurrentAutoRenewPlan && !isScheduledPlan);
   const comparisonPriceCents = activeRecurringPlan?.priceCents ?? null;
   const planSwitchKind =
     isSwitchingAutoRenewPlan && typeof comparisonPriceCents === 'number'
@@ -752,6 +833,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
     buttonLabel = 'Preparing checkout…';
   } else if (isCurrentAutoRenewPlan) {
     buttonLabel = 'Current plan active';
+  } else if (isScheduledPlan) {
+    buttonLabel = 'Scheduled at cycle end';
   } else if (isSwitchingAutoRenewPlan) {
     if (typeof comparisonPriceCents === 'number') {
       buttonLabel = plan.priceCents > comparisonPriceCents ? 'Upgrade plan' : plan.priceCents < comparisonPriceCents ? 'Downgrade plan' : 'Switch plan';
@@ -766,7 +849,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
     }
   }
 
-  const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || isCurrentAutoRenewPlan;
+  const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
     <div className="group relative flex h-full w-full max-w-[420px] mx-auto flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-blue-100/40 transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgba(14,165,233,0.32)]">
@@ -782,6 +865,12 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {badge.text}
               </span>
+              {isScheduledPlan && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-100">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  Upcoming
+                </span>
+              )}
               {isTeamPlan ? (
                 <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-100">
                   <FontAwesomeIcon icon={faUsers} className="h-2.5 w-2.5" />
@@ -948,9 +1037,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
               <div className={`relative w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 ${prorationVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.98]'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Review proration</h3>
+                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
+                      {prorationPreview?.downgradeScheduledAtCycleEnd
+                        ? 'Downgrade at end of cycle'
+                        : prorationPreview?.isEstimate ? 'Estimated proration' : 'Review proration'}
+                    </h3>
                     <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      Switching plans now will charge or credit you based on the time left on your current billing period.
+                      {prorationPreview?.downgradeScheduledAtCycleEnd
+                        ? 'Your payment provider does not support immediate downgrades. The new plan will take effect at the end of your current billing period.'
+                        : 'Switching plans now will charge or credit you based on the time left on your current billing period.'}
                     </p>
                   </div>
                   <button
@@ -1018,9 +1113,27 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
                     </div>
 
                     <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60">
-                      <span>Total due now</span>
-                      <span>{formatCurrency(prorationPreview.amountDue, prorationPreview.currency)}</span>
+                      <span>
+                        {prorationPreview.downgradeScheduledAtCycleEnd
+                          ? 'Due now'
+                          : prorationPreview.isEstimate ? 'Estimated total due now' : 'Total due now'}
+                      </span>
+                      <span>
+                        {prorationPreview.downgradeScheduledAtCycleEnd
+                          ? 'No charge'
+                          : formatCurrency(prorationPreview.amountDue, prorationPreview.currency)}
+                      </span>
                     </div>
+                    {prorationPreview.downgradeScheduledAtCycleEnd && prorationPreview.currentPeriodEnd && (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-blue-200">
+                        Your current plan will remain active until <strong>{new Date(prorationPreview.currentPeriodEnd).toLocaleDateString()}</strong>. After that, your subscription will automatically switch to <strong>{prorationPreview.targetPlan.name}</strong>.
+                      </div>
+                    )}
+                    {prorationPreview.isEstimate && !prorationPreview.downgradeScheduledAtCycleEnd && (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-blue-200">
+                        This is an estimate based on the time remaining in your billing cycle. The final amount charged may vary slightly as it is calculated by the payment provider.
+                      </div>
+                    )}
                     <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
                       {/* Use plan token name when available, otherwise fall back to generic 'tokens' label */}
                       {(() => {
@@ -1054,12 +1167,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, currency
                     disabled={prorationConfirming || !prorationPreview}
                   >
                     {prorationConfirming
-                      ? 'Updating…'
-                      : planSwitchKind === 'upgrade'
-                        ? 'Confirm upgrade'
-                        : planSwitchKind === 'downgrade'
-                          ? 'Confirm downgrade'
-                          : 'Confirm change'}
+                      ? 'Scheduling…'
+                      : prorationPreview?.downgradeScheduledAtCycleEnd
+                        ? 'Schedule downgrade'
+                        : planSwitchKind === 'upgrade'
+                          ? 'Confirm upgrade'
+                          : planSwitchKind === 'downgrade'
+                            ? 'Confirm downgrade'
+                            : 'Confirm change'}
                   </button>
                 </div>
               </div>

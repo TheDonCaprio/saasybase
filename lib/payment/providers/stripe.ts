@@ -789,6 +789,19 @@ export class StripePaymentProvider implements PaymentProvider {
             });
 
             const latestInvoice = updated.latest_invoice as Stripe.Invoice | null;
+            const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent | null;
+
+            // Detect SCA / 3D Secure requirement on the proration invoice.
+            if (paymentIntent?.status === 'requires_action' || paymentIntent?.status === 'requires_confirmation') {
+                return {
+                    success: true,
+                    requiresAction: true,
+                    clientSecret: paymentIntent.client_secret ?? undefined,
+                    newPeriodEnd: new Date(updated.current_period_end * 1000),
+                    invoiceId: latestInvoice?.id,
+                    amountPaid: latestInvoice?.amount_paid,
+                };
+            }
 
             return {
                 success: true,
@@ -848,9 +861,19 @@ export class StripePaymentProvider implements PaymentProvider {
                 ? scheduleRef
                 : (hasStringId(scheduleRef) ? scheduleRef.id : null);
 
-            const scheduleId = existingScheduleId
-                ? existingScheduleId
-                : (await this.stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })).id;
+            let scheduleId = existingScheduleId;
+            if (scheduleId) {
+                // Validate the existing schedule is still usable.
+                const existingSchedule = await this.stripe.subscriptionSchedules.retrieve(scheduleId);
+                const scheduleStatus = existingSchedule.status as string;
+                if (scheduleStatus === 'canceled' || scheduleStatus === 'released') {
+                    // Stale schedule — create a fresh one instead of trying to update it.
+                    scheduleId = null;
+                }
+            }
+            if (!scheduleId) {
+                scheduleId = (await this.stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })).id;
+            }
 
             const schedule = await this.stripe.subscriptionSchedules.retrieve(scheduleId);
 

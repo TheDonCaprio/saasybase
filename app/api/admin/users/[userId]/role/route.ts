@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { adminRateLimit } from '@/lib/rateLimit';
+import { recordAdminAction } from '@/lib/admin-actions';
 
 export async function PATCH(
   request: NextRequest,
@@ -38,6 +39,14 @@ export async function PATCH(
       where: { id: params.userId },
       data: { role },
       select: { id: true, email: true, role: true }
+    });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'user.role_change',
+      targetUserId: params.userId,
+      targetType: 'user',
+      details: { newRole: role, email: user.email },
     });
     const res = NextResponse.json({ success: true, user });
     if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));

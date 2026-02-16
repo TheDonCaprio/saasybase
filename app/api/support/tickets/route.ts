@@ -7,6 +7,7 @@ import type { Prisma } from '@prisma/client';
 import { auth } from '@clerk/nextjs/server';
 import { buildSupportEmail } from '../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail } from '../../../../lib/email';
+import { isSupportEmailNotificationEnabled } from '../../../../lib/notifications';
 import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 export const dynamic = 'force-dynamic';
 
@@ -321,6 +322,9 @@ export async function POST(request: NextRequest) {
 
     void (async () => {
       try {
+        const supportEmailEnabled = await isSupportEmailNotificationEnabled('new_ticket_to_admin');
+        if (!supportEmailEnabled) return;
+
         const [supportEmail, siteName, user] = await Promise.all([
           getSupportEmail(),
           getSiteName(),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import {
   permanentlyDeleteSitePages,
   restoreSitePages,
@@ -15,7 +16,7 @@ const bulkActionSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const payload = await req.json();
     const parsed = bulkActionSchema.safeParse(payload);
     if (!parsed.success) {
@@ -39,6 +40,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
     }
 
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: `page.bulk_${action}`,
+      targetType: 'site_page',
+      details: { ids, affected },
+    });
     return NextResponse.json({ action, affected });
   } catch (error) {
     const guard = toAuthGuardErrorResponse(error);

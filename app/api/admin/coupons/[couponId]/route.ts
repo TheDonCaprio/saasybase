@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
@@ -48,7 +49,7 @@ const couponInclude = {
 export async function PUT(request: NextRequest, context: { params: Promise<{ couponId: string }> }) {
   const { couponId } = await context.params;
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const existing = await fetchCouponOr404(couponId);
     if (!existing) {
       return jsonError('Coupon not found', 404, 'COUPON_NOT_FOUND');
@@ -279,6 +280,14 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ cou
 
     const { applicablePlans, ...rest } = fullCoupon;
 
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'coupon.update',
+      targetType: 'coupon',
+      details: { couponId, code: existing.code },
+    });
+
     return NextResponse.json({
       coupon: {
         ...rest,
@@ -301,7 +310,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ cou
 export async function DELETE(request: NextRequest, context: { params: Promise<{ couponId: string }> }) {
   const { couponId } = await context.params;
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const existing = await fetchCouponOr404(couponId);
     if (!existing) {
       return NextResponse.json({ error: 'Coupon not found' }, { status: 404 });
@@ -373,6 +382,14 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     } else {
       await prisma.coupon.delete({ where: { id: couponId } });
     }
+
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'coupon.delete',
+      targetType: 'coupon',
+      details: { couponId, code: existing.code, forced: forceDelete },
+    });
 
     return NextResponse.json({ success: true, forced: forceDelete });
   } catch (err: unknown) {

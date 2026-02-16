@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
+import { recordAdminAction } from '../../../../lib/admin-actions';
 import { prisma } from '../../../../lib/prisma';
 import { Logger } from '../../../../lib/logger';
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 // POST - Create new email template
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     
     const body = await req.json();
     
@@ -49,6 +50,13 @@ export async function POST(req: NextRequest) {
     });
     
     Logger.info('Created email template', { templateId: template.id, key: template.key });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'email_template.create',
+      targetType: 'email_template',
+      details: { templateId: template.id, key: template.key },
+    });
     
     return NextResponse.json({ template }, { status: 201 });
   } catch (error: unknown) {

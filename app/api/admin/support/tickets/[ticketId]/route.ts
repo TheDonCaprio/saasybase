@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../../lib/admin-actions';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ ticketId: string }> }) {
   const params = await ctx.params;
+  let actor: Awaited<ReturnType<typeof requireAdminOrModerator>>;
   try {
-    await requireAdminOrModerator('support');
+    actor = await requireAdminOrModerator('support');
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
     if (guard) return guard;
@@ -24,6 +26,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ ticke
     const ticket = await prisma.supportTicket.update({
       where: { id: params.ticketId },
       data: { status, updatedAt: new Date() }
+    });
+
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'support.update_status',
+      targetUserId: ticket.userId,
+      targetType: 'ticket',
+      details: { ticketId: params.ticketId, newStatus: status },
     });
 
     return NextResponse.json({ ticket });

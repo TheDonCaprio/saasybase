@@ -80,8 +80,10 @@ export async function getActiveTeamSubscription(userId: string, opts?: { include
           expiresAt: { gt: now },
         },
         // After wall-clock expiry, keep org access during the grace window.
+        // Include CANCELLED (cancel-at-period-end that has reached its end) and
+        // PAST_DUE (payment issues unresolved by period end) — not just EXPIRED.
         {
-          status: 'EXPIRED',
+          status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] },
           expiresAt: { gt: graceCutoff, lte: now },
         },
       ],

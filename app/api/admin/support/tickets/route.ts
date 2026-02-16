@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../../../../../lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../../lib/queryUtils';
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
@@ -225,7 +226,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminOrModerator('support');
+    const actor = await requireAdminOrModerator('support');
 
     const payload = await request.json();
     const validation = createTicketSchema.safeParse(payload);
@@ -251,6 +252,14 @@ export async function POST(request: NextRequest) {
         status: 'OPEN',
         createdByRole: 'ADMIN'
       }
+    });
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'support.create_ticket',
+      targetType: 'support_ticket',
+      targetUserId: userId,
+      details: { ticketId: ticket.id, subject },
     });
 
     return NextResponse.json({ ticket });

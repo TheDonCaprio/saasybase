@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { prisma } from '@/lib/prisma';
 import { paymentService } from '@/lib/payment/service';
 import { toError } from '@/lib/runtime-guards';
@@ -200,6 +201,13 @@ export async function POST(request: NextRequest, context: unknown) {
         recurring: !!price.recurring,
         createdByAdmin: adminId,
         activeSubscriptions: plan._count.subscriptions
+      });
+      await recordAdminAction({
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: 'plan.create_provider_price',
+        targetType: 'plan',
+        details: { planId, priceId: price.id, provider: paymentService.provider.name },
       });
 
       return NextResponse.json({

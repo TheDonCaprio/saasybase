@@ -346,7 +346,6 @@ export function PaginatedUserManagement({
                       }}
                       onEdit={() => handleEditUser(user)}
                       currentAdminId={currentAdminId}
-                      onDelete={handleUserDeleted}
                     />
                   </div>
                 </div>
@@ -442,7 +441,6 @@ export function PaginatedUserManagement({
                           }}
                           onEdit={() => handleEditUser(user)}
                           currentAdminId={currentAdminId}
-                          onDelete={handleUserDeleted}
                         />
                       </div>
                     </div>
@@ -481,7 +479,9 @@ export function PaginatedUserManagement({
               setSelectedUser(null);
             }}
             onUserUpdate={handleUserUpdate}
+            onUserDelete={handleUserDeleted}
             canManageRoles={canManageRoles}
+            currentAdminId={currentAdminId}
           />
 
           <UserPaymentsModal

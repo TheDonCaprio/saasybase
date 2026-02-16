@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { normalizeCouponCode, ensureCouponArtifactsAcrossProviders } from '@/lib/coupons';
 import { Logger } from '@/lib/logger';
 import { toError, asRecord } from '@/lib/runtime-guards';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '@/lib/queryUtils';
 import { getActivePaymentProvider } from '@/lib/payment/provider-config';
 import { getProviderCurrency } from '@/lib/payment/registry';
@@ -250,7 +251,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const raw = await request.json().catch(() => null) as unknown;
     const body = asRecord(raw) || {};
 
@@ -413,6 +414,14 @@ export async function POST(request: NextRequest) {
     if (!hydrated) {
       return jsonError('Failed to load coupon after creation', 500, 'COUPON_CREATE_HYDRATE_FAILED');
     }
+
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'coupon.create',
+      targetType: 'coupon',
+      details: { couponId: hydrated.id, code: hydrated.code, percentOff: hydrated.percentOff, amountOffCents: hydrated.amountOffCents, duration: hydrated.duration },
+    });
 
     return NextResponse.json({ coupon: serializeCoupon(hydrated) });
   } catch (err: unknown) {

@@ -3,6 +3,7 @@ import { Logger } from './logger';
 import { toError, asRecord } from './runtime-guards';
 import type { UserRole } from './auth';
 import { buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from './queryUtils';
+import { getSetting, SETTING_KEYS, SETTING_DEFAULTS, parseStringListSetting } from './settings';
 
 type AdminActionDelegate = {
   create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
@@ -17,6 +18,55 @@ function getAdminActionDelegate(): AdminActionDelegate {
     throw new Error('Admin action log delegate not available on Prisma client');
   }
   return delegate;
+}
+
+function actionMatchesPattern(action: string, pattern: string): boolean {
+  if (!pattern) return false;
+  if (pattern.endsWith('.*')) {
+    const prefix = pattern.slice(0, -2).trim();
+    if (!prefix) return false;
+    return action === prefix || action.startsWith(`${prefix}.`);
+  }
+  return action === pattern;
+}
+
+async function sendAdminActionNotifications({ actorId, actorRole, action, targetType }: AdminActionInput): Promise<void> {
+  try {
+    const raw = await getSetting(
+      SETTING_KEYS.ADMIN_ACTION_NOTIFICATION_ACTIONS,
+      SETTING_DEFAULTS[SETTING_KEYS.ADMIN_ACTION_NOTIFICATION_ACTIONS]
+    );
+    const patterns = parseStringListSetting(raw);
+    if (patterns.size === 0) return;
+
+    const shouldNotify = Array.from(patterns).some((pattern) => actionMatchesPattern(action, pattern));
+    if (!shouldNotify) return;
+
+    const recipients = await prisma.user.findMany({
+      where: { role: 'ADMIN', id: { not: actorId } },
+      select: { id: true }
+    });
+    if (recipients.length === 0) return;
+
+    const message = `${actorRole} performed ${action}${targetType ? ` (${targetType})` : ''}`;
+    await prisma.notification.createMany({
+      data: recipients.map((recipient) => ({
+        userId: recipient.id,
+        title: 'Admin action alert',
+        message,
+        type: 'ACCOUNT',
+        read: false,
+        url: '/admin/moderator-actions'
+      }))
+    });
+  } catch (error: unknown) {
+    const err = toError(error);
+    Logger.warn('Failed to send admin action notifications', {
+      action,
+      actorId,
+      error: err.message
+    });
+  }
 }
 
 export interface AdminActionInput {
@@ -48,6 +98,7 @@ export async function recordAdminAction({
         details: details ? JSON.stringify(details) : null
       }
     });
+    await sendAdminActionNotifications({ actorId, actorRole, action, targetUserId, targetType, details });
   } catch (error: unknown) {
     const err = toError(error);
     Logger.warn('Failed to record admin action', {
@@ -342,6 +393,29 @@ export async function fetchAdminActionGroups(): Promise<string[]> {
     return Array.from(groups).sort((a, b) => a.localeCompare(b));
   } catch (error: unknown) {
     Logger.warn('Failed to fetch admin action groups', { error: toError(error).message });
+    return [];
+  }
+}
+
+export async function fetchAdminActionNames(): Promise<string[]> {
+  try {
+    const delegate = getAdminActionDelegate();
+    const rows = await delegate.findMany({
+      distinct: ['action'],
+      select: { action: true }
+    });
+    const actions = new Set<string>();
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') continue;
+      const rec = row as Record<string, unknown>;
+      const actionRaw = rec.action;
+      if (typeof actionRaw !== 'string') continue;
+      const action = actionRaw.trim();
+      if (action.length > 0) actions.add(action);
+    }
+    return Array.from(actions).sort((a, b) => a.localeCompare(b));
+  } catch (error: unknown) {
+    Logger.warn('Failed to fetch admin action names', { error: toError(error).message });
     return [];
   }
 }

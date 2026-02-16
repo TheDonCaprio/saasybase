@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
+import { recordAdminAction } from '../../../../lib/admin-actions';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { Logger } from '../../../../lib/logger';
 import {
@@ -144,6 +145,13 @@ export async function PUT(req: NextRequest) {
       ]);
       clearSettingsCache();
       Logger.info('Admin reset theme settings to defaults', { actorId });
+      await recordAdminAction({
+        actorId,
+        actorRole: 'ADMIN',
+        action: 'theme.reset',
+        targetType: 'system',
+        details: null,
+      });
       const payload = await getThemePayload();
       const res = NextResponse.json(payload);
       if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));
@@ -180,6 +188,19 @@ export async function PUT(req: NextRequest) {
       footerLinkCount: footerLinks.length,
       headSnippetLength: customHead.length,
       bodySnippetLength: customBody.length
+    });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'theme.update',
+      targetType: 'system',
+      details: {
+        headerLinkCount: headerLinks.length,
+        footerLinkCount: footerLinks.length,
+        hasCustomCss: customCss.length > 0,
+        hasCustomHead: customHead.length > 0,
+        hasCustomBody: customBody.length > 0,
+      },
     });
 
     const payload = await getThemePayload();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import { Logger } from '@/lib/logger';
@@ -192,6 +193,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    await recordAdminAction({
+      actorId: userId,
+      actorRole: 'ADMIN',
+      action: 'maintenance.backfill_invoices',
+      targetType: 'system',
+      details: { processed, updated, errors: errors.length },
+    });
     return NextResponse.json({
       success: true,
       processed,

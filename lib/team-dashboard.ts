@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { getOrganizationAccessSummary, syncOrganizationEligibilityForUser, type TeamSubscriptionStatus } from './organization-access';
+import { getOrganizationAccessSummary, type TeamSubscriptionStatus } from './organization-access';
 import type { Prisma } from '@prisma/client';
 
 export type TeamDashboardMember = {
@@ -186,9 +186,11 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
 }
 
 export async function fetchTeamDashboardState(userId: string, options?: { forceSync?: boolean }): Promise<TeamDashboardState> {
-  if (options?.forceSync) {
-    await syncOrganizationEligibilityForUser(userId);
-  }
+  // NOTE: forceSync previously called syncOrganizationEligibilityForUser which can
+  // DELETE organizations. A simple page-load refresh should never be destructive.
+  // Org cleanup is handled by OrgValidityCheck (lazy check) and the cron job.
+  // forceSync now just ensures we re-read the latest access summary (no-op beyond
+  // a fresh DB query), keeping the team page read-only.
 
   const access = await getOrganizationAccessSummary(userId);
 

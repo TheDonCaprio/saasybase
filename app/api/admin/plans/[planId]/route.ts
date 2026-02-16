@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { prisma } from '@/lib/prisma';
 import { toError } from '@/lib/runtime-guards';
 import { Logger } from '@/lib/logger';
@@ -44,6 +45,14 @@ export const PATCH = withValidation(apiSchemas.adminPlanToggle, async (request: 
       where: { id: planId },
       data: { active: payload.active },
       select: { id: true, name: true, active: true },
+    });
+
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: payload.active ? 'plan.activate' : 'plan.deactivate',
+      targetType: 'plan',
+      details: { planId: plan.id, name: plan.name, active: plan.active },
     });
 
     return NextResponse.json({ success: true, plan });
@@ -654,6 +663,14 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       }
     }
 
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: 'plan.update',
+      targetType: 'plan',
+      details: { planId, name: plan.name },
+    });
+
     return NextResponse.json({ success: true, plan });
   } catch (err: unknown) {
     const planId = await getPlanId(context);
@@ -768,6 +785,13 @@ export async function DELETE(
       await tx.plan.delete({ where: { id: params.planId } });
     });
     Logger.info('Plan deleted', { planId: params.planId, deletedCount: deleted.paymentsDeleted, deletedSubscriptions: deleted.subscriptions.length, force: !!force });
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: 'plan.delete',
+      targetType: 'plan',
+      details: { planId: params.planId, force: !!force, subscriptionsDeleted: deleted.subscriptions.length, paymentsDeleted: deleted.paymentsDeleted },
+    });
 
     return NextResponse.json({ success: true, deleted, force: !!force });
   } catch (error) {

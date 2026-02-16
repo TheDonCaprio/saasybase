@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
@@ -242,6 +243,13 @@ export async function POST(request: NextRequest) {
     });
 
     const statsAfter = await computeStats({ pendingOlderThanMinutes, readyOlderThanDays });
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: 'maintenance.cache_cleanup',
+      targetType: 'system',
+      details: { dryRun, scanned: rows.length, wouldDelete, deleted },
+    });
 
     return NextResponse.json({
       dryRun,

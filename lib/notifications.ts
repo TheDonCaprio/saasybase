@@ -2,7 +2,7 @@ import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { sendEmail, getSupportEmail, getSiteLogo, getSiteName } from './email';
-import { SETTING_DEFAULTS, SETTING_KEYS } from './settings';
+import { getSetting, SETTING_DEFAULTS, SETTING_KEYS, parseStringListSetting } from './settings';
 import { EmailVariables } from './email-templates';
 
 const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -42,6 +42,7 @@ interface BillingNotificationOptions {
 interface AdminNotificationOptions {
   title: string;
   message: string;
+  alertType?: AdminAlertEmailType;
   templateKey?: string;
   variables?: Partial<EmailVariables>;
   userId?: string;
@@ -50,6 +51,39 @@ interface AdminNotificationOptions {
   actorRole?: string;
   actorName?: string;
   actorEmail?: string;
+}
+
+export type AdminAlertEmailType =
+  | 'refund'
+  | 'new_purchase'
+  | 'renewal'
+  | 'upgrade'
+  | 'downgrade'
+  | 'payment_failed'
+  | 'dispute'
+  | 'other';
+
+export type SupportEmailNotificationType =
+  | 'new_ticket_to_admin'
+  | 'admin_reply_to_user'
+  | 'user_reply_to_admin';
+
+export async function isAdminAlertEmailEnabled(alertType: AdminAlertEmailType): Promise<boolean> {
+  const raw = await getSetting(
+    SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES,
+    SETTING_DEFAULTS[SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES]
+  );
+  const enabled = parseStringListSetting(raw);
+  return enabled.has(alertType);
+}
+
+export async function isSupportEmailNotificationEnabled(type: SupportEmailNotificationType): Promise<boolean> {
+  const raw = await getSetting(
+    SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES,
+    SETTING_DEFAULTS[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]
+  );
+  const enabled = parseStringListSetting(raw);
+  return enabled.has(type);
 }
 
 export async function createNotification(
@@ -254,6 +288,12 @@ export async function sendBillingNotification(
 
 export async function sendAdminNotificationEmail(options: AdminNotificationOptions): Promise<boolean> {
   if (process.env.SEND_ADMIN_BILLING_EMAILS !== 'true') {
+    return false;
+  }
+
+  const alertType = options.alertType ?? 'other';
+  const enabled = await isAdminAlertEmailEnabled(alertType);
+  if (!enabled) {
     return false;
   }
 

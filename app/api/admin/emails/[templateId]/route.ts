@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
 import { Logger } from '../../../../../lib/logger';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 
 // GET - Get single email template
 export async function GET(
@@ -41,7 +42,7 @@ export async function PATCH(
   context: { params: Promise<{ templateId: string }> }
 ) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const params = await context.params;
     
     const body = await req.json();
@@ -60,6 +61,13 @@ export async function PATCH(
     });
     
     Logger.info('Updated email template', { templateId: template.id, key: template.key });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'email_template.update',
+      targetType: 'email_template',
+      details: { templateId: template.id, key: template.key, active: template.active },
+    });
     
     return NextResponse.json({ template });
   } catch (error: unknown) {
@@ -79,7 +87,7 @@ export async function DELETE(
   context: { params: Promise<{ templateId: string }> }
 ) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const params = await context.params;
     
     await prisma.emailTemplate.delete({
@@ -87,6 +95,13 @@ export async function DELETE(
     });
     
     Logger.info('Deleted email template', { templateId: params.templateId });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'email_template.delete',
+      targetType: 'email_template',
+      details: { templateId: params.templateId },
+    });
     
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

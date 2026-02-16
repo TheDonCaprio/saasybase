@@ -134,6 +134,9 @@ function mapSubscriptionStatus(status: string | undefined): string {
 	if (s === 'active') return 'active';
 	if (s === 'authenticated' || s === 'created') return 'incomplete';
 	if (s === 'cancelled' || s === 'canceled') return 'canceled';
+	// Razorpay marks a subscription as 'halted' when payment retries are
+	// exhausted.  This is a terminal failed state — treat as canceled.
+	if (s === 'halted') return 'canceled';
 	if (s === 'completed' || s === 'expired') return 'expired';
 	if (s === 'paused') return 'paused';
 	return status || 'unknown';
@@ -922,17 +925,40 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			return { type: 'checkout.completed', payload: session, originalEvent: evt };
 		}
 
-		if (eventName === 'subscription.updated') {
+		if (eventName === 'subscription.updated' || eventName === 'subscription.cancelled' || eventName === 'subscription.halted') {
 			const planId = typeof subscriptionEntity?.plan_id === 'string' ? subscriptionEntity.plan_id : notes?.priceId;
+			const rawStatus = typeof subscriptionEntity?.status === 'string' ? subscriptionEntity.status : undefined;
+			const normalizedStatus = mapSubscriptionStatus(rawStatus);
+
+			// Derive canceledAt from Razorpay fields when the subscription is
+			// cancelled/halted.  `ended_at` is the actual end timestamp;
+			// `end_at` is the scheduled end.  Fall back to now for safety.
+			const isCanceledStatus = normalizedStatus === 'canceled';
+			const canceledAt = isCanceledStatus
+				? (toSecondsDate(subscriptionEntity?.ended_at)
+					|| toSecondsDate(subscriptionEntity?.end_at)
+					|| new Date())
+				: null;
+
+			// Razorpay indicates a pending cancellation when the subscription is
+			// still active but `end_at` is set (i.e. cancel_at_cycle_end was used).
+			const hasScheduledEnd = !isCanceledStatus
+				&& normalizedStatus === 'active'
+				&& subscriptionEntity?.end_at != null
+				&& toSecondsDate(subscriptionEntity.end_at) != null;
+			const cancelAtPeriodEnd = hasScheduledEnd;
+
 			const sub: StandardizedSubscription = {
 				id: typeof subscriptionEntity?.id === 'string' ? subscriptionEntity.id : 'sub',
-				status: mapSubscriptionStatus(typeof subscriptionEntity?.status === 'string' ? subscriptionEntity.status : undefined),
+				status: normalizedStatus,
 				providerId: typeof subscriptionEntity?.id === 'string' ? subscriptionEntity.id : undefined,
 				subscriptionIdsByProvider: typeof subscriptionEntity?.id === 'string' ? { razorpay: subscriptionEntity.id } : undefined,
 				currentPeriodStart: toSecondsDate(subscriptionEntity?.current_start) || new Date(),
 				currentPeriodEnd: toSecondsDate(subscriptionEntity?.current_end) || new Date(),
-				canceledAt: null,
-				cancelAtPeriodEnd: false,
+				canceledAt: cancelAtPeriodEnd
+					? (toSecondsDate(subscriptionEntity?.end_at) || null)
+					: canceledAt,
+				cancelAtPeriodEnd,
 				customerId: typeof subscriptionEntity?.customer_id === 'string' ? subscriptionEntity.customer_id : undefined,
 				customerIdsByProvider: typeof subscriptionEntity?.customer_id === 'string' ? { razorpay: subscriptionEntity.customer_id } : undefined,
 				priceId: planId,

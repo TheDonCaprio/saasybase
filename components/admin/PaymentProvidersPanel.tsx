@@ -27,8 +27,10 @@ interface ProviderFeatures {
     oneTimePayments: boolean;
     embeddedCheckout: boolean;
     customerPortal: boolean;
-    coupons: boolean;
+    coupons: 'provider' | 'in-app' | false;
     refunds: boolean;
+    proration: boolean;
+    subscriptionUpdates: boolean;
 }
 
 interface PaymentProviderInfo {
@@ -57,6 +59,8 @@ const FEATURE_LABELS: Record<keyof ProviderFeatures, string> = {
     customerPortal: 'Customer Portal',
     coupons: 'Coupons & Discounts',
     refunds: 'Refunds',
+    proration: 'Proration (Plan Switching)',
+    subscriptionUpdates: 'Subscription Updates',
 };
 
 // Common currency options for display (used as labels/symbols when known)
@@ -536,6 +540,11 @@ function ProviderCard({ provider }: { provider: PaymentProviderInfo }) {
                                 <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
                                 <span className="text-xs">Set</span>
                             </span>
+                        ) : provider.id === 'paystack' ? (
+                            <span className="flex items-center gap-1 text-blue-500 dark:text-blue-400">
+                                <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                                <span className="text-xs">Uses API Secret Key</span>
+                            </span>
                         ) : (
                             <span className="flex items-center gap-1 text-amber-500 dark:text-amber-400">
                                 <FontAwesomeIcon icon={faExclamationTriangle} className="h-3 w-3" />
@@ -560,26 +569,32 @@ function ProviderCard({ provider }: { provider: PaymentProviderInfo }) {
                         Supported Features
                     </h5>
                     <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(provider.features).map(([key, supported]) => (
-                            <div 
-                                key={key}
-                                className={clsx(
-                                    'flex items-center gap-2 text-sm rounded-lg px-2 py-1.5',
-                                    supported 
-                                        ? 'text-slate-700 dark:text-neutral-300' 
-                                        : 'text-slate-400 dark:text-neutral-500'
-                                )}
-                            >
-                                <FontAwesomeIcon 
-                                    icon={supported ? faCheck : faTimes} 
+                        {Object.entries(provider.features).map(([key, supported]) => {
+                            const isActive = supported === true || supported === 'provider' || supported === 'in-app';
+                            const suffix = supported === 'provider' ? ' (Provider)'
+                                : supported === 'in-app' ? ' (In-app)'
+                                : '';
+                            return (
+                                <div 
+                                    key={key}
                                     className={clsx(
-                                        'h-3 w-3',
-                                        supported ? 'text-emerald-500' : 'text-slate-300 dark:text-neutral-600'
-                                    )} 
-                                />
-                                <span>{FEATURE_LABELS[key as keyof ProviderFeatures]}</span>
-                            </div>
-                        ))}
+                                        'flex items-center gap-2 text-sm rounded-lg px-2 py-1.5',
+                                        isActive 
+                                            ? 'text-slate-700 dark:text-neutral-300' 
+                                            : 'text-slate-400 dark:text-neutral-500'
+                                    )}
+                                >
+                                    <FontAwesomeIcon 
+                                        icon={isActive ? faCheck : faTimes} 
+                                        className={clsx(
+                                            'h-3 w-3',
+                                            isActive ? 'text-emerald-500' : 'text-slate-300 dark:text-neutral-600'
+                                        )} 
+                                    />
+                                    <span>{FEATURE_LABELS[key as keyof ProviderFeatures]}{suffix}</span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { Logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { toError } from '@/lib/runtime-guards';
@@ -278,6 +279,14 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
         organizationTokenPoolStrategy: supportsOrganizations ? (organizationTokenPoolStrategy ?? 'SHARED_FOR_ORG') : null,
         scope: supportsOrganizations ? 'TEAM' : 'INDIVIDUAL',
       },
+    });
+
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: 'plan.create',
+      targetType: 'plan',
+      details: { planId: plan.id, name: plan.name, priceCents: plan.priceCents, autoRenew: plan.autoRenew },
     });
 
     return NextResponse.json({ success: true, plan });

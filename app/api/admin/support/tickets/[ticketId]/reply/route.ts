@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse, type UserRole } from '../../../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../../../lib/admin-actions';
 import { getSetting, SETTING_KEYS } from '../../../../../../../lib/settings';
 import { toError } from '../../../../../../../lib/runtime-guards';
 import { Logger } from '../../../../../../../lib/logger';
+import { isSupportEmailNotificationEnabled } from '../../../../../../../lib/notifications';
 import { buildSupportEmail } from '../../../../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail, shouldEmailUser } from '../../../../../../../lib/email';
 
@@ -98,6 +100,9 @@ export async function POST(
 
     void (async () => {
       try {
+        const supportEmailEnabled = await isSupportEmailNotificationEnabled('admin_reply_to_user');
+        if (!supportEmailEnabled) return;
+
         if (!ticket.userId) return;
         const [userEmailOptIn, siteName, adminUser, supportEmail] = await Promise.all([
           shouldEmailUser(ticket.userId),
@@ -137,6 +142,15 @@ export async function POST(
         Logger.warn('Failed to send admin support reply email', { error: err.message, ticketId: ticket.id });
       }
     })();
+
+    await recordAdminAction({
+      actorId: actorUserId,
+      actorRole,
+      action: 'support.reply',
+      targetUserId: ticket.userId,
+      targetType: 'ticket',
+      details: { ticketId: params.ticketId, subject: ticket.subject },
+    });
 
     return NextResponse.json({ reply });
   } catch (error: unknown) {

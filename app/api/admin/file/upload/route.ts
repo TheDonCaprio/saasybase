@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { requireAdminAuth } from '../../../../../lib/route-guards';
 import { toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { saveAdminFile, saveLogo } from '../../../../../lib/logoStorage';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
 
@@ -161,6 +162,13 @@ export async function POST(req: NextRequest) {
       ? await saveLogo({ buffer, filename: safeName, mimetype: effectiveMime })
       : await saveAdminFile({ buffer, filename: safeName, mimetype: effectiveMime });
 
+    await recordAdminAction({
+      actorId: adminAuth?.userId ?? 'unknown',
+      actorRole: 'ADMIN',
+      action: 'file.upload',
+      targetType: 'file',
+      details: { scope, filename: safeName },
+    });
     return NextResponse.json({ url });
   } catch (error: unknown) {
     // eslint-disable-next-line no-console

@@ -123,6 +123,31 @@ describe('Natural expiry grace', () => {
     expect(prismaMock.organization.findMany).not.toHaveBeenCalled();
   });
 
+  it('does not dismantle orgs during grace for CANCELLED subscriptions', async () => {
+    // A cancel-at-period-end subscription that has reached its end date
+    // should still get grace period protection — not immediate org deletion.
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_cancelled',
+      userId: 'user_1',
+      status: 'CANCELLED',
+      expiresAt: new Date(Date.now() - 60 * 60 * 1000), // expired 1h ago, within 24h grace
+      plan: {
+        id: 'plan_1',
+        name: 'Team',
+        tokenLimit: 100,
+        organizationSeatLimit: 5,
+        organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+        supportsOrganizations: true,
+      },
+    });
+
+    const res = await syncOrganizationEligibilityForUser('user_1');
+
+    expect(res.allowed).toBe(true);
+    expect((res as any).kind).toBe('OWNER');
+    expect(prismaMock.organization.findMany).not.toHaveBeenCalled();
+  });
+
   it('allows admin flows to bypass grace and dismantle orgs immediately', async () => {
     prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
     prismaMock.organization.findMany.mockResolvedValueOnce([]);

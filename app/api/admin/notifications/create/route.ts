@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 
 // Small runtime helpers to avoid `any` and safely narrow `unknown` inputs
 function asRecord(v: unknown): Record<string, unknown> {
@@ -19,9 +20,11 @@ function toErrorMessage(e: unknown): string {
 }
 
 export async function POST(request: NextRequest) {
+  let actor: Awaited<ReturnType<typeof requireAdminOrModerator>>;
+  let actorId: string;
   try {
-    const actor = await requireAdminOrModerator('notifications');
-    const actorId = actor.userId;
+    actor = await requireAdminOrModerator('notifications');
+    actorId = actor.userId;
     const rl = await adminRateLimit(actorId, request, 'admin-notifications:create', { limit: 40, windowMs: 120_000 });
     if (!rl.success && !rl.allowed) {
       return NextResponse.json({ error: 'Service temporarily unavailable. Please retry shortly.' }, { status: 503 });
@@ -62,6 +65,14 @@ export async function POST(request: NextRequest) {
 
       await prisma.notification.createMany({ data: notifications });
 
+      await recordAdminAction({
+        actorId,
+        actorRole: actor.role,
+        action: 'notification.broadcast',
+        targetType: 'notification',
+        details: { title, recipientCount: users.length },
+      });
+
       return NextResponse.json({ 
         success: true, 
         message: `Notification sent to ${users.length} users` 
@@ -85,6 +96,15 @@ export async function POST(request: NextRequest) {
       if (type) data.type = type;
 
       await prisma.notification.create({ data });
+
+      await recordAdminAction({
+        actorId,
+        actorRole: actor.role,
+        action: 'notification.send',
+        targetUserId: user.id,
+        targetType: 'notification',
+        details: { title, targetEmail },
+      });
 
       return NextResponse.json({ 
         success: true, 

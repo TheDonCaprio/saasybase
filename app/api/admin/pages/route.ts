@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
+import { recordAdminAction } from '../../../../lib/admin-actions';
 import { createSitePage, listSitePagesPaginated, toSitePageDTO } from '../../../../lib/sitePages';
 import { z } from 'zod';
 import { Logger } from '../../../../lib/logger';
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
@@ -89,6 +90,13 @@ export async function POST(req: NextRequest) {
     }
 
     const page = await createSitePage(parsed.data);
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'page.create',
+      targetType: 'site_page',
+      details: { pageId: page.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toSitePageDTO(page) }, { status: 201 });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);

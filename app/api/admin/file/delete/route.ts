@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { deleteAdminFile } from '@/lib/logoStorage';
 import { Logger } from '@/lib/logger';
 
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
 
     let keyFromBody: string | null = null;
     try {
@@ -23,6 +24,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deleteAdminFile({ key });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'file.delete',
+      targetType: 'file',
+      details: { key },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

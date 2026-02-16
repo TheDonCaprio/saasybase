@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-actions';
 import { adminRateLimit } from '@/lib/rateLimit';
 import { Logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { toError } from '@/lib/runtime-guards';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
 import { getProviderCurrency } from '@/lib/payment/registry';
-import { providerSupportsCoupons } from '@/lib/payment/provider-config';
+import { providerSupportsCoupons, PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { filterProvidersForCatalogSync } from '@/lib/payment/catalog-sync';
 import { providerSupportsOneTimePrices, setIdByProvider, getIdByProvider } from '@/lib/utils/provider-ids';
 import { PaymentError } from '@/lib/payment/errors';
@@ -35,6 +36,25 @@ function isNotImplementedProviderError(err: unknown): boolean {
   if (messages.some(m => m.includes('not implemented') || m.includes('not supported'))) return true;
 
   return false;
+}
+
+function isUnsupportedCurrencyError(err: unknown): boolean {
+  const unwrapped = unwrapPaymentError(err);
+  const messages = unwrapped.messages.map(m => m.toLowerCase());
+  return messages.some(m => m.includes('not a supported currency') || m.includes('unsupported currency'));
+}
+
+/**
+ * Get the ordered list of fallback currencies to try for a provider when
+ * the preferred currency is rejected.  The first entry in each provider's
+ * supportedCurrencies list acts as its primary fallback.
+ */
+function getProviderFallbackCurrencies(providerName: string, triedCurrency: string): string[] {
+  const config = PAYMENT_PROVIDERS[providerName.toLowerCase()];
+  if (!config) return [];
+  return config.supportedCurrencies
+    .map(c => c.toUpperCase())
+    .filter(c => c !== triedCurrency.toUpperCase());
 }
 
 function looksLikeProviderPriceId(providerName: string, priceId: string): boolean {
@@ -150,18 +170,66 @@ export async function POST(request: NextRequest) {
                 });
 
             const providerCurrency = getProviderCurrency(providerName);
-            const price = await provider.createPrice({
-              unitAmount: plan.priceCents,
-              currency: providerCurrency,
-              productId,
-              recurring: plan.autoRenew
-                ? {
-                    interval: (plan.recurringInterval || 'month') as 'day' | 'week' | 'month' | 'year',
-                    intervalCount: typeof plan.recurringIntervalCount === 'number' ? plan.recurringIntervalCount : 1,
-                  }
-                : undefined,
-              metadata: { planId: plan.id, name: plan.name },
-            });
+            const recurringOpts = plan.autoRenew
+              ? {
+                  interval: (plan.recurringInterval || 'month') as 'day' | 'week' | 'month' | 'year',
+                  intervalCount: typeof plan.recurringIntervalCount === 'number' ? plan.recurringIntervalCount : 1,
+                }
+              : undefined;
+
+            let price: Awaited<ReturnType<typeof provider.createPrice>> | null = null;
+            let usedCurrency = providerCurrency;
+
+            // Attempt with the configured currency first.
+            // If the provider rejects it as unsupported, retry with the
+            // provider's other supported currencies in order.
+            try {
+              price = await provider.createPrice({
+                unitAmount: plan.priceCents,
+                currency: providerCurrency,
+                productId,
+                recurring: recurringOpts,
+                metadata: { planId: plan.id, name: plan.name },
+              });
+            } catch (currencyErr) {
+              if (!isUnsupportedCurrencyError(currencyErr)) throw currencyErr;
+
+              const fallbacks = getProviderFallbackCurrencies(providerName, providerCurrency);
+              if (fallbacks.length === 0) throw currencyErr;
+
+              Logger.warn('Admin billing sync: currency rejected, trying fallback currencies', {
+                provider: providerName,
+                planId: plan.id,
+                rejectedCurrency: providerCurrency,
+                fallbacks,
+              });
+
+              for (const fallbackCurrency of fallbacks) {
+                try {
+                  price = await provider.createPrice({
+                    unitAmount: plan.priceCents,
+                    currency: fallbackCurrency,
+                    productId,
+                    recurring: recurringOpts,
+                    metadata: { planId: plan.id, name: plan.name },
+                  });
+                  usedCurrency = fallbackCurrency;
+                  Logger.info('Admin billing sync: price created with fallback currency', {
+                    provider: providerName,
+                    planId: plan.id,
+                    currency: fallbackCurrency,
+                  });
+                  break;
+                } catch (fallbackErr) {
+                  if (!isUnsupportedCurrencyError(fallbackErr)) throw fallbackErr;
+                  // Try next fallback currency
+                }
+              }
+
+              if (!price) throw currencyErr; // All fallbacks exhausted
+            }
+
+            void usedCurrency; // logged above; may be useful for future diagnostics
 
             nextExternalPriceIds = setIdByProvider(nextExternalPriceIds, providerName, price.id);
 			const productIdToPersist = providerName === 'razorpay'
@@ -348,6 +416,21 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    await recordAdminAction({
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      action: 'billing.sync',
+      targetType: 'system',
+      details: {
+        providers: result.providers,
+        plansScanned: result.plans.scanned,
+        plansUpdated: result.plans.updated,
+        plansCreatedPrices: result.plans.createdPrices,
+        couponsCreated: result.coupons?.createdArtifacts ?? 0,
+        couponsUpdated: result.coupons?.updated ?? 0,
+      },
+    });
 
     return NextResponse.json({ success: true, result });
   } catch (e: unknown) {

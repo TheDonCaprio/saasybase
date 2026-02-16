@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
-import { fetchAdminActions, fetchAdminActionGroups, clearAdminActions } from '../../../../lib/admin-actions';
+import { fetchAdminActions, fetchAdminActionGroups, fetchAdminActionNames, clearAdminActions, recordAdminAction } from '../../../../lib/admin-actions';
 import type { AdminActionFilters } from '../../../../lib/admin-actions';
 import { toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
@@ -61,7 +61,10 @@ export async function GET(request: NextRequest) {
       endDate: endDateFilter
     });
 
-    const availableActionGroups = await fetchAdminActionGroups();
+    const [availableActionGroups, availableActions] = await Promise.all([
+      fetchAdminActionGroups(),
+      fetchAdminActionNames()
+    ]);
 
     const payload = entries.map((entry) => ({
       id: entry.id,
@@ -106,7 +109,8 @@ export async function GET(request: NextRequest) {
       nextCursor,
       previousCursor,
       pageInfo,
-      availableActionGroups
+      availableActionGroups,
+      availableActions
     });
   } catch (error: unknown) {
     const authResponse = toAuthGuardErrorResponse(error);
@@ -133,6 +137,16 @@ export async function DELETE() {
     Logger.warn('Admin cleared moderator action log', {
       actorId: actor.userId,
       deletedCount
+    });
+
+    // Log this action AFTER clearing, so the clear-log action itself is recorded
+    // as the first entry in the fresh log.
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'moderation.clear_log',
+      targetType: 'system',
+      details: { deletedCount },
     });
 
     return NextResponse.json({ ok: true, deletedCount });

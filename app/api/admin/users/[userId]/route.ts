@@ -280,6 +280,7 @@ export async function PATCH(
           userId: params.userId,
           title: adminEventTitle,
           message: adminEventSummary,
+          alertType: 'other',
           templateKey: 'admin_notification',
           variables: {
             eventTitle: adminEventTitle,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { Logger } from '../../../../../lib/logger';
 import { permanentlyDeleteBlogPosts, restoreBlogPosts, trashBlogPosts } from '../../../../../lib/blog';
 
@@ -11,7 +12,7 @@ const bulkActionSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const payload = await req.json();
     const parsed = bulkActionSchema.safeParse(payload);
     if (!parsed.success) {
@@ -35,6 +36,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
     }
 
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: `blog.bulk_${action}`,
+      targetType: 'blog_post',
+      details: { ids, affected },
+    });
     return NextResponse.json({ action, affected });
   } catch (error) {
     const guard = toAuthGuardErrorResponse(error);

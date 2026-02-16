@@ -1625,6 +1625,7 @@ export class PaymentService {
                     userId,
                     title: 'Subscription Extended',
                     message: `User ${userId} extended subscription with ${planToUse.name}.`,
+                    alertType: 'renewal',
                     templateKey: 'admin_notification',
                     variables: {
                         planName: planToUse.name,
@@ -1747,6 +1748,7 @@ export class PaymentService {
                     userId,
                     title: `${tokenLabel} top-up purchase`,
                     message: adminMessage,
+                    alertType: 'new_purchase',
                     templateKey: 'admin_notification',
                     variables: {
                         planName: planToUse.name,
@@ -1832,6 +1834,7 @@ export class PaymentService {
                     await sendAdminNotificationEmail({
                         userId,
                         title: isRecurringFallback ? 'New subscription purchase' : 'New one-time subscription purchase',
+                        alertType: 'new_purchase',
                         message: isRecurringFallback
                             ? `User ${userId} purchased recurring ${planToUse.name}.`
                             : `User ${userId} purchased ${planToUse.name}.`,
@@ -1938,6 +1941,7 @@ export class PaymentService {
                 userId,
                 title: adminTitle,
                 message: adminMessage,
+                alertType: isUpgrade ? 'upgrade' : isDowngrade ? 'downgrade' : 'new_purchase',
                 templateKey: 'admin_notification',
                 variables: {
                     planName: plan.name,
@@ -2473,6 +2477,7 @@ export class PaymentService {
                     : resolvedChangeType === 'downgrade'
                         ? 'Subscription downgraded'
                         : 'Subscription activated',
+                alertType: resolvedChangeType === 'upgrade' ? 'upgrade' : resolvedChangeType === 'downgrade' ? 'downgrade' : 'new_purchase',
                 message: resolvedChangeType === 'upgrade'
                     ? `User ${dbSub.userId} upgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`
                     : resolvedChangeType === 'downgrade'
@@ -2663,6 +2668,7 @@ export class PaymentService {
             if (!suppressActivationNotifications) {
                 await sendAdminNotificationEmail({
                     title: `New Subscription: ${plan.name}`,
+                    alertType: 'new_purchase',
                     message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}\nStarted: ${startedAt}\nExpires: ${expiresAt}`,
                     userId
                 });
@@ -3033,6 +3039,7 @@ export class PaymentService {
                     await sendAdminNotificationEmail({
                         userId: dbSub.userId,
                         title: changeType === 'upgrade' ? 'Subscription upgraded' : 'Subscription downgraded',
+                        alertType: changeType === 'upgrade' ? 'upgrade' : 'downgrade',
                         message: changeType === 'upgrade'
                             ? `User ${dbSub.userId} upgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`
                             : `User ${dbSub.userId} downgraded to ${dbSub.plan.name}. Subscription: ${dbSub.id}`,
@@ -3085,6 +3092,20 @@ export class PaymentService {
                             transactionId: paymentResult.payment.id || paymentIntentId || invoice.id,
                             expiresAt: refreshedExpiresAt ? refreshedExpiresAt.toLocaleDateString() : undefined
                         }
+                    });
+
+                    await sendAdminNotificationEmail({
+                        userId: dbSub.userId,
+                        title: 'Subscription renewed',
+                        alertType: 'renewal',
+                        message: `User ${dbSub.userId} renewed ${dbSub.plan.name}. Subscription: ${dbSub.id}`,
+                        templateKey: 'admin_notification',
+                        variables: {
+                            planName: dbSub.plan.name,
+                            amount: `$${(invoice.amountPaid / 100).toFixed(2)}`,
+                            transactionId: paymentResult.payment.externalPaymentId || paymentIntentId || invoice.id,
+                            startedAt: new Date().toLocaleString(),
+                        },
                     });
                 }
             }
@@ -3331,6 +3352,7 @@ export class PaymentService {
         try {
             await sendAdminNotificationEmail({
                 title: 'Payment Failed',
+                alertType: 'payment_failed',
                 message: `A payment has failed.\n\nPayment ID: ${id}\nUser: ${userId}\nError: ${errorMessage || 'Unknown'}\nError Code: ${errorCode || 'N/A'}`
             });
         } catch {
@@ -3409,6 +3431,7 @@ export class PaymentService {
         try {
             await sendAdminNotificationEmail({
                 title: 'Subscription Payment Failed',
+                alertType: 'payment_failed',
                 message: `A subscription payment has failed.\n\nInvoice ID: ${id}\nSubscription ID: ${subscriptionId || 'N/A'}\nUser: ${userId}\nEmail: ${userEmail || 'N/A'}`
             });
         } catch {
@@ -3534,6 +3557,7 @@ export class PaymentService {
                 try {
                     await sendAdminNotificationEmail({
                         title: 'Dispute Filed - Unknown Payment',
+                        alertType: 'dispute',
                         message: `A dispute has been filed for an unknown payment.\n\nDispute ID: ${id}\nPayment Intent: ${paymentIntentId || 'N/A'}\nCharge: ${chargeId || 'N/A'}\nAmount: ${currency.toUpperCase()} ${(amount / 100).toFixed(2)}\nReason: ${reason}\nStatus: ${status}\nEvidence Due: ${evidenceDueBy ? evidenceDueBy.toISOString() : 'N/A'}`
                     });
                 } catch {
@@ -3584,6 +3608,7 @@ export class PaymentService {
             try {
                 await sendAdminNotificationEmail({
                     title: eventType === 'dispute.created' ? 'New Dispute Filed' : `Dispute Updated: ${status}`,
+                    alertType: 'dispute',
                     message: `A ${eventType === 'dispute.created' ? 'new dispute has been filed' : 'dispute status has changed'}.\n\nDispute ID: ${id}\nAmount: ${formattedAmount}\nUser: ${userInfo}\nReason: ${reason}\nStatus: ${status}\nEvidence Due: ${evidenceDueBy ? evidenceDueBy.toISOString() : 'N/A'}\nPayment ID: ${payment.id}`
                 });
             } catch {

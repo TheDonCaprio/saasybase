@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { prisma } from '../../../../../lib/prisma';
 import { Logger } from '../../../../../lib/logger';
 import { renderTemplate, type EmailVariables } from '../../../../../lib/email-templates';
@@ -7,7 +8,7 @@ import { sendEmail, getSiteLogo, getSiteName, getSupportEmail } from '../../../.
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
 
     const body = await req.json();
     const to = typeof body.to === 'string' ? body.to.trim() : '';
@@ -103,6 +104,13 @@ export async function POST(req: NextRequest) {
     }
 
     Logger.info('Sent email template test', { templateId: template.id, to });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'email_template.test',
+      targetType: 'email_template',
+      details: { templateId: template.id, to },
+    });
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);

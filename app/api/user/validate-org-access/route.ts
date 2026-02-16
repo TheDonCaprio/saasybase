@@ -48,7 +48,8 @@ export async function POST() {
                     // Any non-EXPIRED subscription with time remaining still confers org access.
                     { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
                     // After wall-clock expiry, keep org access during the grace window.
-                    { status: 'EXPIRED', expiresAt: { gt: graceCutoff, lte: now } },
+                    // Include CANCELLED and PAST_DUE — not just EXPIRED.
+                    { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
                 ]
             },
             select: { userId: true },

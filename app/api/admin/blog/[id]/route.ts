@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { Logger } from '../../../../../lib/logger';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { z } from 'zod';
 import { getBlogPostById, toBlogPostDTO, trashBlogPosts, updateBlogPost } from '../../../../../lib/blog';
 
@@ -48,7 +49,7 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdminOrModerator('blog');
+    const actor = await requireAdminOrModerator('blog');
     const params = await context.params;
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -58,6 +59,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const page = await updateBlogPost(params.id, parsed.data);
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'blog.update',
+      targetType: 'blog_post',
+      details: { postId: params.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toBlogPostDTO(page) });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
@@ -72,7 +80,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdminOrModerator('blog');
+    const actor = await requireAdminOrModerator('blog');
     const params = await context.params;
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -82,6 +90,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
 
     const page = await updateBlogPost(params.id, parsed.data);
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'blog.update',
+      targetType: 'blog_post',
+      details: { postId: params.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toBlogPostDTO(page) });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
@@ -96,9 +111,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
 export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdminOrModerator('blog');
+    const actor = await requireAdminOrModerator('blog');
     const params = await context.params;
     const count = await trashBlogPosts([params.id]);
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'blog.trash',
+      targetType: 'blog_post',
+      details: { postId: params.id },
+    });
     return NextResponse.json({ trashed: count });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);

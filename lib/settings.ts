@@ -87,6 +87,22 @@ export async function getSettings(keys: string[]): Promise<Record<string, string
   return result;
 }
 
+/** Parse a JSON-serialised string[] setting value into a Set for O(1) lookups. */
+export function parseStringListSetting(raw: string): Set<string> {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(
+      parsed
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 export const SETTING_KEYS = {
   SITE_NAME: 'SITE_NAME',
   SITE_LOGO: 'SITE_LOGO',
@@ -134,6 +150,9 @@ export const SETTING_KEYS = {
   ,TOKENS_RESET_ON_RENEWAL_ONE_TIME: 'TOKENS_RESET_ON_RENEWAL_ONE_TIME'
   ,TOKENS_RESET_ON_RENEWAL_RECURRING: 'TOKENS_RESET_ON_RENEWAL_RECURRING'
   ,TOKENS_NATURAL_EXPIRY_GRACE_HOURS: 'TOKENS_NATURAL_EXPIRY_GRACE_HOURS'
+  ,ADMIN_ACTION_NOTIFICATION_ACTIONS: 'ADMIN_ACTION_NOTIFICATION_ACTIONS'
+  ,ADMIN_ALERT_EMAIL_TYPES: 'ADMIN_ALERT_EMAIL_TYPES'
+  ,SUPPORT_EMAIL_NOTIFICATION_TYPES: 'SUPPORT_EMAIL_NOTIFICATION_TYPES'
 } as const;
 
 export const SETTING_DEFAULTS = {
@@ -184,6 +203,9 @@ export const SETTING_DEFAULTS = {
   ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_ONE_TIME]: 'false'
   ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_RECURRING]: 'false'
   ,[SETTING_KEYS.TOKENS_NATURAL_EXPIRY_GRACE_HOURS]: '24'
+  ,[SETTING_KEYS.ADMIN_ACTION_NOTIFICATION_ACTIONS]: '[]'
+  ,[SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES]: '["refund","new_purchase","renewal","upgrade","downgrade","payment_failed","dispute","other"]'
+  ,[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]: '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
 } as const;
 
 export interface ThemeLink {

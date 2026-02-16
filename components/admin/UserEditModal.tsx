@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { showToast } from '../ui/Toast';
 import { getCanonicalActiveSubscription, SubRecord } from '../../lib/subscriptions';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { useRouter } from 'next/navigation';
 
 interface ClerkData {
   firstName: string | null;
@@ -49,11 +51,15 @@ interface UserEditModalProps {
   onClose: () => void;
   // Accept a partial User so callers that expect Partial<User> remain compatible
   onUserUpdate: (updatedUser: Partial<User>) => void;
+  onUserDelete: (userId: string) => void;
   canManageRoles: boolean;
+  currentAdminId: string;
 }
 
-export function UserEditModal({ user, isOpen, onClose, onUserUpdate, canManageRoles }: UserEditModalProps) {
+export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelete, canManageRoles, currentAdminId }: UserEditModalProps) {
   const [loading, setLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -69,6 +75,8 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, canManageRo
   const [assignLoading, setAssignLoading] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [subscriptions, setSubscriptions] = useState<SubRecord[]>(Array.isArray(user.subscriptions) ? user.subscriptions : []);
+  const router = useRouter();
+  const isSelf = currentAdminId === user.id;
 
   const currentPlan = useMemo(() => getCanonicalActiveSubscription(subscriptions), [subscriptions]);
   const selectedPlan = useMemo(() => plans.find((plan) => plan.id === selectedPlanId) ?? null, [plans, selectedPlanId]);
@@ -287,6 +295,33 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, canManageRo
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (isSelf) return;
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        showToast('User deleted', 'success');
+        onUserDelete(user.id);
+        onClose();
+        try { router.refresh(); } catch { /* ignore refresh errors */ }
+      } else {
+        const json = await response.json().catch(() => ({}));
+        const message = typeof json?.error === 'string' ? json.error : 'Failed to delete user';
+        showToast(message, 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showToast('Failed to delete user', 'error');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const modal = (
@@ -487,24 +522,47 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, canManageRo
           </div>
 
           <div className="border-t border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            {!isSelf && (
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm transition-colors disabled:opacity-50 sm:mr-auto"
+                disabled={loading || tokenUpdating || assignLoading || deleteLoading}
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete User'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
               className="w-full sm:w-auto bg-neutral-700 hover:bg-neutral-600 text-white py-2 px-4 rounded text-sm transition-colors"
-              disabled={loading || tokenUpdating || assignLoading}
+              disabled={loading || tokenUpdating || assignLoading || deleteLoading}
             >
               Close
             </button>
             <button
               type="submit"
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm transition-colors disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || deleteLoading}
             >
               {loading ? 'Saving...' : 'Save Profile'}
             </button>
           </div>
         </form>
       </div>
+
+      {!isSelf && (
+        <ConfirmModal
+          isOpen={deleteConfirmOpen}
+          title="Delete user"
+          description="This will permanently delete the user, their subscriptions, payments, and related data. This action cannot be undone."
+          confirmLabel="Delete user"
+          cancelLabel="Cancel"
+          loading={deleteLoading}
+          onClose={() => setDeleteConfirmOpen(false)}
+          onConfirm={handleDeleteUser}
+        />
+      )}
     </div>
   );
 

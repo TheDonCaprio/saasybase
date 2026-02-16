@@ -5,6 +5,7 @@ import { Logger } from '../../../../../../lib/logger';
 import { toError } from '../../../../../../lib/runtime-guards';
 import { buildSupportEmail } from '../../../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail } from '../../../../../../lib/email';
+import { isSupportEmailNotificationEnabled } from '../../../../../../lib/notifications';
 import { rateLimit, getClientIP } from '../../../../../../lib/rateLimit';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ ticketId: string }> }) {
@@ -100,6 +101,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
 
     void (async () => {
       try {
+        const supportEmailEnabled = await isSupportEmailNotificationEnabled('user_reply_to_admin');
+        if (!supportEmailEnabled) return;
+
         const [supportEmail, siteName] = await Promise.all([
           getSupportEmail(),
           getSiteName()

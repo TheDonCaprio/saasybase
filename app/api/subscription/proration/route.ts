@@ -616,6 +616,7 @@ export async function POST(req: NextRequest) {
         await sendAdminNotificationEmail({
           userId: ctx.userId,
           title: adminTitle,
+          alertType: isUpgrade ? 'upgrade' : 'downgrade',
           message: adminMessage,
           templateKey: 'admin_notification',
           variables: {

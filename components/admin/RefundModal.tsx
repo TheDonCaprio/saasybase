@@ -209,16 +209,16 @@ export function RefundModal({
                         className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
                       />
                       <div className="flex-1">
-                        <div className="text-xs font-medium text-white">Cancel subscription in Stripe</div>
+                        <div className="text-xs font-medium text-white">Cancel subscription with payment provider</div>
                         <div className="text-[11px] text-neutral-400 mt-0.5">
-                          If checked, choose how Stripe should handle the cancellation (immediate vs. at period end).
+                          If checked, choose how the provider should handle the cancellation (immediate vs. at period end).
                         </div>
                       </div>
                     </label>
 
                     {cancelSubscription && (
                       <div className="space-y-2 rounded border border-neutral-800 bg-neutral-900/50 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Stripe cancellation timing</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Provider cancellation timing</label>
                         <div className="grid grid-cols-1 gap-2">
                           <label className={`flex items-start gap-2 rounded border ${cancelMode === 'immediate' ? 'border-red-500 bg-red-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
                             <input
@@ -233,7 +233,7 @@ export function RefundModal({
                             <div className="text-xs text-neutral-200">
                               <div className="font-semibold text-white">Cancel immediately</div>
                               <p className="mt-1 text-neutral-400">
-                                Access is revoked right away, the subscription status becomes <strong>CANCELLED</strong>, and Stripe stops future renewals.
+                                Access is revoked right away, the subscription status becomes <strong>CANCELLED</strong>, and future renewals are stopped.
                               </p>
                             </div>
                           </label>
@@ -251,7 +251,7 @@ export function RefundModal({
                             <div className="text-xs text-neutral-200">
                               <div className="font-semibold text-white">Cancel at period end</div>
                               <p className="mt-1 text-neutral-400">
-                                The customer keeps access until the billing period ends. Stripe sets <code>cancel_at_period_end</code> and we mark the subscription as scheduled for cancellation.
+                                The customer keeps access until the billing period ends. The cancellation is scheduled and we mark the subscription as pending cancellation locally.
                               </p>
                             </div>
                           </label>
@@ -261,9 +261,9 @@ export function RefundModal({
                   </>
                 ) : (
                   <div className="rounded-lg border border-neutral-200 bg-white/95 p-4 text-xs text-neutral-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-300">
-                    <div className="font-semibold text-neutral-800 dark:text-white">Stripe subscription not detected</div>
+                    <div className="font-semibold text-neutral-800 dark:text-white">Provider subscription not detected</div>
                     <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-                      This plan doesn&apos;t renew automatically in Stripe, so we&apos;ll handle access locally. Use the controls across to decide when access should end.
+                      This plan doesn&apos;t renew automatically with the configured provider, so we&apos;ll handle access locally. Use the controls across to decide when access should end.
                     </p>
                   </div>
                 )}
@@ -346,20 +346,20 @@ export function RefundModal({
               <div className="text-xs text-amber-900 dark:text-amber-300">
                 <div className="font-medium mb-1 text-amber-900 dark:text-amber-200">This action cannot be undone</div>
                 <div className="text-amber-700 dark:text-amber-400">
-                  The payment will be refunded via Stripe using the &quot;{selectedReasonData?.label}&quot; reason.
+                  The payment will be refunded via the configured provider using the &quot;{selectedReasonData?.label}&quot; reason.
                   {customReason && ' Your additional notes will be saved for internal tracking.'}
                 </div>
                 {hasActiveSubscription ? (
                   <div className="text-amber-700 dark:text-amber-400 mt-1 space-y-1">
                     <div>
-                      <strong>Stripe handling:</strong>{' '}
+                      <strong>Provider handling:</strong>{' '}
                       {hasStripeSubscription
                         ? cancelSubscription
                           ? cancelMode === 'period_end'
                             ? 'Scheduled to end at period close.'
                             : 'Cancelled immediately to stop future renewals.'
-                          : 'Left active in Stripe.'
-                        : 'Managed locally (no Stripe subscription).'}
+                          : 'Left active with provider.'
+                        : 'Managed locally (no provider subscription).'}
                     </div>
                     <div>
                       <strong>Local access:</strong>{' '}

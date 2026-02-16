@@ -493,6 +493,7 @@ export async function POST(
       await sendAdminNotificationEmail({
         userId: payment.userId,
         title: 'Refund Processed',
+        alertType: 'refund',
         message: `Refund of $${(refund.amount / 100).toFixed(2)} processed for user ${payment.userId}`,
         templateKey: 'admin_notification',
         actorId,

@@ -6,6 +6,7 @@ import { Logger } from '../../../../lib/logger';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { PAYMENT_PROVIDERS, getActivePaymentProvider } from '../../../../lib/payment/provider-config';
+import { recordAdminAction } from '../../../../lib/admin-actions';
 
 function normalizeCurrencyCode(raw: unknown): string {
   const value = typeof raw === 'string' ? raw : String(raw ?? '');
@@ -93,6 +94,13 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await setSetting(key, String(value ?? ''));
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'settings.update',
+      targetType: 'setting',
+      details: { key: result.key },
+    });
     const res = NextResponse.json({ key: result.key, value: result.value });
     if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));
     res.headers.set('X-RateLimit-Limit', '60');
@@ -137,6 +145,13 @@ export async function PATCH(req: NextRequest) {
     // Invalidate cache so clients and server helpers pick up the change immediately
     clearSettingsCache();
     Logger.info('Admin setting upsert', { key: setting.key });
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'settings.upsert',
+      targetType: 'setting',
+      details: { key: setting.key },
+    });
 
     const res = NextResponse.json({ setting });
     if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));

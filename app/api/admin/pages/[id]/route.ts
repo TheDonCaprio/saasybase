@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { getPageById, toSitePageDTO, trashSitePages, updateSitePage } from '../../../../../lib/sitePages';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { z } from 'zod';
 import { Logger } from '../../../../../lib/logger';
 
@@ -43,7 +44,7 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const params = await context.params;
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -53,6 +54,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const page = await updateSitePage(params.id, parsed.data);
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'page.update',
+      targetType: 'site_page',
+      details: { pageId: params.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toSitePageDTO(page) });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
@@ -67,7 +75,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const params = await context.params;
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -77,6 +85,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
 
     const page = await updateSitePage(params.id, parsed.data);
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'page.update',
+      targetType: 'site_page',
+      details: { pageId: params.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toSitePageDTO(page) });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
@@ -91,9 +106,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
 export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     const params = await context.params;
     const count = await trashSitePages([params.id]);
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'page.trash',
+      targetType: 'site_page',
+      details: { pageId: params.id },
+    });
     return NextResponse.json({ trashed: count });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);

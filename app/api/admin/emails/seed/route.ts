@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { seedDefaultTemplates } from '../../../../../lib/email-templates';
 import { Logger } from '../../../../../lib/logger';
 
 export async function POST() {
   try {
-    await requireAdmin();
+    const actorId = await requireAdmin();
     
     Logger.info('Admin initiated email template seeding');
     
     const result = await seedDefaultTemplates();
+    await recordAdminAction({
+      actorId,
+      actorRole: 'ADMIN',
+      action: 'email_template.seed',
+      targetType: 'email_template',
+      details: { created: result.created, skipped: result.skipped },
+    });
     
     return NextResponse.json({
       success: true,

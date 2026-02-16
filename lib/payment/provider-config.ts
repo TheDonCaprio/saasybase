@@ -38,11 +38,19 @@ export interface PaymentProviderConfig {
         oneTimePayments: boolean;
         embeddedCheckout: boolean;
         customerPortal: boolean;
-        coupons: boolean;
+        /** 'provider' = native provider coupons, 'in-app' = app-level discounts only, false = none */
+        coupons: 'provider' | 'in-app' | false;
         refunds: boolean;
+        proration: boolean;
+        subscriptionUpdates: boolean;
     };
     /** Webhook secret env var name */
     webhookSecretEnvVar: string;
+    /**
+     * When true, the provider does not use a standalone webhook secret but signs
+     * webhook payloads with its API secret key instead (e.g. Paystack).
+     */
+    webhookUsesApiSecret?: boolean;
     /** Supported currencies (ISO 4217 codes) */
     supportedCurrencies: string[];
     /** Documentation URL */
@@ -202,8 +210,10 @@ z"/>
             oneTimePayments: true,
             embeddedCheckout: true,
             customerPortal: true,
-            coupons: true,
+            coupons: 'provider',
             refunds: true,
+            proration: true,
+            subscriptionUpdates: true,
         },
         webhookSecretEnvVar: 'STRIPE_WEBHOOK_SECRET',
         supportedCurrencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'INR', 'BRL', 'MXN'],
@@ -236,10 +246,13 @@ z"/>
             // Paystack supports a hosted subscription management page (update card / cancel)
             // via GET /subscription/:code/manage/link (subscriptions only).
             customerPortal: true,
-            coupons: false, // Must be handled in application
+            coupons: 'in-app', // Paystack has no native coupon API; discounts handled in-app
             refunds: true,
+            proration: false,
+            subscriptionUpdates: false, // Must cancel + recreate
         },
         webhookSecretEnvVar: 'PAYSTACK_WEBHOOK_SECRET',
+        webhookUsesApiSecret: true,
         supportedCurrencies: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'],
         docsUrl: 'https://paystack.com/docs',
         dashboardUrls: {
@@ -333,8 +346,10 @@ z"/>
             oneTimePayments: true,
             embeddedCheckout: true,
             customerPortal: true,
-            coupons: true,
+            coupons: 'provider',
             refunds: true,
+            proration: true,
+            subscriptionUpdates: true,
         },
         webhookSecretEnvVar: 'PADDLE_WEBHOOK_SECRET',
         supportedCurrencies: ['USD', 'EUR', 'GBP'],
@@ -366,8 +381,10 @@ z"/>
             oneTimePayments: true,
             embeddedCheckout: true,
             customerPortal: true,
-            coupons: false,
+            coupons: 'in-app', // No native coupons; offer_id opt-in for one-time payments
             refunds: true,
+            proration: true,
+            subscriptionUpdates: true,
         },
         webhookSecretEnvVar: 'RAZORPAY_WEBHOOK_SECRET',
         supportedCurrencies: ['INR', 'USD', 'MYR', 'SGD'],
@@ -451,19 +468,19 @@ export function buildDashboardUrl(
 /**
  * Check if a provider supports native coupons/promotion codes
  * @param providerId - The payment provider ID (e.g., 'stripe', 'paystack')
- * @returns true if the provider supports native coupons
+ * @returns true if the provider supports native provider-level coupons
  */
 export function providerSupportsCoupons(providerId?: string | null): boolean {
     const id = providerId || getActivePaymentProvider();
     const config = PAYMENT_PROVIDERS[id.toLowerCase()];
-    return config?.features?.coupons === true;
+    return config?.features?.coupons === 'provider';
 }
 
 /**
  * Check if a provider supports a specific feature
  * @param providerId - The payment provider ID
  * @param feature - The feature to check
- * @returns true if the provider supports the feature
+ * @returns true if the provider supports the feature (for coupons, 'provider' or 'in-app' both count)
  */
 export function providerSupportsFeature(
     providerId: string | null | undefined,
@@ -471,5 +488,6 @@ export function providerSupportsFeature(
 ): boolean {
     const id = providerId || getActivePaymentProvider();
     const config = PAYMENT_PROVIDERS[id.toLowerCase()];
-    return config?.features?.[feature] === true;
+    const value = config?.features?.[feature];
+    return value === true || value === 'provider' || value === 'in-app';
 }

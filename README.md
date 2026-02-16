@@ -122,6 +122,9 @@ Subscribe your Paystack webhook to:
 
 - `charge.success` (required)
 - `subscription.create` (recommended)
+- `subscription.not_renew` (recommended; fires when a subscription is set to cancel at period end)
+- `subscription.disable` (recommended; fires when a subscription is cancelled immediately)
+- `invoice.create` (recommended; used internally for cancel-at-period-end workaround)
 - `invoice.update` (recommended)
 - `invoice.payment_failed` (recommended)
 - `refund.processed` (recommended; used to sync refunds)
@@ -129,6 +132,7 @@ Subscribe your Paystack webhook to:
 Notes:
 
 - `refund.pending` is intentionally treated as a no-op in this app to avoid marking payments as refunded before Paystack finalizes the refund.
+- Paystack does not use a standalone webhook secret. It signs webhook payloads with your **API Secret Key** (`PAYSTACK_SECRET_KEY`). If `PAYSTACK_WEBHOOK_SECRET` is set it will be used, otherwise the app falls back to `PAYSTACK_SECRET_KEY` automatically.
 
 ## Paddle setup
 
@@ -213,12 +217,16 @@ Enable these webhook events in Razorpay (these are the ones the server currently
 
 - `payment_link.paid` (required; one-time payments via Payment Links)
 - `refund.processed` (recommended; refund sync)
-- `payment.captured` (optional; useful signal for successful payments)
+- `payment.refunded` (recommended; alternative refund event)
+- `payment.captured` (recommended; subscription renewals and one-time payment confirmation)
+- `payment.failed` (recommended; failed payment notifications)
 
 If you are using Razorpay Subscriptions, also enable the **Subscription** events (these only appear in the dashboard once Subscriptions are enabled on your account):
 
 - `subscription.activated` (required; initial activation)
-- `subscription.updated` (recommended; cancellation/resume/status changes)
+- `subscription.updated` (required; plan changes, status changes, scheduled cancellations)
+- `subscription.cancelled` (required; immediate cancellation sync)
+- `subscription.halted` (recommended; fires when payment retries are exhausted)
 
 Notes:
 
@@ -299,8 +307,9 @@ Not all providers support all features. Use `supportsFeature()` to check capabil
 
 | Feature | Stripe | Paystack | Paddle | Razorpay |
 |---------|--------|----------|--------|---------|
-| Coupons | ✅ | ❌ | ✅ | ❌* |
-| Proration | ✅ | ❌ | ❌ | ❌ |
+| Coupons | ✅ Provider | ✅ In-app only | ✅ Provider | ✅ In-app only (offers opt-in)* |
+| Proration | ✅ | ❌ | ✅ | ✅ |
+| Subscription updates | ✅ | ❌ (cancel + recreate) | ✅ | ✅ |
 | Cancel at period end | ✅ | ✅ (via webhook workaround) | ✅ | ✅ |
 | Customer portal | ✅ | Subscriptions only (manage link) | ✅ | Subscriptions only (manage link) |
 | Invoices | ✅ | ❌ | ❌ | ❌ |
@@ -309,10 +318,9 @@ Not all providers support all features. Use `supportsFeature()` to check capabil
 | Disputes | ✅ | ❌ | ❌ | ❌ |
 | Webhooks | ✅ | ✅ | ✅ | ✅ |
 | Elements/Inline | ✅ | ✅ | ❌ | ❌ |
-| Subscription updates | ✅ | ❌ | ❌ | ❌ |
 | Trial periods | ✅ | ❌ | ❌ | ❌ |
 
-\* Razorpay does not support Stripe-style coupons in this app. There is an optional one-time-only integration that can attach a Razorpay `offer_id` to Payment Links when `RAZORPAY_ENABLE_OFFERS=true`.
+\* Razorpay does not support Stripe-style coupons in this app. Coupons/discounts are handled in-app. There is an optional one-time-only integration that can attach a Razorpay `offer_id` to Payment Links when `RAZORPAY_ENABLE_OFFERS=true`.
 
 ### Database Schema for Multi-Provider
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
+import { recordAdminAction } from '../../../../lib/admin-actions';
 import { Logger } from '../../../../lib/logger';
 import { z } from 'zod';
 import { createBlogPost, listBlogPostsPaginated, toBlogPostDTO } from '../../../../lib/blog';
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdminOrModerator('blog');
+    const actor = await requireAdminOrModerator('blog');
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
@@ -93,6 +94,13 @@ export async function POST(req: NextRequest) {
     }
 
     const post = await createBlogPost(parsed.data);
+    await recordAdminAction({
+      actorId: actor.userId,
+      actorRole: actor.role,
+      action: 'blog.create',
+      targetType: 'blog_post',
+      details: { postId: post.id, title: parsed.data.title },
+    });
     return NextResponse.json({ page: toBlogPostDTO(post) }, { status: 201 });
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);

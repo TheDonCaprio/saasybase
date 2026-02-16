@@ -603,9 +603,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     setIfMounted(setProrationError)(null);
     try {
       const postBody: Record<string, unknown> = { planId: plan.id };
-      // When the proration preview already told us this downgrade will be
-      // scheduled at cycle end, signal the backend so it skips the doomed
-      // immediate-switch attempt and goes straight to scheduling.
+      // When the proration preview indicated the switch should be
+      // scheduled at cycle end, signal the backend accordingly.
       if (prorationPreview?.downgradeScheduledAtCycleEnd) {
         postBody.downgradeScheduledAtCycleEnd = true;
       }
@@ -625,9 +624,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
 
       const result = asRecord(json);
 
-      // The plan change was scheduled at cycle end — either because the
-      // frontend requested it (downgradeScheduledAtCycleEnd) or the backend
-      // fell back to it after an immediate switch failed (scheduledFallback).
+      // The plan change was scheduled at cycle end (user explicitly chose
+      // "Switch at end of cycle").
       if (result?.scheduled === true) {
         const newPlanName = typeof result?.newPlan === 'object' && result.newPlan
           ? (asRecord(result.newPlan)?.name as string) : plan.name;

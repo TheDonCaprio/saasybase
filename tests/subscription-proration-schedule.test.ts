@@ -291,13 +291,13 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		expect(body.code).toBe('STRIPE_AUTHENTICATION_REQUIRED');
 	});
 
-	it('falls back to cycle_end scheduling when Razorpay pending-invoice blocks immediate switch', async () => {
+	it('auto-schedules at cycle end when Razorpay "no captured payments" error occurs', async () => {
 		providerMock.updateSubscriptionPlan.mockRejectedValue(
-			new Error('RAZORPAY_PENDING_INVOICE: A recent plan change is still being processed. Please wait a few minutes and try again.')
+			new Error('RAZORPAY_NO_CAPTURED_PAYMENTS: The current invoice has no captured payment, so an immediate plan change cannot be processed.')
 		);
 		providerMock.scheduleSubscriptionPlanChange.mockResolvedValue({
 			success: true,
-			newPeriodEnd: new Date('2026-03-15T00:00:00.000Z'),
+			newPeriodEnd: new Date('2026-03-01T00:00:00Z'),
 		});
 
 		const req = new Request('http://localhost/api/subscription/proration', {
@@ -307,33 +307,13 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		});
 
 		const res = await POST(req as any);
-		const body = await res.json();
+		// Falls back to schedule at cycle end
 		expect(res.status).toBe(200);
+		const body = await res.json();
 		expect(body.ok).toBe(true);
 		expect(body.scheduled).toBe(true);
-		expect(body.scheduledFallback).toBe(true);
-		expect(body.newPlan.name).toBe('Target');
-		expect(body.currentPeriodEnd).toBe('2026-03-15T00:00:00.000Z');
-	});
-
-	it('returns 409 when Razorpay pending-invoice AND cycle_end fallback both fail', async () => {
-		providerMock.updateSubscriptionPlan.mockRejectedValue(
-			new Error('RAZORPAY_PENDING_INVOICE: A recent plan change is still being processed.')
-		);
-		providerMock.scheduleSubscriptionPlanChange.mockRejectedValue(
-			new Error('Razorpay schedule also failed')
-		);
-
-		const req = new Request('http://localhost/api/subscription/proration', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ planId: 'plan_target' }),
-		});
-
-		const res = await POST(req as any);
-		expect(res.status).toBe(409);
-		const body = await res.json();
-		expect(body.code).toBe('RAZORPAY_PENDING_INVOICE');
+		expect(body.noCapturedPaymentsFallback).toBe(true);
+		expect(providerMock.scheduleSubscriptionPlanChange).toHaveBeenCalled();
 	});
 
 	it('maps Razorpay cycle-not-started error to 409', async () => {
@@ -484,7 +464,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		expect(body.downgradeScheduledAtCycleEnd).toBe(false);
 	});
 
-	it('GET returns downgradeScheduledAtCycleEnd=true for Razorpay downgrade', async () => {
+	it('GET returns isDowngrade=true for Razorpay downgrade (immediate switch supported)', async () => {
 		// Provider supports subscription_updates but NOT proration
 		providerMock.supportsFeature.mockImplementation((f: string) => f === 'subscription_updates');
 
@@ -523,12 +503,11 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		expect(body.prorationEnabled).toBe(true);
 		expect(body.isEstimate).toBe(true);
 		expect(body.isDowngrade).toBe(true);
-		expect(body.downgradeScheduledAtCycleEnd).toBe(true);
-		// For scheduled downgrades, amountDue should be 0 (no immediate charge)
-		expect(body.amountDue).toBe(0);
-		// Single line item explaining the scheduled switch
-		expect(body.lineItems).toHaveLength(1);
-		expect(body.lineItems[0].description).toContain('Basic');
+		expect(body.downgradeScheduledAtCycleEnd).toBe(false);
+		// Razorpay supports immediate downgrades, so amountDue reflects proration
+		expect(typeof body.amountDue).toBe('number');
+		// Two proration line items (unused time credit + new plan charge)
+		expect(body.lineItems).toHaveLength(2);
 		expect(body.currentPlan.name).toBe('Pro');
 		expect(body.targetPlan.name).toBe('Basic');
 	});

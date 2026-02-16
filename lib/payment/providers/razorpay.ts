@@ -403,10 +403,6 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		}
 	}
 
-	private isPendingInvoiceError(err: unknown): boolean {
-		return /does not have any captured payments/i.test(this.extractErrorText(err));
-	}
-
 	/**
 	 * Detects Razorpay's "Can't update subscription when cycle start is in future" error.
 	 * This occurs when a user tries to switch plans again before the new billing cycle
@@ -414,6 +410,15 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 	 */
 	private isCycleStartInFutureError(err: unknown): boolean {
 		return /cycle start is in future/i.test(this.extractErrorText(err));
+	}
+
+	/**
+	 * Detects Razorpay's "does not have any captured payments" error.
+	 * This occurs on immediate downgrades when the current cycle's invoice has
+	 * no captured payment — Razorpay cannot issue a credit note/refund in that case.
+	 */
+	private isNoCapturedPaymentsError(err: unknown): boolean {
+		return /does not have any captured payments/i.test(this.extractErrorText(err));
 	}
 
 	private isRemainingCountRequiredForPlanChange(err: unknown): boolean {
@@ -1241,16 +1246,18 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 				body: JSON.stringify(payload),
 			});
 		} catch (err) {
-			// Razorpay rejects plan changes while a proration invoice from a recent
-			// upgrade has not been captured yet. Surface a clear, retryable error.
-			if (this.isPendingInvoiceError(err)) {
-				throw new PaymentProviderError(
-					'RAZORPAY_PENDING_INVOICE: A recent plan change is still being processed. Please wait a few minutes and try again.',
-				);
-			}
 			if (this.isCycleStartInFutureError(err)) {
 				throw new PaymentProviderError(
 					'RAZORPAY_CYCLE_NOT_STARTED: Your new billing cycle has not started yet. Please wait a few minutes and try again.',
+				);
+			}
+			// When the current cycle's invoice has no captured payment (e.g.
+			// subscription just activated, auth-only charge, etc.), Razorpay
+			// cannot issue a credit note for an immediate downgrade.  Signal
+			// this so the route handler can auto-schedule at cycle end instead.
+			if (this.isNoCapturedPaymentsError(err)) {
+				throw new PaymentProviderError(
+					'RAZORPAY_NO_CAPTURED_PAYMENTS: The current invoice has no captured payment, so an immediate plan change cannot be processed. The change will be scheduled at the end of the current billing cycle instead.',
 				);
 			}
 			if (!this.isRemainingCountRequiredForPlanChange(err)) throw err;

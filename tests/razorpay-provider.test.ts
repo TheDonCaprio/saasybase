@@ -179,7 +179,7 @@ describe('razorpay-provider (minimum working)', () => {
 		expect(patchCount).toBe(2);
 	});
 
-	it('updateSubscriptionPlan throws RAZORPAY_PENDING_INVOICE when proration invoice not captured', async () => {
+	it('updateSubscriptionPlan throws RAZORPAY_NO_CAPTURED_PAYMENTS when invoice has no captured payments', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
 		global.fetch = vi.fn(async (url: any, init?: any) => {
@@ -193,9 +193,11 @@ describe('razorpay-provider (minimum working)', () => {
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
 		}) as any;
 
+		// Should throw a specific RAZORPAY_NO_CAPTURED_PAYMENTS error so the
+		// route handler can auto-schedule at cycle end.
 		await expect(provider.updateSubscriptionPlan('sub_pending', 'plan_new', 'user_1'))
 			.rejects
-			.toThrow('RAZORPAY_PENDING_INVOICE');
+			.toThrow(/RAZORPAY_NO_CAPTURED_PAYMENTS/i);
 	});
 
 	it('updateSubscriptionPlan throws RAZORPAY_CYCLE_NOT_STARTED when cycle start is in future', async () => {

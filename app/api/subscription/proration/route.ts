@@ -305,23 +305,20 @@ export async function GET(req: NextRequest) {
             ctx.targetPlan.recurringIntervalCount,
           );
           const isDowngrade = targetDailyRate < currentDailyRate;
-          const downgradeScheduledAtCycleEnd = isDowngrade && ctx.providerKey === 'razorpay';
 
           return NextResponse.json({
             prorationEnabled: true,
             isEstimate: true,
             supportsInlineSwitch: true,
             isDowngrade,
-            downgradeScheduledAtCycleEnd,
-            amountDue: downgradeScheduledAtCycleEnd ? 0 : amountDue,
+            downgradeScheduledAtCycleEnd: false,
+            amountDue,
             currency,
             credit: unusedCredit,
-            lineItems: downgradeScheduledAtCycleEnd
-              ? [{ description: `Switch to ${ctx.targetPlan.name} at end of billing period`, amount: 0, proration: false }]
-              : [
-                  { description: `Unused time on ${ctx.currentSubscription.plan.name}`, amount: -unusedCredit, proration: true },
-                  { description: `Remaining time on ${ctx.targetPlan.name}`, amount: newPlanCharge, proration: true },
-                ],
+            lineItems: [
+              { description: `Unused time on ${ctx.currentSubscription.plan.name}`, amount: -unusedCredit, proration: true },
+              { description: `Remaining time on ${ctx.targetPlan.name}`, amount: newPlanCharge, proration: true },
+            ],
             currentPlan: {
               id: ctx.currentSubscription.plan.id,
               name: ctx.currentSubscription.plan.name,
@@ -439,8 +436,8 @@ export async function POST(req: NextRequest) {
     const scheduleAtRaw = body['scheduleAt'];
     const scheduleAt = scheduleAtRaw === 'cycle_end' ? 'cycle_end' : null;
 
-    // Frontend signals that this is a downgrade that should be scheduled at
-    // cycle end directly (e.g. Razorpay can't do immediate downgrades).
+    // Frontend signals that this switch should be scheduled at cycle end
+    // (e.g. user explicitly chose "Switch at end of cycle").
     const directDowngradeSchedule = body['downgradeScheduledAtCycleEnd'] === true;
 
     const ctx = await resolveContext(planId, actorUserId);
@@ -659,10 +656,6 @@ export async function POST(req: NextRequest) {
       && /can't update subscription/i.test(error.message)
       && /not in authenticated or active state/i.test(error.message);
 
-    const razorpayPendingInvoice =
-      /RAZORPAY_PENDING_INVOICE/i.test(error.message)
-      || (/razorpay/i.test(error.message) && /does not have any captured payments/i.test(error.message));
-
     const razorpayCycleNotStarted =
       /RAZORPAY_CYCLE_NOT_STARTED/i.test(error.message)
       || (/razorpay/i.test(error.message) && /cycle start is in future/i.test(error.message));
@@ -675,57 +668,73 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (razorpayPendingInvoice) {
-      // Razorpay cannot process immediate downgrades — the proration invoice
-      // has nothing to capture. Automatically fall back to scheduling the
-      // plan change at cycle_end so the user isn't stuck.
+    // Razorpay cannot issue a credit note for an immediate downgrade when
+    // the current invoice has no captured payment.  Auto-fall back to
+    // scheduling the change at the end of the current billing cycle.
+    const razorpayNoCapturedPayments =
+      /RAZORPAY_NO_CAPTURED_PAYMENTS/i.test(error.message)
+      || (/razorpay/i.test(error.message) && /does not have any captured payments/i.test(error.message));
+
+    if (razorpayNoCapturedPayments) {
       try {
-        const ctx = await resolveContext(planId!, actorUserId!);
-        const fallbackProvider = paymentService.getProviderForRecord(ctx.providerKey);
-        if (typeof fallbackProvider.scheduleSubscriptionPlanChange === 'function') {
-          const fallbackResult = await fallbackProvider.scheduleSubscriptionPlanChange(
-            ctx.currentSubscription.externalSubscriptionId!,
-            ctx.targetExternalPriceId,
-            ctx.userId
+        const ctx2 = await resolveContext(planId!, actorUserId!);
+        const provider2 = paymentService.getProviderForRecord(ctx2.providerKey);
+
+        if (typeof provider2.scheduleSubscriptionPlanChange !== 'function') {
+          return jsonError(
+            'Immediate plan change is not possible right now and this provider does not support scheduling.',
+            409,
+            'RAZORPAY_NO_CAPTURED_PAYMENTS'
           );
-          const fbPeriodEnd = fallbackResult.newPeriodEnd || null;
-
-          // Persist the scheduled plan switch for the fallback path too.
-          try {
-            await prisma.subscription.update({
-              where: { id: ctx.currentSubscription.id },
-              data: {
-                scheduledPlanId: ctx.targetPlan.id,
-                scheduledPlanDate: fbPeriodEnd ?? ctx.currentSubscription.expiresAt ?? null,
-              },
-            });
-          } catch (dbErr) {
-            const de = toError(dbErr);
-            Logger.warn('Failed to persist scheduledPlanId (fallback)', { error: de.message, subscriptionId: ctx.currentSubscription.id });
-          }
-
-          return NextResponse.json({
-            ok: true,
-            scheduled: true,
-            scheduledFallback: true,
-            newPlan: {
-              id: ctx.targetPlan.id,
-              name: ctx.targetPlan.name,
-              priceCents: ctx.targetPlan.priceCents,
-            },
-            currentPeriodEnd: fbPeriodEnd ? fbPeriodEnd.toISOString() : null,
-          });
         }
+
+        const schedResult = await provider2.scheduleSubscriptionPlanChange(
+          ctx2.currentSubscription.externalSubscriptionId!,
+          ctx2.targetExternalPriceId,
+          ctx2.userId
+        );
+
+        const schedEnd = schedResult.newPeriodEnd || null;
+
+        // Persist the scheduled plan switch.
+        try {
+          await prisma.subscription.update({
+            where: { id: ctx2.currentSubscription.id },
+            data: {
+              scheduledPlanId: ctx2.targetPlan.id,
+              scheduledPlanDate: schedEnd ?? ctx2.currentSubscription.expiresAt ?? null,
+            },
+          });
+        } catch (dbErr) {
+          const de = toError(dbErr);
+          Logger.warn('Failed to persist scheduledPlanId (no-captured-payments fallback)', { error: de.message });
+        }
+
+        Logger.info('Razorpay immediate switch failed (no captured payments); scheduled at cycle end instead', {
+          subscriptionId: ctx2.currentSubscription.id,
+          targetPlan: ctx2.targetPlan.id,
+        });
+
+        return NextResponse.json({
+          ok: true,
+          scheduled: true,
+          noCapturedPaymentsFallback: true,
+          newPlan: {
+            id: ctx2.targetPlan.id,
+            name: ctx2.targetPlan.name,
+            priceCents: ctx2.targetPlan.priceCents,
+          },
+          currentPeriodEnd: schedEnd ? schedEnd.toISOString() : null,
+        });
       } catch (fallbackErr) {
         const fe = toError(fallbackErr);
-        Logger.warn('Razorpay cycle_end fallback also failed', { error: fe.message });
+        Logger.error('Razorpay cycle-end fallback also failed', { error: fe.message });
+        return jsonError(
+          'Unable to switch plans right now. The current invoice has no captured payment and scheduling at cycle end also failed.',
+          409,
+          'RAZORPAY_NO_CAPTURED_PAYMENTS'
+        );
       }
-
-      return jsonError(
-        'Payment for your recent plan change is still being processed. Please wait a few minutes before switching plans again.',
-        409,
-        'RAZORPAY_PENDING_INVOICE'
-      );
     }
 
     if (razorpayNeedsRemainingCount) {

@@ -161,6 +161,19 @@ export class PaymentService {
         for (const user of users) {
             if (this.mapHasValue(user.externalCustomerIds, customerId)) return user.id;
         }
+
+        // Fallback: check PaymentAuthorization table — the authorization from
+        // charge.success may have stored the customerId before it was persisted
+        // on the User record.
+        try {
+            const authRecord = await prisma.paymentAuthorization.findFirst({
+                where: { customerId },
+                select: { userId: true },
+                orderBy: { updatedAt: 'desc' },
+            });
+            if (authRecord?.userId) return authRecord.userId;
+        } catch { /* best-effort */ }
+
         return null;
     }
 
@@ -603,6 +616,44 @@ export class PaymentService {
             }
         }
 
+        // Persist the provider customer ID on the User record so that later
+        // webhook events (e.g. Paystack subscription.create which carries no
+        // metadata) can resolve the user via resolveUserByCustomerId.
+        if (session.customerId && userId) {
+            try {
+                const userForCid = await prisma.user.findUnique({ where: { id: userId }, select: { externalCustomerIds: true } });
+                const mergedCids = this.mergeIdMap(userForCid?.externalCustomerIds, this.providerKey, session.customerId);
+
+                let canSetLegacyCid = true;
+                try {
+                    const cidOwner = await prisma.user.findUnique({
+                        where: { externalCustomerId: session.customerId },
+                        select: { id: true },
+                    });
+                    if (cidOwner?.id && cidOwner.id !== userId) {
+                        canSetLegacyCid = false;
+                    }
+                } catch { /* best-effort */ }
+
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: {
+                        ...(canSetLegacyCid ? { externalCustomerId: session.customerId } : null),
+                        externalCustomerIds: mergedCids ?? userForCid?.externalCustomerIds,
+                        paymentProvider: this.providerKey,
+                    },
+                });
+            } catch (err) {
+                Logger.warn('Failed to persist customerId from checkout session', {
+                    sessionId: session.id,
+                    provider: this.providerKey,
+                    userId,
+                    customerId: session.customerId,
+                    error: toError(err).message,
+                });
+            }
+        }
+
         // Idempotency check
         const existing = await prisma.payment.findFirst({ where: { externalSessionId: session.id } });
         if (existing) {
@@ -751,7 +802,30 @@ export class PaymentService {
             }
         });
 
+        // Only treat this as a renewal if the subscription already has at least one
+        // successfully-linked payment. This prevents the first charge after a Paystack
+        // switch-now (cancel+recreate) from being misclassified as a renewal.
+        let hasSucceededPaymentForSub = false;
         if (existingActiveSub && finalPaymentIntent) {
+            try {
+                const existingSucceeded = await prisma.payment.findFirst({
+                    where: {
+                        subscriptionId: existingActiveSub.id,
+                        status: 'SUCCEEDED',
+                    },
+                    select: { id: true },
+                });
+                hasSucceededPaymentForSub = Boolean(existingSucceeded);
+            } catch (err) {
+                Logger.warn('Failed to check existing payments for Paystack renewal detection', {
+                    userId,
+                    subscriptionId: existingActiveSub.id,
+                    error: toError(err).message,
+                });
+            }
+        }
+
+        if (existingActiveSub && finalPaymentIntent && hasSucceededPaymentForSub) {
             const organizationContext = await this.resolveOrganizationContext(userId);
             const resolvedOrganizationId = organizationContext?.role === 'OWNER'
                 ? organizationContext.organization.id
@@ -859,6 +933,63 @@ export class PaymentService {
                     externalPaymentId: finalPaymentIntent,
                 });
 
+                // Send renewal notification for this Paystack renewal-style charge.
+                try {
+                    const renewalTitle = 'Subscription Renewed';
+                    const renewalMessage = `Your subscription to ${plan.name} has been renewed.`;
+
+                    const existingRecentNotification = await prisma.notification.findFirst({
+                        where: {
+                            userId,
+                            title: renewalTitle,
+                            message: renewalMessage,
+                            createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) }
+                        }
+                    });
+
+                    if (!existingRecentNotification) {
+                        const activeCurrency = await getActiveCurrencyAsync();
+                        const refreshedSub = await prisma.subscription.findUnique({
+                            where: { id: existingActiveSub.id },
+                            select: { expiresAt: true },
+                        });
+
+                        await sendBillingNotification({
+                            userId,
+                            title: renewalTitle,
+                            message: renewalMessage,
+                            templateKey: 'subscription_renewed',
+                            variables: {
+                                planName: plan.name,
+                                amount: formatCurrency(amountCents, activeCurrency),
+                                date: new Date().toLocaleDateString(),
+                                transactionId: finalPaymentIntent || session.id,
+                                expiresAt: refreshedSub?.expiresAt ? refreshedSub.expiresAt.toLocaleDateString() : undefined,
+                            },
+                        });
+
+                        await sendAdminNotificationEmail({
+                            userId,
+                            title: 'Subscription renewed',
+                            alertType: 'renewal',
+                            message: `User ${userId} renewed ${plan.name}. Subscription: ${existingActiveSub.id}`,
+                            templateKey: 'admin_notification',
+                            variables: {
+                                planName: plan.name,
+                                amount: formatCurrency(amountCents, activeCurrency),
+                                transactionId: finalPaymentIntent || session.id,
+                                startedAt: new Date().toLocaleString(),
+                            },
+                        });
+                    }
+                } catch (notifErr) {
+                    Logger.warn('Failed to send renewal notification for Paystack renewal charge', {
+                        userId,
+                        subscriptionId: existingActiveSub.id,
+                        error: toError(notifErr).message,
+                    });
+                }
+
                 await this.consumeCouponRedemptionFromMetadata(session.metadata);
                 return;
             } catch (err) {
@@ -941,7 +1072,28 @@ export class PaymentService {
                 // we may end up linking the pending payment here instead of in handleSubscriptionCreated.
                 // In that case, we still need to fulfill (tokens/eligibility) and notify.
                 if (linked) {
-                    await this.grantSubscriptionAccess(existingSub);
+                    // Avoid double-granting tokens on Paystack switch-now (cancel+recreate), where a
+                    // recurring subscription was just cancelled and a new one created immediately.
+                    const recentCancelledRecurring = await prisma.subscription.findFirst({
+                        where: {
+                            userId,
+                            id: { not: existingSub.id },
+                            status: 'CANCELLED',
+                            canceledAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+                            plan: { autoRenew: true },
+                        },
+                        select: { id: true },
+                    });
+
+                    if (!recentCancelledRecurring) {
+                        await this.grantSubscriptionAccess(existingSub);
+                    } else {
+                        Logger.info('Skipping grantSubscriptionAccess for Paystack pending-payment link (recent cancel detected)', {
+                            userId,
+                            subscriptionId: existingSub.id,
+                            recentCancelledSubscriptionId: recentCancelledRecurring.id,
+                        });
+                    }
                 }
             }
         } catch (err) {
@@ -2146,6 +2298,21 @@ export class PaymentService {
                 dbSub = updatedSub;
             }
 
+            // Paystack switch-now flow can create the local subscription record before the
+            // provider emits subscription.create. In that case, the subscription won't be
+            // in a PENDING->ACTIVE transition, but we still want to link the pending payment
+            // recorded from charge.success.
+            if (this.providerKey === 'paystack' && (status === 'active' || status === 'trialing')) {
+                const linked = await this.linkPendingPaymentToSubscription(dbSub);
+                if (linked) {
+                    Logger.info('Linked pending Paystack payment on subscription.created (existing record)', {
+                        subscriptionId,
+                        dbSubscriptionId: dbSub.id,
+                        userId: dbSub.userId,
+                    });
+                }
+            }
+
             // Only link pending payment and grant access if this is a "first activation" scenario:
             // The subscription was PENDING and is now being set to ACTIVE
             if (wasTransitioningToActive) {
@@ -2373,6 +2540,27 @@ export class PaymentService {
                     }
                 } catch (err) {
                     Logger.warn('Failed to create fallback Razorpay payment on subscription update', {
+                        subscriptionId,
+                        error: toError(err).message,
+                    });
+                }
+            }
+
+            // Paystack switch-now can create the local subscription record before the provider
+            // reports activation. If charge.success recorded a pending payment, link it once we
+            // have the provider subscription id and the subscription is ACTIVE.
+            if (effectiveStatus === 'ACTIVE' && this.providerKey === 'paystack' && !isNewlyCreated) {
+                try {
+                    const linked = await this.linkPendingPaymentToSubscription(dbSub);
+                    if (linked) {
+                        Logger.info('Linked pending Paystack payment on subscription.updated (existing record)', {
+                            subscriptionId,
+                            dbSubscriptionId: dbSub.id,
+                            userId: dbSub.userId,
+                        });
+                    }
+                } catch (err) {
+                    Logger.warn('Failed to link pending Paystack payment on subscription.updated', {
                         subscriptionId,
                         error: toError(err).message,
                     });

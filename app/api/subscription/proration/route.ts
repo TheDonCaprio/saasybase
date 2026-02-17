@@ -37,6 +37,7 @@ type SubscriptionWithPlan = {
   externalSubscriptionIds: string | null;
   paymentProvider: string | null;
   prorationPendingSince: Date | null;
+  organizationId: string | null;
   plan: { id: string; name: string; priceCents: number; autoRenew: boolean; recurringInterval: string | null; recurringIntervalCount: number };
 };
 
@@ -88,6 +89,7 @@ async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWit
       externalSubscriptionIds: true,
       paymentProvider: true,
       prorationPendingSince: true,
+      organizationId: true,
       plan: {
         select: { id: true, name: true, priceCents: true, autoRenew: true, recurringInterval: true, recurringIntervalCount: true },
       },
@@ -274,8 +276,49 @@ export async function GET(req: NextRequest) {
       // Provider can't generate a proration preview, but may still support
       // inline subscription updates ("switch now" without preview).
       if (provider.supportsFeature('subscription_updates')) {
-        // Attempt a local time-proportional proration estimate so the user
-        // sees an approximate breakdown before confirming.
+        // Paystack doesn't offer proration at all (cancel + recreate at full price).
+        // Don't show an estimated proration breakdown — just allow the switch with
+        // plan info and upgrade/downgrade detection.
+        if (ctx.providerKey === 'paystack') {
+          const { expiresAt } = ctx.currentSubscription;
+          const currentPriceCents = ctx.currentSubscription.plan.priceCents;
+          const targetPriceCents = ctx.targetPlan.priceCents;
+
+          const currentDailyRate = normalizePriceToDailyRate(
+            currentPriceCents,
+            ctx.currentSubscription.plan.recurringInterval,
+            ctx.currentSubscription.plan.recurringIntervalCount,
+          );
+          const targetDailyRate = normalizePriceToDailyRate(
+            targetPriceCents,
+            ctx.targetPlan.recurringInterval,
+            ctx.targetPlan.recurringIntervalCount,
+          );
+          const isDowngrade = targetDailyRate < currentDailyRate;
+
+          return NextResponse.json({
+            prorationEnabled: false,
+            supportsInlineSwitch: true,
+            isDowngrade,
+            downgradeScheduledAtCycleEnd: false,
+            reason: 'PROVIDER_PRORATION_UNSUPPORTED',
+            code: 'PROVIDER_PRORATION_UNSUPPORTED',
+            currentPlan: {
+              id: ctx.currentSubscription.plan.id,
+              name: ctx.currentSubscription.plan.name,
+              priceCents: ctx.currentSubscription.plan.priceCents,
+            },
+            targetPlan: {
+              id: ctx.targetPlan.id,
+              name: ctx.targetPlan.name,
+              priceCents: ctx.targetPlan.priceCents,
+            },
+            currentPeriodEnd: expiresAt ? expiresAt.toISOString() : null,
+          });
+        }
+
+        // Other providers (e.g. Razorpay): attempt a local time-proportional
+        // proration estimate so the user sees an approximate breakdown.
         const now = new Date();
         const { startedAt, expiresAt } = ctx.currentSubscription;
         if (startedAt && expiresAt && expiresAt > now) {
@@ -493,6 +536,61 @@ export async function POST(req: NextRequest) {
         Logger.warn('Failed to persist scheduledPlanId', { error: de.message, subscriptionId: ctx.currentSubscription.id });
       }
 
+      // Send notification emails for the scheduled plan switch (upgrade/downgrade).
+      try {
+        const priceDelta = ctx.targetPlan.priceCents - ctx.currentSubscription.plan.priceCents;
+        const isUpgrade = priceDelta > 0;
+        const isDowngrade = priceDelta < 0;
+
+        if (isUpgrade || isDowngrade) {
+          const scheduledDate = newPeriodEnd ?? ctx.currentSubscription.expiresAt;
+          const scheduledDateStr = scheduledDate ? scheduledDate.toLocaleDateString() : 'the end of your current billing cycle';
+          const templateKey = isUpgrade ? 'subscription_upgraded_recurring' : 'subscription_downgraded';
+          const title = isUpgrade ? 'Plan Upgrade Scheduled' : 'Plan Change Scheduled';
+          const message = isUpgrade
+            ? `Your subscription will be upgraded to ${ctx.targetPlan.name} on ${scheduledDateStr}.`
+            : `Your subscription will be changed to ${ctx.targetPlan.name} on ${scheduledDateStr}.`;
+
+          const activeCurrency = await getActiveCurrencyAsync();
+
+          await sendBillingNotification({
+            userId: ctx.userId,
+            title,
+            message,
+            templateKey,
+            variables: {
+              planName: ctx.targetPlan.name,
+              amount: formatCurrency(ctx.targetPlan.priceCents, activeCurrency),
+              startedAt: scheduledDateStr,
+              expiresAt: scheduledDate ? scheduledDate.toLocaleDateString() : undefined,
+              transactionId: ctx.currentSubscription.id,
+            },
+          });
+
+          const adminTitle = isUpgrade ? 'Subscription upgrade scheduled' : 'Subscription downgrade scheduled';
+          const adminMessage = isUpgrade
+            ? `User ${ctx.userId} scheduled upgrade to ${ctx.targetPlan.name} on ${scheduledDateStr}. Subscription: ${ctx.currentSubscription.id}`
+            : `User ${ctx.userId} scheduled downgrade to ${ctx.targetPlan.name} on ${scheduledDateStr}. Subscription: ${ctx.currentSubscription.id}`;
+
+          await sendAdminNotificationEmail({
+            userId: ctx.userId,
+            title: adminTitle,
+            alertType: isUpgrade ? 'upgrade' : 'downgrade',
+            message: adminMessage,
+            templateKey: 'admin_notification',
+            variables: {
+              planName: ctx.targetPlan.name,
+              amount: formatCurrency(ctx.targetPlan.priceCents, activeCurrency),
+              transactionId: ctx.currentSubscription.id,
+              startedAt: new Date().toLocaleString(),
+            },
+          });
+        }
+      } catch (notifErr) {
+        const ne = toError(notifErr);
+        Logger.warn('Failed to send scheduled plan change notification', { error: ne.message, userId: ctx.userId });
+      }
+
       return NextResponse.json({
         ok: true,
         scheduled: true,
@@ -538,23 +636,88 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const expiresAtValue = newPeriodEnd ?? ctx.currentSubscription.expiresAt ?? undefined;
 
-    const updateData: Prisma.SubscriptionUncheckedUpdateInput = {
-      planId: ctx.targetPlan.id,
-      startedAt: now,
-      ...(expiresAtValue ? { expiresAt: expiresAtValue } : {}),
-      // Clear any previously scheduled plan switch since the immediate switch succeeded.
-      scheduledPlanId: null,
-      scheduledPlanDate: null,
-      // For Razorpay, the proration invoice must be captured before another
-      // switch is allowed.  Mark the subscription as having a pending proration
-      // so the GET handler can show a "processing" state.
-      prorationPendingSince: ctx.providerKey === 'razorpay' ? now : null,
+    const computePlanPeriodMs = () => {
+      const count = ctx.targetPlan.recurringIntervalCount ?? 1;
+      const interval = ctx.targetPlan.recurringInterval;
+      if (ctx.targetPlan.autoRenew && interval) {
+        switch (interval) {
+          case 'day':   return count * 24 * 60 * 60 * 1000;
+          case 'week':  return count * 7 * 24 * 60 * 60 * 1000;
+          case 'month': return count * 30 * 24 * 60 * 60 * 1000;
+          case 'year':  return count * 365 * 24 * 60 * 60 * 1000;
+          default: break;
+        }
+      }
+      return 0;
     };
 
-    await prisma.subscription.update({
-      where: { id: ctx.currentSubscription.id },
-      data: updateData,
-    });
+    // Paystack cancel+recreate flow: force-cancel the OLD local subscription and
+    // create a fresh ACTIVE record for the new plan.  This matches the established
+    // Paystack force-cancel pattern (force locally, schedule-disable on provider).
+    // The old externalSubscriptionId is preserved so the incoming
+    // subscription.disable webhook can find it and harmlessly skip it.
+    if (result.newExternalSubscriptionId) {
+      // Force-cancel the old subscription locally
+      await prisma.subscription.update({
+        where: { id: ctx.currentSubscription.id },
+        data: {
+          status: 'CANCELLED',
+          expiresAt: now,
+          canceledAt: now,
+          cancelAtPeriodEnd: false,
+          scheduledPlanId: null,
+          scheduledPlanDate: null,
+        },
+      });
+
+      // Create a new local subscription for the new plan
+      const newSubIdMap = JSON.stringify({ [ctx.providerKey]: result.newExternalSubscriptionId });
+
+      // For Paystack cancel+recreate, the new subscription should start a fresh billing cycle.
+      // Prefer the provider-reported period end; otherwise approximate from plan interval.
+      const paystackPeriodMs = computePlanPeriodMs();
+      const paystackExpiresAt =
+        (newPeriodEnd && newPeriodEnd > now)
+          ? newPeriodEnd
+          : (paystackPeriodMs > 0 ? new Date(now.getTime() + paystackPeriodMs) : (expiresAtValue ?? now));
+
+      await prisma.subscription.create({
+        data: {
+          userId: ctx.userId,
+          planId: ctx.targetPlan.id,
+          organizationId: ctx.currentSubscription.organizationId ?? undefined,
+          status: 'ACTIVE',
+          startedAt: now,
+          expiresAt: paystackExpiresAt,
+          externalSubscriptionId: result.newExternalSubscriptionId,
+          externalSubscriptionIds: newSubIdMap,
+          paymentProvider: ctx.providerKey,
+          cancelAtPeriodEnd: false,
+        } satisfies Prisma.SubscriptionUncheckedCreateInput,
+      });
+    } else {
+      // Standard inline switch (Stripe, Razorpay, etc.) — reuse the same record.
+      const updateData: Prisma.SubscriptionUncheckedUpdateInput = {
+        planId: ctx.targetPlan.id,
+        startedAt: now,
+        ...(expiresAtValue ? { expiresAt: expiresAtValue } : {}),
+        // Clear any previously scheduled plan switch since the immediate switch succeeded.
+        scheduledPlanId: null,
+        scheduledPlanDate: null,
+        // For Razorpay, the proration invoice must be captured before another
+        // switch is allowed.  Mark the subscription as having a pending proration
+        // so the GET handler can show a "processing" state.
+        prorationPendingSince: ctx.providerKey === 'razorpay' ? now : null,
+        // Clear cancel-at-period-end since we are switching immediately.
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+      };
+
+      await prisma.subscription.update({
+        where: { id: ctx.currentSubscription.id },
+        data: updateData,
+      });
+    }
 
     // Adjust token balance according to admin "Paid token operations" setting.
     // If the admin has configured tokens to be reset on renewal for recurring plans,

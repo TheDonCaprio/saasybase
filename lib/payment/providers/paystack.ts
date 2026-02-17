@@ -164,12 +164,13 @@ export class PaystackPaymentProvider implements PaymentProvider {
             // Paystack supports a hosted subscription management page (update card/cancel)
             // via GET /subscription/:code/manage/link.
             'customer_portal',
+            // Paystack supports immediate plan switching via cancel + recreate.
+            'subscription_updates',
             // Note: These are NOT supported natively:
             // - coupons (must be handled in-app)
             // - promotion_codes
             // - proration (must cancel + recreate)
             // - cancel_at_period_end (we work around via invoice.created webhook)
-            // - subscription_updates (must cancel + recreate)
             // - disputes (not exposed via API)
             // - trial_periods
         ];
@@ -1069,14 +1070,102 @@ export class PaystackPaymentProvider implements PaymentProvider {
     }
 
     /**
-     * Update subscription plan for Paystack.
-     * This is not natively supported - caller should use cancel + new checkout flow.
+     * Update subscription plan for Paystack (immediate switch).
+     * Paystack does not support native inline plan changes, so we implement
+     * this by disabling the current subscription and creating a new one
+     * starting immediately with the user's reusable authorization.
+     *
+     * Paystack only supports /subscription/disable (no native force-cancel),
+     * so the caller is responsible for force-cancelling the local DB record.
+     * This matches the established Paystack pattern: disable on provider,
+     * force-cancel locally.
      */
     async updateSubscriptionPlan(subscriptionId: string, newPriceId: string, userId: string): Promise<SubscriptionUpdateResult> {
-        void subscriptionId;
-        void newPriceId;
-        void userId;
-        throw new PaymentProviderError('Paystack does not support inline plan changes. Use cancel + new checkout.');
+        // Load current subscription for customer_code
+        const current = await this.getSubscription(subscriptionId);
+        const customerCode = current.customerId;
+        if (!customerCode) {
+            throw new PaymentProviderError('PAYSTACK_CUSTOMER_MISSING');
+        }
+
+        // Require a reusable authorization
+        const authorization = await prisma.paymentAuthorization.findFirst({
+            where: {
+                userId,
+                provider: 'paystack',
+                reusable: true,
+                OR: [{ customerId: customerCode }, { customerId: null }],
+            },
+            orderBy: { updatedAt: 'desc' },
+            select: { authorizationCode: true },
+        });
+
+        if (!authorization?.authorizationCode) {
+            throw new PaymentProviderError('PAYSTACK_AUTHORIZATION_REQUIRED');
+        }
+
+        // Disable (schedule-cancel) the current subscription on Paystack.
+        // Use immediately=false so Paystack sets it to "non-renewing" without
+        // emitting a terminal "cancelled" state. The caller handles local force-cancel.
+        await this.cancelSubscription(subscriptionId, false);
+
+        // Create a new subscription starting NOW
+        const now = new Date();
+        let newSubscriptionCode: string | undefined;
+        try {
+            const createResult = await this.request<{ subscription_code?: string }>(
+                '/subscription',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        customer: customerCode,
+                        plan: newPriceId,
+                        authorization: authorization.authorizationCode,
+                        start_date: now.toISOString(),
+                    }),
+                },
+            );
+            newSubscriptionCode = createResult.data?.subscription_code;
+        } catch (err) {
+            // Creation failed — try to re-enable the old subscription.
+            try {
+                await this.undoCancelSubscription(subscriptionId);
+            } catch (rollbackErr) {
+                console.error('[Paystack] CRITICAL: Immediate plan switch failed AND rollback failed.', {
+                    subscriptionId,
+                    userId,
+                    originalError: err instanceof Error ? err.message : String(err),
+                    rollbackError: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
+                });
+            }
+            console.error('[Paystack] Immediate plan switch failed after disabling old subscription.', {
+                subscriptionId,
+                userId,
+                error: err instanceof Error ? err.message : String(err),
+            });
+            throw new PaymentProviderError('PAYSTACK_SCHEDULE_FAILED');
+        }
+
+        let newPeriodEnd: Date | undefined;
+        if (newSubscriptionCode) {
+            try {
+                const newSub = await this.getSubscription(newSubscriptionCode);
+                newPeriodEnd = newSub.currentPeriodEnd ?? undefined;
+            } catch (err) {
+                console.warn('[Paystack] Unable to fetch new subscription period end after switch', {
+                    subscriptionId,
+                    newSubscriptionCode,
+                    userId,
+                    error: err instanceof Error ? err.message : String(err),
+                });
+            }
+        }
+
+        return {
+            success: true,
+            newPeriodEnd,
+            newExternalSubscriptionId: newSubscriptionCode,
+        };
     }
 
     // ============== Billing & Refunds ==============

@@ -375,6 +375,12 @@ export interface SubscriptionUpdateResult {
     requiresAction?: boolean;
     /** Stripe PaymentIntent client secret needed to complete SCA on the client. */
     clientSecret?: string;
+    /**
+     * When the provider creates a completely new subscription during plan switching
+     * (e.g. Paystack cancel-and-recreate), this is the new provider subscription ID
+     * so the caller can update the local record.
+     */
+    newExternalSubscriptionId?: string;
 }
 
 export interface SubscriptionDetails {

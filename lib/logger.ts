@@ -2,7 +2,6 @@
 // This replaces console.log statements throughout the application
 
 import { prisma } from './prisma'
-import { toError } from './runtime-guards'
 
 const MAX_PERSISTED_LOGS = 1000
 const PERSIST_PRUNE_PROBABILITY = 0.05
@@ -152,11 +151,10 @@ export class SecureLogger {
   }
 
   error(message: string, data?: unknown, context?: Record<string, unknown>): void {
-    const normalized = toError(data)
-    const errorPayload = normalized instanceof Error ? {
-      name: normalized.name,
-      message: normalized.message,
-      stack: this.isDevelopment ? normalized.stack : undefined,
+    const errorPayload = data instanceof Error ? {
+      name: data.name,
+      message: data.message,
+      stack: this.isDevelopment ? data.stack : undefined,
     } : data
 
     const formatted = this.formatMessage('ERROR', message, errorPayload)

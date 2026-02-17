@@ -218,14 +218,39 @@ export async function POST(
           providerStatus,
           providerRequestId,
           error: e.message,
-          stack: e.stack,
         });
+
+        // Extract a clean, user-friendly error message.
+        // Provider errors look like:
+        //   "Razorpay API request failed (400): BAD_REQUEST_ERROR: Your account does not have enough balance..."
+        //   "Stripe API request failed (402): card_declined: Your card was declined."
+        // We strip the technical prefix and return only the actionable description.
+        let userMessage: string;
+        if (isTransientProviderFailure) {
+          userMessage = 'Payment provider is temporarily unavailable. Please retry in a few minutes.';
+        } else if (providerError) {
+          const rpError = asRecord((providerMeta as Record<string, unknown>)?.razorpayError);
+          const description = typeof rpError?.description === 'string' ? rpError.description : null;
+          if (description) {
+            userMessage = description;
+          } else {
+            // Strip common prefix patterns: "Provider API request failed (NNN): CODE: "
+            const raw = e.message;
+            const colonSplit = raw.split(': ');
+            // If we have at least 3 segments (prefix, code, message), take everything after the code
+            userMessage = colonSplit.length >= 3
+              ? colonSplit.slice(2).join(': ')
+              : colonSplit.length >= 2
+                ? colonSplit.slice(1).join(': ')
+                : raw;
+          }
+        } else {
+          userMessage = 'An unexpected error occurred while processing the refund.';
+        }
 
         return NextResponse.json(
           {
-            error: isTransientProviderFailure
-              ? 'Refund failed: payment provider is temporarily unavailable. Please retry shortly.'
-              : `Refund failed: ${e.message}`,
+            error: userMessage,
             ...(providerRequestId ? { providerRequestId } : null),
           },
           { status: isTransientProviderFailure ? 502 : 400 },

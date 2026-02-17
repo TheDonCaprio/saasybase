@@ -19,7 +19,7 @@ import { asRecord, toError } from '../../../lib/runtime-guards';
 import { ensureProviderCoupon, isCouponCurrentlyActive, normalizeCouponCode, calculateCouponDiscountCents, isCouponValidForCurrency, extractRazorpayOfferId } from '../../../lib/coupons';
 import { isRecurringProrationEnabled } from '../../../lib/settings';
 import { getIdByProvider, getCurrentProviderKey } from '../../../lib/utils/provider-ids';
-import { getProviderCurrency } from '../../../lib/payment/registry';
+import { getProviderCurrency, getProviderDefaultCurrency } from '../../../lib/payment/registry';
 import { formatCurrency } from '../../../lib/utils/currency';
 
 const couponWithPlansInclude = {
@@ -503,7 +503,7 @@ export async function POST(req: NextRequest) {
                     description: targetPlanName || plan?.name || 'Plan',
                   }));
 
-                  const created = await paymentService.provider.createPrice({
+                  const priceOpts = {
                     productId,
                     unitAmount: discountedAmount,
                     currency: planCurrency,
@@ -514,7 +514,22 @@ export async function POST(req: NextRequest) {
                       couponCode: coupon.code,
                       planId: planId,
                     },
-                  });
+                  };
+
+                  let created;
+                  try {
+                    created = await paymentService.provider.createPrice(priceOpts);
+                  } catch (priceErr) {
+                    // If the provider rejected the currency, fall back to its default currency.
+                    const errMsg = priceErr instanceof Error ? priceErr.message : '';
+                    const fallbackCurrency = getProviderDefaultCurrency(activeProviderKey);
+                    if (/not a supported currency|unsupported currency/i.test(errMsg) && fallbackCurrency.toUpperCase() !== planCurrency.toUpperCase()) {
+                      Logger.warn('Provider rejected currency; retrying with default', { planCurrency, fallbackCurrency, provider: activeProviderKey });
+                      created = await paymentService.provider.createPrice({ ...priceOpts, currency: fallbackCurrency });
+                    } else {
+                      throw priceErr;
+                    }
+                  }
 
                   discountedSubscriptionPriceId = created.id;
                   subscriptionDiscountCentsApplied = discountCents;

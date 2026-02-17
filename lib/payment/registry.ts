@@ -42,7 +42,7 @@ export const PAYMENT_PROVIDER_REGISTRY: Record<string, ProviderConfig> = {
             return new PaystackPaymentProvider(process.env.PAYSTACK_SECRET_KEY!);
         },
         defaultCurrency: 'NGN',
-        supportedCurrencies: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'], // Note: USD only for some Paystack merchants
+        supportedCurrencies: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'], // USD requires merchant approval; set PAYSTACK_CURRENCY=USD to use it as default
     },
     paddle: {
         Class: PaddlePaymentProvider,
@@ -143,6 +143,15 @@ export function getProviderCurrency(providerName: string, requestedCurrency?: st
     }
     
     return currency;
+}
+
+/**
+ * Get the provider's hard-coded default currency (e.g. NGN for Paystack, INR for Razorpay).
+ * Ignores environment overrides; useful as a fallback when the provider rejects the configured currency.
+ */
+export function getProviderDefaultCurrency(providerName: string): string {
+    const config = PAYMENT_PROVIDER_REGISTRY[providerName];
+    return config ? config.defaultCurrency.toUpperCase() : 'USD';
 }
 
 /**

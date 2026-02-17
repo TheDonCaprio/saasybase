@@ -25,10 +25,12 @@ export function PaymentActions({
 }: PaymentActionsProps) {
   const [loading, setLoading] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState<string | null>(null);
 
   const handleRefundClick = () => {
     if (loading || payment.status === 'REFUNDED') return;
+    setRefundError(null);
     setShowRefundModal(true);
   };
 
@@ -62,14 +64,16 @@ export function PaymentActions({
         const updatedPayment = { ...payment, status: 'REFUNDED' };
         onPaymentUpdate(updatedPayment);
         setShowRefundModal(false);
+        setRefundError(null);
         showToast(`Refund of ${formatCurrency(payment.amountCents, 'usd')} processed successfully`, 'success');
       } else {
-        const error = await response.json().catch(() => ({}));
-        showToast(`Failed to process refund: ${error.error}`, 'error');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'An unexpected error occurred while processing the refund.';
+        setRefundError(errorMessage);
       }
     } catch (error) {
       console.error('Error processing refund:', error);
-      showToast('Error processing refund', 'error');
+      setRefundError('A network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -77,6 +81,7 @@ export function PaymentActions({
 
   const handleRefundCancel = () => {
     setShowRefundModal(false);
+    setRefundError(null);
   };
 
   const canRefund = payment.status === 'COMPLETED' || payment.status === 'SUCCEEDED';
@@ -160,6 +165,7 @@ export function PaymentActions({
         amount={payment.amountCents}
         paymentId={payment.id}
         loading={loading}
+        error={refundError}
         hasActiveSubscription={!!payment.subscription}
         subscriptionPlanAutoRenew={payment.subscription?.plan?.autoRenew ?? null}
         subscriptionExpiresAt={payment.subscription?.expiresAt ?? null}

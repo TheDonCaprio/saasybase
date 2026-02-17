@@ -99,7 +99,7 @@ export class PaymentService {
         }
     }
 
-    private async findPlanByPriceIdentifier(priceId: string): Promise<Plan | null> {
+    private async findPlanByPriceIdentifier(priceId: string, metadataPlanId?: string | null): Promise<Plan | null> {
         const legacy = await prisma.plan.findFirst({ where: { OR: [{ externalPriceId: priceId }, { stripePriceId: priceId }] } });
         if (legacy) return legacy;
 
@@ -109,8 +109,32 @@ export class PaymentService {
         });
 
         const match = plans.find(p => this.mapHasValue(p.externalPriceIds, priceId));
-        if (!match) return null;
-        return prisma.plan.findUnique({ where: { id: match.id } });
+        if (match) return prisma.plan.findUnique({ where: { id: match.id } });
+
+        // Fallback: the priceId may be a dynamically-created discounted plan/price that
+        // doesn't exist in the Plan table (e.g. coupon-discounted Paystack/Razorpay plans).
+        // Use the original planId from checkout metadata to resolve the plan.
+        if (metadataPlanId) {
+            const identifier = metadataPlanId.trim();
+            if (identifier) {
+                const planById = await prisma.plan.findUnique({ where: { id: identifier } });
+                if (planById) {
+                    Logger.info('Resolved plan via metadata planId fallback (discounted price)', { priceId, metadataPlanId: identifier });
+                    return planById;
+                }
+                // Also try matching by name via PLAN_DEFINITIONS seed
+                const seed = PLAN_DEFINITIONS.find(def => def.id === identifier);
+                if (seed) {
+                    const planByName = await prisma.plan.findFirst({ where: { name: seed.name } });
+                    if (planByName) {
+                        Logger.info('Resolved plan via metadata planId seed name fallback', { priceId, metadataPlanId: identifier, name: seed.name });
+                        return planByName;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private async findSubscriptionByProviderId(subscriptionId: string): Promise<SubscriptionWithPlan | null> {
@@ -673,9 +697,9 @@ export class PaymentService {
             return;
         }
 
-        const plan = await this.findPlanByPriceIdentifier(priceId);
+        const plan = await this.findPlanByPriceIdentifier(priceId, session.metadata?.planId);
         if (!plan) {
-            Logger.warn('Pending subscription payment: plan not found for priceId', { priceId, userId });
+            Logger.warn('Pending subscription payment: plan not found for priceId', { priceId, userId, metadataPlanId: session.metadata?.planId });
             return;
         }
 
@@ -938,10 +962,10 @@ export class PaymentService {
 
         if (!priceId || !userId) return;
 
-        const finalPlan = await this.findPlanByPriceIdentifier(priceId);
+        const finalPlan = await this.findPlanByPriceIdentifier(priceId, session.metadata?.planId ?? sub.metadata?.planId);
 
         if (!finalPlan) {
-            Logger.warn('handleSubscriptionCheckout: Plan not found for priceId', { priceId, userId });
+            Logger.warn('handleSubscriptionCheckout: Plan not found for priceId', { priceId, userId, metadataPlanId: session.metadata?.planId });
             return;
         }
 
@@ -1458,7 +1482,7 @@ export class PaymentService {
         const priceId = session.lineItems?.[0]?.priceId || session.metadata?.priceId || session.metadata?.planPriceId;
         if (!priceId) return;
 
-        const planToUse = await this.findPlanByPriceIdentifier(priceId);
+        const planToUse = await this.findPlanByPriceIdentifier(priceId, session.metadata?.planId);
         if (!planToUse) return;
 
         await this.consumeCouponRedemptionFromMetadata(session.metadata);
@@ -2182,7 +2206,7 @@ export class PaymentService {
             if (!(isLocallyCancelled && normalizedStatus === 'ACTIVE')) {
                 const priceId = subscription.priceId;
                 if (typeof priceId === 'string' && priceId.length > 0) {
-                    const nextPlan = await this.findPlanByPriceIdentifier(priceId);
+                    const nextPlan = await this.findPlanByPriceIdentifier(priceId, subscription.metadata?.planId);
                     if (!nextPlan) {
                         Logger.warn('Received subscription update with unknown priceId', { subscriptionId, priceId });
                     } else if (nextPlan.id !== dbSub.planId) {
@@ -3668,10 +3692,49 @@ export class PaymentService {
             return null;
         }
 
-        const plan = await this.findPlanByPriceIdentifier(priceId);
+        let plan = await this.findPlanByPriceIdentifier(priceId, providerSubscription.metadata?.planId ?? context.invoice?.metadata?.planId);
+
+        // Fallback: for providers like Paystack, subscription.created doesn't carry checkout
+        // metadata. If the plan wasn't found by priceId (e.g. dynamically-created discounted
+        // plan), look up the most recent PENDING_SUBSCRIPTION payment for this user to recover
+        // the original planId.
+        if (!plan) {
+            let fallbackUserId: string | null = providerSubscription.metadata?.['userId']
+                || providerSubscription.metadata?.['user_id']
+                || context.invoice?.metadata?.['userId']
+                || context.invoice?.metadata?.['user_id']
+                || null;
+
+            if (!fallbackUserId) {
+                const customerId = providerSubscription.customerId || context.invoice?.customerId;
+                if (customerId) {
+                    fallbackUserId = await this.resolveUserByCustomerId(customerId);
+                }
+            }
+
+            if (fallbackUserId) {
+                const pendingPayment = await prisma.payment.findFirst({
+                    where: {
+                        userId: fallbackUserId,
+                        status: 'PENDING_SUBSCRIPTION',
+                        createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    select: { planId: true },
+                });
+                if (pendingPayment?.planId) {
+                    plan = await prisma.plan.findUnique({ where: { id: pendingPayment.planId } });
+                    if (plan) {
+                        Logger.info('Resolved plan via pending payment fallback (discounted subscription price)', {
+                            subscriptionId, priceId, planId: plan.id,
+                        });
+                    }
+                }
+            }
+        }
 
         if (!plan) {
-            Logger.warn('Unable to map provider subscription to plan', { subscriptionId, priceId });
+            Logger.warn('Unable to map provider subscription to plan', { subscriptionId, priceId, metadataPlanId: providerSubscription.metadata?.planId });
             return null;
         }
 

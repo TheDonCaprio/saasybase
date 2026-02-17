@@ -156,6 +156,7 @@ export function PaginatedSubscriptionsManagement({
   const [pendingClearPaidTokens, setPendingClearPaidTokens] = useState(false);
   const [refundTarget, setRefundTarget] = useState<{ sub: SubRow; payment: NonNullable<SubRow['latestPayment']> } | null>(null);
   const [refundLoading, setRefundLoading] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
   // underscore-prefixed setters from hook are intentionally unused here in some builds
   void _setItems;
@@ -396,6 +397,7 @@ export function PaginatedSubscriptionsManagement({
       return;
     }
     if (actionLoading[sub.id]) return;
+    setRefundError(null);
     setRefundTarget({ sub, payment });
   };
 
@@ -419,18 +421,19 @@ export function PaginatedSubscriptionsManagement({
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        showToast(json?.error || 'Refund request failed', 'error');
+        setRefundError(json?.error || 'Refund request failed');
       } else {
         showToast(`Refund processed for ${formatCurrency(payment.amountCents, payment.currency)}`, 'success');
         refreshSubscriptions();
+        setRefundTarget(null);
+        setRefundError(null);
       }
     } catch (e) {
       void e;
-      showToast('Refund request failed', 'error');
+      setRefundError('A network error occurred. Please check your connection and try again.');
     } finally {
       setActionLoading(prev => ({ ...prev, [sub.id]: false }));
       setRefundLoading(false);
-      setRefundTarget(null);
     }
   }
 
@@ -1127,6 +1130,7 @@ export function PaginatedSubscriptionsManagement({
           onClose={() => {
             if (refundLoading) return;
             setRefundTarget(null);
+            setRefundError(null);
           }}
           onConfirm={executeRefund}
           amount={refundTarget.payment.amountCents}
@@ -1136,6 +1140,7 @@ export function PaginatedSubscriptionsManagement({
             refundTarget.payment.id
           }
           loading={refundLoading}
+          error={refundError}
           hasActiveSubscription={!!refundTarget.sub}
           subscriptionPlanAutoRenew={refundTarget.sub.planAutoRenew ?? null}
           subscriptionExpiresAt={refundTarget.sub.expiresAt ?? null}

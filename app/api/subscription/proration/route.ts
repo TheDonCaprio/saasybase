@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { paymentService } from '../../../../lib/payment/service';
 import { prisma } from '../../../../lib/prisma';
 import { formatCurrency } from '../../../../lib/utils/currency';
-import { getActiveCurrency } from '../../../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
 import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../../lib/plans';
 import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
@@ -290,7 +290,7 @@ export async function GET(req: NextRequest) {
           const newPlanCharge = Math.round(targetPriceCents * remainingFraction);
           const amountDue = newPlanCharge - unusedCredit;
 
-          const currency = getActiveCurrency();
+          const currency = await getActiveCurrencyAsync();
 
           // Detect downgrades using normalized daily rates so that cross-interval
           // switches are compared fairly (e.g. $300/month vs $100/day).
@@ -601,7 +601,7 @@ export async function POST(req: NextRequest) {
           templateKey,
           variables: {
             planName: ctx.targetPlan.name,
-            amount: formatCurrency(amountCents, getActiveCurrency()),
+            amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
             startedAt: now.toLocaleDateString(),
             expiresAt: expiresAtValue ? expiresAtValue.toLocaleDateString() : undefined,
             transactionId: (result.invoiceId || ctx.currentSubscription.id)
@@ -621,7 +621,7 @@ export async function POST(req: NextRequest) {
           templateKey: 'admin_notification',
           variables: {
             planName: ctx.targetPlan.name,
-            amount: formatCurrency(amountCents, getActiveCurrency()),
+            amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
             transactionId: result.invoiceId || ctx.currentSubscription.id,
             startedAt: now.toLocaleString(),
           },

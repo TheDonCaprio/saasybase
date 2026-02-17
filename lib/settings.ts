@@ -103,6 +103,16 @@ export function parseStringListSetting(raw: string): Set<string> {
   }
 }
 
+/**
+ * Synchronous read from the in-memory settings cache.
+ * Returns the last-known value (even if expired) or null if the key was never fetched.
+ * Useful when an async call is not possible but a DB-backed override should be respected.
+ */
+export function getSettingCached(key: string): string | null {
+  const cached = settingsCache.get(key);
+  return cached?.value || null;
+}
+
 export const SETTING_KEYS = {
   SITE_NAME: 'SITE_NAME',
   SITE_LOGO: 'SITE_LOGO',
@@ -114,6 +124,7 @@ export const SETTING_KEYS = {
   DEFAULT_TOKEN_LABEL: 'DEFAULT_TOKEN_LABEL',
   SUPPORT_AUTO_SET_IN_PROGRESS: 'SUPPORT_AUTO_SET_IN_PROGRESS',
   ENABLE_RECURRING_PRORATION: 'ENABLE_RECURRING_PRORATION',
+  DEFAULT_CURRENCY: 'DEFAULT_CURRENCY',
   ANNOUNCEMENT_MESSAGE: 'ANNOUNCEMENT_MESSAGE',
   MAINTENANCE_MODE: 'MAINTENANCE_MODE',
   FREE_PLAN_TOKEN_LIMIT: 'FREE_PLAN_TOKEN_LIMIT',

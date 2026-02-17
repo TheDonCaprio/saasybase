@@ -6,7 +6,7 @@ import { DashboardPageHeader } from '../../../components/dashboard/DashboardPage
 import { AdminStatCard } from '../../../components/admin/AdminStatCard';
 import type { AdminStatCardProps } from '../../../components/admin/AdminStatCard';
 import { formatCurrency as formatCurrencyUtil } from '../../../lib/utils/currency';
-import { getActiveCurrency } from '../../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import {
   faLayerGroup,
   faArrowsRotate,
@@ -20,13 +20,6 @@ const numberFormatter = new Intl.NumberFormat('en-US');
 
 const formatNumber = (value: number) => numberFormatter.format(value);
 
-// Get the active currency from the payment provider
-const activeCurrency = getActiveCurrency();
-
-// Format a dollar value as currency using the active provider's currency
-const formatCurrency = (dollars: number) =>
-  formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
-
 export async function generateMetadata() {
   return buildDashboardMetadata({
     page: 'Plans',
@@ -37,6 +30,10 @@ export async function generateMetadata() {
 
 export default async function AdminPlansPage() {
   await requireAdminAuth('/admin/plans');
+
+  const activeCurrency = await getActiveCurrencyAsync();
+  const formatCurrency = (dollars: number) =>
+    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 
   const now = new Date();
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);

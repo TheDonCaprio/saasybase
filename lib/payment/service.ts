@@ -34,7 +34,7 @@ import {
 import type { Prisma, Plan } from '@prisma/client';
 import { PaymentProviderFactory } from './factory';
 import { formatCurrency } from '../utils/currency';
-import { getActiveCurrency } from './registry';
+import { getActiveCurrencyAsync } from './registry';
 
 type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{ include: { plan: true } }>;
 
@@ -1050,7 +1050,7 @@ export class PaymentService {
                             templateKey: 'subscription_upgraded',
                             variables: {
                                 planName: planToUse.name,
-                                amount: formatCurrency(planToUse.priceCents, getActiveCurrency()),
+                                amount: formatCurrency(planToUse.priceCents, await getActiveCurrencyAsync()),
                                 startedAt: startedAt.toLocaleDateString(),
                                 expiresAt: expiresAt.toLocaleDateString(),
                                 transactionId: sub.latestInvoice?.paymentIntentId || session.paymentIntentId || session.id
@@ -2042,6 +2042,22 @@ export class PaymentService {
             } else {
                 // Create the subscription
                 dbSub = await this.ensureProviderBackedSubscription(subscriptionId, { subscription });
+
+                // Paystack race condition: subscription.created can arrive BEFORE charge.success,
+                // which means the pending payment (and its planId) hasn't been recorded yet.
+                // Retry with back-off to give the charge webhook time to process.
+                if (!dbSub && this.providerKey === 'paystack') {
+                    const retryDelays = [2000, 4000, 6000]; // 2s, 4s, 6s
+                    for (const delay of retryDelays) {
+                        Logger.info('subscription.created: plan not found, retrying after delay (Paystack race)', {
+                            subscriptionId, delayMs: delay,
+                        });
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        dbSub = await this.ensureProviderBackedSubscription(subscriptionId, { subscription });
+                        if (dbSub) break;
+                    }
+                }
+
                 if (!dbSub) {
                     Logger.warn('Failed to create subscription from subscription.created event', { subscriptionId });
                     return;

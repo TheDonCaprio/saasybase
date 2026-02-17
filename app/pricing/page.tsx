@@ -7,13 +7,13 @@ import { getDefaultTokenLabel, getPricingSettings, generatePricingGridClasses, g
 import { CurrentPlanStatus } from '../../components/dashboard/CurrentPlanStatus';
 import PlanBillingActions from '../../components/dashboard/PlanBillingActions';
 import { PricingPageClient } from '../../components/pricing/PricingPageClient';
-import { getActiveCurrency } from '../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { formatCurrency } from '../../lib/utils/currency';
 
 export default async function PricingPage() {
   const { userId } = await auth();
   const numberFormatter = new Intl.NumberFormat('en-US');
-  const activeCurrency = getActiveCurrency();
+  const activeCurrency = await getActiveCurrencyAsync();
 
   const [currentSubscription, plansRaw, defaultTokenLabel, userRecord] = await Promise.all([
     userId ? prisma.subscription.findFirst({

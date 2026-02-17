@@ -4,7 +4,7 @@ import { AdminStatCard, type AdminStatCardProps } from '../../../components/admi
 // removed dashboardMutedPanelClass import (subscriber snapshot removed)
 import AnalyticsDashboard from '../../../components/admin/AnalyticsDashboard';
 import { formatCurrency as formatCurrencyUtil } from '../../../lib/utils/currency';
-import { getActiveCurrency } from '../../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { getAdminAnalytics } from '../../../lib/admin-analytics';
 import { ADMIN_ANALYTICS_PERIODS, type AdminAnalyticsPeriod } from '../../../lib/admin-analytics-shared';
 import { faSackDollar, faChartLine, faUserCheck, faUserPlus } from '@fortawesome/free-solid-svg-icons';
@@ -21,14 +21,9 @@ export async function generateMetadata() {
   });
 }
 
-// Get the active currency from the payment provider
-const activeCurrency = getActiveCurrency();
-
 const numberFormatter = new Intl.NumberFormat('en-US');
 const percentFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 
-// Format a dollar value as currency using the active provider's currency
-const formatCurrency = (dollars: number) => formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 const formatNumber = (value: number) => numberFormatter.format(value);
 const formatPercent = (value: number) => `${percentFormatter.format(value)}%`;
 // (formatGrowth helper intentionally removed here; dashboard uses its own formatter)
@@ -39,6 +34,9 @@ interface AdminAnalyticsPageProps {
 
 export default async function AdminAnalyticsPage({ searchParams }: AdminAnalyticsPageProps) {
   await requireAdminSectionAccess('analytics');
+
+  const activeCurrency = await getActiveCurrencyAsync();
+  const formatCurrency = (dollars: number) => formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 
   const resolvedSearchParams = await searchParams;
   const requestedPeriod = (resolvedSearchParams?.period as AdminAnalyticsPeriod | undefined) ?? '30d';

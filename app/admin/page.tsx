@@ -3,7 +3,7 @@ import { requireAdminAreaActor } from '../../lib/route-guards';
 import { prisma } from '../../lib/prisma';
 import { formatDateServer } from '../../lib/formatDate.server';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
-import { getActiveCurrency } from '../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { asRecord } from '../../lib/runtime-guards';
 import { getAdminTrafficSnapshot } from '../../lib/admin-traffic';
 import { DashboardPageHeader, type DashboardPageHeaderStat } from '../../components/dashboard/DashboardPageHeader';
@@ -42,6 +42,13 @@ export default async function AdminHome() {
   const actor = await requireAdminAreaActor();
   const isAdmin = actor.role === 'ADMIN';
   const canAccess = (section: ModeratorSection) => isAdmin || actor.permissions[section];
+
+  const activeCurrency = await getActiveCurrencyAsync();
+  // Format a dollar value as currency using the active provider's currency
+  // NOTE: This wrapper accepts dollars (for compatibility with existing code)
+  // and converts to cents for the formatCurrency utility
+  const formatCurrency = (dollars: number) =>
+    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
   
   const [
     totalUsers,
@@ -411,14 +418,4 @@ interface QuickLink {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
-}
-
-// Get the active currency from the payment provider
-const activeCurrency = getActiveCurrency();
-
-// Format a dollar value as currency using the active provider's currency
-// NOTE: This wrapper accepts dollars (for compatibility with existing code)
-// and converts to cents for the formatCurrency utility
-function formatCurrency(dollars: number) {
-  return formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 }

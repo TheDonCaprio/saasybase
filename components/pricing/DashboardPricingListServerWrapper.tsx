@@ -1,7 +1,7 @@
 import React from 'react';
 import DashboardPricingListWrapper from './DashboardPricingListWrapper';
 import { getPricingSettings, generatePricingGridClasses } from '../../lib/settings';
-import { getActiveCurrency } from '../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 
 // Server wrapper around client PricingList. This file is a server component
 // that simply returns the client component with props. Next.js allows server
@@ -49,7 +49,7 @@ export default async function DashboardPricingListServerWrapper({ plans, activeR
   };
   
   // Resolve currency on server and pass to client for consistent display
-  const currency = getActiveCurrency();
+  const currency = await getActiveCurrencyAsync();
   
   return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlanId} gridClasses={gridClasses} currency={currency} />;
 }

@@ -3,7 +3,7 @@ import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { PAYMENT_PROVIDERS, getActivePaymentProvider, isProviderConfigured } from '@/lib/payment/provider-config';
 import { Logger } from '@/lib/logger';
 import { adminRateLimit } from '@/lib/rateLimit';
-import { getProviderCurrency } from '@/lib/payment/registry';
+import { getActiveCurrencyAsync } from '@/lib/payment/registry';
 
 /**
  * GET /api/admin/payment-providers
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         }
 
         const activeProvider = getActivePaymentProvider();
-        const activeCurrency = getProviderCurrency(activeProvider);
+        const activeCurrency = await getActiveCurrencyAsync();
         
         const providers = Object.values(PAYMENT_PROVIDERS).map(provider => {
             const configured = isProviderConfigured(provider.id);

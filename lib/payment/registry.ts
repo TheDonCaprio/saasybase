@@ -3,6 +3,7 @@ import { StripePaymentProvider } from './providers/stripe';
 import { PaystackPaymentProvider } from './providers/paystack';
 import { PaddlePaymentProvider } from './providers/paddle';
 import { RazorpayPaymentProvider } from './providers/razorpay';
+import { getSetting, getSettingCached } from '../settings';
 
 type ProviderConstructor = new (secretKey: string) => PaymentProvider;
 
@@ -163,5 +164,26 @@ export function getProviderDefaultCurrency(providerName: string): string {
  */
 export function getActiveCurrency(): string {
     const activeProvider = process.env.PAYMENT_PROVIDER || 'stripe';
+    // Check sync cache for admin-configured DEFAULT_CURRENCY (populated
+    // after any getSetting/setSetting call for this key).
+    const cachedDbCurrency = getSettingCached('DEFAULT_CURRENCY');
+    if (cachedDbCurrency) {
+        return getProviderCurrency(activeProvider, cachedDbCurrency);
+    }
 	return getProviderCurrency(activeProvider);
+}
+
+/**
+ * Async variant of getActiveCurrency that reads the admin-configured DEFAULT_CURRENCY
+ * from the database before falling back to environment variables.
+ *
+ * Use this in server components / API routes where `await` is available.
+ */
+export async function getActiveCurrencyAsync(): Promise<string> {
+    const dbCurrency = await getSetting('DEFAULT_CURRENCY');
+    const activeProvider = process.env.PAYMENT_PROVIDER || 'stripe';
+    if (dbCurrency) {
+        return getProviderCurrency(activeProvider, dbCurrency);
+    }
+    return getProviderCurrency(activeProvider);
 }

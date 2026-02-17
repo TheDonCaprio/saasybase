@@ -3,7 +3,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import { formatDateServer } from '../../../lib/formatDate.server';
 import { pluralize } from '../../../lib/pluralize';
 import { formatCurrency } from '../../../lib/utils/currency';
-import { getActiveCurrency } from '../../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../lib/settings';
 import ActiveSessionsList from '../../../components/dashboard/ActiveSessionsList';
 import { ActiveSessionsSummary } from '../../../components/dashboard/ActiveSessionsSummary';
@@ -30,13 +30,12 @@ export async function generateMetadata() {
   });
 }
 
-// Get the active currency from the payment provider
-const activeCurrency = getActiveCurrency();
-
 export default async function UserActivityPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/activity', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+
+  const activeCurrency = await getActiveCurrencyAsync();
 
   const [
     clerkUser,

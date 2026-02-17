@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { requireAdminSectionAccess } from '../../../lib/route-guards';
 import { prisma } from '../../../lib/prisma';
 import { formatCurrency as formatCurrencyUtil } from '../../../lib/utils/currency';
-import { getActiveCurrency } from '../../../lib/payment/registry';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { PaginatedPurchaseManagement } from '../../../components/admin/PaginatedPurchaseManagement';
 import { DashboardPageHeader } from '../../../components/dashboard/DashboardPageHeader';
 import { AdminStatCard } from '../../../components/admin/AdminStatCard';
@@ -30,6 +30,10 @@ export async function generateMetadata() {
 
 export default async function AdminPurchasesPage() {
   await requireAdminSectionAccess('purchases');
+
+  const activeCurrency = await getActiveCurrencyAsync();
+  const formatCurrency = (dollars: number) =>
+    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 
   const page = 1;
   const limit = 50;
@@ -325,14 +329,6 @@ export default async function AdminPurchasesPage() {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
-}
-
-// Get the active currency from the payment provider
-const activeCurrency = getActiveCurrency();
-
-// Format a dollar value as currency using the active provider's currency
-function formatCurrency(dollars: number) {
-  return formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
 }
 
 function getPaymentDashboardUrl(payment: {

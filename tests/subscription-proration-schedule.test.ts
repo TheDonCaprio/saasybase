@@ -32,7 +32,7 @@ vi.mock('../lib/settings', () => ({
 }));
 vi.mock('../lib/notifications', () => ({ sendBillingNotification: vi.fn(async () => ({ ok: true })), sendAdminNotificationEmail: vi.fn(async () => ({ ok: true })) }));
 vi.mock('../lib/plans', () => ({ PLAN_DEFINITIONS: [], resolvePlanPriceEnv: vi.fn(), syncPlanExternalPriceIds: vi.fn(async () => undefined) }));
-vi.mock('../lib/payment/registry', () => ({ getActiveCurrency: () => 'usd' }));
+vi.mock('../lib/payment/registry', () => ({ getActiveCurrency: () => 'usd', getActiveCurrencyAsync: async () => 'usd' }));
 vi.mock('../lib/utils/currency', () => ({ formatCurrency: () => '$0.00' }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../lib/utils/provider-ids', () => ({

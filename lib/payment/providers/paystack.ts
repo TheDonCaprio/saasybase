@@ -594,7 +594,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
         switch (event.event) {
             case 'charge.success': {
                 let tx = event.data as PaystackTransaction;
-                
+
                 // Debug: Log the full transaction data to see what Paystack actually sends
                 console.log('[Paystack] charge.success webhook received:', {
                     reference: tx.reference,
@@ -611,18 +611,18 @@ export class PaystackPaymentProvider implements PaymentProvider {
                     metadataPlanCode: tx.metadata?.planCode,
                     metadataPriceId: tx.metadata?.priceId,
                 });
-                
+
                 // IMPORTANT: If authorization is not reusable, Paystack will NOT create a subscription
                 // even if a plan was passed to /transaction/initialize
                 if (tx.authorization && !tx.authorization.reusable) {
                     console.warn('[Paystack] WARNING: Authorization is NOT reusable - subscription will NOT be created by Paystack');
                 }
-                
+
                 // Determine mode: first from tx.plan, then from metadata (stored during checkout creation)
                 // Paystack doesn't always include the plan object in charge.success webhook
                 const metadataMode = tx.metadata?.checkoutMode as 'subscription' | 'payment' | undefined;
                 const mode = tx.plan ? 'subscription' : (metadataMode || 'payment');
-                
+
                 // Get plan code from tx.plan, or from metadata if not present
                 // Check planCode first (our explicit field), then priceId (embedded checkout passes this)
                 let planCode = tx.plan?.plan_code || (tx.metadata?.planCode as string | undefined) || (tx.metadata?.priceId as string | undefined);
@@ -646,9 +646,9 @@ export class PaystackPaymentProvider implements PaymentProvider {
                         });
                     }
                 }
-                
+
                 console.log('[Paystack] Normalized values:', { mode, planCode });
-                
+
                 const session: StandardizedCheckoutSession = {
                     id: tx.reference,
                     userId: tx.metadata?.userId as string | undefined,
@@ -895,7 +895,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
         // Subscription plans are self-contained. We'll create a placeholder product code
         // that will be replaced by the plan_code when createPrice is called.
         // This avoids the "Price is required" error when price is 0.
-        
+
         // Try to create a real product only if we have metadata indicating this is for one-time
         // Otherwise, return a placeholder that will be overwritten by createPrice
         try {
@@ -1177,7 +1177,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
         // - /transaction/:id only accepts numeric IDs
         // - /refund accepts either reference or id
         const isNumericId = /^\d+$/.test(paymentId);
-        
+
         // Verify transaction exists using the appropriate endpoint
         if (isNumericId) {
             // Use fetch endpoint for numeric IDs
@@ -1216,11 +1216,11 @@ export class PaystackPaymentProvider implements PaymentProvider {
             const response = await this.request<PaystackRefund[]>(
                 '/refund',
             );
-            
+
             // paymentId can be either a numeric transaction ID or a reference string
             const isNumericId = /^\d+$/.test(paymentId);
-            const refund = response.data.find(r => 
-                isNumericId 
+            const refund = response.data.find(r =>
+                isNumericId
                     ? r.transaction.toString() === paymentId
                     : r.transaction_reference === paymentId
             );

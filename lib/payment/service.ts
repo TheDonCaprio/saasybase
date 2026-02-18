@@ -71,11 +71,11 @@ export class PaymentService {
         if (plan.autoRenew && plan.recurringInterval) {
             const count = plan.recurringIntervalCount ?? 1;
             switch (plan.recurringInterval) {
-                case 'day':   return count * 24 * 3600 * 1000;
-                case 'week':  return count * 7 * 24 * 3600 * 1000;
+                case 'day': return count * 24 * 3600 * 1000;
+                case 'week': return count * 7 * 24 * 3600 * 1000;
                 case 'month': return count * 30 * 24 * 3600 * 1000;
-                case 'year':  return count * 365 * 24 * 3600 * 1000;
-                default:      break; // fall through to durationHours
+                case 'year': return count * 365 * 24 * 3600 * 1000;
+                default: break; // fall through to durationHours
             }
         }
         return plan.durationHours * 3600 * 1000;
@@ -714,9 +714,9 @@ export class PaymentService {
             } else if (this.providerKey === 'paystack') {
                 // Paystack subscription: charge.success fires before subscription.create
                 // Record the payment as pending subscription, let subscription.create event create the subscription
-                Logger.info('Subscription checkout without subscriptionId (Paystack flow), recording pending payment', { 
-                    sessionId: session.id, 
-                    userId 
+                Logger.info('Subscription checkout without subscriptionId (Paystack flow), recording pending payment', {
+                    sessionId: session.id,
+                    userId
                 });
                 await this.handlePendingSubscriptionPayment(session, userId);
             } else {
@@ -1038,7 +1038,85 @@ export class PaymentService {
             // Consume coupon if present
             await this.consumeCouponRedemptionFromMetadata(session.metadata);
 
-            // If the subscription already exists (webhook order reversed), link now
+            // Grant tokens immediately — don't wait for the subscription.create webhook.
+            // The user has paid; give them access right away.
+            const isSwitchNowFallbackFlow = Boolean(session.metadata?.prorationFallbackReason);
+            const recentCancelledRecurring = await prisma.subscription.findFirst({
+                where: {
+                    userId,
+                    status: 'CANCELLED',
+                    canceledAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+                    plan: { autoRenew: true },
+                },
+                select: { id: true },
+            });
+            const suppressNotifications = isSwitchNowFallbackFlow && Boolean(recentCancelledRecurring);
+
+            if (plan.tokenLimit && plan.tokenLimit > 0) {
+                const organizationContext = await this.resolveOrganizationContext(userId);
+                if (organizationContext?.role === 'OWNER' && plan.supportsOrganizations) {
+                    await creditOrganizationSharedTokens({
+                        organizationId: organizationContext.organization.id,
+                        amount: plan.tokenLimit,
+                    });
+                } else {
+                    await prisma.user.update({
+                        where: { id: userId },
+                        data: { tokenBalance: { increment: plan.tokenLimit } },
+                    });
+                }
+                Logger.info('Credited tokens from Paystack pending subscription payment', {
+                    userId,
+                    planId: plan.id,
+                    tokens: plan.tokenLimit,
+                });
+            }
+
+            // Sync organization eligibility
+            await syncOrganizationEligibilityForUser(userId);
+
+            // Send user and admin notifications immediately
+            if (!suppressNotifications) {
+                try {
+                    const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
+                    const tokenName = planTokenName || await getDefaultTokenLabel();
+                    const tokenInfo = plan.tokenLimit ? ` with ${plan.tokenLimit} ${tokenName}` : '';
+
+                    await sendBillingNotification({
+                        userId,
+                        title: 'Subscription Activated',
+                        message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
+                        templateKey: 'subscription_activated',
+                        variables: {
+                            planName: plan.name,
+                            tokenBalance: String(plan.tokenLimit || 0),
+                            tokenName,
+                            startedAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                            expiresAt: '',
+                        },
+                    });
+
+                    const user = await prisma.user.findUnique({
+                        where: { id: userId },
+                        select: { email: true, name: true },
+                    });
+
+                    await sendAdminNotificationEmail({
+                        title: `New Subscription: ${plan.name}`,
+                        alertType: 'new_purchase',
+                        message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}`,
+                        userId,
+                    });
+                } catch (notifErr) {
+                    Logger.warn('Failed to send notifications for Paystack pending subscription payment', {
+                        userId,
+                        error: toError(notifErr).message,
+                    });
+                }
+            }
+
+            // If the subscription already exists (webhook order reversed), link now.
+            // Tokens and notifications were already handled above — just link the payment.
             let existingSub: SubscriptionWithPlan | null = null;
             const providerSubscriptionId = session.subscriptionId || session.metadata?.subscriptionId;
 
@@ -1067,40 +1145,13 @@ export class PaymentService {
             }
 
             if (existingSub) {
-                const linked = await this.linkPendingPaymentToSubscription(existingSub);
-                // If Paystack webhooks arrive out-of-order (subscription.create before charge.success),
-                // we may end up linking the pending payment here instead of in handleSubscriptionCreated.
-                // In that case, we still need to fulfill (tokens/eligibility) and notify.
-                if (linked) {
-                    // Avoid double-granting tokens on Paystack switch-now (cancel+recreate), where a
-                    // recurring subscription was just cancelled and a new one created immediately.
-                    const recentCancelledRecurring = await prisma.subscription.findFirst({
-                        where: {
-                            userId,
-                            id: { not: existingSub.id },
-                            status: 'CANCELLED',
-                            canceledAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
-                            plan: { autoRenew: true },
-                        },
-                        select: { id: true },
-                    });
-
-                    if (!recentCancelledRecurring) {
-                        await this.grantSubscriptionAccess(existingSub);
-                    } else {
-                        Logger.info('Skipping grantSubscriptionAccess for Paystack pending-payment link (recent cancel detected)', {
-                            userId,
-                            subscriptionId: existingSub.id,
-                            recentCancelledSubscriptionId: recentCancelledRecurring.id,
-                        });
-                    }
-                }
+                await this.linkPendingPaymentToSubscription(existingSub);
             }
         } catch (err) {
-            Logger.error('Failed to record pending subscription payment', { 
-                sessionId: session.id, 
-                userId, 
-                error: toError(err).message 
+            Logger.error('Failed to record pending subscription payment', {
+                sessionId: session.id,
+                userId,
+                error: toError(err).message
             });
         }
     }
@@ -1459,9 +1510,9 @@ export class PaymentService {
                 : 0;
 
             try {
-                        const existing = await prisma.payment.findFirst({
-                            where: { OR: [{ externalPaymentId: paymentId }, { externalSessionId: session.id }] }
-                        });
+                const existing = await prisma.payment.findFirst({
+                    where: { OR: [{ externalPaymentId: paymentId }, { externalSessionId: session.id }] }
+                });
 
                 if (!existing) {
                     await prisma.$transaction(async (tx) => {
@@ -1643,27 +1694,27 @@ export class PaymentService {
         const periodMs = PaymentService.computePlanPeriodMs(planToUse);
         const sessionSubtotalCents = session.amountSubtotal;
         const sessionTotalCents = session.amountTotal;
-        
+
         // Check for in-app discount (for providers without native coupon support)
-        const inAppDiscountCents = session.metadata?.inAppDiscountCents 
-            ? parseInt(session.metadata.inAppDiscountCents, 10) 
+        const inAppDiscountCents = session.metadata?.inAppDiscountCents
+            ? parseInt(session.metadata.inAppDiscountCents, 10)
             : 0;
-        const originalPriceCents = session.metadata?.originalPriceCents 
-            ? parseInt(session.metadata.originalPriceCents, 10) 
+        const originalPriceCents = session.metadata?.originalPriceCents
+            ? parseInt(session.metadata.originalPriceCents, 10)
             : null;
-        
+
         // Calculate discount: prefer in-app discount, then session-level discount
-        const sessionDiscountCents = session.amountTotal && session.amountSubtotal 
-            ? session.amountSubtotal - session.amountTotal 
+        const sessionDiscountCents = session.amountTotal && session.amountSubtotal
+            ? session.amountSubtotal - session.amountTotal
             : inAppDiscountCents;
 
         const resolvedAmountCents = sessionTotalCents ?? planToUse.priceCents;
-        const resolvedSubtotalCents = originalPriceCents 
-            ?? sessionSubtotalCents 
-            ?? (sessionDiscountCents != null ? resolvedAmountCents + sessionDiscountCents : undefined) 
+        const resolvedSubtotalCents = originalPriceCents
+            ?? sessionSubtotalCents
+            ?? (sessionDiscountCents != null ? resolvedAmountCents + sessionDiscountCents : undefined)
             ?? planToUse.priceCents;
-        const resolvedDiscountCents = inAppDiscountCents > 0 
-            ? inAppDiscountCents 
+        const resolvedDiscountCents = inAppDiscountCents > 0
+            ? inAppDiscountCents
             : (sessionDiscountCents ?? (resolvedSubtotalCents != null ? Math.max(0, resolvedSubtotalCents - resolvedAmountCents) : undefined));
         const couponCode = session.metadata?.couponCode;
 
@@ -2218,20 +2269,20 @@ export class PaymentService {
                 // Link pending payment and grant access for new subscriptions
                 const status = subscription.status;
                 if (status === 'active' || status === 'trialing') {
-                    // Only grant access (and send activation emails) when we actually linked a
-                    // pending payment. This keeps Paystack's pending-payment flow working while
-                    // avoiding duplicate activation emails for providers where checkout.completed
-                    // already handles fulfillment (e.g., Paddle/Stripe).
+                    // Link the pending payment to this subscription.
+                    // Tokens and notifications were already granted immediately when
+                    // the pending payment was created in handlePendingSubscriptionPayment,
+                    // so we only sync organization eligibility here.
                     const linked = await this.linkPendingPaymentToSubscription(dbSub);
                     if (linked) {
-                        await this.grantSubscriptionAccess(dbSub);
-                    } else {
-                        Logger.info('Skipping grantSubscriptionAccess (no pending payment to link)', {
-                            subscriptionId,
-                            dbSubscriptionId: dbSub.id,
-                            userId: dbSub.userId,
-                        });
+                        await syncOrganizationEligibilityForUser(dbSub.userId);
                     }
+                    Logger.info('Processed subscription.created linking', {
+                        subscriptionId,
+                        dbSubscriptionId: dbSub.id,
+                        userId: dbSub.userId,
+                        linked,
+                    });
                 }
 
                 Logger.info('Successfully created subscription from subscription.created event', {
@@ -2270,9 +2321,16 @@ export class PaymentService {
             const effectiveStatus = isLocallyCancelled && normalizedStatus === 'ACTIVE'
                 ? dbSub.status
                 : normalizedStatus;
-            const effectiveExpiresAt = isLocallyCancelled && normalizedStatus === 'ACTIVE'
+            const nowTs = Date.now();
+            const shouldPreserveExistingPaystackExpiry = this.providerKey === 'paystack'
+                && normalizedStatus === 'ACTIVE'
+                && currentPeriodEnd.getTime() <= nowTs
+                && dbSub.expiresAt.getTime() > nowTs;
+            const effectiveExpiresAt = shouldPreserveExistingPaystackExpiry
                 ? dbSub.expiresAt
-                : currentPeriodEnd;
+                : (isLocallyCancelled && normalizedStatus === 'ACTIVE'
+                    ? dbSub.expiresAt
+                    : currentPeriodEnd);
 
             // Store old status to detect "first activation" scenario
             const wasTransitioningToActive = dbSub.status === 'PENDING' && (status === 'active' || status === 'trialing');
@@ -2317,15 +2375,16 @@ export class PaymentService {
             // The subscription was PENDING and is now being set to ACTIVE
             if (wasTransitioningToActive) {
                 const linked = await this.linkPendingPaymentToSubscription(dbSub);
+                // Tokens and notifications were already granted in handlePendingSubscriptionPayment.
                 if (linked) {
-                    await this.grantSubscriptionAccess(dbSub);
-                } else {
-                    Logger.info('Skipping grantSubscriptionAccess on activation transition (no pending payment to link)', {
-                        subscriptionId,
-                        dbSubscriptionId: dbSub.id,
-                        userId: dbSub.userId,
-                    });
+                    await syncOrganizationEligibilityForUser(dbSub.userId);
                 }
+                Logger.info('Processed subscription.created activation transition', {
+                    subscriptionId,
+                    dbSubscriptionId: dbSub.id,
+                    userId: dbSub.userId,
+                    linked,
+                });
             }
 
             Logger.info('Processed subscription.created as update', { subscriptionId, status, wasTransitioningToActive });
@@ -2379,9 +2438,16 @@ export class PaymentService {
             const effectiveStatus = isLocallyCancelled && normalizedStatus === 'ACTIVE'
                 ? dbSub.status
                 : normalizedStatus;
-            const effectiveExpiresAt = isLocallyCancelled && normalizedStatus === 'ACTIVE'
+            const nowTs = Date.now();
+            const shouldPreserveExistingPaystackExpiry = this.providerKey === 'paystack'
+                && normalizedStatus === 'ACTIVE'
+                && currentPeriodEnd.getTime() <= nowTs
+                && dbSub.expiresAt.getTime() > nowTs;
+            const effectiveExpiresAt = shouldPreserveExistingPaystackExpiry
                 ? dbSub.expiresAt
-                : currentPeriodEnd;
+                : (isLocallyCancelled && normalizedStatus === 'ACTIVE'
+                    ? dbSub.expiresAt
+                    : currentPeriodEnd);
 
             // Plan changes: apply immediately when the provider sends a new priceId.
             // If we treat the webhook as stale (locally CANCELLED but provider says ACTIVE), also ignore plan changes.
@@ -2403,7 +2469,7 @@ export class PaymentService {
                 || dbSub.expiresAt.getTime() !== effectiveExpiresAt.getTime()
                 || dbSub.cancelAtPeriodEnd !== nextCancelAtPeriodEnd
                 || (dbSub.canceledAt?.getTime() ?? 0) !== (nextCanceledAt?.getTime() ?? 0)
-				|| (nextPlanId != null && nextPlanId !== dbSub.planId)
+                || (nextPlanId != null && nextPlanId !== dbSub.planId)
             ) {
                 Logger.info('Updating subscription from webhook', {
                     subscriptionId: dbSub.id,
@@ -2423,7 +2489,7 @@ export class PaymentService {
                         status: effectiveStatus,
                         canceledAt: nextCanceledAt,
                         cancelAtPeriodEnd: nextCancelAtPeriodEnd,
-						...(nextPlanId ? { planId: nextPlanId, scheduledPlanId: null, scheduledPlanDate: null } : null),
+                        ...(nextPlanId ? { planId: nextPlanId, scheduledPlanId: null, scheduledPlanDate: null } : null),
                         // Clear pending proration flag — the subscription update confirms the switch settled.
                         prorationPendingSince: null,
                     },
@@ -2432,15 +2498,15 @@ export class PaymentService {
                 // Use fresh data for any subsequent operations
                 dbSub = updatedSub;
 
-				if (nextPlanId) {
-					try {
-						await syncOrganizationEligibilityForUser(dbSub.userId);
-					} catch (err) {
-						Logger.warn('Failed to sync organization eligibility after subscription plan change', {
-							userId: dbSub.userId,
-							error: toError(err).message,
-						});
-					}
+                if (nextPlanId) {
+                    try {
+                        await syncOrganizationEligibilityForUser(dbSub.userId);
+                    } catch (err) {
+                        Logger.warn('Failed to sync organization eligibility after subscription plan change', {
+                            userId: dbSub.userId,
+                            error: toError(err).message,
+                        });
+                    }
 
                     // Token policy: when the plan actually changes (immediately or at cycle end),
                     // optionally reset remaining paid tokens to the new plan's allotment.
@@ -2470,7 +2536,7 @@ export class PaymentService {
                             error: toError(err).message,
                         });
                     }
-				}
+                }
             }
 
             if (!dbSub) {
@@ -2567,11 +2633,12 @@ export class PaymentService {
                 }
             }
 
-            // For newly created subscriptions (Paystack flow), link pending payment and grant access
+            // For newly created subscriptions (Paystack flow), link pending payment
             if (isNewlyCreated && normalizedStatus === 'ACTIVE') {
                 const linked = await this.linkPendingPaymentToSubscription(dbSub);
                 if (linked) {
-                    await this.grantSubscriptionAccess(dbSub);
+                    // Tokens and notifications already granted in handlePendingSubscriptionPayment.
+                    await syncOrganizationEligibilityForUser(dbSub.userId);
                 } else {
                     if (this.providerKey === 'stripe' && status === 'active') {
                         const hasSuccessfulPayment = await prisma.payment.findFirst({
@@ -3514,7 +3581,7 @@ export class PaymentService {
 
     private async handlePaymentFailed(payload: import('./types').StandardizedPaymentFailed) {
         const { id, subscriptionId, customerId, errorMessage, errorCode, metadata } = payload;
-        
+
         Logger.warn('Payment failed webhook received', {
             paymentId: id,
             subscriptionId,
@@ -3590,7 +3657,7 @@ export class PaymentService {
 
     private async handleInvoicePaymentFailed(invoice: StandardizedInvoice) {
         const { id, subscriptionId, customerId, userEmail } = invoice;
-        
+
         Logger.warn('Invoice payment failed webhook received', {
             invoiceId: id,
             subscriptionId,
@@ -3669,7 +3736,7 @@ export class PaymentService {
 
     private async handleRefundProcessed(refund: import('./types').StandardizedRefund) {
         const { id, paymentIntentId, chargeId, amount, currency, status, reason } = refund;
-        
+
         Logger.info('Refund processed webhook received', {
             refundId: id,
             paymentIntentId,
@@ -3832,7 +3899,7 @@ export class PaymentService {
             // Always notify admins about disputes - they're critical
             const formattedAmount = `${currency.toUpperCase()} ${(amount / 100).toFixed(2)}`;
             const userInfo = payment.user?.email || payment.userId || 'Unknown';
-            
+
             try {
                 await sendAdminNotificationEmail({
                     title: eventType === 'dispute.created' ? 'New Dispute Filed' : `Dispute Updated: ${status}`,

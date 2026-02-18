@@ -356,4 +356,46 @@ describe('PaymentService subscription resurrection', () => {
       })
     );
   });
+
+  it('preserves future local expiry for Paystack when subscription.updated period end is stale', async () => {
+    const now = Date.now();
+    const futureEnd = new Date(now + 14 * 24 * 60 * 60 * 1000);
+    const staleEnd = new Date(now - 30 * 1000);
+
+    prismaMock.subscription.findUnique.mockResolvedValueOnce({
+      id: 'db_sub_paystack_1',
+      userId: 'user_1',
+      planId: 'plan_1',
+      organizationId: null,
+      status: 'ACTIVE',
+      startedAt: new Date(now - 1 * 24 * 60 * 60 * 1000),
+      expiresAt: futureEnd,
+      canceledAt: null,
+      cancelAtPeriodEnd: false,
+      paymentProvider: 'paystack',
+      externalSubscriptionId: 'sub_paystack_1',
+      externalSubscriptionIds: null,
+      plan: { autoRenew: true, id: 'plan_1', priceCents: 10000 },
+    });
+
+    const { PaymentService } = await import('../lib/payment/service');
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+
+    await svc.processWebhookEvent({
+      type: 'subscription.updated',
+      payload: {
+        id: 'sub_paystack_1',
+        status: 'active',
+        currentPeriodEnd: staleEnd,
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+      },
+    } as any);
+
+    const updateCalls = prismaMock.subscription.update.mock.calls;
+    for (const call of updateCalls) {
+      const arg = call?.[0];
+      expect(arg?.data?.expiresAt?.getTime?.()).not.toBe(staleEnd.getTime());
+    }
+  });
 });

@@ -52,6 +52,7 @@ const prismaMock = {
     findFirst: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
+    upsert: vi.fn(),
   },
   payment: {
     findFirst: vi.fn(),
@@ -397,5 +398,296 @@ describe('PaymentService subscription resurrection', () => {
       const arg = call?.[0];
       expect(arg?.data?.expiresAt?.getTime?.()).not.toBe(staleEnd.getTime());
     }
+  });
+
+  it('routes Paystack non-recurring checkout to one-time fulfillment even when mode is subscription', async () => {
+    const now = Date.now();
+
+    prismaMock.payment.findFirst.mockResolvedValueOnce(null);
+    prismaMock.plan.findFirst.mockResolvedValue({
+      id: 'plan_one_time',
+      name: 'One-Time Plan',
+      autoRenew: false,
+      durationHours: 24,
+      priceCents: 1500,
+      tokenLimit: 100,
+      tokenName: 'credits',
+      externalPriceIds: null,
+      externalPriceId: null,
+      stripePriceId: null,
+    } as any);
+    prismaMock.subscription.findMany.mockResolvedValueOnce([] as any);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 } as any);
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null as any);
+
+    const tx = {
+      subscription: {
+        create: vi.fn(async () => ({ id: 'sub_one_time_1' })),
+      },
+      payment: {
+        create: vi.fn(async () => ({ id: 'pay_one_time_1' })),
+      },
+      user: {
+        update: vi.fn(async () => undefined),
+      },
+      organization: {
+        update: vi.fn(async () => undefined),
+      },
+    };
+
+    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const { PaymentService } = await import('../lib/payment/service');
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+
+    await svc.processWebhookEvent({
+      type: 'checkout.completed',
+      payload: {
+        id: `cs_paystack_one_time_${now}`,
+        userId: 'user_1',
+        mode: 'subscription',
+        subscriptionId: undefined,
+        paymentStatus: 'paid',
+        amountTotal: 1500,
+        currency: 'NGN',
+        lineItems: [{ priceId: 'PLN_ONE_TIME' }],
+        metadata: {
+          userId: 'user_1',
+          planId: 'plan_one_time',
+          checkoutMode: 'subscription',
+        },
+      },
+    } as any);
+
+    expect(tx.subscription.create).toHaveBeenCalledTimes(1);
+    expect(tx.payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'SUCCEEDED',
+          planId: 'plan_one_time',
+        }),
+      })
+    );
+    expect(prismaMock.payment.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'PENDING_SUBSCRIPTION' }),
+      })
+    );
+  });
+
+  it('cancels active one-time subscription when a recurring subscription is purchased', async () => {
+    const now = Date.now();
+    const currentPeriodStart = new Date(now);
+    const currentPeriodEnd = new Date(now + 30 * 24 * 60 * 60 * 1000);
+
+    prismaMock.plan.findFirst.mockResolvedValueOnce({
+      id: 'plan_recurring',
+      name: 'Recurring Pro',
+      autoRenew: true,
+      priceCents: 5000,
+      tokenLimit: 0,
+      externalPriceId: 'PLN_RECUR',
+      stripePriceId: null,
+      externalPriceIds: null,
+      recurringInterval: 'month',
+      recurringIntervalCount: 1,
+      durationHours: 720,
+    } as any);
+
+    prismaMock.subscription.findMany.mockResolvedValueOnce([] as any);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 } as any);
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_one_time_active',
+      userId: 'user_1',
+      status: 'ACTIVE',
+      expiresAt: new Date(now + 12 * 60 * 60 * 1000),
+      paymentProvider: 'paystack',
+      externalSubscriptionId: null,
+      externalSubscriptionIds: null,
+      plan: {
+        id: 'plan_one_time',
+        autoRenew: false,
+        priceCents: 1000,
+      },
+    } as any);
+
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({ externalCustomerIds: null } as any)
+      .mockResolvedValueOnce(null as any);
+    prismaMock.user.update.mockResolvedValue(undefined as any);
+
+    prismaMock.subscription.findUnique.mockResolvedValueOnce(null as any);
+    prismaMock.subscription.upsert.mockResolvedValueOnce({
+      id: 'sub_recurring_new',
+      userId: 'user_1',
+      planId: 'plan_recurring',
+      status: 'ACTIVE',
+    } as any);
+
+    prismaMock.payment.findUnique.mockResolvedValueOnce(null as any);
+
+    const tx = {
+      payment: {
+        create: vi.fn(async () => ({ id: 'pay_recurring_1' })),
+      },
+      user: {
+        update: vi.fn(async () => undefined),
+      },
+      organization: {
+        update: vi.fn(async () => undefined),
+      },
+      subscription: {
+        update: vi.fn(async () => undefined),
+      },
+    };
+    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const provider = makeProvider({
+      name: 'paystack',
+      getSubscription: vi.fn(async () => ({
+        id: 'SUB_new_1',
+        status: 'active',
+        customerId: 'CUS_new_1',
+        priceId: 'PLN_RECUR',
+        currentPeriodStart,
+        currentPeriodEnd,
+        canceledAt: null,
+        latestInvoice: {
+          id: 'inv_1',
+          paymentIntentId: 'pi_recur_1',
+          total: 5000,
+          subtotal: 5000,
+          amountDiscount: 0,
+          currency: 'ngn',
+        },
+        metadata: {},
+      })),
+    });
+
+    const { PaymentService } = await import('../lib/payment/service');
+    const svc = new PaymentService(provider as any);
+
+    await svc.processWebhookEvent({
+      type: 'checkout.completed',
+      payload: {
+        id: 'cs_recur_1',
+        userId: 'user_1',
+        mode: 'subscription',
+        subscriptionId: 'SUB_new_1',
+        paymentStatus: 'paid',
+        amountTotal: 5000,
+        currency: 'NGN',
+        metadata: { userId: 'user_1' },
+        paymentIntentId: 'pi_recur_1',
+      },
+    } as any);
+
+    expect(prismaMock.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'sub_one_time_active' },
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          expiresAt: expect.any(Date),
+          cancelAtPeriodEnd: false,
+        }),
+      })
+    );
+
+    expect(prismaMock.subscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          userId: 'user_1',
+          planId: 'plan_recurring',
+          status: 'ACTIVE',
+        }),
+      })
+    );
+  });
+
+  it('cancels active one-time subscription on Paystack subscription.created for recurring plan', async () => {
+    const now = Date.now();
+    const periodStart = new Date(now);
+    const periodEnd = new Date(now + 30 * 24 * 60 * 60 * 1000);
+
+    prismaMock.subscription.findUnique
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce(null as any);
+    prismaMock.subscription.findMany.mockResolvedValue([] as any);
+
+    prismaMock.plan.findFirst.mockResolvedValueOnce({
+      id: 'plan_recurring',
+      name: 'Recurring Pro',
+      autoRenew: true,
+      priceCents: 5000,
+      tokenLimit: 0,
+      externalPriceId: 'PLN_RECUR',
+      stripePriceId: null,
+      externalPriceIds: null,
+      recurringInterval: 'month',
+      recurringIntervalCount: 1,
+      durationHours: 720,
+    } as any);
+
+    prismaMock.subscription.upsert.mockResolvedValueOnce({
+      id: 'sub_paystack_new_db',
+      userId: 'user_1',
+      planId: 'plan_recurring',
+      organizationId: null,
+      status: 'ACTIVE',
+      startedAt: periodStart,
+      expiresAt: periodEnd,
+      canceledAt: null,
+      cancelAtPeriodEnd: false,
+      paymentProvider: 'paystack',
+      externalSubscriptionId: 'SUB_paystack_new',
+      externalSubscriptionIds: null,
+      plan: {
+        id: 'plan_recurring',
+        autoRenew: true,
+        priceCents: 5000,
+      },
+    } as any);
+
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 1 } as any);
+    prismaMock.payment.findFirst.mockResolvedValueOnce(null as any);
+    prismaMock.payment.findMany.mockResolvedValueOnce([] as any);
+
+    const { PaymentService } = await import('../lib/payment/service');
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+
+    await svc.processWebhookEvent({
+      type: 'subscription.created',
+      payload: {
+        id: 'SUB_paystack_new',
+        status: 'active',
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+        priceId: 'PLN_RECUR',
+        customerId: 'CUS_1',
+        metadata: {
+          userId: 'user_1',
+          planId: 'plan_recurring',
+        },
+      },
+    } as any);
+
+    expect(prismaMock.subscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: 'user_1',
+          id: { not: 'sub_paystack_new_db' },
+          status: 'ACTIVE',
+          plan: { autoRenew: false },
+        }),
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          canceledAt: expect.any(Date),
+          expiresAt: expect.any(Date),
+          cancelAtPeriodEnd: false,
+        }),
+      })
+    );
   });
 });

@@ -707,7 +707,33 @@ export class PaymentService {
         // Resolve Organization Context
         const organizationContext = await this.resolveOrganizationContext(userId);
 
-        if (session.mode === 'subscription' || session.subscriptionId) {
+        // Paystack guard: some checkout.completed payloads can arrive with subscription-like
+        // metadata for non-recurring plans. If no provider subscription exists yet and the
+        // resolved plan is one-time, route through one-time fulfillment (create active plan)
+        // instead of recording PENDING_SUBSCRIPTION.
+        let effectiveMode = session.mode;
+        if (this.providerKey === 'paystack' && session.mode === 'subscription' && !session.subscriptionId) {
+            const detectedPriceId = session.lineItems?.[0]?.priceId
+                || session.metadata?.priceId
+                || session.metadata?.planPriceId
+                || session.metadata?.planCode;
+
+            if (detectedPriceId) {
+                const detectedPlan = await this.findPlanByPriceIdentifier(detectedPriceId, session.metadata?.planId);
+                if (detectedPlan && detectedPlan.autoRenew === false) {
+                    effectiveMode = 'payment';
+                    Logger.warn('Paystack checkout reported subscription mode for non-recurring plan; routing as one-time', {
+                        sessionId: session.id,
+                        userId,
+                        provider: this.providerKey,
+                        planId: detectedPlan.id,
+                        priceId: detectedPriceId,
+                    });
+                }
+            }
+        }
+
+        if (effectiveMode === 'subscription' || session.subscriptionId) {
             Logger.info('Processing as subscription checkout', { sessionId: session.id, userId });
             if (session.subscriptionId) {
                 await this.handleSubscriptionCheckout(session, userId, organizationContext);
@@ -733,7 +759,8 @@ export class PaymentService {
             }
         } else {
             Logger.info('Processing as one-time checkout', { sessionId: session.id, userId });
-            await this.handleOneTimeCheckout(session, userId, organizationContext);
+            const oneTimeSession = effectiveMode === session.mode ? session : { ...session, mode: 'payment' as const };
+            await this.handleOneTimeCheckout(oneTimeSession, userId, organizationContext);
         }
     }
 
@@ -1237,9 +1264,15 @@ export class PaymentService {
         if (existingActive) {
             if (existingActive.plan.autoRenew === false && planToUse.autoRenew === true) {
                 // Replace non-recurring with recurring
+                const cancellationTime = new Date();
                 await prisma.subscription.update({
                     where: { id: existingActive.id },
-                    data: { status: 'CANCELLED', canceledAt: new Date() }
+                    data: {
+                        status: 'CANCELLED',
+                        canceledAt: cancellationTime,
+                        expiresAt: cancellationTime,
+                        cancelAtPeriodEnd: false,
+                    }
                 });
 
                 // Send upgrade notification/email using template
@@ -2266,8 +2299,13 @@ export class PaymentService {
                     return;
                 }
 
-                // Link pending payment and grant access for new subscriptions
                 const status = subscription.status;
+
+                if (this.providerKey === 'paystack' && dbSub.plan.autoRenew === true && (status === 'active' || status === 'trialing')) {
+                    await this.cancelSupersededOneTimeSubscriptions(dbSub.userId, dbSub.id);
+                }
+
+                // Link pending payment and grant access for new subscriptions
                 if (status === 'active' || status === 'trialing') {
                     // Link the pending payment to this subscription.
                     // Tokens and notifications were already granted immediately when
@@ -2361,6 +2399,9 @@ export class PaymentService {
             // in a PENDING->ACTIVE transition, but we still want to link the pending payment
             // recorded from charge.success.
             if (this.providerKey === 'paystack' && (status === 'active' || status === 'trialing')) {
+                if (dbSub.plan.autoRenew === true) {
+                    await this.cancelSupersededOneTimeSubscriptions(dbSub.userId, dbSub.id);
+                }
                 const linked = await this.linkPendingPaymentToSubscription(dbSub);
                 if (linked) {
                     Logger.info('Linked pending Paystack payment on subscription.created (existing record)', {
@@ -2617,6 +2658,9 @@ export class PaymentService {
             // have the provider subscription id and the subscription is ACTIVE.
             if (effectiveStatus === 'ACTIVE' && this.providerKey === 'paystack' && !isNewlyCreated) {
                 try {
+                    if (dbSub.plan.autoRenew === true) {
+                        await this.cancelSupersededOneTimeSubscriptions(dbSub.userId, dbSub.id);
+                    }
                     const linked = await this.linkPendingPaymentToSubscription(dbSub);
                     if (linked) {
                         Logger.info('Linked pending Paystack payment on subscription.updated (existing record)', {
@@ -2635,6 +2679,9 @@ export class PaymentService {
 
             // For newly created subscriptions (Paystack flow), link pending payment
             if (isNewlyCreated && normalizedStatus === 'ACTIVE') {
+                if (this.providerKey === 'paystack' && dbSub.plan.autoRenew === true) {
+                    await this.cancelSupersededOneTimeSubscriptions(dbSub.userId, dbSub.id);
+                }
                 const linked = await this.linkPendingPaymentToSubscription(dbSub);
                 if (linked) {
                     // Tokens and notifications already granted in handlePendingSubscriptionPayment.
@@ -2873,6 +2920,35 @@ export class PaymentService {
                 error: toError(err).message
             });
             return false;
+        }
+    }
+
+    private async cancelSupersededOneTimeSubscriptions(userId: string, replacementSubscriptionId: string): Promise<void> {
+        const cancellationTime = new Date();
+
+        const cancelled = await prisma.subscription.updateMany({
+            where: {
+                userId,
+                id: { not: replacementSubscriptionId },
+                status: 'ACTIVE',
+                expiresAt: { gt: cancellationTime },
+                plan: { autoRenew: false },
+            },
+            data: {
+                status: 'CANCELLED',
+                canceledAt: cancellationTime,
+                expiresAt: cancellationTime,
+                cancelAtPeriodEnd: false,
+            },
+        });
+
+        if (cancelled.count > 0) {
+            Logger.info('Cancelled superseded one-time subscriptions for recurring replacement', {
+                userId,
+                replacementSubscriptionId,
+                cancelledCount: cancelled.count,
+                provider: this.providerKey,
+            });
         }
     }
 

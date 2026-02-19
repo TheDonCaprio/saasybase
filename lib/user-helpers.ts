@@ -21,6 +21,59 @@ type LocalUser = {
 
 type ClerkCurrentUser = Awaited<ReturnType<typeof currentUser>>;
 
+function getErrorStatusCode(error: unknown): number | null {
+  if (!error || typeof error !== 'object') return null;
+  const maybe = error as { status?: unknown; statusCode?: unknown; clerkError?: { status?: unknown; statusCode?: unknown } };
+  const candidates = [maybe.status, maybe.statusCode, maybe.clerkError?.status, maybe.clerkError?.statusCode];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number') return candidate;
+    if (typeof candidate === 'string') {
+      const parsed = Number(candidate);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+function isClerkRateLimitError(error: unknown): boolean {
+  const status = getErrorStatusCode(error);
+  if (status === 429) return true;
+  const message = toError(error).message.toLowerCase();
+  return message.includes('too many requests') || message.includes('rate limit');
+}
+
+async function safeCurrentUserForEnsure(userId: string): Promise<{ user: ClerkCurrentUser; rateLimited: boolean }> {
+  try {
+    const user = await currentUser();
+    return { user, rateLimited: false };
+  } catch (err: unknown) {
+    const error = toError(err);
+    const rateLimited = isClerkRateLimitError(err);
+    Logger.warn('ensureUserExists: currentUser failed', {
+      userId,
+      rateLimited,
+      status: getErrorStatusCode(err) ?? 'unknown',
+      error: error.message,
+    });
+    return { user: null, rateLimited };
+  }
+}
+
+async function safeCurrentUserForSync(userId: string): Promise<ClerkCurrentUser> {
+  try {
+    return await currentUser();
+  } catch (err: unknown) {
+    const error = toError(err);
+    Logger.warn('syncUserFromClerk: currentUser failed', {
+      userId,
+      rateLimited: isClerkRateLimitError(err),
+      status: getErrorStatusCode(err) ?? 'unknown',
+      error: error.message,
+    });
+    return null;
+  }
+}
+
 function normalizeEmail(email?: string | null): string | null {
   if (!email) return null;
   const trimmed = email.trim().toLowerCase();
@@ -52,14 +105,20 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
   if (!userId) return null;
 
   // Get the current user data from Clerk; fall back to direct fetch when userId differs from auth context
-  let clerkUser = await currentUser();
-  if (!clerkUser || clerkUser.id !== userId) {
+  const currentUserResult = await safeCurrentUserForEnsure(userId);
+  let clerkUser = currentUserResult.user;
+  if ((!clerkUser || clerkUser.id !== userId) && !currentUserResult.rateLimited) {
     try {
       const client = await clerkClient();
       clerkUser = await client.users.getUser(userId);
     } catch (err: unknown) {
       const error = toError(err);
-      Logger.warn('ensureUserExists: failed to load Clerk user directly', { userId, error: error.message });
+      Logger.warn('ensureUserExists: failed to load Clerk user directly', {
+        userId,
+        rateLimited: isClerkRateLimitError(err),
+        status: getErrorStatusCode(err) ?? 'unknown',
+        error: error.message,
+      });
       clerkUser = null;
     }
   }
@@ -217,7 +276,7 @@ export async function syncUserFromClerk() {
   const { userId } = await auth();
   if (!userId) return null;
 
-  const clerkUser = await currentUser();
+  const clerkUser = await safeCurrentUserForSync(userId);
   if (!clerkUser) return null;
 
   const normalizedEmail = pickClerkEmail(clerkUser);

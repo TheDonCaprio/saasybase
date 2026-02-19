@@ -10,6 +10,14 @@ const nextConfig = {
   // when multiple lockfiles exist on the machine.
   outputFileTracingRoot: __dirname,
 
+  // Prevent Next.js from bundling @react-pdf/renderer through its RSC webpack
+  // transform. Bundling it causes a React instance conflict (two separate React
+  // reconciler copies) that triggers React error #31 ("Objects are not valid as
+  // React children") when pdf().toBlob() tries to render the element tree.
+  // Marking it external makes Node.js require() it at runtime, so it shares the
+  // same React module from node_modules as the rest of the app.
+  serverExternalPackages: ['@react-pdf/renderer'],
+
   // Security headers for production
   async headers() {
     return [

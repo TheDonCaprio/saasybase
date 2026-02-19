@@ -7,6 +7,7 @@ import { getSiteName, getSupportEmail } from '../../../../../lib/settings';
 import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 function jsonError(message: string, status: number, code: string, extra?: Record<string, unknown>) {
   return NextResponse.json({ error: message, code, ...(extra || {}) }, { status });

@@ -278,7 +278,6 @@ export default async function AdminCouponsPage({ searchParams }: PageProps) {
         eyebrow="Promotion codes"
           eyebrowIcon={<FontAwesomeIcon icon={faTicket} />}
         title="Coupon management"
-        description="Launch time-bound promotions, pause underperforming codes, and monitor redemption health without leaving the admin workspace."
         stats={headerStats}
       >
  

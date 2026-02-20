@@ -7,19 +7,19 @@ type BadgeTone = 'emerald' | 'amber' | 'violet' | 'indigo' | 'slate';
 
 const tileToneClasses: Record<TileTone, string> = {
 	emerald:
-		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	rose:
-		'rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-rose-500/40 dark:from-rose-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-rose-500/40 dark:from-rose-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	violet:
-		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	blue:
-		'rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-blue-500/40 dark:from-blue-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-blue-500/40 dark:from-blue-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	amber:
-		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	slate:
-		'rounded-xl border border-slate-200/80 bg-white/80 p-4 text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
+		'rounded-xl border border-slate-200/80 bg-white/80 p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
 	indigo:
-		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-4 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 };
 
 	const tileAccentClasses: Record<TileTone, string> = {
@@ -34,15 +34,15 @@ const tileToneClasses: Record<TileTone, string> = {
 
 const badgeToneClasses: Record<BadgeTone, string> = {
 	emerald:
-		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-3 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	amber:
-		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-3 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	violet:
-		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-3 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	indigo:
-		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-3 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
 	slate:
-		'rounded-xl border border-slate-200/80 bg-white/80 p-3 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
+		'rounded-xl border border-slate-200/80 bg-white/80 p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
 };
 
 const badgeAccentClasses: Record<BadgeTone, string> = {
@@ -219,16 +219,18 @@ export function CurrentPlanStatus({
 																const accent = tileAccentClasses[tile.tone ?? 'slate'];
 											return (
 												<div key={index} className={tone}>
-													{tile.label ? (
-																			<p className={clsx('text-xs font-semibold uppercase tracking-wide', accent)}>
-															{tile.label}
-														</p>
-													) : null}
-													{tile.value ? (
-														<p className="mt-2 text-base font-semibold text-slate-900 dark:text-neutral-50">{tile.value}</p>
-													) : null}
+													<div className="flex items-baseline justify-between gap-2 2xl:block">
+														{tile.label ? (
+															<p className={clsx('text-[12px] 2xl:text-[10px] font-semibold uppercase tracking-wide', accent)}>
+																{tile.label}
+															</p>
+														) : null}
+														{tile.value ? (
+															<p className="text-sm 2xl:text-base font-semibold text-slate-900 dark:text-neutral-50">{tile.value}</p>
+														) : null}
+													</div>
 													{tile.helper ? (
-														<p className="mt-1 text-[11px] text-slate-500 dark:text-neutral-400">{tile.helper}</p>
+														<p className="mt-1 text-[10px] text-slate-500 dark:text-neutral-400">{tile.helper}</p>
 													) : null}
 												</div>
 											);

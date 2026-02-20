@@ -46,7 +46,6 @@ export default async function TeamDashboardPage({ searchParams }: PageProps) {
         accent="violet"
         eyebrow="Team workspace"
         title="Manage your organization"
-        description="Provision a shared workspace, invite collaborators, and keep seats in sync with your billing plan."
       />
       <TeamProvisioner initialState={state} viewer={viewer} pendingInvitesForViewer={pendingInvites} />
     </div>

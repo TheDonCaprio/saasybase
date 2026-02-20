@@ -289,7 +289,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           stripePriceId: 'string? — optional; empty string treated as undefined',
           autoRenew: 'boolean? — default false',
           recurringInterval: "'day' | 'week' | 'month' | 'year'? (default 'month')",
-          recurringIntervalCount: 'number? — int 1..365 (default 1; if autoRenew=true and recurringInterval=day and count omitted, defaults to 7)',
+          recurringIntervalCount: 'number? — int 1..365 (default 1)',
           tokenLimit: 'number | null?',
           tokenName: 'string | null? — max 100',
           supportsOrganizations: 'boolean? — default false',

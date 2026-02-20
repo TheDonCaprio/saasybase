@@ -296,7 +296,6 @@ export default async function AdminPurchasesPage() {
         eyebrow="Purchase ledger"
         eyebrowIcon={<FontAwesomeIcon icon={faReceipt} />}
         title="One-time purchase management"
-        description="Track non-renewing plans, monitor entitlements, and process refunds without leaving the admin workspace."
         stats={headerStats}
       >
       </DashboardPageHeader>

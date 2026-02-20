@@ -344,7 +344,6 @@ export default async function AdminSubscriptionsPage() {
         eyebrow="Recurring plans"
         eyebrowIcon={<FontAwesomeIcon icon={faRepeat} />}
         title="Subscription management"
-        description="Monitor auto-renewing plans, handle cancellations, and keep an eye on recurring revenue without leaving the admin dashboard."
         stats={headerStats}
       >
       </DashboardPageHeader>

@@ -270,7 +270,6 @@ export default async function PlanPage({ searchParams }: PageProps) {
         eyebrow="Subscription overview"
         eyebrowIcon={<FontAwesomeIcon icon={faCreditCard} className="w-5 h-5" />}
         title="Manage your Pro access"
-        description="Track your current plan, upcoming renewals, and stacked subscriptions in one place. Activate pending time or explore new plans tailored to your workflow."
         stats={[
           {
             label: 'Membership status',

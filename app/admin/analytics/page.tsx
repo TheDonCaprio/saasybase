@@ -103,7 +103,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
         eyebrow="Growth intelligence"
         eyebrowIcon={<FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />}
         title="Analytics command center"
-        description="Monitor revenue momentum, subscriber health, and customer growth without leaving the admin experience."
         stats={heroStats}
       >
       </DashboardPageHeader>

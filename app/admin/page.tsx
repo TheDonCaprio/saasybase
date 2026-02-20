@@ -268,12 +268,8 @@ export default async function AdminHome() {
         eyebrow="Operations center"
         eyebrowIcon={<FontAwesomeIcon icon={faGear} />}
         title="Control room overview"
-        description="Monitor revenue, keep an eye on subscriptions, and take action fast when something needs your attention."
         stats={headerStats.length > 0 ? headerStats : undefined}
       >
-        <p>
-          Every card below pulls live numbers from Prisma. When something needs attention, follow the areas you have access to and resolve it fast.
-        </p>
       </DashboardPageHeader>
 
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">

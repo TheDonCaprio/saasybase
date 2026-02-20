@@ -123,20 +123,7 @@ export const apiSchemas = {
   }),
 
   // Admin plans
-  adminPlanCreate: z.preprocess((input) => {
-    // Conditional defaults: Razorpay enforces daily interval_count >= 7.
-    // To avoid creating invalid "daily" subscription plans, default to 7 *only*
-    // when the caller didn't supply recurringIntervalCount.
-    if (!input || typeof input !== 'object' || Array.isArray(input)) return input;
-    const obj = input as Record<string, unknown>;
-    const hasCount = Object.prototype.hasOwnProperty.call(obj, 'recurringIntervalCount');
-    const autoRenew = obj.autoRenew === true;
-    const interval = typeof obj.recurringInterval === 'string' ? obj.recurringInterval : null;
-    if (!hasCount && autoRenew && interval === 'day') {
-      return { ...obj, recurringIntervalCount: 7 };
-    }
-    return input;
-  }, z.object({
+  adminPlanCreate: z.object({
     name: commonSchemas.nonEmptyString.max(120),
     shortDescription: z.union([z.string().max(200), z.null()]).optional(),
     description: z.union([z.string().max(2000), z.null()]).optional(),
@@ -153,7 +140,7 @@ export const apiSchemas = {
     supportsOrganizations: z.boolean().optional().default(false),
     organizationSeatLimit: z.union([z.number().int().min(1), z.null()]).optional(),
     organizationTokenPoolStrategy: z.union([commonSchemas.organizationTokenPoolStrategy, z.null()]).optional(),
-  })),
+  }),
   adminPlanUpdate: z.object({
     name: z.string().min(1).max(120).optional(),
     shortDescription: z.union([z.string().max(200), z.null()]).optional(),

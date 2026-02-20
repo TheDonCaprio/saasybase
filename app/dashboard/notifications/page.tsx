@@ -53,7 +53,6 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
         eyebrow="Inbox"
         eyebrowIcon="🔔"
         title="Notifications"
-        description="Stay in the loop with billing updates, support replies, and product improvements."
         actions={
           <div className="text-xs text-slate-500 dark:text-neutral-400">
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}

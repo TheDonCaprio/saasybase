@@ -40,6 +40,7 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const enableBackgroundRefreshChecks = process.env.NODE_ENV === 'production';
   const siteName = await getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
   const siteLogo = await getSiteLogo().catch(() => process.env.NEXT_PUBLIC_SITE_LOGO || '');
   const siteLogoLight = await getSiteLogoLight().catch(() => process.env.NEXT_PUBLIC_SITE_LOGO_LIGHT || '');
@@ -225,8 +226,8 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
               </nav>
             ) : null}
             <div className="text-xs text-neutral-500 dark:text-neutral-400">{footerText}</div>
-            <OrgValidityCheck />
-            <TokenExpiryCleanupPing />
+            {enableBackgroundRefreshChecks ? <OrgValidityCheck /> : null}
+            {enableBackgroundRefreshChecks ? <TokenExpiryCleanupPing /> : null}
           </footer>
           {/* Global toast container so showToast() works from any page */}
           <ToastContainer />

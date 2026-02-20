@@ -150,7 +150,7 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
         eyebrow="Promotions"
   eyebrowIcon={<FontAwesomeIcon icon={faTicket} />}
         title="Coupon wallet"
-        description="Redeem team-provided codes and keep tabs on what’s ready for your next billing cycle."
+
         stats={[
           {
             label: 'Ready to apply',

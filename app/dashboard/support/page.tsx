@@ -137,7 +137,6 @@ export default async function SupportPage({ searchParams }: PageProps) {
         eyebrow="Help & support"
         eyebrowIcon="💬"
         title="We're on your side"
-        description="Raise a ticket, track progress, and keep conversations tidy. Our team watches this inbox closely."
         stats={headerStats}
       />
 

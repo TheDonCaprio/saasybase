@@ -81,7 +81,6 @@ export default async function AdminApiPage() {
         eyebrow="Platform API"
         eyebrowIcon="🔌"
         title="Admin API reference hub"
-        description="Endpoints inherit Clerk authentication and role-aware guards. Use the filters below to locate a path quickly, then copy it into your API client or workflows."
         stats={heroStats}
       >
       </DashboardPageHeader>

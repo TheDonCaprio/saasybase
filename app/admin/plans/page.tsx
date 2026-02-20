@@ -167,7 +167,6 @@ export default async function AdminPlansPage() {
         eyebrow="Catalog"
         eyebrowIcon={<FontAwesomeIcon icon={faLayerGroup} />}
         title="Plan management"
-        description="Curate your product catalog, adjust pricing, and keep subscription SKUs aligned across Stripe and the app. Use this catalog to manage one-time unlocks and recurring subscription tiers."
         stats={heroStats}
       >
       </DashboardPageHeader>

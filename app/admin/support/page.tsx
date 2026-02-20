@@ -132,7 +132,6 @@ export default async function AdminSupportPage({ searchParams }: { searchParams?
         eyebrow="Customer care"
         eyebrowIcon={<FontAwesomeIcon icon={faHeadset} />}
         title="Support desk overview"
-        description="Monitor ticket volume, track the backlog, and keep first-response SLAs on target. Use filters and quick metrics below to understand which requests need eyes on them."
         stats={heroStats}
       >
       </DashboardPageHeader>

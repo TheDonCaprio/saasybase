@@ -32,6 +32,7 @@ type SubscriptionWithPlan = {
   startedAt: Date;
   expiresAt: Date | null;
   status: string;
+  canceledAt: Date | null;
   cancelAtPeriodEnd: boolean;
   externalSubscriptionId: string | null;
   externalSubscriptionIds: string | null;
@@ -84,6 +85,7 @@ async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWit
       startedAt: true,
       expiresAt: true,
       status: true,
+      canceledAt: true,
       cancelAtPeriodEnd: true,
       externalSubscriptionId: true,
       externalSubscriptionIds: true,
@@ -498,12 +500,14 @@ export async function POST(req: NextRequest) {
       // Paystack implements pay-at-renewal by disabling the current subscription.
       // Mark the local record BEFORE calling the provider so that a racing
       // subscription.disable webhook does not set conflicting state.
+      let paystackPreMarkedLocalCancel = false;
       if (provider.name === 'paystack' && ctx.currentSubscription.cancelAtPeriodEnd !== true) {
         try {
           await prisma.subscription.update({
             where: { id: ctx.currentSubscription.id },
             data: { cancelAtPeriodEnd: true, canceledAt: ctx.currentSubscription.expiresAt },
           });
+          paystackPreMarkedLocalCancel = true;
         } catch (err) {
           const e = toError(err);
           Logger.warn('Failed to mark subscription as non-renewing before Paystack schedule', {
@@ -514,11 +518,38 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const result = await provider.scheduleSubscriptionPlanChange(
-        ctx.currentSubscription.externalSubscriptionId!,
-        ctx.targetExternalPriceId,
-        ctx.userId
-      );
+      let result;
+      try {
+        result = await provider.scheduleSubscriptionPlanChange(
+          ctx.currentSubscription.externalSubscriptionId!,
+          ctx.targetExternalPriceId,
+          ctx.userId
+        );
+      } catch (err) {
+        if (provider.name === 'paystack' && paystackPreMarkedLocalCancel) {
+          try {
+            await prisma.subscription.update({
+              where: { id: ctx.currentSubscription.id },
+              data: {
+                cancelAtPeriodEnd: ctx.currentSubscription.cancelAtPeriodEnd,
+                canceledAt: ctx.currentSubscription.canceledAt,
+              },
+            });
+            Logger.info('Rolled back local non-renewing mark after Paystack schedule failure', {
+              subscriptionId: ctx.currentSubscription.id,
+              userId: ctx.userId,
+            });
+          } catch (rollbackErr) {
+            const re = toError(rollbackErr);
+            Logger.error('Failed to roll back local non-renewing mark after Paystack schedule failure', {
+              subscriptionId: ctx.currentSubscription.id,
+              userId: ctx.userId,
+              error: re.message,
+            });
+          }
+        }
+        throw err;
+      }
 
       const newPeriodEnd = result.newPeriodEnd || null;
 

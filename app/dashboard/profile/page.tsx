@@ -129,7 +129,6 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
         eyebrow="Account"
         eyebrowIcon={<FontAwesomeIcon icon={faUser} />}
         title={`Welcome back, ${greetingName}`}
-        description={`Manage your profile, preferences, and billing from a single control center. You're currently on the ${planName}.`}
         stats={[
           {
             label: 'Status',

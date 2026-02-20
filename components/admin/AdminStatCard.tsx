@@ -57,23 +57,23 @@ export function AdminStatCard({ label, value, helper, footer, icon, accent = 'in
   const palette = accentMap[accent];
 
   return (
-    <div className={dashboardPanelClass(clsx('relative overflow-hidden h-full flex flex-col justify-between', palette.border, palette.gradient, className))}>
+    <div className={dashboardPanelClass(clsx('relative overflow-hidden h-full flex flex-col justify-between p-4', palette.border, palette.gradient, className))}>
       <div className={clsx('pointer-events-none absolute inset-0 opacity-75', palette.overlay)} />
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex items-start justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">{label}</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-neutral-50">{value}</p>
-          {helper ? <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">{helper}</p> : null}
+          <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-50">{value}</p>
+          {helper ? <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{helper}</p> : null}
         </div>
         {icon ? (
-          <span className={clsx('hidden sm:flex h-11 w-11 items-center justify-center rounded-full', palette.icon)}>
-            <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+          <span className={clsx('hidden sm:flex h-8 w-8 items-center justify-center rounded-full', palette.icon)}>
+            <FontAwesomeIcon icon={icon} className="h-3 w-3" />
           </span>
         ) : null}
       </div>
 
       {footer ? (
-        <div className="pt-3">
+        <div className="pt-2">
           <p className="text-xs text-slate-500 dark:text-neutral-400">{footer}</p>
         </div>
       ) : null}

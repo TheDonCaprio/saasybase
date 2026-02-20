@@ -15,12 +15,13 @@ export interface BlogCategoryDTO {
 
 interface BlogCategoriesPanelProps {
   initialCategories: BlogCategoryDTO[];
+  onCategoriesChange?: (categories: BlogCategoryDTO[]) => void;
 }
 
 const sortCategories = (categories: BlogCategoryDTO[]) =>
   [...categories].sort((a, b) => a.title.localeCompare(b.title));
 
-export default function BlogCategoriesPanel({ initialCategories }: BlogCategoriesPanelProps) {
+export default function BlogCategoriesPanel({ initialCategories, onCategoriesChange }: BlogCategoriesPanelProps) {
   const [categories, setCategories] = useState<BlogCategoryDTO[]>(() => sortCategories(initialCategories));
   const [creating, setCreating] = useState(false);
   const [newCategory, setNewCategory] = useState({ title: '', slug: '', description: '' });
@@ -29,6 +30,14 @@ export default function BlogCategoriesPanel({ initialCategories }: BlogCategorie
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<BlogCategoryDTO | null>(null);
+
+  const updateCategories = (updater: (current: BlogCategoryDTO[]) => BlogCategoryDTO[]) => {
+    setCategories((current) => {
+      const next = sortCategories(updater(current));
+      onCategoriesChange?.(next);
+      return next;
+    });
+  };
 
   const resetNewCategory = () => setNewCategory({ title: '', slug: '', description: '' });
 
@@ -53,7 +62,7 @@ export default function BlogCategoriesPanel({ initialCategories }: BlogCategorie
         throw new Error(error.error || 'Failed to create category');
       }
       const { category } = (await response.json()) as { category: BlogCategoryDTO };
-      setCategories((prev) => sortCategories([category, ...prev.filter((existing) => existing.id !== category.id)]));
+      updateCategories((prev) => [category, ...prev.filter((existing) => existing.id !== category.id)]);
       showToast('Category created', 'success');
       resetNewCategory();
     } catch (error) {
@@ -99,7 +108,7 @@ export default function BlogCategoriesPanel({ initialCategories }: BlogCategorie
         throw new Error(error.error || 'Failed to update category');
       }
       const { category } = (await response.json()) as { category: BlogCategoryDTO };
-      setCategories((prev) => sortCategories(prev.map((existing) => (existing.id === category.id ? category : existing))));
+      updateCategories((prev) => prev.map((existing) => (existing.id === category.id ? category : existing)));
       showToast('Category updated', 'success');
       cancelEditing();
     } catch (error) {
@@ -124,7 +133,7 @@ export default function BlogCategoriesPanel({ initialCategories }: BlogCategorie
         const error = await response.json().catch(() => ({ error: 'Failed to delete category' }));
         throw new Error(error.error || 'Failed to delete category');
       }
-      setCategories((prev) => prev.filter((category) => category.id !== categoryToDelete.id));
+      updateCategories((prev) => prev.filter((category) => category.id !== categoryToDelete.id));
       showToast('Category deleted', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete category';

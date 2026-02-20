@@ -54,12 +54,19 @@ export async function handleInvoiceCreatedCancellation(params: {
 
         await provider.cancelSubscription(externalSubId, true);
 
+        const now = new Date();
+        const currentExpiresAt = dbSub.expiresAt;
+        const shouldCancelImmediately = currentExpiresAt.getTime() <= now.getTime();
+        const effectiveCancellationTime = shouldCancelImmediately ? now : currentExpiresAt;
+
         await prisma.subscription.update({
             where: { id: dbSub.id },
             data: {
-                status: 'CANCELLED',
-                canceledAt: new Date(),
-                cancelAtPeriodEnd: false
+                status: shouldCancelImmediately ? 'CANCELLED' : 'ACTIVE',
+                canceledAt: effectiveCancellationTime,
+                cancelAtPeriodEnd: false,
+                scheduledPlanId: null,
+                scheduledPlanDate: null,
             }
         });
 

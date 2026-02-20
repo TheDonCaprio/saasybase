@@ -202,7 +202,6 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
         eyebrow="Usage insights"
         eyebrowIcon="📈"
         title="Activity & usage"
-        description="Review your billing journey, session history, and recent visits. We keep everything in sync so you stay secure and informed."
         stats={[
           {
             label: 'Lifetime spend',

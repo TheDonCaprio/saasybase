@@ -154,7 +154,6 @@ export default async function TrafficPage() {
         eyebrow="Traffic intelligence"
         eyebrowIcon={<FontAwesomeIcon icon={faRoad} className="w-5 h-5" />}
         title="Traffic analytics hub"
-        description="Spot today's biggest traffic swings, compare them with yesterday, and drill into engagement trends powered by Google Analytics."
         stats={heroStats}
       >
       </DashboardPageHeader>

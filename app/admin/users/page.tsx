@@ -152,7 +152,6 @@ export default async function AdminUsersPage() {
         eyebrow="Accounts"
         eyebrowIcon={<FontAwesomeIcon icon={faUserGroup} />}
         title="User management"
-        description="Review every account, promote trusted admins, and keep tabs on billing status from a single view. Edits here sync back to your Clerk dashboard automatically."
         stats={[
           {
             label: 'Active paid accounts',

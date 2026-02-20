@@ -25,7 +25,6 @@ export default async function AdminMaintenancePage() {
         eyebrow="Developer"
         eyebrowIcon={<FontAwesomeIcon icon={faWrench} />}
         title="Maintenance"
-        description="Run safe, admin-only cleanup tasks and operational tools."
       />
 
       <MaintenanceTools />

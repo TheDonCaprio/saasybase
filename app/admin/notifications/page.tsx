@@ -135,7 +135,6 @@ export default async function AdminNotificationsPage() {
         eyebrow="Messaging"
         eyebrowIcon={<FontAwesomeIcon icon={faBell} />}
         title="Notification center"
-        description="Track audience reach, keep unread counts down, and compose new announcements without leaving the dashboard."
         stats={heroStats}
       >
       </DashboardPageHeader>

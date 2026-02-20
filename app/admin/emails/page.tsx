@@ -122,7 +122,6 @@ export default async function EmailTemplatesPage() {
         eyebrow="Messaging"
         eyebrowIcon={<FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />}
         title="Email delivery center"
-        description="Audit template coverage, monitor delivery health, and seed defaults so campaigns never miss a beat. Stay ahead of deliverability issues by watching send volume and failure trends. "
         stats={heroStats}
       >
       </DashboardPageHeader>

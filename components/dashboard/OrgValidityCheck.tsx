@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function OrgValidityCheck() {
+    const router = useRouter();
+
     useEffect(() => {
         // Only run on authenticated app areas; avoid running on auth pages
         // like /sign-in where a reload would look like a redirect loop.
@@ -56,9 +59,9 @@ export function OrgValidityCheck() {
                         // ignore storage errors; proceed with a single reload attempt
                     }
 
-                    // Force a hard reload to clear client cache and update UI state.
-                    // Do NOT redirect; refresh wherever the user currently is.
-                    window.location.reload();
+                    if (document.visibilityState === 'visible') {
+                        router.refresh();
+                    }
                 }
             } catch (err) {
                 // Silent fail - don't disrupt user experience if check fails
@@ -72,7 +75,7 @@ export function OrgValidityCheck() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [router]);
 
     return null; // This component renders nothing
 }

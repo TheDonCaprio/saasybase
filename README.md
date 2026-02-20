@@ -78,7 +78,7 @@ Admin plans support `recurringInterval` + `recurringIntervalCount` when `autoRen
 
 - `recurringInterval`: the unit (`day`, `week`, `month`, `year`).
 - `recurringIntervalCount`: cadence multiplier (“every N units”), e.g. `month` + `2` means billed every 2 months. This is not the number of renewals/charges; users will keep being charged until they cancel.
-- Razorpay constraint: daily subscriptions require `recurringIntervalCount >= 7`. The admin UI/API defaults daily subscriptions to `7` when the caller/admin hasn’t explicitly set a different value.
+- Razorpay constraint: daily subscriptions require `recurringIntervalCount >= 7`. We do not force this globally for other providers; when a plan is daily with a lower count, Razorpay price creation is skipped with a warning while other providers are still created.
 
 - The admin UI shows an "Interval" select and "Every" field when creating/editing a plan. Use them to control the provider recurring price cadence for auto-created prices.
 

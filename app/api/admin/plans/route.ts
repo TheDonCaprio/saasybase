@@ -11,6 +11,7 @@ import { adminRateLimit } from '@/lib/rateLimit';
 import { providerSupportsOneTimePrices, setIdByProvider } from '@/lib/utils/provider-ids';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
 import { getProviderCurrency } from '@/lib/payment/registry';
+import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
 import { PaymentError } from '@/lib/payment/errors';
 
@@ -28,6 +29,20 @@ function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown }
   }
 
   return { messages: Array.from(new Set(messages)).filter(Boolean), root: cur };
+}
+
+function isUnsupportedCurrencyError(err: unknown): boolean {
+  const unwrapped = unwrapPaymentError(err);
+  const messages = unwrapped.messages.map(m => m.toLowerCase());
+  return messages.some(m => m.includes('not a supported currency') || m.includes('unsupported currency'));
+}
+
+function getProviderFallbackCurrencies(providerName: string, triedCurrency: string): string[] {
+  const config = PAYMENT_PROVIDERS[providerName.toLowerCase()];
+  if (!config) return [];
+  return config.supportedCurrencies
+    .map(c => c.toUpperCase())
+    .filter(c => c !== triedCurrency.toUpperCase());
 }
 
 
@@ -160,6 +175,7 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
     let stripePriceIdToSave = typeof stripePriceId === 'string' ? stripePriceId : undefined;
     let externalPriceIdsToSave: string | null = null;
     let externalProductIdsToSave: string | null = null;
+    const creationWarnings: string[] = [];
 
     // Sync plan to ALL configured payment providers (not just the active one)
     if (!stripePriceIdToSave && autoCreate) {
@@ -168,6 +184,24 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
       for (const { name: providerName, provider } of configuredProviders) {
         let providerCurrency: string | null = null;
         try {
+          if (
+            providerName === 'razorpay'
+            && autoRenew
+            && recurringInterval === 'day'
+            && recurringIntervalCount < 7
+          ) {
+            const warning = 'Skipped Razorpay price creation: daily recurring plans require interval_count >= 7.';
+            creationWarnings.push(warning);
+            Logger.warn('Skipping Razorpay price creation for daily recurring plan below provider minimum', {
+              planName: name,
+              provider: providerName,
+              recurringInterval,
+              recurringIntervalCount,
+              requiredMinIntervalCount: 7,
+            });
+            continue;
+          }
+
           // Paystack doesn't support one-time prices; only create for subscriptions or providers that support one-time
           const shouldCreatePrice = autoRenew || providerSupportsOneTimePrices(providerName);
 
@@ -203,6 +237,51 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
                 }
               : undefined,
             metadata: { name } // Pass plan name for Paystack
+          }).catch(async (currencyErr) => {
+            if (!isUnsupportedCurrencyError(currencyErr) || !providerCurrency) throw currencyErr;
+
+            const fallbacks = getProviderFallbackCurrencies(providerName, providerCurrency);
+            if (fallbacks.length === 0) throw currencyErr;
+
+            Logger.warn('Admin plan create: currency rejected, trying fallback currencies', {
+              provider: providerName,
+              planName: name,
+              rejectedCurrency: providerCurrency,
+              fallbacks,
+            });
+
+            for (const fallbackCurrency of fallbacks) {
+              try {
+                const fallbackPrice = await provider.createPrice({
+                  unitAmount: priceCents,
+                  currency: fallbackCurrency,
+                  productId: productId,
+                  recurring: autoRenew
+                    ? {
+                        interval: recurringInterval as 'day' | 'week' | 'month' | 'year',
+                        intervalCount: recurringIntervalCount,
+                      }
+                    : undefined,
+                  metadata: { name },
+                });
+
+                creationWarnings.push(
+                  `Created ${providerName} price with fallback currency ${fallbackCurrency} (requested ${providerCurrency}).`
+                );
+
+                Logger.info('Admin plan create: price created with fallback currency', {
+                  provider: providerName,
+                  planName: name,
+                  currency: fallbackCurrency,
+                });
+
+                return fallbackPrice;
+              } catch (fallbackErr) {
+                if (!isUnsupportedCurrencyError(fallbackErr)) throw fallbackErr;
+              }
+            }
+
+            throw currencyErr;
           });
 
           // Update provider maps
@@ -289,7 +368,7 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
       details: { planId: plan.id, name: plan.name, priceCents: plan.priceCents, autoRenew: plan.autoRenew },
     });
 
-    return NextResponse.json({ success: true, plan });
+    return NextResponse.json({ success: true, plan, warnings: creationWarnings });
   } catch (error: unknown) {
     const authResponse = toAuthGuardErrorResponse(error);
     if (authResponse) return authResponse;

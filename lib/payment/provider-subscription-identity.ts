@@ -175,8 +175,11 @@ export async function upsertHydratedProviderSubscription(params: {
 }): Promise<Prisma.SubscriptionGetPayload<{ include: { plan: true } }>> {
     const startedAt = params.providerSubscription.currentPeriodStart ?? new Date();
     const expiresAt = params.providerSubscription.currentPeriodEnd ?? startedAt;
+    const nowTs = Date.now();
+    const futureStartGraceMs = 30 * 1000;
+    const startsInFuture = startedAt.getTime() > nowTs + futureStartGraceMs;
     const normalizedStatus = params.providerSubscription.status === 'active' || params.providerSubscription.status === 'trialing'
-        ? 'ACTIVE'
+        ? (startsInFuture ? 'PENDING' : 'ACTIVE')
         : params.providerSubscription.status === 'canceled'
             ? 'CANCELLED'
             : 'PENDING';

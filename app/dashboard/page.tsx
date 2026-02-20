@@ -29,7 +29,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         eyebrow="Demo app"
         eyebrowIcon="⚡️"
         title="SaaSyBase Demo App"
-        description="Run small operations that deduct real tokens from your account. Useful for validating billing/token flows before launch."
       />
 
       <section className={dashboardPanelClass('space-y-4')}>

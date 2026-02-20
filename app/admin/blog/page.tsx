@@ -33,7 +33,6 @@ export default async function AdminBlogPostsPage() {
         accent="rose"
         eyebrow="Content"
         title="Blog posts"
-        description="Keep your audience up to date with product launches, behind-the-scenes stories, and customer wins."
         stats={[
           {
             label: 'Total posts',

@@ -123,7 +123,6 @@ export default async function AdminOrganizationsPage() {
         eyebrow="Workspaces"
         eyebrowIcon={<FontAwesomeIcon icon={faBuilding} />}
         title="Organization management"
-        description="Track every shared workspace, tune token policies, and keep member rosters in sync from a single command center."
         stats={headerStats}
       />
 

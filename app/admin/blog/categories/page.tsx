@@ -23,7 +23,6 @@ export default async function BlogCategoriesPage() {
         accent="emerald"
         eyebrow="Content"
         title="Blog categories"
-        description="Categories power /blog/category/&lt;slug&gt; and the filters inside your marketing pages."
       />
       <BlogCategoriesPanel initialCategories={categories} />
     </div>

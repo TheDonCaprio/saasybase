@@ -63,7 +63,6 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
         eyebrow="Getting started"
         eyebrowIcon={<FontAwesomeIcon icon={faStar} className="w-5 h-5" />}
         title={`Welcome to ${siteName}`}
-        description="Let's complete the essentials so you can get started. Each checklist item unlocks powerful features tailored to your needs."
         stats={[
           {
             label: 'Completed steps',

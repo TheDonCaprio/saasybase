@@ -77,45 +77,45 @@ const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: str
 
 const statToneStyles: Record<Tone, { wrapper: string; label: string; value: string; helper: string }> = {
 	indigo: {
-		wrapper: 'rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10',
+		wrapper: 'rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10',
 		label: 'text-xs uppercase tracking-wide text-indigo-600/80 dark:text-indigo-100/70',
-		value: 'mt-1 text-lg font-semibold text-indigo-700 dark:text-indigo-100',
+		value: 'mt-1 text-base font-semibold text-indigo-700 dark:text-indigo-100',
 		helper: 'text-xs text-indigo-600/70 dark:text-indigo-200/70'
 	},
 	emerald: {
-		wrapper: 'rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10',
+		wrapper: 'rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10',
 		label: 'text-xs uppercase tracking-wide text-emerald-600/80 dark:text-emerald-100/70',
-		value: 'mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-100',
+		value: 'mt-1 text-base font-semibold text-emerald-700 dark:text-emerald-100',
 		helper: 'text-xs text-emerald-600/70 dark:text-emerald-200/70'
 	},
 	purple: {
-		wrapper: 'rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 shadow-sm dark:border-purple-500/30 dark:bg-purple-500/10',
+		wrapper: 'rounded-2xl border border-purple-200 bg-purple-50 px-3 py-2 shadow-sm dark:border-purple-500/30 dark:bg-purple-500/10',
 		label: 'text-xs uppercase tracking-wide text-purple-600/80 dark:text-purple-100/70',
-		value: 'mt-1 text-lg font-semibold text-purple-700 dark:text-purple-100',
+		value: 'mt-1 text-base font-semibold text-purple-700 dark:text-purple-100',
 		helper: 'text-xs text-purple-600/70 dark:text-purple-200/70'
 	},
 	blue: {
-		wrapper: 'rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10',
+		wrapper: 'rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10',
 		label: 'text-xs uppercase tracking-wide text-blue-600/80 dark:text-blue-100/70',
-		value: 'mt-1 text-lg font-semibold text-blue-700 dark:text-blue-100',
+		value: 'mt-1 text-base font-semibold text-blue-700 dark:text-blue-100',
 		helper: 'text-xs text-blue-600/70 dark:text-blue-200/70'
 	},
 	amber: {
-		wrapper: 'rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10',
+		wrapper: 'rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10',
 		label: 'text-xs uppercase tracking-wide text-amber-600/80 dark:text-amber-100/70',
-		value: 'mt-1 text-lg font-semibold text-amber-700 dark:text-amber-100',
+		value: 'mt-1 text-base font-semibold text-amber-700 dark:text-amber-100',
 		helper: 'text-xs text-amber-600/70 dark:text-amber-200/70'
 	},
 	rose: {
-		wrapper: 'rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10',
+		wrapper: 'rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10',
 		label: 'text-xs uppercase tracking-wide text-rose-600/80 dark:text-rose-100/70',
-		value: 'mt-1 text-lg font-semibold text-rose-700 dark:text-rose-100',
+		value: 'mt-1 text-base font-semibold text-rose-700 dark:text-rose-100',
 		helper: 'text-xs text-rose-600/70 dark:text-rose-200/70'
 	},
 	slate: {
-		wrapper: 'rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60',
+		wrapper: 'rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60',
 		label: 'text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-500',
-		value: 'mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100',
+		value: 'mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100',
 		helper: 'text-xs text-slate-500 dark:text-neutral-400'
 	}
 };
@@ -136,7 +136,7 @@ export function DashboardPageHeader({
 	return (
 		<div
 			className={cx(
-				'relative overflow-hidden rounded-3xl border p-8 transition-shadow',
+				'relative overflow-hidden rounded-3xl border p-6 transition-shadow',
 				palette.wrapper,
 				className
 			)}
@@ -145,8 +145,8 @@ export function DashboardPageHeader({
 				<div className={cx('h-full w-full', palette.overlay)} />
 			</div>
 
-			<div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-				<div className="max-w-2xl space-y-4">
+			<div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div className="max-w-2xl space-y-3">
 					{eyebrow ? (
 						<div className={palette.pill}>
 							<span className={palette.dot} />
@@ -155,20 +155,20 @@ export function DashboardPageHeader({
 						</div>
 					) : null}
 
-					<div className="space-y-3">
-						<h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl dark:text-neutral-50">{title}</h1>
+					<div className="space-y-2">
+						<h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl dark:text-neutral-50">{title}</h1>
 						{description ? (
 							<p className="text-sm text-slate-600 dark:text-neutral-200/80">{description}</p>
 						) : null}
 					</div>
 
-					{children ? <div className="space-y-3 text-sm text-slate-600 dark:text-neutral-200/80">{children}</div> : null}
+					{children ? <div className="space-y-2 text-sm text-slate-600 dark:text-neutral-200/80">{children}</div> : null}
 
-					{actions ? <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">{actions}</div> : null}
+					{actions ? <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">{actions}</div> : null}
 				</div>
 
 				{stats && stats.length > 0 ? (
-					<div className="grid w-full max-w-lg gap-3 text-sm grid-cols-2">
+					<div className="grid w-full max-w-lg gap-2 text-sm grid-cols-2">
 						{stats.map((stat, index) => {
 							const tone = statToneStyles[stat.tone ?? 'slate'];
 							return (

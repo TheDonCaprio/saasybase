@@ -12,9 +12,40 @@ import { persistEnvValue } from '@/lib/env-files';
 import { providerSupportsOneTimePrices, setIdByProvider, getIdByProvider } from '@/lib/utils/provider-ids';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
 import { getProviderCurrency } from '@/lib/payment/registry';
-import { PaymentProviderError } from '@/lib/payment/errors';
+import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
+import { PaymentError, PaymentProviderError } from '@/lib/payment/errors';
 import type { Prisma } from '@prisma/client';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
+
+function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown } {
+  const messages: string[] = [];
+  let cur: unknown = err;
+
+  for (let i = 0; i < 6; i += 1) {
+    if (cur instanceof Error) messages.push(cur.message);
+    if (cur instanceof PaymentError && cur.originalError != null) {
+      cur = cur.originalError;
+      continue;
+    }
+    break;
+  }
+
+  return { messages: Array.from(new Set(messages)).filter(Boolean), root: cur };
+}
+
+function isUnsupportedCurrencyError(err: unknown): boolean {
+  const unwrapped = unwrapPaymentError(err);
+  const messages = unwrapped.messages.map(m => m.toLowerCase());
+  return messages.some(m => m.includes('not a supported currency') || m.includes('unsupported currency'));
+}
+
+function getProviderFallbackCurrencies(providerName: string, triedCurrency: string): string[] {
+  const config = PAYMENT_PROVIDERS[providerName.toLowerCase()];
+  if (!config) return [];
+  return config.supportedCurrencies
+    .map(c => c.toUpperCase())
+    .filter(c => c !== triedCurrency.toUpperCase());
+}
 
 async function getPlanId(context: unknown): Promise<string | null> {
   const paramsOrPromise = (context as { params?: { planId?: string } | Promise<{ planId?: string }> } | undefined)?.params;
@@ -190,6 +221,78 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       : (existingStripePriceId ?? undefined);
     let shouldPersistStripeId = stripeProvided;
     let envPersistValue: string | undefined;
+    const updateWarnings: string[] = [];
+
+    const createPriceWithCurrencyFallback = async (
+      providerName: string,
+      provider: {
+        createPrice: (options: {
+          unitAmount: number;
+          currency: string;
+          productId: string;
+          recurring?: {
+            interval: 'day' | 'week' | 'month' | 'year';
+            intervalCount: number;
+          };
+          metadata?: Record<string, string>;
+        }) => Promise<any>;
+      },
+      options: {
+        unitAmount: number;
+        currency: string;
+        productId: string;
+        recurring?: {
+          interval: 'day' | 'week' | 'month' | 'year';
+          intervalCount: number;
+        };
+        metadata?: Record<string, string>;
+      },
+    ) => {
+      const attemptedCurrency = options.currency;
+
+      try {
+        return await provider.createPrice(options);
+      } catch (currencyErr) {
+        if (!isUnsupportedCurrencyError(currencyErr)) throw currencyErr;
+
+        const fallbacks = getProviderFallbackCurrencies(providerName, attemptedCurrency);
+        if (fallbacks.length === 0) throw currencyErr;
+
+        Logger.warn('Admin plan update: currency rejected, trying fallback currencies', {
+          planId,
+          provider: providerName,
+          planName: finalName,
+          rejectedCurrency: attemptedCurrency,
+          fallbacks,
+        });
+
+        for (const fallbackCurrency of fallbacks) {
+          try {
+            const fallbackPrice = await provider.createPrice({
+              ...options,
+              currency: fallbackCurrency,
+            });
+
+            updateWarnings.push(
+              `Created ${providerName} price with fallback currency ${fallbackCurrency} (requested ${attemptedCurrency}).`
+            );
+
+            Logger.info('Admin plan update: price created with fallback currency', {
+              planId,
+              provider: providerName,
+              planName: finalName,
+              currency: fallbackCurrency,
+            });
+
+            return fallbackPrice;
+          } catch (fallbackErr) {
+            if (!isUnsupportedCurrencyError(fallbackErr)) throw fallbackErr;
+          }
+        }
+
+        throw currencyErr;
+      }
+    };
 
     const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
 
@@ -329,7 +432,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
 
           // Create the price with provider-specific currency
           const providerCurrency = getProviderCurrency(providerName);
-          const price = await provider.createPrice({
+          const price = await createPriceWithCurrencyFallback(providerName, provider, {
             unitAmount: finalPriceCents,
             currency: providerCurrency,
             productId: productId,
@@ -449,7 +552,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
 
               // Use provider-specific currency
               const providerCurrency = getProviderCurrency(providerName);
-              const price = await provider.createPrice({
+              const price = await createPriceWithCurrencyFallback(providerName, provider, {
                 unitAmount: finalPriceCents,
                 currency: providerCurrency,
                 productId: productId,
@@ -521,7 +624,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
 
               // Use provider-specific currency
               const providerCurrency = getProviderCurrency(providerName);
-              const price = await provider.createPrice({
+              const price = await createPriceWithCurrencyFallback(providerName, provider, {
                 unitAmount: finalPriceCents,
                 currency: providerCurrency,
                 productId: productId,
@@ -671,7 +774,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       details: { planId, name: plan.name },
     });
 
-    return NextResponse.json({ success: true, plan });
+    return NextResponse.json({ success: true, plan, warnings: updateWarnings });
   } catch (err: unknown) {
     const planId = await getPlanId(context);
     const e = toError(err);

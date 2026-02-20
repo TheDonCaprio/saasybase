@@ -25,6 +25,7 @@ import { dashboardPanelClass, dashboardMutedPanelClass } from '../../dashboard/d
 import { SitePageDTO } from './SitePagesList';
 import ImageEditorModal from './ImageEditorModal';
 import { ImagePickerModal } from '../../ui/ImagePickerModal';
+import BlogCategoriesPanel from '../blog/BlogCategoriesPanel';
 import { CustomImage } from './CustomImage';
 import CustomIframe, { IframeAttrs } from './CustomIframe';
 import Youtube from '@tiptap/extension-youtube';
@@ -174,6 +175,7 @@ export default function PageEditor({
   const [isMounted, setIsMounted] = useState(false);
   const [showConfirmManualRestore, setShowConfirmManualRestore] = useState(false);
   const [showConfirmAutoRestore, setShowConfirmAutoRestore] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -194,9 +196,12 @@ export default function PageEditor({
     ogTitle: false,
     ogDescription: false,
   });
+  const [editorCategories, setEditorCategories] = useState<BlogCategoryDTO[]>(() =>
+    [...categories].sort((a, b) => a.title.localeCompare(b.title))
+  );
   const availableCategories = useMemo(() => {
-    return [...categories].sort((a, b) => a.title.localeCompare(b.title));
-  }, [categories]);
+    return [...editorCategories].sort((a, b) => a.title.localeCompare(b.title));
+  }, [editorCategories]);
   const entityNames = useMemo(() => {
     const singular = (entityLabel ?? 'Page').trim() || 'Page';
     const providedPlural = (entityLabelPlural ?? '').trim();
@@ -287,6 +292,10 @@ export default function PageEditor({
   }, [initialPage, formatMode, formatTimezone]);
 
   useEffect(() => {
+    setEditorCategories([...categories].sort((a, b) => a.title.localeCompare(b.title)));
+  }, [categories]);
+
+  useEffect(() => {
     if (!isEditingSlug) {
       setSlugDraft(formData.slug);
     }
@@ -298,6 +307,14 @@ export default function PageEditor({
       slugInputRef.current?.select();
     }
   }, [isEditingSlug]);
+
+  const handleCategoriesPanelChange = useCallback((nextCategories: BlogCategoryDTO[]) => {
+    setEditorCategories([...nextCategories].sort((a, b) => a.title.localeCompare(b.title)));
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: prev.categoryIds.filter((id) => nextCategories.some((category) => category.id === id)),
+    }));
+  }, []);
 
   // Track client-side mounting to prevent hydration issues
   useEffect(() => {
@@ -2383,17 +2400,16 @@ export default function PageEditor({
                   <span>
                     {formData.categoryIds.length}/{CATEGORY_SELECTION_LIMIT} selected
                   </span>
-                  {categoriesHref ? (
-                    <NextLink
-                      href={categoriesHref}
-                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-2 py-1 font-medium text-neutral-700 transition hover:border-violet-400 hover:text-violet-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-400"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
-                      </svg>
-                      Manage
-                    </NextLink>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoriesModal(true)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-2 py-1 font-medium text-neutral-700 transition hover:border-violet-400 hover:text-violet-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-400"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
+                    </svg>
+                    Manage
+                  </button>
                 </div>
               </div>
 
@@ -2435,17 +2451,15 @@ export default function PageEditor({
               ) : (
                 <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900/40 dark:text-neutral-300">
                   No categories yet.
-                  {categoriesHref ? (
-                    <>
-                      {' '}
-                      <NextLink href={categoriesHref} className="text-violet-600 underline hover:text-violet-500">
-                        Create one
-                      </NextLink>
-                      {' '}to get started.
-                    </>
-                  ) : (
-                    ' Add some from the admin dashboard.'
-                  )}
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoriesModal(true)}
+                    className="text-violet-600 underline hover:text-violet-500"
+                  >
+                    Create one
+                  </button>
+                  {' '}to get started.
                 </div>
               )}
             </div>
@@ -2678,6 +2692,30 @@ export default function PageEditor({
               >
                 Restore
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {isMounted && showCategoriesModal && createPortal(
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="flex h-[min(90vh,900px)] w-[min(1100px,96vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-700">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Manage blog categories</h3>
+              <button
+                type="button"
+                onClick={() => setShowCategoriesModal(false)}
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <BlogCategoriesPanel
+                initialCategories={availableCategories}
+                onCategoriesChange={handleCategoriesPanelChange}
+              />
             </div>
           </div>
         </div>,

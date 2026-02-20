@@ -10,6 +10,17 @@ const nextConfig = {
   // when multiple lockfiles exist on the machine.
   outputFileTracingRoot: __dirname,
 
+  // Keep compiled dev pages in memory much longer so switching between open
+  // tabs doesn't trigger a visible recompilation / page flash.
+  // Default maxInactiveAge is ~60 s in webpack mode which is too short when
+  // multiple routes are open during development.
+  onDemandEntries: {
+    // 30 minutes – pages stay warm long enough for normal dev workflows
+    maxInactiveAge: 30 * 60 * 1000,
+    // Keep up to 25 pages buffered (default is 5)
+    pagesBufferLength: 25,
+  },
+
   // Prevent Next.js from bundling @react-pdf/renderer through its RSC webpack
   // transform. Bundling it causes a React instance conflict (two separate React
   // reconciler copies) that triggers React error #31 ("Objects are not valid as
@@ -70,13 +81,6 @@ const nextConfig = {
     // This is a pragmatic short-term change while we address the many lint/type warnings
     // across the codebase. Remove or set to false once the codebase is cleaned up.
     // eslint: { ignoreDuringBuilds: true }, // removed: re-enable strict linting for builds
-  onDemandEntries: {
-    // Period (in ms) where the server will keep pages in the buffer
-    maxInactiveAge: 25 * 1000,
-    // Number of pages that should be kept simultaneously without being disposed
-    pagesBufferLength: 2,
-  },
-
   // Allow next/image to load logos from S3 and common CDNs used in production.
   // Adjust these patterns to match your production bucket / CDN hostnames.
   images: {
@@ -119,6 +123,25 @@ const nextConfig = {
         path: false,
       };
     }
+
+    if (dev) {
+      // Reduce false-positive file-change detections that trigger unnecessary
+      // recompilation / page refreshes in development. Ignore directories that
+      // frequently write artefacts unrelated to the running app code.
+      config.watchOptions = {
+        ...(config.watchOptions || {}),
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next/**',
+          '**/prisma/migrations/**',
+          '**/test_output*',
+          '**/*.test.*',
+          '**/*.spec.*',
+        ],
+      };
+    }
+
     return config;
   },
 };

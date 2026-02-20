@@ -207,7 +207,6 @@ export default async function AdminTransactionsPage() {
         eyebrow="Billing ledger"
         eyebrowIcon={<FontAwesomeIcon icon={faMoneyBillWave} />}
         title="Transaction management"
-        description="Stay ahead of revenue trends, keep an eye on refunds, and dive into individual charges without leaving the dashboard."
         stats={headerStats}
       >
       </DashboardPageHeader>

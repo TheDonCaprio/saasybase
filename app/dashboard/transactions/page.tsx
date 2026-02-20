@@ -128,7 +128,6 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         eyebrow="Billing records"
         eyebrowIcon={<FontAwesomeIcon icon={faMoneyBillWave} />}
         title="Transaction history"
-        description="Review every charge, refund, and coupon in one place. Export receipts or drill into individual entries for more context."
         stats={[
           {
             label: 'Transactions logged',

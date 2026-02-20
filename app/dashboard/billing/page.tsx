@@ -238,7 +238,6 @@ export default async function BillingPage({ searchParams }: PageProps) {
         eyebrow="Billing & subscription"
         eyebrowIcon="🧾"
         title="Keep billing effortless"
-        description="Manage payment methods, download invoices, and stay ahead of upcoming renewals without leaving your dashboard."
         stats={[
           {
             label: 'Subscription status',

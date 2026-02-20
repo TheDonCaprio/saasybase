@@ -92,7 +92,6 @@ export default async function ModerationPage() {
         eyebrow="Oversight"
         eyebrowIcon={<FontAwesomeIcon icon={faUserShield} />}
         title="Moderation activity log"
-        description="Review a chronological log of moderator and admin actions across users, subscriptions, and purchases. Use this to trace adjustments and stay ahead of issues."
         stats={headerStats}
       >
       </DashboardPageHeader>

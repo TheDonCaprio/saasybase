@@ -228,7 +228,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     setStatus(value.toUpperCase());
   };
 
-  const refreshPlans = useCallback(async () => {
+  const refreshPlans = useCallback(async (showSuccessToast = true) => {
     try {
       const res = await fetch('/api/admin/plans');
       if (!res.ok) {
@@ -238,7 +238,9 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       }
       const json = (await res.json()) as Array<Plan & { activeSubscriberCount?: number }>;
       setPlans(sortPlans(json.map((plan) => ({ ...plan, activeSubscriberCount: plan.activeSubscriberCount ?? 0 }))));
-      showToast('Plans refreshed', 'success');
+      if (showSuccessToast) {
+        showToast('Plans refreshed', 'success');
+      }
     } catch (error) {
       void error;
       showToast('Failed to refresh plans', 'error');
@@ -316,6 +318,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
         setDeleteModalOpen(false);
         setPendingDeleteId(null);
         showToast('Plan deleted', 'success');
+        await refreshPlans(false);
       } else {
         showToast(json?.error || 'Unable to delete', 'error');
       }
@@ -426,6 +429,13 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
             )
           );
           showToast('Plan updated', 'success');
+          await refreshPlans(false);
+          const warnings = Array.isArray((json as { warnings?: unknown }).warnings)
+            ? ((json as { warnings?: unknown[] }).warnings ?? []).filter((w): w is string => typeof w === 'string' && w.length > 0)
+            : [];
+          if (warnings.length > 0) {
+            showToast(`Plan updated with warnings: ${warnings[0]}`, 'error');
+          }
         } else showToast(json?.error || 'Unable to update', 'error');
       } else {
         const res = await fetch('/api/admin/plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -433,6 +443,13 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
         if (res.ok) {
           setPlans((p) => sortPlans([...p, { ...json.plan, activeSubscriberCount: 0 }]));
           showToast('Plan created', 'success');
+          await refreshPlans(false);
+          const warnings = Array.isArray((json as { warnings?: unknown }).warnings)
+            ? ((json as { warnings?: unknown[] }).warnings ?? []).filter((w): w is string => typeof w === 'string' && w.length > 0)
+            : [];
+          if (warnings.length > 0) {
+            showToast(`Plan created with warnings: ${warnings[0]}`, 'error');
+          }
         } else showToast(json?.error || 'Unable to create', 'error');
       }
       setShowModal(false);
@@ -1046,24 +1063,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                         type="checkbox"
                         checked={form.autoRenew}
                         disabled={isEditingExistingPlan}
-                        onChange={(e) =>
-                          setForm((prev) => {
-                            const nextAutoRenew = e.target.checked;
-                            // Razorpay daily subscriptions require interval_count >= 7.
-                            // When switching to auto-renew on a daily interval, default to 7
-                            // only if the user hasn't changed it yet (still at 1).
-                            const nextIntervalCount =
-                              nextAutoRenew && prev.recurringInterval === 'day' && (prev.recurringIntervalCount ?? 1) === 1
-                                ? 7
-                                : prev.recurringIntervalCount;
-
-                            return {
-                              ...prev,
-                              autoRenew: nextAutoRenew,
-                              recurringIntervalCount: nextIntervalCount,
-                            };
-                          })
-                        }
+                        onChange={(e) => setForm((prev) => ({ ...prev, autoRenew: e.target.checked }))}
                         className="w-4 h-4 bg-neutral-800 border border-neutral-700 rounded text-blue-500 disabled:opacity-40"
                       />
                       <span className="text-sm text-neutral-300">Auto-renew</span>
@@ -1091,21 +1091,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                             className="px-2.5 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-100 text-sm focus:ring-2 focus:ring-blue-500"
                             value={form.recurringInterval}
                             disabled={isEditingExistingPlan}
-                            onChange={(e) =>
-                              setForm((prev) => {
-                                const nextInterval = e.target.value as 'day' | 'week' | 'month' | 'year';
-                                const shouldDefaultDailyToSeven =
-                                  prev.autoRenew &&
-                                  nextInterval === 'day' &&
-                                  (prev.recurringIntervalCount ?? 1) === 1;
-
-                                return {
-                                  ...prev,
-                                  recurringInterval: nextInterval,
-                                  recurringIntervalCount: shouldDefaultDailyToSeven ? 7 : prev.recurringIntervalCount,
-                                };
-                              })
-                            }
+                            onChange={(e) => setForm((prev) => ({ ...prev, recurringInterval: e.target.value as 'day' | 'week' | 'month' | 'year' }))}
                           >
                             <option value="day">day(s)</option>
                             <option value="week">week(s)</option>
@@ -1120,7 +1106,9 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                   {form.autoRenew && (
                     <div className="text-xs text-neutral-400 pl-6">
                       Cadence: bills every {form.recurringIntervalCount} {form.recurringInterval}(s).
-                      {form.recurringInterval === 'day' ? ' Razorpay requires daily ≥ 7.' : ''}
+                      {form.recurringInterval === 'day' && form.recurringIntervalCount < 7
+                        ? ' Razorpay price creation will be skipped for this plan (daily requires interval count ≥ 7).'
+                        : ''}
                     </div>
                   )}
                   {/* Info box when toggling plan type */}

@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const LAST_RUN_KEY = 'user:expiry-cleanup:last-run-at';
 const RUN_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export function TokenExpiryCleanupPing() {
+  const router = useRouter();
+
   useEffect(() => {
     // Only run on authenticated app areas; avoid running on auth pages
     // like /sign-in where a reload would look like a redirect loop.
@@ -57,9 +60,11 @@ export function TokenExpiryCleanupPing() {
 
         const data = (await res.json()) as { cleared?: boolean };
 
-        // If tokens were cleared, force a hard reload so any cached UI state updates.
+        // If tokens were cleared, refresh route data without forcing a full-page reload.
         if (data.cleared === true) {
-          window.location.reload();
+          if (document.visibilityState === 'visible') {
+            router.refresh();
+          }
         }
       } catch {
         // Silent fail - don't disrupt user experience if check fails
@@ -71,7 +76,7 @@ export function TokenExpiryCleanupPing() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   return null;
 }

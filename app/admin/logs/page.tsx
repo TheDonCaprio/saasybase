@@ -171,16 +171,14 @@ export default async function AdminLogsPage() {
   ];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <DashboardPageHeader
         accent="violet"
         eyebrow="Observability"
         eyebrowIcon={<FontAwesomeIcon icon={faListAlt} />}
         title="System log monitor"
-        description="Track platform warnings and errors flowing in from background jobs, webhooks, and core processes. Stay ahead of production issues by watching error trends and warning spikes. "
         stats={heroStats}
-      >
-      </DashboardPageHeader>
+      />
 
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {metricCards.map((card) => (

@@ -28,7 +28,7 @@ export default async function AdminBlogPostsPage() {
   const systemPosts = result.overallTotals?.system ?? result.posts.filter((post) => post.system).length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <DashboardPageHeader
         accent="rose"
         eyebrow="Content"
@@ -47,24 +47,7 @@ export default async function AdminBlogPostsPage() {
             tone: publishedPosts > 0 ? 'emerald' : 'slate'
           }
         ]}
-      >
-        <div className="flex items-center justify-between">
-          <p>
-            Posts publish under
-            <code className="ml-1 rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-900 dark:bg-slate-900 dark:text-white">/blog/&lt;slug&gt;</code>
-            by default. Reuse them across landing pages or curated feeds.
-          </p>
-          <Link
-            href="/admin/blog/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Write post
-          </Link>
-        </div>
-      </DashboardPageHeader>
+      />
       <SitePagesList
         initialPages={dto}
         initialTotalCount={result.totalCount}

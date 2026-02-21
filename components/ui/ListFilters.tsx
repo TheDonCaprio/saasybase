@@ -309,6 +309,17 @@ export function ListFilters<T extends string = string>({
               </svg>
               <span className="ml-2">Filters</span>
             </button>
+            {additionalButton && (
+              <button
+                onClick={additionalButton.onClick}
+                disabled={additionalButton.disabled}
+                className={additionalButton.className ?? `inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-white hover:text-slate-800 dark:border-neutral-700 dark:bg-neutral-900/40 dark:text-neutral-200 ${additionalButton.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                title={additionalButton.label}
+              >
+                <span className="hidden sm:inline">{additionalButton.label}</span>
+                <span className="sm:hidden text-[13px]">{additionalButton.label}</span>
+              </button>
+            )}
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -322,17 +333,6 @@ export function ListFilters<T extends string = string>({
                   <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
                 </svg>
                 <span className="uppercase tracking-wide text-xs">Refresh</span>
-              </button>
-            )}
-            {additionalButton && (
-              <button
-                onClick={additionalButton.onClick}
-                disabled={additionalButton.disabled}
-                className={additionalButton.className ?? `inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-white hover:text-slate-800 dark:border-neutral-700 dark:bg-neutral-900/40 dark:text-neutral-200 ${additionalButton.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-                title={additionalButton.label}
-              >
-                <span className="hidden sm:inline">{additionalButton.label}</span>
-                <span className="sm:hidden text-[13px]">{additionalButton.label}</span>
               </button>
             )}
             {/* render trailing content inline on mobile so extra actions (like MarkAllRead) appear on same row */}

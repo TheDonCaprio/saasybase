@@ -246,32 +246,12 @@ export default async function BillingPage({ searchParams }: PageProps) {
             tone: planActive ? 'emerald' : 'slate'
           },
           {
-            label: 'Cycle progress',
-            value: cycleProgressValue,
-            helper: cycleProgressHelper,
-            tone: planActive ? 'blue' : 'slate'
-          },
-          {
             label: `Remaining ${tokenLabel}`,
             value: tokenStatValue,
             helper: tokenStatHelper,
             tone: tokenTone
           },
-          {
-            label: 'Last invoice',
-            value: latestPaymentDate ?? '—',
-            helper: latestPaymentHelper,
-            tone: latestPayment ? 'indigo' : 'slate'
-          }
         ]}
-        actions={
-          <Link
-            href="/dashboard/plan"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
-          >
-            Change plan
-          </Link>
-        }
       />
 
   <div className="grid gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]">

@@ -28,12 +28,11 @@ export default async function AdminPagesPage() {
   const systemPages = result.overallTotals?.system ?? result.pages.filter((page) => page.system).length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <DashboardPageHeader
         accent="violet"
         eyebrow="Content"
         title="Site pages"
-        description=""
         stats={[
           {
             label: 'Total pages',
@@ -48,23 +47,7 @@ export default async function AdminPagesPage() {
             tone: publishedPages > 0 ? 'emerald' : 'slate'
           },
         ]}
-      >
-        <div className="flex items-center justify-between">
-          <p>
-            Core system pages like terms and privacy are protected but still editable here. All published pages resolve at
-            <code className="ml-1 rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-900 dark:bg-slate-900 dark:text-white">/&lt;slug&gt;</code> unless you map them elsewhere.
-          </p>
-          <Link
-            href="/admin/pages/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add
-          </Link>
-        </div>
-      </DashboardPageHeader>
+      />
       <SitePagesList
         initialPages={dto}
         initialTotalCount={result.totalCount}

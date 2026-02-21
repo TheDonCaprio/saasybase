@@ -55,13 +55,13 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
 
   const informativeCardClasses = activeTicketsCount > 0
     ? dashboardMutedPanelClass(
-        'p-4 text-sm leading-relaxed border-amber-200/80 bg-amber-50/80 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-100'
+        'p-2 sm:p-3 text-xs leading-tight border-amber-200/80 bg-amber-50/80 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-100'
       )
-    : dashboardMutedPanelClass('p-4 text-sm leading-relaxed text-slate-600 dark:text-neutral-200');
+    : dashboardMutedPanelClass('p-2 sm:p-3 text-xs leading-tight text-slate-600 dark:text-neutral-200');
 
   const informativeHeadingClass = activeTicketsCount > 0
-    ? 'text-sm font-semibold text-amber-900 dark:text-amber-100'
-    : 'text-sm font-semibold text-slate-700 dark:text-neutral-100';
+    ? 'text-xs font-semibold text-amber-900 dark:text-amber-100'
+    : 'text-xs font-semibold text-slate-700 dark:text-neutral-100';
 
   const handleTicketSuccess = () => {
     onTicketSubmitted?.();
@@ -69,29 +69,27 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
   };
 
   return (
-    <div className="space-y-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-slate-900 dark:text-neutral-50">Submit a support request</h3>
-          <p className="text-sm text-slate-600 dark:text-neutral-300">
-            Share as much context as you can. Screenshots, links, and recent changes help our team reproduce issues faster.
-          </p>
+    <div className="space-y-4 p-3 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">Submit a support request</h3>
+
         </div>
         <div className={informativeCardClasses}>
           <div className={informativeHeadingClass}>Avoid duplicate tickets</div>
-          <p>
-            {activeTicketMessage} If you already have an open request, reply to that conversation instead of creating another one so we can keep everything in one thread.
+          <p className="text-[13px] leading-tight">
+            {activeTicketMessage} Reply to an existing request if one exists rather than creating a new ticket.
           </p>
         </div>
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-slate-500 dark:text-neutral-400">
-          Average response time: <span className="text-slate-700 dark:text-neutral-200">within 24 hours</span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-[11px] text-slate-500 dark:text-neutral-400">
+          Avg response: <span className="text-slate-700 dark:text-neutral-200">within 24h</span>
         </div>
         <button
           type="button"
           onClick={openModal}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           Open support form
         </button>

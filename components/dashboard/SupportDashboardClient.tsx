@@ -93,6 +93,30 @@ export function SupportDashboardClient({
     },
   ];
 
+  const statusCards = [
+    {
+      label: 'Open',
+      value: stats.open,
+      helper: 'Waiting for our response',
+      accent: 'text-amber-500 dark:text-amber-300',
+      badge: 'bg-amber-100/60 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100'
+    },
+    {
+      label: 'In progress',
+      value: stats.inProgress,
+      helper: 'Our team is on it',
+      accent: 'text-sky-500 dark:text-sky-300',
+      badge: 'bg-sky-100/60 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100'
+    },
+    {
+      label: 'Closed',
+      value: stats.closed,
+      helper: 'Resolved conversations',
+      accent: 'text-emerald-500 dark:text-emerald-300',
+      badge: 'bg-emerald-100/60 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-100'
+    }
+  ];
+
   return (
   <div className="grid gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]">
       <div className="space-y-6 min-w-0">
@@ -126,21 +150,19 @@ export function SupportDashboardClient({
         </section>
       </div>
 
-  <aside className="space-y-6 min-w-0">
-        <div className={dashboardPanelClass('space-y-4 p-4 sm:p-6')}>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Snapshot</h3>
-          <div className="space-y-3">
-            {quickStats.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-slate-200/80 bg-white/40 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-neutral-500">{item.label}</div>
-                <div className="mt-1 text-2xl font-semibold text-slate-900 dark:text-neutral-50">{item.value}</div>
-                <p className="text-xs text-slate-500 dark:text-neutral-400">{item.helper}</p>
+      <aside className="space-y-6 min-w-0">
+        <div className={dashboardPanelClass('space-y-3 p-3')}>
+          {statusCards.map((card) => (
+            <div key={card.label} className={dashboardMutedPanelClass('p-2 sm:p-3')}>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${card.badge}`}>
+                  {card.label}
+                </span>
+                <div className={`text-lg font-semibold ${card.accent}`}>{card.value}</div>
               </div>
-            ))}
-          </div>
-          <div className={dashboardMutedPanelClass('p-4 text-sm leading-relaxed text-slate-600 dark:text-neutral-200')}>
-            Having trouble finding an answer? Open a ticket and we&apos;ll follow up via email too, so you never miss an update.
-          </div>
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-neutral-300 truncate">{card.helper}</p>
+            </div>
+          ))}
         </div>
 
         <div className={dashboardMutedPanelClass('space-y-4 p-4 sm:p-6 text-sm leading-relaxed text-slate-600 dark:text-neutral-200')}>

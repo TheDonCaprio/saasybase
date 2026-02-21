@@ -289,18 +289,6 @@ export function SupportTicketsList({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {statusCards.map((card) => (
-          <div key={card.label} className={dashboardMutedPanelClass('p-4 sm:p-5 space-y-2')}>
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${card.badge}`}>
-              {card.label}
-            </span>
-            <div className={`text-2xl font-semibold ${card.accent}`}>{card.value}</div>
-            <p className="text-xs text-slate-500 dark:text-neutral-300">{card.helper}</p>
-          </div>
-        ))}
-      </div>
-
       <div className={dashboardMutedPanelClass('p-4 sm:p-5')}>
         <ListFilters
           search={search}

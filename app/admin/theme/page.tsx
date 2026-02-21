@@ -60,17 +60,14 @@ export default async function AdminThemePage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white p-8 shadow-xl dark:border-violet-500/30 dark:from-violet-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:shadow-[0_0_40px_rgba(139,92,246,0.2)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-3 max-w-2xl">
+      <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white p-6 shadow-sm dark:border-violet-500/30 dark:from-violet-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:shadow-[0_0_24px_rgba(139,92,246,0.08)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-600 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-100">
               <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse dark:bg-violet-300" />
               Theme designer
             </div>
             <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl dark:text-neutral-50">Theme & Navigation</h1>
-            <p className="text-sm text-slate-600 dark:text-neutral-200/80">
-              Curate how visitors experience <span className="font-semibold text-slate-900 dark:text-neutral-100">{siteName}</span> across the marketing site and dashboard. Update navigation, footer details, and inject custom CSS or JavaScript snippets.
-            </p>
           </div>
           <div className="rounded-2xl border border-violet-200 bg-white/70 px-4 py-3 text-sm text-slate-600 shadow-sm backdrop-blur-sm dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-neutral-100 dark:shadow-inner">
             <p className="text-xs uppercase tracking-wide text-violet-500 dark:text-violet-200/80">Live preview</p>

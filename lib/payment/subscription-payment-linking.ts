@@ -272,14 +272,15 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
     consumeCouponRedemptionFromMetadata: (metadata?: Record<string, unknown> | null) => Promise<void>;
 }): Promise<boolean> {
     const { session, userId, plan, providerKey, finalPaymentIntent, amountCents } = params;
+    if (providerKey !== 'paystack') return false;
     if (!finalPaymentIntent) return false;
 
-    const existingActiveSub = await prisma.subscription.findFirst({
+    const candidateSub = await prisma.subscription.findFirst({
         where: {
             userId,
             planId: plan.id,
             paymentProvider: providerKey,
-            status: { in: ['ACTIVE', 'EXPIRED'] },
+            status: { in: ['ACTIVE', 'PENDING', 'EXPIRED'] },
             expiresAt: { gt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }
         },
         orderBy: { expiresAt: 'desc' },
@@ -293,11 +294,11 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
     });
 
     let hasSucceededPaymentForSub = false;
-    if (existingActiveSub) {
+    if (candidateSub) {
         try {
             const existingSucceeded = await prisma.payment.findFirst({
                 where: {
-                    subscriptionId: existingActiveSub.id,
+                    subscriptionId: candidateSub.id,
                     status: 'SUCCEEDED',
                 },
                 select: { id: true },
@@ -306,20 +307,39 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
         } catch (err) {
             Logger.warn('Failed to check existing payments for Paystack renewal detection', {
                 userId,
-                subscriptionId: existingActiveSub.id,
+                subscriptionId: candidateSub.id,
                 error: toError(err).message,
             });
         }
     }
 
-    if (!(existingActiveSub && hasSucceededPaymentForSub)) {
+    const now = Date.now();
+    const activationWindowStart = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const activationWindowEnd = new Date(now + 2 * 24 * 60 * 60 * 1000);
+
+    const shouldTreatAsRenewal = Boolean(candidateSub && hasSucceededPaymentForSub);
+    const shouldTreatAsActivationOfPrecreatedSub = Boolean(
+        candidateSub
+        && !hasSucceededPaymentForSub
+        && candidateSub.externalSubscriptionId
+        // Guardrail: only treat as activation when the local subscription boundary is
+        // near “now”. This avoids accidentally linking unrelated/older unpaid records.
+        && candidateSub.expiresAt >= activationWindowStart
+        && candidateSub.expiresAt <= activationWindowEnd
+    );
+
+    if (!shouldTreatAsRenewal && !shouldTreatAsActivationOfPrecreatedSub) {
+        return false;
+    }
+
+    if (!candidateSub) {
         return false;
     }
 
     const organizationContext = await params.resolveOrganizationContext(userId);
     const resolvedOrganizationId = organizationContext?.role === 'OWNER'
         ? organizationContext.organization.id
-        : (existingActiveSub.organizationId ?? null);
+        : (candidateSub.organizationId ?? null);
 
     const shouldResetTokensOnRenewal = await shouldClearPaidTokensOnRenewal(Boolean(plan.autoRenew));
 
@@ -328,7 +348,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
             await tx.payment.create({
                 data: {
                     userId,
-                    subscriptionId: existingActiveSub.id,
+                    subscriptionId: candidateSub.id,
                     planId: plan.id,
                     organizationId: resolvedOrganizationId,
                     amountCents,
@@ -372,42 +392,49 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
             }
         });
 
-        await updateSubscriptionLastPaymentAmount(existingActiveSub.id);
+        await updateSubscriptionLastPaymentAmount(candidateSub.id);
 
         let refreshedPeriodEnd: Date | null = null;
-        if (existingActiveSub.externalSubscriptionId) {
+        if (candidateSub.externalSubscriptionId) {
             const refreshed = await params.refreshSubscriptionExpiryFromProvider({
-                dbSubscriptionId: existingActiveSub.id,
-                providerSubscriptionId: existingActiveSub.externalSubscriptionId,
-                wasLocallyExpired: existingActiveSub.status === 'EXPIRED',
+                dbSubscriptionId: candidateSub.id,
+                providerSubscriptionId: candidateSub.externalSubscriptionId,
+                wasLocallyExpired: candidateSub.status === 'EXPIRED',
                 resurrectOnlyIfFuture: false,
                 warnMessage: 'Unable to refresh subscription expiry after Paystack renewal-style charge',
             });
             refreshedPeriodEnd = refreshed.refreshedPeriodEnd;
         }
 
-        if (existingActiveSub.status === 'EXPIRED' && !refreshedPeriodEnd) {
+        if (candidateSub.status === 'EXPIRED' && !refreshedPeriodEnd) {
             const durationHours = typeof plan.durationHours === 'number' ? plan.durationHours : 0;
             if (durationHours > 0) {
-                const base = Math.max(existingActiveSub.expiresAt.getTime(), Date.now());
+                const base = Math.max(candidateSub.expiresAt.getTime(), Date.now());
                 const nextExpiresAt = new Date(base + durationHours * 60 * 60 * 1000);
-                await params.markSubscriptionActive(existingActiveSub.id, nextExpiresAt);
+                await params.markSubscriptionActive(candidateSub.id, nextExpiresAt);
             } else {
-                await params.markSubscriptionActive(existingActiveSub.id);
+                await params.markSubscriptionActive(candidateSub.id);
             }
+        } else if (candidateSub.status === 'PENDING') {
+            // If this was a pre-created Paystack subscription that only charges at cycle end,
+            // the first charge is the proof of activation.
+            await params.markSubscriptionActive(candidateSub.id, refreshedPeriodEnd ?? undefined);
         }
 
-        Logger.info('Recorded Paystack renewal-style charge as SUCCEEDED', {
+        Logger.info('Recorded Paystack renewal/activation-style charge as SUCCEEDED', {
             sessionId: session.id,
             userId,
             planId: plan.id,
-            subscriptionId: existingActiveSub.id,
+            subscriptionId: candidateSub.id,
             externalPaymentId: finalPaymentIntent,
+            treatedAs: shouldTreatAsActivationOfPrecreatedSub ? 'activation' : 'renewal',
         });
 
         try {
-            const renewalTitle = 'Subscription Renewed';
-            const renewalMessage = `Your subscription to ${plan.name} has been renewed.`;
+            const renewalTitle = shouldTreatAsActivationOfPrecreatedSub ? 'Subscription Activated' : 'Subscription Renewed';
+            const renewalMessage = shouldTreatAsActivationOfPrecreatedSub
+                ? `Your subscription to ${plan.name} is now active.`
+                : `Your subscription to ${plan.name} has been renewed.`;
 
             const existingRecentNotification = await params.findRecentNotificationByExactMessage(
                 userId,
@@ -419,7 +446,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
             if (!existingRecentNotification) {
                 const activeCurrency = await getActiveCurrencyAsync();
                 const refreshedSub = await prisma.subscription.findUnique({
-                    where: { id: existingActiveSub.id },
+                    where: { id: candidateSub.id },
                     select: { expiresAt: true },
                 });
 
@@ -439,9 +466,11 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
 
                 await sendAdminNotificationEmail({
                     userId,
-                    title: 'Subscription renewed',
-                    alertType: 'renewal',
-                    message: `User ${userId} renewed ${plan.name}. Subscription: ${existingActiveSub.id}`,
+                    title: shouldTreatAsActivationOfPrecreatedSub ? 'Subscription activated' : 'Subscription renewed',
+                    alertType: shouldTreatAsActivationOfPrecreatedSub ? 'new_purchase' : 'renewal',
+                    message: shouldTreatAsActivationOfPrecreatedSub
+                        ? `User ${userId} activated ${plan.name}. Subscription: ${candidateSub.id}`
+                        : `User ${userId} renewed ${plan.name}. Subscription: ${candidateSub.id}`,
                     templateKey: 'admin_notification',
                     variables: {
                         planName: plan.name,
@@ -454,7 +483,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
         } catch (notifErr) {
             Logger.warn('Failed to send renewal notification for Paystack renewal charge', {
                 userId,
-                subscriptionId: existingActiveSub.id,
+                subscriptionId: candidateSub.id,
                 error: toError(notifErr).message,
             });
         }
@@ -466,7 +495,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
             sessionId: session.id,
             userId,
             planId: plan.id,
-            subscriptionId: existingActiveSub.id,
+            subscriptionId: candidateSub.id,
             error: toError(err).message
         });
         return false;

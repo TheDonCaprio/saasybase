@@ -666,9 +666,12 @@ export async function POST(req: NextRequest) {
 
       const checkoutPriceId = discountedSubscriptionPriceId || priceId;
       const typedMode: 'payment' | 'subscription' = mode === 'subscription' ? 'subscription' : 'payment';
+      const checkoutCurrency = getProviderCurrency(getCurrentProviderKey());
       const session = await paymentService.provider.createCheckoutSession({
         userId,
         priceId: checkoutPriceId,
+        amount: typedMode === 'payment' ? checkoutAmount : undefined,
+        currency: typedMode === 'payment' ? checkoutCurrency : undefined,
         mode: typedMode,
         successUrl,
         cancelUrl,

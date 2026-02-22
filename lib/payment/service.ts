@@ -533,6 +533,7 @@ export class PaymentService {
             ...this.getPendingSubscriptionRenewalDeps(),
         });
         if (didHandleRenewalStyleCharge) {
+            await syncOrganizationEligibilityForUser(userId);
             return;
         }
 

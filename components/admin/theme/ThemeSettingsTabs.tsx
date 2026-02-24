@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ThemeLink } from '../../../lib/settings';
+import type { ThemeLink } from '../../../lib/settings';
 import { showToast } from '../../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -23,9 +23,755 @@ import {
   faEye,
   faEyeSlash,
   faArrowUp,
-  faArrowDown
+  faArrowDown,
+  faPalette,
 } from '@fortawesome/free-solid-svg-icons';
 import SimplePageEditor from '../pages/SimplePageEditor';
+
+// ─── Color-palette data (client-side types & defaults) ──────────────────────
+
+type ColorHexKey =
+  | 'bgPrimary'
+  | 'bgSecondary'
+  | 'panelBg'
+  | 'heroBg'
+  | 'bgTertiary'
+  | 'bgQuaternary'
+  | 'textPrimary'
+  | 'textSecondary'
+  | 'textTertiary'
+  | 'borderPrimary'
+  | 'borderSecondary'
+  | 'accentPrimary'
+  | 'accentHover'
+  | 'headerBg'
+  | 'sidebarBg'
+  | 'pageGradientFrom'
+  | 'pageGradientVia'
+  | 'pageGradientTo'
+  | 'heroGradientFrom'
+  | 'heroGradientVia'
+  | 'heroGradientTo'
+  | 'cardGradientFrom'
+  | 'cardGradientVia'
+  | 'cardGradientTo'
+  | 'tabsGradientFrom'
+  | 'tabsGradientVia'
+  | 'tabsGradientTo'
+  | 'pageGlow';
+
+type OpacityKey = 'headerOpacity' | 'sidebarOpacity' | 'glowOpacity';
+
+type ColorTokens = {
+  bgPrimary: string;
+  bgSecondary: string;
+  panelBg: string;
+  heroBg: string;
+  bgTertiary: string;
+  bgQuaternary: string;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  borderPrimary: string;
+  borderSecondary: string;
+  accentPrimary: string;
+  accentHover: string;
+  headerBg: string;
+  headerOpacity: number;
+  sidebarBg: string;
+  sidebarOpacity: number;
+  pageGradientFrom: string;
+  pageGradientVia: string;
+  pageGradientTo: string;
+  heroGradientFrom: string;
+  heroGradientVia: string;
+  heroGradientTo: string;
+  cardGradientFrom: string;
+  cardGradientVia: string;
+  cardGradientTo: string;
+  tabsGradientFrom: string;
+  tabsGradientVia: string;
+  tabsGradientTo: string;
+  pageGlow: string;
+  glowOpacity: number;
+};
+
+type ElementGradientKeys =
+  | 'heroGradientFrom'
+  | 'heroGradientVia'
+  | 'heroGradientTo'
+  | 'cardGradientFrom'
+  | 'cardGradientVia'
+  | 'cardGradientTo'
+  | 'tabsGradientFrom'
+  | 'tabsGradientVia'
+  | 'tabsGradientTo';
+
+type PartialColorTokens = Omit<ColorTokens, ElementGradientKeys> & Partial<Pick<ColorTokens, ElementGradientKeys>>;
+
+const fillElementGradients = (t: PartialColorTokens): ColorTokens => {
+  return {
+    ...(t as Omit<ColorTokens, ElementGradientKeys>),
+    heroGradientFrom: t.heroGradientFrom ?? t.pageGradientFrom,
+    heroGradientVia: t.heroGradientVia ?? t.pageGradientVia,
+    heroGradientTo: t.heroGradientTo ?? t.pageGradientTo,
+    cardGradientFrom: t.cardGradientFrom ?? t.pageGradientFrom,
+    cardGradientVia: t.cardGradientVia ?? t.pageGradientVia,
+    cardGradientTo: t.cardGradientTo ?? t.pageGradientTo,
+    tabsGradientFrom: t.tabsGradientFrom ?? t.pageGradientFrom,
+    tabsGradientVia: t.tabsGradientVia ?? t.pageGradientVia,
+    tabsGradientTo: t.tabsGradientTo ?? t.pageGradientTo,
+  };
+};
+
+type ThemeColorPalette = { light: ColorTokens; dark: ColorTokens };
+
+type ThemeColorPreset = { name: string; light: ColorTokens; dark: ColorTokens };
+
+const DEFAULT_LIGHT_COLORS: ColorTokens = {
+  bgPrimary: '#ffffff', bgSecondary: '#f9fafb', panelBg: '#f9fafb', heroBg: '#f9fafb', bgTertiary: '#f3f4f6', bgQuaternary: '#e5e7eb',
+  textPrimary: '#111827', textSecondary: '#4b5563', textTertiary: '#6b7280',
+  borderPrimary: '#d1d5db', borderSecondary: '#9ca3af',
+  accentPrimary: '#3b82f6', accentHover: '#2563eb',
+  headerBg: '#ffffff', headerOpacity: 0.8,
+  sidebarBg: '#ffffff', sidebarOpacity: 0.9,
+  pageGradientFrom: '#f0f9ff', pageGradientVia: '#eef2ff', pageGradientTo: '#ffffff',
+  heroGradientFrom: '#f0f9ff', heroGradientVia: '#eef2ff', heroGradientTo: '#ffffff',
+  cardGradientFrom: '#f0f9ff', cardGradientVia: '#eef2ff', cardGradientTo: '#ffffff',
+  tabsGradientFrom: '#f0f9ff', tabsGradientVia: '#eef2ff', tabsGradientTo: '#ffffff',
+  pageGlow: '#3b82f6', glowOpacity: 0.18,
+};
+
+const DEFAULT_DARK_COLORS: ColorTokens = {
+  bgPrimary: '#0a0a0a', bgSecondary: '#171717', panelBg: '#171717', heroBg: '#171717', bgTertiary: '#262626', bgQuaternary: '#404040',
+  textPrimary: '#f5f5f5', textSecondary: '#a3a3a3', textTertiary: '#737373',
+  borderPrimary: '#404040', borderSecondary: '#525252',
+  accentPrimary: '#3b82f6', accentHover: '#2563eb',
+  headerBg: '#0a0a0a', headerOpacity: 0.7,
+  sidebarBg: '#171717', sidebarOpacity: 0.5,
+  pageGradientFrom: '#171717', pageGradientVia: '#312e81', pageGradientTo: '#0a0a0a',
+  heroGradientFrom: '#171717', heroGradientVia: '#312e81', heroGradientTo: '#0a0a0a',
+  cardGradientFrom: '#171717', cardGradientVia: '#312e81', cardGradientTo: '#0a0a0a',
+  tabsGradientFrom: '#171717', tabsGradientVia: '#312e81', tabsGradientTo: '#0a0a0a',
+  pageGlow: '#6366f1', glowOpacity: 0.12,
+};
+
+const COLOR_LABELS: Record<ColorHexKey, string> = {
+  bgPrimary:       'Page background',
+  bgSecondary:     'Stat / info cards',
+  heroBg:          'Top hero',
+  panelBg:         'Panels',
+  bgTertiary:      'Input fields',
+  bgQuaternary:    'Hover fills',
+  textPrimary:     'Primary text',
+  textSecondary:   'Secondary text',
+  textTertiary:    'Placeholder text',
+  borderPrimary:   'Primary border',
+  borderSecondary: 'Secondary border',
+  accentPrimary:   'Primary accent',
+  accentHover:     'Accent hover',
+  headerBg:        'Header background',
+  sidebarBg:       'Sidebar background',
+  pageGradientFrom:'Content area (from)',
+  pageGradientVia: 'Content area (via)',
+  pageGradientTo:  'Content area (to)',
+  heroGradientFrom:'Top hero gradient (from)',
+  heroGradientVia: 'Top hero gradient (via)',
+  heroGradientTo:  'Top hero gradient (to)',
+  cardGradientFrom:'Stat / info gradient (from)',
+  cardGradientVia: 'Stat / info gradient (via)',
+  cardGradientTo:  'Stat / info gradient (to)',
+  tabsGradientFrom:'Tab strip gradient (from)',
+  tabsGradientVia: 'Tab strip gradient (via)',
+  tabsGradientTo:  'Tab strip gradient (to)',
+  pageGlow:        'Backdrop glow accent',
+};
+
+const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
+  { title: 'Backgrounds', keys: ['bgPrimary', 'bgTertiary', 'bgQuaternary'] },
+  { title: 'Surfaces', keys: ['bgSecondary', 'heroBg', 'panelBg'] },
+  { title: 'Text',        keys: ['textPrimary', 'textSecondary', 'textTertiary'] },
+  { title: 'Borders',     keys: ['borderPrimary', 'borderSecondary'] },
+  { title: 'Accents',     keys: ['accentPrimary', 'accentHover'] },
+  { title: 'Layout',      keys: ['headerBg', 'sidebarBg'] },
+  { title: 'Content Area', keys: ['pageGradientFrom', 'pageGradientVia', 'pageGradientTo'] },
+  { title: 'Top Hero Gradient', keys: ['heroGradientFrom', 'heroGradientVia', 'heroGradientTo'] },
+  { title: 'Stat / Info Gradient', keys: ['cardGradientFrom', 'cardGradientVia', 'cardGradientTo'] },
+  { title: 'Tab Strip Gradient', keys: ['tabsGradientFrom', 'tabsGradientVia', 'tabsGradientTo'] },
+  { title: 'Backdrop Glow', keys: ['pageGlow'] },
+];
+
+const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTokens }> = [
+  {
+    name: 'Default',
+    accent: DEFAULT_LIGHT_COLORS.accentPrimary,
+    colors: DEFAULT_LIGHT_COLORS,
+  },
+  {
+    name: 'Warm',
+    accent: '#fef3dc',
+    colors: {
+      bgPrimary: '#fffbf5', bgSecondary: '#fef8ee', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#fde9be',
+      textPrimary: '#1c1009', textSecondary: '#78461d', textTertiary: '#9a6b3c',
+      borderPrimary: '#f5d9a0', borderSecondary: '#e8bc6a',
+      accentPrimary: '#f59e0b', accentHover: '#d97706',
+      headerBg: '#fffbf5', headerOpacity: 0.8,
+      sidebarBg: '#fffbf5', sidebarOpacity: 0.9,
+      pageGradientFrom: '#fffbf5', pageGradientVia: '#fef3dc', pageGradientTo: '#ffffff',
+      pageGlow: '#f59e0b', glowOpacity: 0.18,
+    },
+  },
+  {
+    name: 'Ocean',
+    accent: '#e0f2fe',
+    colors: {
+      bgPrimary: '#f0f9ff', bgSecondary: '#e0f2fe', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#7dd3fc',
+      textPrimary: '#0c2d48', textSecondary: '#0369a1', textTertiary: '#0284c7',
+      borderPrimary: '#bae6fd', borderSecondary: '#7dd3fc',
+      accentPrimary: '#0ea5e9', accentHover: '#0284c7',
+      headerBg: '#f0f9ff', headerOpacity: 0.8,
+      sidebarBg: '#f0f9ff', sidebarOpacity: 0.9,
+      pageGradientFrom: '#f0f9ff', pageGradientVia: '#e0f2fe', pageGradientTo: '#ffffff',
+      pageGlow: '#0ea5e9', glowOpacity: 0.18,
+    },
+  },
+  {
+    name: 'Lavender',
+    accent: '#f3e8ff',
+    colors: {
+      bgPrimary: '#faf5ff', bgSecondary: '#f3e8ff', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#d8b4fe',
+      textPrimary: '#2e1065', textSecondary: '#7e22ce', textTertiary: '#9333ea',
+      borderPrimary: '#e9d5ff', borderSecondary: '#d8b4fe',
+      accentPrimary: '#a855f7', accentHover: '#9333ea',
+      headerBg: '#faf5ff', headerOpacity: 0.8,
+      sidebarBg: '#faf5ff', sidebarOpacity: 0.9,
+      pageGradientFrom: '#faf5ff', pageGradientVia: '#f3e8ff', pageGradientTo: '#ffffff',
+      pageGlow: '#a855f7', glowOpacity: 0.18,
+    },
+  },
+  {
+    name: 'Sage',
+    accent: '#dcfce7',
+    colors: {
+      bgPrimary: '#f0fdf4', bgSecondary: '#dcfce7', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#86efac',
+      textPrimary: '#052e16', textSecondary: '#15803d', textTertiary: '#16a34a',
+      borderPrimary: '#bbf7d0', borderSecondary: '#86efac',
+      accentPrimary: '#22c55e', accentHover: '#16a34a',
+      headerBg: '#f0fdf4', headerOpacity: 0.8,
+      sidebarBg: '#f0fdf4', sidebarOpacity: 0.9,
+      pageGradientFrom: '#f0fdf4', pageGradientVia: '#dcfce7', pageGradientTo: '#ffffff',
+      pageGlow: '#22c55e', glowOpacity: 0.18,
+    },
+  },
+  {
+    name: 'Sunset',
+    accent: '#fff1f2',
+    colors: {
+      bgPrimary: '#fff7f7', bgSecondary: '#fff1f2', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#fecdd3',
+      textPrimary: '#1f0b0f', textSecondary: '#7f1d1d', textTertiary: '#9f1239',
+      borderPrimary: '#fecdd3', borderSecondary: '#fda4af',
+      accentPrimary: '#fb7185', accentHover: '#e11d48',
+      headerBg: '#fff7f7', headerOpacity: 0.82,
+      sidebarBg: '#fff7f7', sidebarOpacity: 0.92,
+      pageGradientFrom: '#fff7f7', pageGradientVia: '#ffe4e6', pageGradientTo: '#ffffff',
+      pageGlow: '#fb7185', glowOpacity: 0.18,
+    },
+  },
+  {
+    name: 'Citrine',
+    accent: '#fffbeb',
+    colors: {
+      bgPrimary: '#ffffff', bgSecondary: '#fffbeb', panelBg: DEFAULT_LIGHT_COLORS.panelBg, heroBg: DEFAULT_LIGHT_COLORS.heroBg, bgTertiary: DEFAULT_LIGHT_COLORS.bgTertiary, bgQuaternary: '#fde68a',
+      textPrimary: '#1f1500', textSecondary: '#78350f', textTertiary: '#92400e',
+      borderPrimary: '#fde68a', borderSecondary: '#fbbf24',
+      accentPrimary: '#f59e0b', accentHover: '#b45309',
+      headerBg: '#fffbeb', headerOpacity: 0.8,
+      sidebarBg: '#fffbeb', sidebarOpacity: 0.9,
+      pageGradientFrom: '#fffbeb', pageGradientVia: '#fef3c7', pageGradientTo: '#ffffff',
+      pageGlow: '#f59e0b', glowOpacity: 0.16,
+    },
+  },
+];
+
+const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTokens }> = [
+  {
+    name: 'Default',
+    accent: DEFAULT_DARK_COLORS.accentPrimary,
+    colors: DEFAULT_DARK_COLORS,
+  },
+  {
+    name: 'Midnight',
+    accent: '#0a1628',
+    colors: {
+      bgPrimary: '#020616', bgSecondary: '#0a1628', panelBg: DEFAULT_DARK_COLORS.panelBg, heroBg: DEFAULT_DARK_COLORS.heroBg, bgTertiary: DEFAULT_DARK_COLORS.bgTertiary, bgQuaternary: '#1e3a5f',
+      textPrimary: '#e0f2fe', textSecondary: '#7dd3fc', textTertiary: '#38bdf8',
+      borderPrimary: '#1e3a5f', borderSecondary: '#2e4e7e',
+      accentPrimary: '#38bdf8', accentHover: '#0ea5e9',
+      headerBg: '#020616', headerOpacity: 0.7,
+      sidebarBg: '#0a1628', sidebarOpacity: 0.5,
+      pageGradientFrom: '#020616', pageGradientVia: '#0a1628', pageGradientTo: '#020616',
+      pageGlow: '#38bdf8', glowOpacity: 0.12,
+    },
+  },
+  {
+    name: 'Amethyst',
+    accent: '#1a0f2e',
+    colors: {
+      bgPrimary: '#0f0a1f', bgSecondary: '#1a0f2e', panelBg: DEFAULT_DARK_COLORS.panelBg, heroBg: DEFAULT_DARK_COLORS.heroBg, bgTertiary: DEFAULT_DARK_COLORS.bgTertiary, bgQuaternary: '#3d2468',
+      textPrimary: '#ede9fe', textSecondary: '#c084fc', textTertiary: '#a855f7',
+      borderPrimary: '#3d2468', borderSecondary: '#5b3a8a',
+      accentPrimary: '#c084fc', accentHover: '#a855f7',
+      headerBg: '#0f0a1f', headerOpacity: 0.7,
+      sidebarBg: '#1a0f2e', sidebarOpacity: 0.5,
+      pageGradientFrom: '#0f0a1f', pageGradientVia: '#1a0f2e', pageGradientTo: '#0a0a0a',
+      pageGlow: '#c084fc', glowOpacity: 0.12,
+    },
+  },
+  {
+    name: 'Obsidian',
+    accent: '#0a0a0a',
+    colors: {
+      bgPrimary: '#000000', bgSecondary: '#0a0a0a', panelBg: DEFAULT_DARK_COLORS.panelBg, heroBg: DEFAULT_DARK_COLORS.heroBg, bgTertiary: DEFAULT_DARK_COLORS.bgTertiary, bgQuaternary: '#1f1f1f',
+      textPrimary: '#ffffff', textSecondary: '#a0a0a0', textTertiary: '#6b6b6b',
+      borderPrimary: '#1f1f1f', borderSecondary: '#2d2d2d',
+      accentPrimary: '#6366f1', accentHover: '#4f46e5',
+      headerBg: '#000000', headerOpacity: 0.7,
+      sidebarBg: '#0a0a0a', sidebarOpacity: 0.5,
+      pageGradientFrom: '#000000', pageGradientVia: '#0a0a0a', pageGradientTo: '#000000',
+      pageGlow: '#6366f1', glowOpacity: 0.12,
+    },
+  },
+  {
+    name: 'Forest',
+    accent: '#0d261e',
+    colors: {
+      bgPrimary: '#071612', bgSecondary: '#0d261e', panelBg: DEFAULT_DARK_COLORS.panelBg, heroBg: DEFAULT_DARK_COLORS.heroBg, bgTertiary: DEFAULT_DARK_COLORS.bgTertiary, bgQuaternary: '#1c4d3a',
+      textPrimary: '#d1fae5', textSecondary: '#6ee7b7', textTertiary: '#34d399',
+      borderPrimary: '#1c4d3a', borderSecondary: '#276048',
+      accentPrimary: '#34d399', accentHover: '#10b981',
+      headerBg: '#071612', headerOpacity: 0.7,
+      sidebarBg: '#0d261e', sidebarOpacity: 0.5,
+      pageGradientFrom: '#071612', pageGradientVia: '#0d261e', pageGradientTo: '#071612',
+      pageGlow: '#34d399', glowOpacity: 0.12,
+    },
+  },
+  {
+    name: 'Neon Rose',
+    accent: '#0b0b14',
+    colors: {
+      bgPrimary: '#070712', bgSecondary: '#0b0b14', panelBg: DEFAULT_DARK_COLORS.panelBg, heroBg: DEFAULT_DARK_COLORS.heroBg, bgTertiary: DEFAULT_DARK_COLORS.bgTertiary, bgQuaternary: '#1f1f3a',
+      textPrimary: '#f5f5f5', textSecondary: '#fbcfe8', textTertiary: '#fda4af',
+      borderPrimary: '#1f1f3a', borderSecondary: '#2b2b55',
+      accentPrimary: '#fb7185', accentHover: '#e11d48',
+      headerBg: '#070712', headerOpacity: 0.72,
+      sidebarBg: '#0b0b14', sidebarOpacity: 0.52,
+      pageGradientFrom: '#070712', pageGradientVia: '#131326', pageGradientTo: '#000000',
+      pageGlow: '#fb7185', glowOpacity: 0.13,
+    },
+  },
+];
+
+interface ColorTabContentProps {
+  lightColors: ColorTokens;
+  darkColors: ColorTokens;
+  colorMode: 'light' | 'dark';
+  onColorMode: (m: 'light' | 'dark') => void;
+  onLightChange: (c: ColorTokens) => void;
+  onDarkChange:  (c: ColorTokens) => void;
+  customPresets?: ThemeColorPreset[];
+  onSavePreset?: (name: string) => void;
+  onDeletePreset?: (name: string) => void;
+}
+
+function ColorTabContent({
+  lightColors,
+  darkColors,
+  colorMode,
+  onColorMode,
+  onLightChange,
+  onDarkChange,
+  customPresets = [],
+  onSavePreset,
+  onDeletePreset,
+}: ColorTabContentProps) {
+  const colors  = colorMode === 'light' ? lightColors  : darkColors;
+  const builtInPresets = colorMode === 'light' ? LIGHT_PRESETS : DARK_PRESETS;
+  const setColors = colorMode === 'light' ? onLightChange : onDarkChange;
+
+  const custom = customPresets.map((preset) => {
+    const modeColors = colorMode === 'light' ? preset.light : preset.dark;
+    return {
+      name: preset.name,
+      accent: modeColors.accentPrimary,
+      colors: fillElementGradients(modeColors),
+      source: 'custom' as const,
+    };
+  });
+
+  const presets = [
+    ...builtInPresets.map((p) => ({ ...p, colors: fillElementGradients(p.colors), source: 'built-in' as const })),
+    ...custom,
+  ];
+
+  const updateColor = (key: ColorHexKey, value: string) => {
+    setColors({ ...colors, [key]: value });
+  };
+
+  const isPresetActive = (preset: ColorTokens) => {
+    const keys = Object.keys(DEFAULT_LIGHT_COLORS) as (keyof ColorTokens)[];
+    return keys.every((k) => colors[k] === preset[k]);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Mode toggle */}
+      <div className="flex items-center gap-2">
+        <div role="tablist" className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-neutral-700 dark:bg-neutral-900">
+          {(['light', 'dark'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={colorMode === m}
+              onClick={() => onColorMode(m)}
+              className={cx(
+                'rounded-md px-4 py-1.5 text-sm font-medium transition-all',
+                colorMode === m
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+              )}
+            >
+              {m === 'light' ? 'Light mode' : 'Dark mode'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Presets */}
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
+          {onSavePreset ? (
+            <button
+              type="button"
+              onClick={() => {
+                const name = (window.prompt('Save preset as…') || '').trim();
+                if (!name) return;
+                onSavePreset(name);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+              <FontAwesomeIcon icon={faFloppyDisk} className="h-3.5 w-3.5" />
+              Save current as preset
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {presets.map((preset) => {
+            const active = isPresetActive(preset.colors);
+            return (
+              <div key={`${preset.source}-${preset.name}`} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setColors(preset.colors)}
+                  className={cx(
+                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
+                    active
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-inner dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
+                  )}
+                >
+                  <span
+                    className="h-4 w-4 rounded-full border border-black/10 flex-shrink-0"
+                    style={{ backgroundColor: preset.accent }}
+                  />
+                  {preset.name}
+                  {active && <span className="text-xs opacity-60">(active)</span>}
+                </button>
+
+                {preset.source === 'custom' && onDeletePreset ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const ok = window.confirm(`Delete preset "${preset.name}"?`);
+                      if (!ok) return;
+                      onDeletePreset(preset.name);
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:text-neutral-100"
+                    aria-label={`Delete preset ${preset.name}`}
+                    title="Delete preset"
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Per-token pickers */}
+      <section className="space-y-6">
+        {COLOR_GROUPS.map((group) => (
+          <div key={group.title}>
+            <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">{group.title}</div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {group.keys.map((key) => (
+                <label key={key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+                  <span className="text-sm text-slate-700 dark:text-neutral-300">{COLOR_LABELS[key]}</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-6 w-6 rounded border border-black/10 flex-shrink-0"
+                      style={{ backgroundColor: colors[key] }}
+                    />
+                    <input
+                      type="color"
+                      value={colors[key]}
+                      onChange={(e) => updateColor(key, e.target.value)}
+                      className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 dark:border-neutral-600"
+                      title={COLOR_LABELS[key]}
+                    />
+                    <input
+                      type="text"
+                      value={colors[key]}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) updateColor(key, v.length === 7 ? v : v);
+                      }}
+                      maxLength={7}
+                      className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                    />
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Opacity controls */}
+      <section>
+        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Opacity</div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(() => {
+            const updateOpacityPercent = (key: OpacityKey, percent: number) => {
+              const clamped = Math.max(0, Math.min(100, percent));
+              const next = Math.round(clamped) / 100;
+              setColors({ ...colors, [key]: next });
+            };
+
+            const opacityFields: Array<{ key: OpacityKey; label: string }> = [
+              { key: 'headerOpacity', label: 'Header opacity' },
+              { key: 'sidebarOpacity', label: 'Sidebar opacity' },
+              { key: 'glowOpacity', label: 'Backdrop glow opacity' },
+            ];
+
+            return opacityFields.map((f) => (
+              <div key={`${colorMode}-${f.key}`} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+                <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((colors[f.key] ?? 0) * 100)}
+                    onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
+                    className="h-2 w-full flex-1 cursor-pointer"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((colors[f.key] ?? 0) * 100)}
+                    onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
+                    className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                    aria-label={`${f.label} percent`}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-neutral-400">Percent (0–100)</p>
+              </div>
+            ));
+          })()}
+        </div>
+      </section>
+
+      {/* Live preview */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Live preview</div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">{colorMode} mode</span>
+        </div>
+
+        {/* Browser chrome */}
+        <div className="overflow-hidden rounded-2xl border shadow-lg" style={{ borderColor: colors.borderPrimary }}>
+
+          {/* ── Topbar / header ── */}
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5"
+            style={{ backgroundColor: colors.headerBg, borderBottom: `1px solid ${colors.borderPrimary}` }}
+          >
+            {/* Brand */}
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-5 rounded-md flex-shrink-0" style={{ backgroundColor: colors.accentPrimary }} />
+              <span className="text-xs font-bold tracking-tight" style={{ color: colors.textPrimary }}>SaaSyBase</span>
+            </div>
+            {/* Nav links */}
+            <div className="hidden sm:flex items-center gap-4">
+              {['Pricing', 'Blog', 'Docs'].map((label) => (
+                <span key={label} className="text-xs" style={{ color: colors.textSecondary }}>{label}</span>
+              ))}
+            </div>
+            {/* CTA + avatar */}
+            <div className="flex items-center gap-2">
+              <div className="rounded-md px-2.5 py-1 text-xs font-semibold text-white" style={{ backgroundColor: colors.accentPrimary }}>
+                Get started
+              </div>
+              <div className="h-6 w-6 rounded-full" style={{ backgroundColor: colors.accentHover }} />
+            </div>
+          </div>
+
+          {/* ── Body: sidebar + main ── */}
+          <div
+            className="flex min-h-0"
+            style={{
+              background: `linear-gradient(135deg, ${colors.pageGradientFrom}, ${colors.pageGradientVia}, ${colors.pageGradientTo})`,
+            }}
+          >
+            {/* Sidebar */}
+            <div
+              className="w-32 flex-shrink-0 px-3 py-4 space-y-1"
+              style={{ backgroundColor: colors.sidebarBg, borderRight: `1px solid ${colors.borderPrimary}` }}
+            >
+              {[
+                { label: 'Overview', active: true },
+                { label: 'Billing', active: false },
+                { label: 'Analytics', active: false },
+                { label: 'Settings', active: false },
+              ].map(({ label, active }) => (
+                <div
+                  key={label}
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: active ? `${colors.accentPrimary}18` : 'transparent',
+                    color: active ? colors.accentPrimary : colors.textSecondary,
+                    borderLeft: active ? `2px solid ${colors.accentPrimary}` : '2px solid transparent',
+                  }}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* Main content */}
+            <div className="flex-1 overflow-hidden p-4 space-y-3">
+
+              {/* Hero strip */}
+              <div
+                className="rounded-xl px-4 py-3 flex items-center justify-between"
+                style={{
+                  backgroundColor: colors.heroBg,
+                  border: `1px solid ${colors.borderPrimary}`,
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: colors.textPrimary }}>Welcome back, Alex 👋</p>
+                  <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>Here's what's happening today.</p>
+                </div>
+                <div className="rounded-lg px-2.5 py-1 text-xs font-medium text-white" style={{ backgroundColor: colors.accentPrimary }}>Upgrade</div>
+              </div>
+
+              {/* Stat cards */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Revenue', value: '$4,820' },
+                  { label: 'Users', value: '1,240' },
+                  { label: 'Conversions', value: '8.3%' },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-xl px-3 py-2.5"
+                    style={{
+                      backgroundColor: colors.bgSecondary,
+                      border: `1px solid ${colors.borderPrimary}`,
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: colors.textTertiary }}>{label}</p>
+                    <p className="text-sm font-bold mt-0.5" style={{ color: colors.textPrimary }}>{value}</p>
+                    <p className="text-xs mt-0.5" style={{ color: colors.accentPrimary }}>↑ 12%</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tab strip */}
+              <div
+                className="flex items-center gap-1 rounded-xl px-2 py-1.5"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
+                  border: `1px solid ${colors.borderPrimary}`,
+                }}
+              >
+                {['Activity', 'Invoices', 'Team'].map((label, i) => (
+                  <div
+                    key={label}
+                    className="rounded-lg px-3 py-1 text-xs font-medium"
+                    style={{
+                      backgroundColor: i === 0 ? colors.bgPrimary : 'transparent',
+                      color: i === 0 ? colors.accentPrimary : colors.textSecondary,
+                      boxShadow: i === 0 ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* Panel / table card */}
+              <div
+                className="rounded-xl px-3 py-2.5"
+                style={{ backgroundColor: colors.panelBg, border: `1px solid ${colors.borderPrimary}` }}
+              >
+                <p className="text-xs font-semibold mb-2" style={{ color: colors.textPrimary }}>Recent activity</p>
+                {['Invoice #1042 paid', 'New signup: maria@co.io', 'Plan upgraded to Pro'].map((row) => (
+                  <div
+                    key={row}
+                    className="flex items-center justify-between py-1 text-xs"
+                    style={{ borderTop: `1px solid ${colors.borderPrimary}`, color: colors.textSecondary }}
+                  >
+                    <span>{row}</span>
+                    <span style={{ color: colors.textTertiary }}>just now</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Input row */}
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value="Search…"
+                  className="flex-1 rounded-lg border px-2.5 py-1.5 text-xs"
+                  style={{
+                    backgroundColor: colors.bgTertiary,
+                    borderColor: colors.borderSecondary,
+                    color: colors.textTertiary,
+                  }}
+                />
+                <div
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white flex-shrink-0"
+                  style={{ backgroundColor: colors.accentPrimary }}
+                >Search</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 interface PricingSettings {
   maxColumns: number;
@@ -70,6 +816,8 @@ interface ThemeSettingsTabsProps {
   initialBlogHtmlBeforeFirst?: string;
   initialBlogHtmlMiddle?: string;
   initialBlogHtmlAfterLast?: string;
+  initialColorPalette?: ThemeColorPalette;
+  initialColorPresets?: ThemeColorPreset[];
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
@@ -92,9 +840,72 @@ export function ThemeSettingsTabs({
   initialRelatedPostsEnabled,
   initialBlogHtmlBeforeFirst,
   initialBlogHtmlMiddle,
-  initialBlogHtmlAfterLast
+  initialBlogHtmlAfterLast,
+  initialColorPalette,
+  initialColorPresets,
 }: ThemeSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('navigation');
+
+  const hexToSpaceRgb = useCallback((hex: string): string => {
+    const clean = (hex || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '0 0 0';
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `${r} ${g} ${b}`;
+  }, []);
+
+  const applyPaletteToDocument = useCallback((palette: ThemeColorPalette) => {
+    if (typeof document === 'undefined') return;
+
+    const buildBlock = (t: ColorTokens, mode: 'light' | 'dark') => {
+      const headerOpacity = (typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7)).toFixed(2);
+      const sidebarOpacity = (typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5)).toFixed(2);
+      const glowOpacity = (typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12)).toFixed(2);
+      return [
+        `  --bg-primary: ${hexToSpaceRgb(t.bgPrimary)};`,
+        `  --bg-secondary: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
+        `  --surface-panel: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
+        `  --surface-card: ${hexToSpaceRgb(t.bgSecondary)};`,
+        `  --surface-hero: ${hexToSpaceRgb(t.heroBg ?? t.bgSecondary)};`,
+        `  --bg-tertiary: ${hexToSpaceRgb(t.bgTertiary)};`,
+        `  --bg-quaternary: ${hexToSpaceRgb(t.bgQuaternary)};`,
+        `  --text-primary: ${hexToSpaceRgb(t.textPrimary)};`,
+        `  --text-secondary: ${hexToSpaceRgb(t.textSecondary)};`,
+        `  --text-tertiary: ${hexToSpaceRgb(t.textTertiary)};`,
+        `  --border-primary: ${hexToSpaceRgb(t.borderPrimary)};`,
+        `  --border-secondary: ${hexToSpaceRgb(t.borderSecondary)};`,
+        `  --accent-primary: ${hexToSpaceRgb(t.accentPrimary)};`,
+        `  --accent-hover: ${hexToSpaceRgb(t.accentHover)};`,
+        `  --theme-header-bg: rgb(${hexToSpaceRgb(t.headerBg)} / ${headerOpacity});`,
+        `  --theme-sidebar-bg: rgb(${hexToSpaceRgb(t.sidebarBg)} / ${sidebarOpacity});`,
+        `  --theme-page-gradient-from: rgb(${hexToSpaceRgb(t.pageGradientFrom)});`,
+        `  --theme-page-gradient-via: rgb(${hexToSpaceRgb(t.pageGradientVia)});`,
+        `  --theme-page-gradient-to: rgb(${hexToSpaceRgb(t.pageGradientTo)});`,
+        `  --theme-hero-gradient-from: rgb(${hexToSpaceRgb(t.heroGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-hero-gradient-via: rgb(${hexToSpaceRgb(t.heroGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-hero-gradient-to: rgb(${hexToSpaceRgb(t.heroGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-card-gradient-from: rgb(${hexToSpaceRgb(t.cardGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-card-gradient-via: rgb(${hexToSpaceRgb(t.cardGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-card-gradient-to: rgb(${hexToSpaceRgb(t.cardGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-tabs-gradient-from: rgb(${hexToSpaceRgb(t.tabsGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-tabs-gradient-via: rgb(${hexToSpaceRgb(t.tabsGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-tabs-gradient-to: rgb(${hexToSpaceRgb(t.tabsGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-page-glow: rgb(${hexToSpaceRgb(t.pageGlow)} / ${glowOpacity});`,
+      ].join('\n');
+    };
+
+    const css = `html.light {\n${buildBlock(palette.light, 'light')}\n}\nhtml.dark {\n${buildBlock(palette.dark, 'dark')}\n}`;
+    const styleId = 'runtime-theme-color-vars';
+    let tag = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!tag) {
+      tag = document.createElement('style');
+      tag.id = styleId;
+      tag.setAttribute('data-theme-color-vars', 'runtime');
+      document.head.appendChild(tag);
+    }
+    tag.textContent = css;
+  }, [hexToSpaceRgb]);
   
   // Navigation state
   const [headerLinks, setHeaderLinks] = useState<ThemeLink[]>(() => 
@@ -104,6 +915,8 @@ export function ThemeSettingsTabs({
     initialFooterLinks.length ? initialFooterLinks : [emptyLink()]
   );
   const [footerText, setFooterText] = useState(initialFooterText);
+
+  const [colorPresets, setColorPresets] = useState<ThemeColorPreset[]>(() => initialColorPresets ?? []);
   
   // Content state
   const [blogListingStyle, setBlogListingStyle] = useState(initialBlogListingStyle);
@@ -172,6 +985,100 @@ export function ThemeSettingsTabs({
   const [pricingMaxColumns, setPricingMaxColumns] = useState(initialPricingSettings.maxColumns);
   const [pricingCenterUneven, setPricingCenterUneven] = useState(initialPricingSettings.centerUneven);
   
+  // Color state
+  const [lightColors, setLightColors] = useState<ColorTokens>(
+    initialColorPalette?.light ?? DEFAULT_LIGHT_COLORS
+  );
+  const [darkColors, setDarkColors] = useState<ColorTokens>(
+    initialColorPalette?.dark ?? DEFAULT_DARK_COLORS
+  );
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
+
+  // Keep the runtime CSS vars in sync while editing, and
+  // re-apply on tab switches in case the head gets reconciled.
+  useEffect(() => {
+    applyPaletteToDocument({ light: lightColors, dark: darkColors });
+  }, [applyPaletteToDocument, lightColors, darkColors, activeTab]);
+
+  // Prevent unsaved preview styles from leaking after leaving /admin/theme.
+  useEffect(() => {
+    return () => {
+      try {
+        document.getElementById('runtime-theme-color-vars')?.remove();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
+  const handleSaveColorPreset = useCallback(async (name: string) => {
+    const trimmed = (name || '').trim().slice(0, 48);
+    if (!trimmed) return;
+
+    const prev = colorPresets;
+    const next: ThemeColorPreset[] = [
+      ...prev.filter((preset) => preset.name.toLowerCase() !== trimmed.toLowerCase()),
+      { name: trimmed, light: lightColors, dark: darkColors },
+    ].slice(0, 25);
+
+    setColorPresets(next);
+
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [{ key: 'THEME_COLOR_PRESETS', value: JSON.stringify(next) }],
+        }),
+      });
+
+      if (!response.ok) {
+        setColorPresets(prev);
+        showToast('Failed to save preset', 'error');
+        return;
+      }
+
+      showToast('Preset saved', 'success');
+    } catch (error) {
+      console.error('Failed to save color preset', error);
+      setColorPresets(prev);
+      showToast('Failed to save preset', 'error');
+    }
+  }, [colorPresets, darkColors, lightColors]);
+
+  const handleDeleteColorPreset = useCallback(async (name: string) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+
+    const prev = colorPresets;
+    const next = prev.filter((preset) => preset.name.toLowerCase() !== trimmed.toLowerCase());
+    if (next.length === prev.length) return;
+
+    setColorPresets(next);
+
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [{ key: 'THEME_COLOR_PRESETS', value: JSON.stringify(next) }],
+        }),
+      });
+
+      if (!response.ok) {
+        setColorPresets(prev);
+        showToast('Failed to delete preset', 'error');
+        return;
+      }
+
+      showToast('Preset deleted', 'success');
+    } catch (error) {
+      console.error('Failed to delete color preset', error);
+      setColorPresets(prev);
+      showToast('Failed to delete preset', 'error');
+    }
+  }, [colorPresets]);
+  
   // Code state
   const [customCss, setCustomCss] = useState(initialCustomCss);
   const [customHead, setCustomHead] = useState(initialCustomHead);
@@ -230,44 +1137,14 @@ export function ThemeSettingsTabs({
           footerText: footerText.trim(),
           customCss,
           customHead,
-          customBody
+          customBody,
+          colorPalette: { light: lightColors, dark: darkColors },
         })
       });
 
       if (!themeResponse.ok) {
         const error = await themeResponse.json().catch(() => ({ error: 'Failed to save theme settings' }));
         showToast(error.error || 'Failed to save theme settings', 'error');
-        return;
-      }
-
-      // Save pricing settings
-      const pricingPromises = [
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'PRICING_MAX_COLUMNS', value: pricingMaxColumns.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'PRICING_CENTER_UNEVEN', value: pricingCenterUneven.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_LISTING_STYLE', value: blogListingStyle })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_LISTING_PAGE_SIZE', value: blogListingPageSize.toString() })
-        })
-      ];
-
-      const [maxColResponse, centerResponse, blogStyleResponse, blogPageSizeResponse] = await Promise.all(pricingPromises);
-
-      if ([maxColResponse, centerResponse, blogStyleResponse, blogPageSizeResponse].some(res => !res.ok)) {
-        showToast('Failed to save settings', 'error');
         return;
       }
 
@@ -282,80 +1159,38 @@ export function ThemeSettingsTabs({
         .sort((a, b) => a.order - b.order)
         .map(w => w.type);
       const widgetOrderString = enabledWidgets.length > 0 ? enabledWidgets.join(',') : 'recent-posts,rich-content,raw-html';
-      
-      // Save blog sidebar settings
-      const sidebarPromises = [
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_ENABLED_INDEX', value: blogSidebarEnabledIndex.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_ENABLED_ARCHIVE', value: blogSidebarEnabledArchive.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_ENABLED_SINGLE', value: blogSidebarEnabledSingle.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_ENABLED_PAGES', value: blogSidebarEnabledPages.toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_SHOW_RECENT', value: (!!recentWidget).toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_RECENT_COUNT', value: (recentWidget?.settings.recentCount || 5).toString() })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_CONTENT', value: richContentWidget?.settings.content || '' })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_HTML', value: htmlWidget?.settings.html || '' })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_SIDEBAR_WIDGET_ORDER', value: widgetOrderString })
-        }),
-        // HTML snippet insertion points for blog posts
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_HTML_BEFORE_FIRST_PARAGRAPH', value: blogHtmlBeforeFirst || '' })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_HTML_MIDDLE_OF_POST', value: blogHtmlMiddle || '' })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_HTML_AFTER_LAST_PARAGRAPH', value: blogHtmlAfterLast || '' })
-        }),
-        fetch('/api/admin/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'BLOG_RELATED_POSTS_ENABLED', value: blogRelatedPostsEnabled.toString() })
-        })
-      ];
 
-      const sidebarResponses = await Promise.all(sidebarPromises);
-      if (sidebarResponses.some(res => !res.ok)) {
-        showToast('Failed to save blog sidebar settings', 'error');
+      const bulkSettingsResponse = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [
+            // pricing + listing settings
+            { key: 'PRICING_MAX_COLUMNS', value: pricingMaxColumns.toString() },
+            { key: 'PRICING_CENTER_UNEVEN', value: pricingCenterUneven.toString() },
+            { key: 'BLOG_LISTING_STYLE', value: blogListingStyle },
+            { key: 'BLOG_LISTING_PAGE_SIZE', value: blogListingPageSize.toString() },
+            // blog sidebar settings
+            { key: 'BLOG_SIDEBAR_ENABLED_INDEX', value: blogSidebarEnabledIndex.toString() },
+            { key: 'BLOG_SIDEBAR_ENABLED_ARCHIVE', value: blogSidebarEnabledArchive.toString() },
+            { key: 'BLOG_SIDEBAR_ENABLED_SINGLE', value: blogSidebarEnabledSingle.toString() },
+            { key: 'BLOG_SIDEBAR_ENABLED_PAGES', value: blogSidebarEnabledPages.toString() },
+            { key: 'BLOG_SIDEBAR_SHOW_RECENT', value: (!!recentWidget).toString() },
+            { key: 'BLOG_SIDEBAR_RECENT_COUNT', value: (recentWidget?.settings.recentCount || 5).toString() },
+            { key: 'BLOG_SIDEBAR_CONTENT', value: richContentWidget?.settings.content || '' },
+            { key: 'BLOG_SIDEBAR_HTML', value: htmlWidget?.settings.html || '' },
+            { key: 'BLOG_SIDEBAR_WIDGET_ORDER', value: widgetOrderString },
+            // HTML snippet insertion points for blog posts
+            { key: 'BLOG_HTML_BEFORE_FIRST_PARAGRAPH', value: blogHtmlBeforeFirst || '' },
+            { key: 'BLOG_HTML_MIDDLE_OF_POST', value: blogHtmlMiddle || '' },
+            { key: 'BLOG_HTML_AFTER_LAST_PARAGRAPH', value: blogHtmlAfterLast || '' },
+            { key: 'BLOG_RELATED_POSTS_ENABLED', value: blogRelatedPostsEnabled.toString() },
+          ],
+        })
+      });
+
+      if (!bulkSettingsResponse.ok) {
+        showToast('Failed to save settings', 'error');
         return;
       }
 
@@ -366,6 +1201,15 @@ export function ThemeSettingsTabs({
       setCustomCss(themePayload.customCss ?? '');
       setCustomHead(themePayload.customHead ?? '');
       setCustomBody(themePayload.customBody ?? themePayload.legacySnippet ?? '');
+      if (themePayload.colorPalette) {
+        const merged: ThemeColorPalette = {
+          light: themePayload.colorPalette.light ?? DEFAULT_LIGHT_COLORS,
+          dark: themePayload.colorPalette.dark ?? DEFAULT_DARK_COLORS,
+        };
+        setLightColors(merged.light);
+        setDarkColors(merged.dark);
+        applyPaletteToDocument(merged);
+      }
       showToast('Theme settings saved successfully', 'success');
     } catch (error) {
       console.error('Failed to save settings', error);
@@ -378,7 +1222,9 @@ export function ThemeSettingsTabs({
     normalizeLinks, pricingMaxColumns, pricingCenterUneven, blogListingStyle,
     blogListingPageSize, blogSidebarEnabledIndex, blogSidebarEnabledSingle,
     blogSidebarEnabledArchive, blogSidebarEnabledPages, sidebarWidgets,
-    blogRelatedPostsEnabled, blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast
+    blogRelatedPostsEnabled, blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
+    lightColors, darkColors,
+    applyPaletteToDocument,
   ]);
 
   const handleReset = useCallback(async () => {
@@ -404,6 +1250,12 @@ export function ThemeSettingsTabs({
       setCustomCss(payload.customCss ?? '');
       setCustomHead(payload.customHead ?? '');
       setCustomBody(payload.customBody ?? payload.legacySnippet ?? '');
+      setLightColors(payload.colorPalette?.light ?? DEFAULT_LIGHT_COLORS);
+      setDarkColors(payload.colorPalette?.dark ?? DEFAULT_DARK_COLORS);
+      applyPaletteToDocument({
+        light: payload.colorPalette?.light ?? DEFAULT_LIGHT_COLORS,
+        dark: payload.colorPalette?.dark ?? DEFAULT_DARK_COLORS,
+      });
       showToast('Theme settings restored to defaults', 'success');
       // Refresh blog sidebar + related posts settings from server defaults
       try {
@@ -1067,6 +1919,25 @@ export function ThemeSettingsTabs({
       )
     },
     {
+      id: 'colors',
+      label: 'Colors',
+      icon: faPalette,
+      description: 'Brand colors, backgrounds, and accents for light and dark mode',
+      content: (
+        <ColorTabContent
+          lightColors={lightColors}
+          darkColors={darkColors}
+          colorMode={colorMode}
+          onColorMode={setColorMode}
+          onLightChange={setLightColors}
+          onDarkChange={setDarkColors}
+          customPresets={colorPresets}
+          onSavePreset={handleSaveColorPreset}
+          onDeletePreset={handleDeleteColorPreset}
+        />
+      )
+    },
+    {
       id: 'layout',
       label: 'Layout',
       icon: faTableCells,
@@ -1126,6 +1997,181 @@ export function ThemeSettingsTabs({
                   }
                 </p>
               </div>
+            </div>
+          </section>
+
+          <section className="space-y-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-xl font-semibold text-slate-900 dark:text-neutral-50">Header & Background</div>
+                <p className="text-sm text-slate-600 dark:text-neutral-300">Adjust header, sidebar, content area, and backdrop glow styling for light and dark mode.</p>
+              </div>
+              <div role="tablist" className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-neutral-700 dark:bg-neutral-900">
+                {(['light', 'dark'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="tab"
+                    aria-selected={colorMode === m}
+                    onClick={() => setColorMode(m)}
+                    className={cx(
+                      'rounded-md px-4 py-1.5 text-sm font-medium transition-all',
+                      colorMode === m
+                        ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+                    )}
+                  >
+                    {m === 'light' ? 'Light' : 'Dark'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
+              <div className="flex flex-wrap gap-3">
+                {(() => {
+                  const colors = colorMode === 'light' ? lightColors : darkColors;
+                  const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
+                  const builtInPresets = colorMode === 'light' ? LIGHT_PRESETS : DARK_PRESETS;
+                  const custom = colorPresets.map((preset) => {
+                    const modeColors = colorMode === 'light' ? preset.light : preset.dark;
+                    return { name: preset.name, accent: modeColors.accentPrimary, colors: fillElementGradients(modeColors) };
+                  });
+                  const presets = [
+                    ...builtInPresets.map((p) => ({ ...p, colors: fillElementGradients(p.colors) })),
+                    ...custom
+                  ];
+                  const layoutStringKeys = [
+                    'headerBg',
+                    'sidebarBg',
+                    'pageGradientFrom',
+                    'pageGradientVia',
+                    'pageGradientTo',
+                    'pageGlow',
+                  ] as const;
+                  const layoutNumberKeys = ['headerOpacity', 'sidebarOpacity', 'glowOpacity'] as const;
+                  const layoutKeys = [...layoutStringKeys, ...layoutNumberKeys] as const;
+
+                  const isActive = (preset: ColorTokens) => layoutKeys.every((k) => colors[k] === preset[k]);
+
+                  return presets.map((preset) => {
+                    const active = isActive(preset.colors);
+                    return (
+                      <button
+                        key={`${colorMode}-${preset.name}`}
+                        type="button"
+                        onClick={() => {
+                          setColors({
+                            ...colors,
+                            headerBg: preset.colors.headerBg,
+                            headerOpacity: preset.colors.headerOpacity,
+                            sidebarBg: preset.colors.sidebarBg,
+                            sidebarOpacity: preset.colors.sidebarOpacity,
+                            pageGradientFrom: preset.colors.pageGradientFrom,
+                            pageGradientVia: preset.colors.pageGradientVia,
+                            pageGradientTo: preset.colors.pageGradientTo,
+                            pageGlow: preset.colors.pageGlow,
+                            glowOpacity: preset.colors.glowOpacity,
+                          });
+                        }}
+                        className={cx(
+                          'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
+                          active
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-inner dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
+                        )}
+                      >
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: preset.accent }} />
+                        {preset.name}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              {(() => {
+                const colors = colorMode === 'light' ? lightColors : darkColors;
+                const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
+                const update = (key: ColorHexKey, value: string) => setColors({ ...colors, [key]: value });
+
+                const fields: Array<{ key: ColorHexKey; label: string }> = [
+                  { key: 'headerBg', label: 'Header background' },
+                  { key: 'sidebarBg', label: 'Sidebar background' },
+                  { key: 'pageGradientFrom', label: 'Content area (from)' },
+                  { key: 'pageGradientVia', label: 'Content area (via)' },
+                  { key: 'pageGradientTo', label: 'Content area (to)' },
+                  { key: 'pageGlow', label: 'Backdrop glow accent' },
+                ];
+
+                return fields.map((f) => (
+                  <div key={`${colorMode}-${String(f.key)}`} className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={colors[f.key]}
+                        onChange={(e) => update(f.key, e.target.value)}
+                        className="h-10 w-12 rounded-lg border border-slate-300 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-900"
+                      />
+                      <input
+                        type="text"
+                        value={colors[f.key]}
+                        onChange={(e) => update(f.key, e.target.value)}
+                        placeholder="#rrggbb"
+                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                      />
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              {(() => {
+                const colors = colorMode === 'light' ? lightColors : darkColors;
+                const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
+                const updateOpacityPercent = (key: OpacityKey, percent: number) => {
+                  const clamped = Math.max(0, Math.min(100, percent));
+                  const next = Math.round(clamped) / 100;
+                  setColors({ ...colors, [key]: next });
+                };
+
+                const opacityFields: Array<{ key: OpacityKey; label: string }> = [
+                  { key: 'headerOpacity', label: 'Header opacity' },
+                  { key: 'sidebarOpacity', label: 'Sidebar opacity' },
+                  { key: 'glowOpacity', label: 'Backdrop glow opacity' },
+                ];
+
+                return opacityFields.map((f) => (
+                  <div key={`${colorMode}-${f.key}`} className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={Math.round((colors[f.key] ?? 0) * 100)}
+                        onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
+                        className="h-2 w-full flex-1 cursor-pointer"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={Math.round((colors[f.key] ?? 0) * 100)}
+                        onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
+                        className="w-20 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                        aria-label={`${f.label} percent`}
+                      />
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </section>
         </div>
@@ -1197,7 +2243,8 @@ export function ThemeSettingsTabs({
     addWidget, removeWidget, toggleWidget, updateWidgetSettings, updateWidgetTitle, moveWidget, canMoveUp, canMoveDown,
     pricingMaxColumns, pricingCenterUneven, setPricingMaxColumns, setPricingCenterUneven,
     customCss, customHead, customBody, setCustomCss, setCustomHead, setCustomBody,
-    blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast
+    blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
+    lightColors, darkColors, colorMode, setColorMode,
   ]);
 
   const activeContent = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
@@ -1205,11 +2252,11 @@ export function ThemeSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative flex overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white shadow-[0_12px_45px_rgba(109,40,217,0.12)] transition-shadow dark:border-violet-500/40 dark:from-violet-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:shadow-[0_0_40px_rgba(168,85,247,0.18)]"
+        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
         role="tablist"
         aria-label="Theme settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -1220,7 +2267,7 @@ export function ThemeSettingsTabs({
             className={cx(
               'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all',
               activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow-md dark:bg-black dark:text-neutral-100'
+                ? 'bg-white text-[rgb(var(--accent-primary))] shadow-md dark:bg-black dark:text-[rgb(var(--accent-primary))]'
                 : 'text-slate-700/85 hover:bg-white/60 hover:text-slate-900 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-neutral-50'
             )}
           >

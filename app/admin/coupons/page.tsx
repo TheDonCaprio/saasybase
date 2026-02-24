@@ -170,28 +170,28 @@ export default async function AdminCouponsPage({ searchParams }: PageProps) {
       value: formatNumber(globalCouponCount),
       helper: `${formatNumber(limitedCount)} with limited supply`,
       icon: faTicket,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Expiring soon',
       value: formatNumber(expiringSoonCount),
       helper: 'Expiring within 7 days',
       icon: faHourglassEnd,
-      accent: 'rose'
+      accent: 'theme'
     },
     {
       label: 'Scheduled launches',
       value: formatNumber(scheduledCount),
       helper: 'Start date in the future',
       icon: faCalendarPlus,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Pending redemptions',
       value: formatNumber(pendingRedemptionsTotal),
       helper: 'Awaiting consumption',
       icon: faGift,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

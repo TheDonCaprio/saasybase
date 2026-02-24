@@ -82,28 +82,28 @@ export default async function AdminUsersPage() {
       value: formatNumber(totalCount),
       helper: `+${formatNumber(newUsersLast7Days)} in 7 days`,
       icon: faUsers,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'New users today',
       value: formatNumber(newUsersToday),
       helper: `${formatNumber(newUsersThisMonth)} this month`,
       icon: faRepeat,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Team admins',
       value: formatNumber(adminCount),
       helper: 'Users with admin role',
       icon: faUserShield,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Renewals in 14 days',
       value: formatNumber(expiringSoonCount),
       helper: 'Upcoming expirations',
       icon: faHourglassHalf,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

@@ -297,28 +297,28 @@ export default async function AdminSubscriptionsPage() {
       value: formatNumber(activeCount),
       helper: `${formatNumber(totalCount)} managed total`,
       icon: faRepeat,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Scheduled cancellations',
       value: formatNumber(scheduledCancelCount),
       helper: `${formatNumber(expiringSoonCount)} expiring in 30 days`,
       icon: faClockRotateLeft,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Lifetime churn',
       value: formatNumber(cancelledCount + expiredCount),
       helper: `${formatNumber(churn30Count)} in the last 30 days`,
       icon: faUserSlash,
-      accent: 'rose'
+      accent: 'theme'
     },
     {
       label: 'New subscriptions (30d)',
       value: formatNumber(newIn30Count),
       helper: `${formatNumber(uniqueCustomers)} unique customers`,
       icon: faUserPlus,
-      accent: 'violet'
+      accent: 'theme'
     }
   ];
 

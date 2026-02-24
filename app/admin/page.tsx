@@ -153,7 +153,7 @@ export default async function AdminHome() {
         value: formatNumber(totalUsers),
         helper: 'All-time accounts',
         icon: faUsers,
-        accent: 'indigo'
+        accent: 'theme'
       }
     },
     {
@@ -163,7 +163,7 @@ export default async function AdminHome() {
         value: formatNumber(activeSubscriptions),
         helper: `${conversionRate.toFixed(1)}% conversion`,
         icon: faRepeat,
-        accent: 'violet'
+        accent: 'theme'
       }
     },
     {
@@ -173,7 +173,7 @@ export default async function AdminHome() {
         value: formatCurrency(netRevenueCents / 100),
         helper: `Refunds: ${formatCurrency(refundedCents / 100)}`,
         icon: faCircleDollarToSlot,
-        accent: 'emerald'
+        accent: 'theme'
       }
     },
     {
@@ -183,7 +183,7 @@ export default async function AdminHome() {
         value: formatNumber(totalPayments),
         helper: averageTransactionValue ? `${formatCurrency(averageTransactionValue)} avg.` : 'No transactions yet',
         icon: faArrowTrendUp,
-        accent: 'amber'
+        accent: 'theme'
       }
     }
   ];

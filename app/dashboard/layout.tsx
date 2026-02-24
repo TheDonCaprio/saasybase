@@ -68,15 +68,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="-mx-6 lg:mx-0 lg:flex lg:gap-3 min-h-screen">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-56 flex-shrink-0 space-y-4 bg-neutral-900/50 p-4 lg:min-h-screen">
-        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
-        <SidebarNav items={nav} />
-        <div className="pt-4 border-t border-neutral-700">
-          <SignOutButton>
-            <button className="text-sm text-neutral-400 hover:text-white">
-              Sign Out
-            </button>
-          </SignOutButton>
+      <aside className="hidden lg:block w-56 flex-shrink-0 bg-[color:var(--theme-sidebar-bg)] lg:min-h-screen -mt-6 -ml-6 -mb-6">
+        <div className="space-y-4 pr-4 pb-4 pt-10 pl-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
+          <SidebarNav items={nav} />
+          <div className="pt-4 border-t border-neutral-700">
+            <SignOutButton>
+              <button className="text-sm text-neutral-400 hover:text-white">
+                Sign Out
+              </button>
+            </SignOutButton>
+          </div>
         </div>
       </aside>
 

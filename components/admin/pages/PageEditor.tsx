@@ -22,6 +22,7 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { showToast } from '../../ui/Toast';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../../dashboard/dashboardSurfaces';
+import { DashboardPageHeader } from '../../dashboard/DashboardPageHeader';
 import { SitePageDTO } from './SitePagesList';
 import ImageEditorModal from './ImageEditorModal';
 import { ImagePickerModal } from '../../ui/ImagePickerModal';
@@ -1415,42 +1416,35 @@ export default function PageEditor({
 
   return (
     <div className="space-y-6 pb-16">
-      <button
-        type="button"
-        onClick={handleBackNavigation}
-        className="inline-flex items-center gap-2 text-sm text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to {entityNames.pluralLower}
-      </button>
+      <DashboardPageHeader
+        eyebrow={mode === 'create' ? `Create ${entityNames.singularLower}` : `Edit ${entityNames.singularLower}`}
+        eyebrowIcon={mode === 'create' ? '✨' : '✏️'}
+        title={
+          mode === 'create'
+            ? `Create a new ${entityNames.singularLower}`
+            : `Edit ${initialPage?.title ?? entityNames.singularLower}`
+        }
+        description="Draft copy, adjust metadata, and publish when you are ready. Updates go live instantly."
+        actionsAlign={mode === 'edit' ? 'right' : 'left'}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleBackNavigation}
+              className="inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--border-primary)_/_0.55)] bg-[color:rgb(var(--surface-card)_/_0.55)] px-4 py-2 text-sm font-medium text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card)_/_0.70)] hover:text-[color:rgb(var(--text-primary))]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to {entityNames.pluralLower}
+            </button>
 
-  <div className={dashboardPanelClass('relative overflow-hidden')}>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.18),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.32),_transparent_58%)]" />
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-3">
-            <h1 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">
-              {mode === 'create'
-                ? `Create a new ${entityNames.singularLower}`
-                : `Edit ${initialPage?.title ?? entityNames.singularLower}`}
-            </h1>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Draft copy, adjust metadata, and publish when you are ready. Updates go live instantly.
-            </p>
-            {lastUpdatedLabel ? (
-              <p className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                Last updated {lastUpdatedLabel}
-              </p>
-            ) : null}
-          </div>
-          {mode === 'edit' && initialPage?.published && previewHref && (
-            <div className="flex-shrink-0">
+            {mode === 'edit' && initialPage?.published && previewHref ? (
               <NextLink
                 href={previewHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                className="inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--accent-primary)_/_0.25)] bg-[color:rgb(var(--accent-primary)_/_0.10)] px-4 py-2 text-sm font-medium text-[color:rgb(var(--accent-primary)_/_0.92)] transition-colors hover:bg-[color:rgb(var(--accent-primary)_/_0.16)]"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -1462,10 +1456,16 @@ export default function PageEditor({
                 </svg>
                 Preview {entityNames.singular}
               </NextLink>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : null}
+          </>
+        }
+      >
+        {lastUpdatedLabel ? (
+          <p className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            Last updated {lastUpdatedLabel}
+          </p>
+        ) : null}
+      </DashboardPageHeader>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="space-y-6">

@@ -151,7 +151,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           value={completedCount.toLocaleString()}
           helper="Successful charges"
           icon={faCircleCheck}
-          accent="indigo"
+          accent="theme"
           className="h-full"
         />
         <AdminStatCard
@@ -159,7 +159,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           value={pendingCount.toLocaleString()}
           helper="Awaiting confirmation"
           icon={faClock}
-          accent="amber"
+          accent="theme"
           className="h-full"
         />
         <AdminStatCard
@@ -167,7 +167,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           value={failedCount.toLocaleString()}
           helper="Requires attention"
           icon={faTriangleExclamation}
-          accent="rose"
+          accent="theme"
           className="h-full"
         />
         <AdminStatCard
@@ -175,7 +175,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           value={refundedCount.toLocaleString()}
           helper="Issued back to you"
           icon={faArrowRotateLeft}
-          accent="violet"
+          accent="theme"
           className="h-full"
         />
       </section>

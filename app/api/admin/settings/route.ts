@@ -131,29 +131,97 @@ export async function PATCH(req: NextRequest) {
 
     const body: unknown = await req.json();
     const b = asRecord(body);
-    const key = typeof b?.key === 'string' ? b.key : undefined;
-    const value = b?.value;
-    if (!key) return NextResponse.json({ error: 'missing key' }, { status: 400 });
 
-    const setting = await prisma.setting.upsert({
-      where: { key },
-      update: { value: String(value ?? '') },
-      create: { key, value: String(value ?? '') },
-      select: { key: true, value: true }
-    });
+    const updatesRaw = (b as Record<string, unknown>)?.updates;
+    const isBulk = Array.isArray(updatesRaw);
 
-    // Invalidate cache so clients and server helpers pick up the change immediately
+    if (!isBulk) {
+      const key = typeof b?.key === 'string' ? b.key : undefined;
+      const value = b?.value;
+      if (!key) return NextResponse.json({ error: 'missing key' }, { status: 400 });
+
+      const setting = await prisma.setting.upsert({
+        where: { key },
+        update: { value: String(value ?? '') },
+        create: { key, value: String(value ?? '') },
+        select: { key: true, value: true }
+      });
+
+      // Invalidate cache so clients and server helpers pick up the change immediately
+      clearSettingsCache();
+      Logger.info('Admin setting upsert', { key: setting.key });
+      await recordAdminAction({
+        actorId,
+        actorRole: 'ADMIN',
+        action: 'settings.upsert',
+        targetType: 'setting',
+        details: { key: setting.key },
+      });
+
+      const res = NextResponse.json({ setting });
+      if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));
+      res.headers.set('X-RateLimit-Limit', '60');
+      if (rl.reset) res.headers.set('X-RateLimit-Reset', String(rl.reset));
+      return res;
+    }
+
+    const updatesIn = updatesRaw as unknown[];
+    const updates: Array<{ key: string; value: string }> = [];
+    for (const item of updatesIn) {
+      const rec = asRecord(item);
+      const key = typeof rec?.key === 'string' ? rec.key : '';
+      if (!key) continue;
+      const value = String(rec?.value ?? '');
+      updates.push({ key, value });
+      if (updates.length >= 50) break;
+    }
+    if (updates.length === 0) return NextResponse.json({ error: 'missing updates' }, { status: 400 });
+
+    // Server-side validation for provider-restricted currency selection.
+    const desiredCurrency = updates.find((u) => u.key === 'DEFAULT_CURRENCY')?.value;
+    if (desiredCurrency !== undefined) {
+      const desired = normalizeCurrencyCode(desiredCurrency);
+
+      if (!desired || !/^[A-Z]{3}$/.test(desired)) {
+        return NextResponse.json({ error: 'DEFAULT_CURRENCY must be a 3-letter ISO currency code (e.g. USD)' }, { status: 400 });
+      }
+
+      const activeProviderId = getActivePaymentProvider();
+      if (isRestrictedCurrencyProvider(activeProviderId)) {
+        const config = PAYMENT_PROVIDERS[activeProviderId.toLowerCase()];
+        const supported = (config?.supportedCurrencies || []).map((c) => String(c).toUpperCase());
+        if (supported.length > 0 && !supported.includes(desired)) {
+          return NextResponse.json(
+            { error: `Currency ${desired} is not supported by the active provider (${config?.displayName || activeProviderId}).` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    const keys = Array.from(new Set(updates.map((u) => u.key)));
+    const settings = await prisma.$transaction(
+      updates.map((u) =>
+        prisma.setting.upsert({
+          where: { key: u.key },
+          update: { value: u.value },
+          create: { key: u.key, value: u.value },
+          select: { key: true, value: true }
+        })
+      )
+    );
+
     clearSettingsCache();
-    Logger.info('Admin setting upsert', { key: setting.key });
+    Logger.info('Admin settings bulk upsert', { count: settings.length });
     await recordAdminAction({
       actorId,
       actorRole: 'ADMIN',
-      action: 'settings.upsert',
+      action: 'settings.bulk_upsert',
       targetType: 'setting',
-      details: { key: setting.key },
+      details: { keys },
     });
 
-    const res = NextResponse.json({ setting });
+    const res = NextResponse.json({ settings });
     if (rl.remaining !== undefined) res.headers.set('X-RateLimit-Remaining', String(rl.remaining));
     res.headers.set('X-RateLimit-Limit', '60');
     if (rl.reset) res.headers.set('X-RateLimit-Reset', String(rl.reset));

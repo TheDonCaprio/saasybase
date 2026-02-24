@@ -154,7 +154,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                 onClick={() => toggleGroup(group.title)}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-xs font-semibold transition ${
                   isExpanded || hasActiveItem
-                    ? 'text-white'
+                    ? 'text-[rgb(var(--accent-primary))]'
                     : 'text-neutral-400 hover:text-neutral-300'
                 }`}
               >
@@ -175,7 +175,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                         href={item.href}
                                 className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 transition ${
                                   active
-                                    ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/30 dark:text-violet-100'
+                                    ? 'bg-[rgb(var(--accent-primary)_/_0.12)] text-[rgb(var(--accent-primary))] dark:bg-[rgb(var(--accent-primary)_/_0.18)]'
                                     : 'text-slate-500 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800/50'
                                 }`}
                         style={{ fontSize: '0.85rem' }}
@@ -186,7 +186,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                               icon={item.icon}
                               className={`h-3.5 w-3.5 transition ${
                                 active
-                                  ? 'text-violet-600 dark:text-violet-400'
+                                  ? 'text-[rgb(var(--accent-primary))]'
                                   : 'text-slate-300 dark:text-neutral-500'
                               }`}
                             />
@@ -243,7 +243,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
               href={it.href}
               className={`flex items-center justify-between gap-2 rounded px-3 py-2 text-sm border transition ${
                 active
-                  ? 'bg-violet-600/20 text-violet-200 border-violet-500/30'
+                  ? 'bg-[rgb(var(--accent-primary)_/_0.16)] text-[rgb(var(--accent-primary))] border-[rgb(var(--accent-primary)_/_0.35)]'
                   : 'border-transparent text-neutral-400 hover:text-white hover:bg-neutral-800/60'
               }`}
             >

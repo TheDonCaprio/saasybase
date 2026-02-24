@@ -145,28 +145,28 @@ export default async function AdminLogsPage() {
       value: formatNumber(total),
       helper: `~${formatNumber(Math.max(0, Math.round(recentPerHour)))} / hr last 24h`,
       icon: faClipboardList,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Error share',
       value: formatPercentage(errorRate),
       helper: `${formatNumber(errorCount)} entries`,
       icon: faBug,
-      accent: 'rose'
+      accent: 'theme'
     },
     {
       label: 'Warning share',
       value: formatPercentage(warnRate),
       helper: `${formatNumber(warnCount)} entries`,
       icon: faTriangleExclamation,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Last 1 hour',
       value: formatNumber(typeof recent1hCount === 'number' ? recent1hCount : 0),
       helper: `${formatNumber(typeof recent1hWarnCount === 'number' ? recent1hWarnCount : 0)} warnings`,
       icon: faClockRotateLeft,
-      accent: 'indigo'
+      accent: 'theme'
     }
   ];
 

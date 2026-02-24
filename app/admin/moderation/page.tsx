@@ -102,21 +102,21 @@ export default async function ModerationPage() {
           value={formatNumber(moderationSummary.totalActions)}
           helper="All-time moderation events"
           icon={faChartLine}
-          accent="rose"
+          accent="theme"
         />
         <AdminStatCard
           label="Last 7 days"
           value={formatNumber(moderationSummary.actionsLast7Days)}
           helper={`${formatNumber(moderationSummary.moderatorActionsLast7Days)} moderator / ${formatNumber(moderationSummary.adminActionsLast7Days)} admin`}
           icon={faArrowTrendUp}
-          accent="amber"
+          accent="theme"
         />
         <AdminStatCard
           label="Active moderators"
           value={formatNumber(moderationSummary.activeModeratorsLast7Days)}
           helper="Contributors in the past week"
           icon={faShieldCat}
-          accent="emerald"
+          accent="theme"
         />
         <AdminStatCard
           label="Moderator share"
@@ -125,7 +125,7 @@ export default async function ModerationPage() {
             ? `${formatNumber(moderationSummary.moderatorActionsLast7Days)} of ${formatNumber(totalLast7Days)} actions`
             : 'No actions this week'}
           icon={faScaleBalanced}
-          accent="indigo"
+          accent="theme"
         />
       </section>
 

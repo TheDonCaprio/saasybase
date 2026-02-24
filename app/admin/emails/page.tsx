@@ -90,28 +90,28 @@ export default async function EmailTemplatesPage() {
       value: formatNumber(sentLast24h),
       helper: `${formatNumber(failedLast24h)} failures`,
       icon: faPaperPlane,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Emails sent (7d)',
       value: formatNumber(sentLast7d),
       helper: `${formatNumber(uniqueRecipients7d.length)} recipients`,
       icon: faEnvelopeOpenText,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Templated sends (7d)',
       value: formatNumber(templatedSends7d),
       helper: `${formatPercentage(templatedShare7d)} of total`,
       icon: faCode,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Inactive templates',
       value: formatNumber(inactiveTemplates),
       helper: `${formatNumber(updatedTemplates7d)} updated this week`,
       icon: faTriangleExclamation,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

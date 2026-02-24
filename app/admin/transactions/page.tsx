@@ -160,28 +160,28 @@ export default async function AdminTransactionsPage() {
       value: formatCurrency(successfulVolumeCents / 100),
       helper: `Total refunds ${formatCurrency(refundedVolumeCents / 100)}`,
       icon: faSackDollar,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: '30-day volume',
       value: formatCurrency(last30VolumeCents / 100),
       helper: `${formatNumber(last30CompletedCount)} successful charges`,
       icon: faCalendarCheck,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Pending charges',
       value: formatNumber(pendingCount),
       helper: `${formatNumber(failedCount)} failed overall`,
       icon: faClock,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Average order value',
       value: formatCurrency(averageOrderValue),
       helper: `Across ${formatNumber(completedCount)} completed charges`,
       icon: faCreditCard,
-      accent: 'violet'
+      accent: 'theme'
     }
   ];
 

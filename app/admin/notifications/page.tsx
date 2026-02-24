@@ -103,28 +103,28 @@ export default async function AdminNotificationsPage() {
       value: formatNumber(totalCount),
       helper: `+${formatNumber(sentLast7d)} in last 7 days`,
       icon: faBell,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Sent in 24 hours',
       value: formatNumber(sentLast24h),
       helper: `${averagePerDay.toFixed(1)} avg / day`,
       icon: faPaperPlane,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Billing alerts',
       value: formatNumber(billingCount),
       helper: `${formatNumber(billingUnread)} unread`,
       icon: faFileInvoiceDollar,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Support updates',
       value: formatNumber(supportCount),
       helper: `${formatNumber(supportUnread)} unread`,
       icon: faLifeRing,
-      accent: 'rose'
+      accent: 'theme'
     }
   ];
 

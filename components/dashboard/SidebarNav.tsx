@@ -89,7 +89,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
             href={it.href}
             className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 transition ${
               active
-                ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/30 dark:text-violet-100'
+                ? 'bg-[color:rgb(var(--accent-primary)_/_0.10)] text-slate-900 dark:bg-[color:rgb(var(--accent-primary)_/_0.16)] dark:text-neutral-50'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-neutral-800/50'
             }`}
             style={{ fontSize: '0.85rem' }}
@@ -100,7 +100,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                   icon={it.icon}
                   className={`h-3.5 w-3.5 transition ${
                     active
-                      ? 'text-violet-600 dark:text-violet-400'
+                      ? 'text-[color:rgb(var(--accent-primary)_/_0.90)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]'
                       : 'text-slate-400 dark:text-neutral-600'
                   }`}
                 />

@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-type Accent = 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
-type Tone = 'indigo' | 'emerald' | 'purple' | 'blue' | 'amber' | 'rose' | 'slate';
+type Accent = 'theme' | 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
+type Tone = 'theme' | 'indigo' | 'emerald' | 'purple' | 'blue' | 'amber' | 'rose' | 'slate';
 
 export interface DashboardPageHeaderStat {
 	label: ReactNode;
@@ -19,6 +19,7 @@ export interface DashboardPageHeaderProps {
 	title: ReactNode;
 	description?: ReactNode;
 	actions?: ReactNode;
+	actionsAlign?: 'left' | 'right';
 	stats?: DashboardPageHeaderStat[];
 	children?: ReactNode;
 	className?: string;
@@ -27,6 +28,15 @@ export interface DashboardPageHeaderProps {
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
 
 const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: string; dot: string }> = {
+	theme: {
+		wrapper:
+			'border-[color:rgb(var(--accent-primary)_/_0.18)] bg-[linear-gradient(135deg,rgb(var(--surface-hero)_/_0.72),rgb(var(--surface-hero)_/_0.72)),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] dark:border-[color:rgb(var(--accent-primary)_/_0.30)] dark:bg-[linear-gradient(135deg,rgb(var(--surface-hero)_/_0.42),rgb(var(--surface-hero)_/_0.42)),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]',
+		overlay:
+			'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]',
+		pill:
+			'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--accent-primary)_/_0.25)] bg-[color:rgb(var(--accent-primary)_/_0.08)] px-3 py-1 text-xs font-medium text-[color:rgb(var(--accent-primary)_/_0.88)] dark:border-[color:rgb(var(--accent-primary)_/_0.35)] dark:bg-[color:rgb(var(--accent-primary)_/_0.12)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
+		dot: 'h-2 w-2 rounded-full bg-[color:rgb(var(--accent-primary)_/_0.9)] animate-pulse dark:bg-[color:rgb(var(--accent-primary)_/_0.95)]'
+	},
 	indigo: {
 		wrapper:
 			'border-slate-200 bg-gradient-to-br from-indigo-100 via-sky-50 to-white shadow-[0_12px_45px_rgba(30,64,175,0.12)] dark:border-neutral-800 dark:from-indigo-500/15 dark:via-blue-500/10 dark:to-transparent dark:shadow-[0_0_40px_rgba(59,130,246,0.15)]',
@@ -76,6 +86,16 @@ const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: str
 };
 
 const statToneStyles: Record<Tone, { wrapper: string; label: string; value: string; helper: string }> = {
+	theme: {
+		wrapper:
+			'rounded-2xl border border-[color:rgb(var(--accent-primary)_/_0.20)] bg-[color:rgb(var(--accent-primary)_/_0.06)] px-3 py-2 shadow-sm dark:border-[color:rgb(var(--accent-primary)_/_0.30)] dark:bg-[color:rgb(var(--accent-primary)_/_0.10)]',
+		label:
+			'text-xs uppercase tracking-wide text-[color:rgb(var(--accent-primary)_/_0.78)] dark:text-[color:rgb(var(--accent-primary)_/_0.75)]',
+		value:
+			'mt-1 text-base font-semibold text-[color:rgb(var(--accent-primary)_/_0.92)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
+		helper:
+			'text-xs text-[color:rgb(var(--accent-primary)_/_0.70)] dark:text-[color:rgb(var(--accent-primary)_/_0.70)]'
+	},
 	indigo: {
 		wrapper: 'rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10',
 		label: 'text-xs uppercase tracking-wide text-indigo-600/80 dark:text-indigo-100/70',
@@ -113,25 +133,27 @@ const statToneStyles: Record<Tone, { wrapper: string; label: string; value: stri
 		helper: 'text-xs text-rose-600/70 dark:text-rose-200/70'
 	},
 	slate: {
-		wrapper: 'rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60',
-		label: 'text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-500',
-		value: 'mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100',
-		helper: 'text-xs text-slate-500 dark:text-neutral-400'
+		wrapper:
+			'rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.55)] bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.75),rgb(var(--surface-card)_/_0.75)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2 shadow-sm backdrop-blur-sm',
+		label: 'text-xs uppercase tracking-wide text-[color:rgb(var(--text-secondary)_/_0.85)]',
+		value: 'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
+		helper: 'text-xs text-[color:rgb(var(--text-secondary)_/_0.80)]'
 	}
 };
 
 export function DashboardPageHeader({
-	accent = 'indigo',
+	accent: _accent = 'theme',
 	eyebrow,
 	eyebrowIcon,
 	title,
 	description,
 	actions,
+	actionsAlign = 'left',
 	stats,
 	children,
 	className
 }: DashboardPageHeaderProps) {
-	const palette = accentStyles[accent];
+	const palette = accentStyles.theme;
 
 	return (
 		<div
@@ -145,7 +167,7 @@ export function DashboardPageHeader({
 				<div className={cx('h-full w-full', palette.overlay)} />
 			</div>
 
-			<div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+			<div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 				<div className="max-w-2xl space-y-3">
 					{eyebrow ? (
 						<div className={palette.pill}>
@@ -164,21 +186,35 @@ export function DashboardPageHeader({
 
 					{children ? <div className="space-y-2 text-sm text-slate-600 dark:text-neutral-200/80">{children}</div> : null}
 
-					{actions ? <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">{actions}</div> : null}
+					{actions && actionsAlign === 'left' ? (
+						<div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">{actions}</div>
+					) : null}
 				</div>
 
-				{stats && stats.length > 0 ? (
-					<div className="grid w-full max-w-lg gap-2 text-sm grid-cols-2">
-						{stats.map((stat, index) => {
-							const tone = statToneStyles[stat.tone ?? 'slate'];
-							return (
-								<div key={index} className={tone.wrapper}>
-									<p className={tone.label}>{stat.label}</p>
-									<p className={tone.value}>{stat.value}</p>
-									{stat.helper ? <p className={tone.helper}>{stat.helper}</p> : null}
-								</div>
-							);
-						})}
+				{actionsAlign === 'right' || (stats && stats.length > 0) ? (
+					<div className="w-full max-w-lg space-y-2">
+						{actions && actionsAlign === 'right' ? (
+							<div className="flex w-full justify-end">
+								<div className="flex flex-col gap-2 sm:flex-row sm:items-center">{actions}</div>
+							</div>
+						) : null}
+
+						{stats && stats.length > 0 ? (
+							<div className="grid w-full gap-2 text-sm grid-cols-2">
+								{stats.map((stat, index) => {
+								// Always use the themed neutral card style so all stat cards
+								// look uniform against the gradient hero background.
+								const tone = statToneStyles['slate'];
+									return (
+										<div key={index} className={tone.wrapper}>
+											<p className={tone.label}>{stat.label}</p>
+											<p className={tone.value}>{stat.value}</p>
+											{stat.helper ? <p className={tone.helper}>{stat.helper}</p> : null}
+										</div>
+									);
+								})}
+							</div>
+						) : null}
 					</div>
 				) : null}
 			</div>

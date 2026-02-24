@@ -160,11 +160,11 @@ export function UserSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative flex overflow-hidden rounded-2xl border border-purple-200/70 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white shadow-[0_12px_45px_rgba(109,40,217,0.12)] transition-shadow dark:border-purple-500/40 dark:from-purple-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:shadow-[0_0_40px_rgba(168,85,247,0.18)]"
+        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
         role="tablist"
         aria-label="User settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -176,7 +176,7 @@ export function UserSettingsTabs({
             className={cx(
               'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all',
               activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow-md dark:bg-black dark:text-white'
+                ? 'bg-white text-[rgb(var(--accent-primary))] shadow-md dark:bg-black dark:text-[rgb(var(--accent-primary))]'
                 : 'text-slate-700/85 hover:bg-white/60 hover:text-slate-900 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-neutral-50'
             )}
           >

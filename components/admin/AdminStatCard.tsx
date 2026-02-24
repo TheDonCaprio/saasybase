@@ -1,9 +1,9 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import clsx from 'clsx';
-import { dashboardPanelClass } from '../dashboard/dashboardSurfaces';
+import { dashboardCardClass } from '../dashboard/dashboardSurfaces';
 
-export type AdminStatAccent = 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
+export type AdminStatAccent = 'theme' | 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
 
 export interface AdminStatCardProps {
   label: string;
@@ -21,6 +21,12 @@ const accentMap: Record<AdminStatAccent, {
   icon: string;
   overlay: string;
 }> = {
+  theme: {
+    border: 'border-[color:rgb(var(--accent-primary)_/_0.22)] dark:border-[color:rgb(var(--accent-primary)_/_0.35)]',
+    gradient: 'bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.78),rgb(var(--surface-card)_/_0.78)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.58),rgb(var(--surface-card)_/_0.58)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))]',
+    icon: 'bg-[color:rgb(var(--accent-primary)_/_0.15)] text-[color:rgb(var(--accent-primary)_/_0.90)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
+    overlay: 'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.16),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.26),_transparent_60%)]'
+  },
   indigo: {
     border: 'border-indigo-200/70 dark:border-indigo-500/40',
     gradient: 'bg-gradient-to-br from-indigo-50 via-white to-white dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent',
@@ -53,11 +59,11 @@ const accentMap: Record<AdminStatAccent, {
   }
 };
 
-export function AdminStatCard({ label, value, helper, footer, icon, accent = 'indigo', className }: AdminStatCardProps) {
+export function AdminStatCard({ label, value, helper, footer, icon, accent = 'theme', className }: AdminStatCardProps) {
   const palette = accentMap[accent];
 
   return (
-    <div className={dashboardPanelClass(clsx('relative overflow-hidden h-full flex flex-col justify-between p-4', palette.border, palette.gradient, className))}>
+    <div className={dashboardCardClass(clsx('relative overflow-hidden h-full flex flex-col justify-between p-4', palette.border, palette.gradient, className))}>
       <div className={clsx('pointer-events-none absolute inset-0 opacity-75', palette.overlay)} />
       <div className="relative flex items-start justify-between gap-2">
         <div>

@@ -138,6 +138,8 @@ export const SETTING_KEYS = {
   THEME_CUSTOM_JS: 'THEME_CUSTOM_JS',
   THEME_CUSTOM_HEAD: 'THEME_CUSTOM_HEAD',
   THEME_CUSTOM_BODY: 'THEME_CUSTOM_BODY',
+  THEME_COLOR_PALETTE: 'THEME_COLOR_PALETTE',
+  THEME_COLOR_PRESETS: 'THEME_COLOR_PRESETS',
   PRICING_MAX_COLUMNS: 'PRICING_MAX_COLUMNS',
   PRICING_CENTER_UNEVEN: 'PRICING_CENTER_UNEVEN',
   BLOG_LISTING_STYLE: 'BLOG_LISTING_STYLE',
@@ -165,6 +167,117 @@ export const SETTING_KEYS = {
   ,ADMIN_ALERT_EMAIL_TYPES: 'ADMIN_ALERT_EMAIL_TYPES'
   ,SUPPORT_EMAIL_NOTIFICATION_TYPES: 'SUPPORT_EMAIL_NOTIFICATION_TYPES'
 } as const;
+
+export type ThemeColorTokens = {
+  bgPrimary: string;
+  bgSecondary: string;
+  panelBg: string;
+  heroBg: string;
+  bgTertiary: string;
+  bgQuaternary: string;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  borderPrimary: string;
+  borderSecondary: string;
+  accentPrimary: string;
+  accentHover: string;
+  headerBg: string;
+  headerOpacity: number;
+  sidebarBg: string;
+  sidebarOpacity: number;
+  pageGradientFrom: string;
+  pageGradientVia: string;
+  pageGradientTo: string;
+  heroGradientFrom: string;
+  heroGradientVia: string;
+  heroGradientTo: string;
+  cardGradientFrom: string;
+  cardGradientVia: string;
+  cardGradientTo: string;
+  tabsGradientFrom: string;
+  tabsGradientVia: string;
+  tabsGradientTo: string;
+  pageGlow: string;
+  glowOpacity: number;
+};
+
+export type ThemeColorPalette = { light: ThemeColorTokens; dark: ThemeColorTokens };
+
+export interface ThemeColorPreset {
+  name: string;
+  light: ThemeColorTokens;
+  dark: ThemeColorTokens;
+}
+
+export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
+  light: {
+    bgPrimary: '#ffffff',
+    bgSecondary: '#f9fafb',
+    panelBg: '#f9fafb',
+    heroBg: '#f9fafb',
+    bgTertiary: '#f3f4f6',
+    bgQuaternary: '#e5e7eb',
+    textPrimary: '#111827',
+    textSecondary: '#4b5563',
+    textTertiary: '#6b7280',
+    borderPrimary: '#d1d5db',
+    borderSecondary: '#9ca3af',
+    accentPrimary: '#3b82f6',
+    accentHover: '#2563eb',
+    headerBg: '#ffffff',
+    headerOpacity: 0.8,
+    sidebarBg: '#ffffff',
+    sidebarOpacity: 0.9,
+    pageGradientFrom: '#f0f9ff',
+    pageGradientVia: '#eef2ff',
+    pageGradientTo: '#ffffff',
+    heroGradientFrom: '#f0f9ff',
+    heroGradientVia: '#eef2ff',
+    heroGradientTo: '#ffffff',
+    cardGradientFrom: '#f0f9ff',
+    cardGradientVia: '#eef2ff',
+    cardGradientTo: '#ffffff',
+    tabsGradientFrom: '#f0f9ff',
+    tabsGradientVia: '#eef2ff',
+    tabsGradientTo: '#ffffff',
+    pageGlow: '#3b82f6',
+    glowOpacity: 0.18,
+  },
+  dark: {
+    bgPrimary: '#0a0a0a',
+    bgSecondary: '#171717',
+    panelBg: '#171717',
+    heroBg: '#171717',
+    bgTertiary: '#262626',
+    bgQuaternary: '#404040',
+    textPrimary: '#f5f5f5',
+    textSecondary: '#a3a3a3',
+    textTertiary: '#737373',
+    borderPrimary: '#404040',
+    borderSecondary: '#525252',
+    accentPrimary: '#3b82f6',
+    accentHover: '#2563eb',
+    headerBg: '#0a0a0a',
+    headerOpacity: 0.7,
+    sidebarBg: '#171717',
+    sidebarOpacity: 0.5,
+    pageGradientFrom: '#171717',
+    pageGradientVia: '#312e81',
+    pageGradientTo: '#0a0a0a',
+    heroGradientFrom: '#171717',
+    heroGradientVia: '#312e81',
+    heroGradientTo: '#0a0a0a',
+    cardGradientFrom: '#171717',
+    cardGradientVia: '#312e81',
+    cardGradientTo: '#0a0a0a',
+    tabsGradientFrom: '#171717',
+    tabsGradientVia: '#312e81',
+    tabsGradientTo: '#0a0a0a',
+    pageGlow: '#6366f1',
+    glowOpacity: 0.12,
+  },
+};
 
 export const SETTING_DEFAULTS = {
   [SETTING_KEYS.SITE_LOGO]: '',
@@ -207,6 +320,8 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.THEME_CUSTOM_JS]: '',
   [SETTING_KEYS.THEME_CUSTOM_HEAD]: '',
   [SETTING_KEYS.THEME_CUSTOM_BODY]: '',
+  [SETTING_KEYS.THEME_COLOR_PALETTE]: JSON.stringify(DEFAULT_THEME_COLOR_PALETTE),
+  [SETTING_KEYS.THEME_COLOR_PRESETS]: '[]',
   [SETTING_KEYS.PRICING_MAX_COLUMNS]: '0', // 0 means no limit (auto-fit)
   [SETTING_KEYS.PRICING_CENTER_UNEVEN]: 'false'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_ONE_TIME]: 'true'
@@ -218,6 +333,117 @@ export const SETTING_DEFAULTS = {
   ,[SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES]: '["refund","new_purchase","renewal","upgrade","downgrade","payment_failed","dispute","other"]'
   ,[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]: '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
 } as const;
+
+const THEME_HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+const sanitizeThemeHex = (value: unknown, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return THEME_HEX_RE.test(trimmed) ? trimmed.toLowerCase() : fallback;
+};
+
+const clamp01 = (value: unknown, fallback: number): number => {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+};
+
+const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeColorTokens => {
+  const rec = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
+  const legacySurface = rec.bgSecondary;
+  const pageFrom = sanitizeThemeHex(rec.pageGradientFrom, fallback.pageGradientFrom);
+  const pageVia = sanitizeThemeHex(rec.pageGradientVia, fallback.pageGradientVia);
+  const pageTo = sanitizeThemeHex(rec.pageGradientTo, fallback.pageGradientTo);
+  return {
+    bgPrimary: sanitizeThemeHex(rec.bgPrimary, fallback.bgPrimary),
+    bgSecondary: sanitizeThemeHex(rec.bgSecondary, fallback.bgSecondary),
+    panelBg: sanitizeThemeHex(rec.panelBg ?? legacySurface, fallback.panelBg),
+    heroBg: sanitizeThemeHex(rec.heroBg ?? legacySurface, fallback.heroBg),
+    bgTertiary: sanitizeThemeHex(rec.bgTertiary, fallback.bgTertiary),
+    bgQuaternary: sanitizeThemeHex(rec.bgQuaternary, fallback.bgQuaternary),
+    textPrimary: sanitizeThemeHex(rec.textPrimary, fallback.textPrimary),
+    textSecondary: sanitizeThemeHex(rec.textSecondary, fallback.textSecondary),
+    textTertiary: sanitizeThemeHex(rec.textTertiary, fallback.textTertiary),
+    borderPrimary: sanitizeThemeHex(rec.borderPrimary, fallback.borderPrimary),
+    borderSecondary: sanitizeThemeHex(rec.borderSecondary, fallback.borderSecondary),
+    accentPrimary: sanitizeThemeHex(rec.accentPrimary, fallback.accentPrimary),
+    accentHover: sanitizeThemeHex(rec.accentHover, fallback.accentHover),
+    headerBg: sanitizeThemeHex(rec.headerBg, fallback.headerBg),
+    headerOpacity: clamp01(rec.headerOpacity, fallback.headerOpacity),
+    sidebarBg: sanitizeThemeHex(rec.sidebarBg, fallback.sidebarBg),
+    sidebarOpacity: clamp01(rec.sidebarOpacity, fallback.sidebarOpacity),
+    pageGradientFrom: pageFrom,
+    pageGradientVia: pageVia,
+    pageGradientTo: pageTo,
+    heroGradientFrom: sanitizeThemeHex(rec.heroGradientFrom, pageFrom),
+    heroGradientVia: sanitizeThemeHex(rec.heroGradientVia, pageVia),
+    heroGradientTo: sanitizeThemeHex(rec.heroGradientTo, pageTo),
+    cardGradientFrom: sanitizeThemeHex(rec.cardGradientFrom, pageFrom),
+    cardGradientVia: sanitizeThemeHex(rec.cardGradientVia, pageVia),
+    cardGradientTo: sanitizeThemeHex(rec.cardGradientTo, pageTo),
+    tabsGradientFrom: sanitizeThemeHex(rec.tabsGradientFrom, pageFrom),
+    tabsGradientVia: sanitizeThemeHex(rec.tabsGradientVia, pageVia),
+    tabsGradientTo: sanitizeThemeHex(rec.tabsGradientTo, pageTo),
+    pageGlow: sanitizeThemeHex(rec.pageGlow, fallback.pageGlow),
+    glowOpacity: clamp01(rec.glowOpacity, fallback.glowOpacity),
+  };
+};
+
+const MAX_THEME_COLOR_PRESETS = 25;
+const MAX_THEME_PRESET_NAME_CHARS = 48;
+
+const normalizeThemeColorPresets = (raw: string): ThemeColorPreset[] => {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    const presets: ThemeColorPreset[] = [];
+    const seen = new Set<string>();
+
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== 'object') continue;
+      const rec = entry as Record<string, unknown>;
+      const name = typeof rec.name === 'string' ? rec.name.trim().slice(0, MAX_THEME_PRESET_NAME_CHARS) : '';
+      if (!name) continue;
+      const dedupeKey = name.toLowerCase();
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      presets.push({
+        name,
+        light: mergeThemeColorTokens(rec.light, DEFAULT_THEME_COLOR_PALETTE.light),
+        dark: mergeThemeColorTokens(rec.dark, DEFAULT_THEME_COLOR_PALETTE.dark),
+      });
+
+      if (presets.length >= MAX_THEME_COLOR_PRESETS) break;
+    }
+
+    return presets;
+  } catch {
+    return [];
+  }
+};
+
+export async function getThemeColorPalette(): Promise<ThemeColorPalette> {
+  const raw = await getSetting(SETTING_KEYS.THEME_COLOR_PALETTE, SETTING_DEFAULTS[SETTING_KEYS.THEME_COLOR_PALETTE]);
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    const rec = (parsed && typeof parsed === 'object') ? (parsed as Record<string, unknown>) : {};
+    return {
+      light: mergeThemeColorTokens(rec.light, DEFAULT_THEME_COLOR_PALETTE.light),
+      dark: mergeThemeColorTokens(rec.dark, DEFAULT_THEME_COLOR_PALETTE.dark),
+    };
+  } catch {
+    return DEFAULT_THEME_COLOR_PALETTE;
+  }
+}
+
+export async function getThemeColorPresets(): Promise<ThemeColorPreset[]> {
+  const raw = await getSetting(SETTING_KEYS.THEME_COLOR_PRESETS, SETTING_DEFAULTS[SETTING_KEYS.THEME_COLOR_PRESETS]);
+  return normalizeThemeColorPresets(raw);
+}
 
 export interface ThemeLink {
   label: string;

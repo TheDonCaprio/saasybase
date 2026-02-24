@@ -49,28 +49,28 @@ export default async function AdminApiPage() {
       value: 'Clerk + internal token',
       helper: 'Admin/user via Clerk session; internal via Bearer token',
       icon: faKey,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Security posture',
       value: 'Role-aware',
       helper: `${summary.adminEndpoints} admin-only endpoints`,
       icon: faShieldHalved,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Rate tiers',
       value: rateLimiting.length.toString(),
       helper: rateLimiting.map((tier) => `${tier.tier}: ${tier.limit}`).join(' · '),
       icon: faGaugeHigh,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Version',
       value: changelog[0]?.version ?? 'Current',
       helper: changelog[0] ? `Updated ${formatAdminApiDate(changelog[0].releasedAt)}` : 'Latest updates applied',
       icon: faCodeBranch,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

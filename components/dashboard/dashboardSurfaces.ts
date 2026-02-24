@@ -2,15 +2,22 @@ import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const basePanel =
-	'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-[0_0_25px_rgba(15,23,42,0.45)]';
+	'rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.70)] bg-[color:rgb(var(--bg-secondary))] p-6 shadow-sm transition-shadow dark:shadow-[0_0_25px_rgba(15,23,42,0.45)]';
+
+const baseCard =
+	'rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.70)] bg-[color:rgb(var(--surface-card))] p-6 shadow-sm transition-shadow dark:shadow-[0_0_25px_rgba(15,23,42,0.45)]';
 
 export function dashboardPanelClass(...extra: ClassValue[]) {
 	return twMerge(basePanel, clsx(extra));
 }
 
+export function dashboardCardClass(...extra: ClassValue[]) {
+	return twMerge(baseCard, clsx(extra));
+}
+
 export function dashboardMutedPanelClass(...extra: ClassValue[]) {
 	return twMerge(
-		'rounded-2xl border border-slate-200 bg-slate-50/70 p-6 shadow-sm backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/40',
+		'rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.60)] bg-[color:rgb(var(--bg-secondary)_/_0.70)] p-6 shadow-sm backdrop-blur-sm',
 		clsx(extra)
 	);
 }
@@ -24,7 +31,7 @@ export function dashboardDangerPanelClass(...extra: ClassValue[]) {
 
 export function dashboardPillClass(...extra: ClassValue[]) {
 	return twMerge(
-		'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200',
+		'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--border-primary)_/_0.60)] bg-[color:rgb(var(--surface-card)_/_0.70)] px-3 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm dark:text-neutral-200',
 		clsx(extra)
 	);
 }

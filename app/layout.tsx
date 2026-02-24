@@ -22,6 +22,7 @@ import {
   getThemeCustomCss,
   getThemeCustomHeadSnippet,
   getThemeCustomBodySnippet,
+  getThemeColorPalette,
   type ThemeLink
 } from '../lib/settings';
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
@@ -50,14 +51,67 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const faviconHref = (siteFavicon ?? '').trim() || '/favicon.ico';
   const logoHeightNum = Number(siteLogoHeight) || 48;
   const formatSettings = await getFormatSetting().catch(() => ({ mode: 'short' as const, timezone: undefined }));
-  const [headerLinks, footerLinks, footerText, customCss, customHeadSnippet, customBodySnippet] = await Promise.all([
+  const [headerLinks, footerLinks, footerText, customCss, customHeadSnippet, customBodySnippet, colorPalette] = await Promise.all([
     getThemeHeaderLinks().catch(() => [] as ThemeLink[]),
     getThemeFooterLinks().catch(() => [] as ThemeLink[]),
     getThemeFooterText(siteName).catch(() => `© ${new Date().getFullYear()} ${siteName}`),
     getThemeCustomCss().catch(() => ''),
     getThemeCustomHeadSnippet().catch(() => ''),
-    getThemeCustomBodySnippet().catch(() => '')
+    getThemeCustomBodySnippet().catch(() => ''),
+    getThemeColorPalette()
   ]);
+
+  const hexToSpaceRgb = (hex: string): string => {
+    const clean = (hex || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '0 0 0';
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `${r} ${g} ${b}`;
+  };
+
+  const buildThemeColorVarsCss = () => {
+    const buildBlock = (t: typeof colorPalette.light, mode: 'light' | 'dark') => {
+      const headerOpacity = (typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7)).toFixed(2);
+      const sidebarOpacity = (typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5)).toFixed(2);
+      const glowOpacity = (typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12)).toFixed(2);
+      return [
+        `  --bg-primary: ${hexToSpaceRgb(t.bgPrimary)};`,
+        `  --bg-secondary: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
+        `  --surface-panel: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
+        `  --surface-card: ${hexToSpaceRgb(t.bgSecondary)};`,
+        `  --surface-hero: ${hexToSpaceRgb(t.heroBg ?? t.bgSecondary)};`,
+        `  --bg-tertiary: ${hexToSpaceRgb(t.bgTertiary)};`,
+        `  --bg-quaternary: ${hexToSpaceRgb(t.bgQuaternary)};`,
+        `  --text-primary: ${hexToSpaceRgb(t.textPrimary)};`,
+        `  --text-secondary: ${hexToSpaceRgb(t.textSecondary)};`,
+        `  --text-tertiary: ${hexToSpaceRgb(t.textTertiary)};`,
+        `  --border-primary: ${hexToSpaceRgb(t.borderPrimary)};`,
+        `  --border-secondary: ${hexToSpaceRgb(t.borderSecondary)};`,
+        `  --accent-primary: ${hexToSpaceRgb(t.accentPrimary)};`,
+        `  --accent-hover: ${hexToSpaceRgb(t.accentHover)};`,
+        `  --theme-header-bg: rgb(${hexToSpaceRgb(t.headerBg)} / ${headerOpacity});`,
+        `  --theme-sidebar-bg: rgb(${hexToSpaceRgb(t.sidebarBg)} / ${sidebarOpacity});`,
+        `  --theme-page-gradient-from: rgb(${hexToSpaceRgb(t.pageGradientFrom)});`,
+        `  --theme-page-gradient-via: rgb(${hexToSpaceRgb(t.pageGradientVia)});`,
+        `  --theme-page-gradient-to: rgb(${hexToSpaceRgb(t.pageGradientTo)});`,
+        `  --theme-hero-gradient-from: rgb(${hexToSpaceRgb(t.heroGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-hero-gradient-via: rgb(${hexToSpaceRgb(t.heroGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-hero-gradient-to: rgb(${hexToSpaceRgb(t.heroGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-card-gradient-from: rgb(${hexToSpaceRgb(t.cardGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-card-gradient-via: rgb(${hexToSpaceRgb(t.cardGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-card-gradient-to: rgb(${hexToSpaceRgb(t.cardGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-tabs-gradient-from: rgb(${hexToSpaceRgb(t.tabsGradientFrom ?? t.pageGradientFrom)});`,
+        `  --theme-tabs-gradient-via: rgb(${hexToSpaceRgb(t.tabsGradientVia ?? t.pageGradientVia)});`,
+        `  --theme-tabs-gradient-to: rgb(${hexToSpaceRgb(t.tabsGradientTo ?? t.pageGradientTo)});`,
+        `  --theme-page-glow: rgb(${hexToSpaceRgb(t.pageGlow)} / ${glowOpacity});`,
+      ].join('\n');
+    };
+
+    return `html.light {\n${buildBlock(colorPalette.light, 'light')}\n}\nhtml.dark {\n${buildBlock(colorPalette.dark, 'dark')}\n}`;
+  };
+
+  const themeColorVarsCss = buildThemeColorVarsCss();
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const shouldInjectGa = Boolean(gaMeasurementId);
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
@@ -88,6 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <link rel="icon" href={faviconHref} />
           {/* Theme script must run before body renders to prevent hydration mismatch */}
           <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=localStorage.getItem('themePreference');if(p==='dark'){document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');}else if(p==='light'){document.documentElement.classList.add('light');document.documentElement.classList.remove('dark');}else{document.documentElement.classList.remove('light','dark');if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}else{document.documentElement.classList.add('light');}}}catch(e){} })()` }} />
+          <style id="theme-color-vars" dangerouslySetInnerHTML={{ __html: themeColorVarsCss }} />
           {customCss ? <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
           {customHeadSnippet ? (
             <script
@@ -105,7 +160,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           markup and client theme application.
         */}
         <body
-          className="min-h-screen flex flex-col bg-white text-neutral-900 transition-colors duration-150 dark:bg-neutral-950 dark:text-neutral-100"
+          className="min-h-screen flex flex-col bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] transition-colors duration-150"
           suppressHydrationWarning={true}
         >
           <DevClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
@@ -134,7 +189,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
           ) : null}
           {/* Payment provider scripts (loaded dynamically based on active provider) */}
           <PaymentProviderScripts provider={process.env.PAYMENT_PROVIDER} />
-          <header className="px-6 py-4 flex items-center justify-between border-b border-neutral-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:border-neutral-800 dark:bg-neutral-950/70 relative z-40">
+          <header className="px-6 py-4 flex items-center justify-between bg-[color:var(--theme-header-bg)] backdrop-blur relative z-40">
             <a href="/" className="font-semibold text-lg flex items-center gap-3">
               {/* Prefer theme-specific logos: show dark variant when html has .dark, otherwise light. If none, fall back to SITE_LOGO or Brand */}
               {(
@@ -201,11 +256,19 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
             </div>
           </header>
           {/* top-down page-level gradient and soft radial highlight at the top */}
-          <main className="flex-1 w-full p-6 bg-gradient-to-b from-sky-50 via-indigo-50 to-white dark:from-neutral-900/95 dark:via-indigo-900/80 dark:to-neutral-950 relative">
+          <main
+            className="flex-1 w-full p-6 relative"
+            style={{
+              backgroundImage: 'linear-gradient(to bottom, var(--theme-page-gradient-from), var(--theme-page-gradient-via), var(--theme-page-gradient-to))'
+            }}
+          >
             {/* bluish/purplish top radial glow for 'light from above' */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-28 w-[min(1200px,100vw)] h-[520px] -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.18),_transparent_35%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.12),_transparent_35%)] opacity-100"
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-28 w-[min(1200px,100vw)] h-[520px] -z-10 opacity-100"
+              style={{
+                backgroundImage: 'radial-gradient(ellipse at top, var(--theme-page-glow), transparent 35%)'
+              }}
             />
             {children}
           </main>

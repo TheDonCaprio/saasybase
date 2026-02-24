@@ -259,9 +259,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <CurrentPlanStatus
             isActive={planActive}
             planSummary={{
-              eyebrow: 'Plan overview',
               name: activePlanName,
-              description: planActive ? currentPlanDescription : planDisplay.statusHelper,
             }}
             infoTiles={planInfoTiles}
             progress={planProgress}

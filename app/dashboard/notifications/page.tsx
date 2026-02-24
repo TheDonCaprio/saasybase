@@ -49,7 +49,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <DashboardPageHeader
-        accent="indigo"
+        accent="theme"
         eyebrow="Inbox"
         eyebrowIcon="🔔"
         title="Notifications"
@@ -63,13 +63,13 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
             label: 'Total notifications',
             value: totalCount,
             helper: totalCount > 0 ? 'Latest 50 are shown below' : 'We’ll notify you when something needs attention',
-            tone: 'slate',
+            tone: 'theme',
           },
           {
             label: 'Unread',
             value: unreadCount,
             helper: unreadCount > 0 ? 'Clear them or keep them for reference' : 'No pending alerts',
-            tone: unreadCount > 0 ? 'indigo' : 'emerald',
+            tone: 'theme',
           },
         ]}
       >

@@ -123,19 +123,19 @@ export default async function TrafficPage() {
       label: 'Total page views (30D)',
       value: formatNumber(traffic.totals.pageViews),
       helper: 'Screens and page views captured',
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'New users (30D)',
       value: formatNumber(traffic.totals.newUsers),
       helper: `${formatPercent(traffic.derived.newUserShare)} of visits`,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Avg session duration (30D)',
       value: formatDuration(traffic.totals.averageSessionDurationSeconds),
       helper: 'Across all sessions',
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Top country (30D)',
@@ -143,7 +143,7 @@ export default async function TrafficPage() {
       helper: traffic.breakdowns.countries[0]
         ? `${formatPercent(traffic.breakdowns.countries[0].share)} of visits`
         : 'No country data',
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

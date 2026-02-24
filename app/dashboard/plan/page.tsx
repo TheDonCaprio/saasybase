@@ -304,12 +304,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
           <CurrentPlanStatus
             isActive={!!activeSub || workspaceOnly}
             planSummary={{
-              eyebrow: 'Plan overview',
               name: activeSub ? currentPlan?.name ?? '—' : planDisplay.planName,
-              description:
-                activeSub
-                  ? currentPlan?.shortDescription || currentPlan?.description || `${process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} subscription`
-                  : planDisplay.statusHelper,
             }}
             infoTiles={planInfoTiles}
             progress={planProgress}

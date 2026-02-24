@@ -151,28 +151,28 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
           value={`$${grossTotal.toFixed(2)}`}
           helper={`${grossCount} transactions`}
           icon={faDollarSign}
-          accent="indigo"
+          accent="theme"
         />
         <AdminStatCard
           label="Net lifetime spend"
           value={`$${totalSpent.toFixed(2)}`}
           helper={`${netCount} transactions`}
           icon={faDollarSign}
-          accent="emerald"
+          accent="theme"
         />
         <AdminStatCard
           label="Most purchased"
           value={mostPurchased}
           helper={`${mostPurchasedCount} purchases`}
           icon={faCoins}
-          accent="amber"
+          accent="theme"
         />
         <AdminStatCard
           label="Current plan"
           value={planName}
           footer={currentPlanFooter}
           icon={faCalendarDays}
-          accent="violet"
+          accent="theme"
         />
       </section>
 

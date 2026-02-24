@@ -93,14 +93,14 @@ export default async function AdminPlansPage() {
       value: formatNumber(totalPlans),
       helper: `Bestseller: ${BestsellerName}`,
       icon: faLayerGroup,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Average price',
       value: formatCurrency(averagePrice),
       helper: `Max ${formatCurrency(highestPrice)}`,
       icon: faBolt,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Active subscriptions',
@@ -110,14 +110,14 @@ export default async function AdminPlansPage() {
         return `Across ${formatNumber(plansWithActiveSubs)} plan${plansWithActiveSubs === 1 ? '' : 's'}`;
       })(),
       icon: faArrowsRotate,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Expiring in 30 days',
       value: formatNumber(expiringSubscriptionCount),
       helper: 'Includes scheduled cancels',
       icon: faClock,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

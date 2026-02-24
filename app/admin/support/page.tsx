@@ -100,28 +100,28 @@ export default async function AdminSupportPage({ searchParams }: { searchParams?
       value: formatNumber(totalCount),
       helper: `+${formatNumber(newTickets24h)} in last 24h`,
       icon: faInbox,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Open queue',
       value: formatNumber(openCount),
       helper: `${formatNumber(inProgressCount)} escalated`,
       icon: faLifeRing,
-      accent: 'rose'
+      accent: 'theme'
     },
     {
       label: 'Closed (7 days)',
       value: formatNumber(closedLast7Days),
       helper: `${formatNumber(closedTotal)} all-time`,
       icon: faPaperPlane,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Replies per ticket',
       value: averageRepliesPerTicket.toFixed(1),
       helper: `${formatNumber(totalReplies)} total replies`,
       icon: faUserClock,
-      accent: 'amber'
+      accent: 'theme'
     }
   ];
 

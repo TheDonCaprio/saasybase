@@ -69,28 +69,28 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       value: formatCurrency(analytics.revenue.total),
       helper: 'Processed lifetime',
       icon: faSackDollar,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Monthly recurring revenue',
       value: formatCurrency(analytics.revenue.mrr),
       helper: `${formatCurrency(analytics.revenue.arr)} ARR`,
       icon: faChartLine,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Paying customers',
       value: formatNumber(payingUsers),
       helper: `${formatPercent(payingSharePercent)} of ${formatNumber(totalUsers)} users`,
       icon: faUserCheck,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: 'Total users',
       value: formatNumber(totalUsers),
       helper: `${formatNumber(freeUsers)} free · ${formatNumber(payingUsers)} paying`,
       icon: faUserPlus,
-      accent: 'violet'
+      accent: 'theme'
     }
   ];
 

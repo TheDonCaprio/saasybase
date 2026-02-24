@@ -133,7 +133,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
   return (
   <div className="space-y-6">
       <DashboardPageHeader
-        accent="violet"
+        accent="theme"
         eyebrow="Help & support"
         eyebrowIcon="💬"
         title="We're on your side"

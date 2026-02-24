@@ -5,51 +5,45 @@ import PlanBillingActions from './PlanBillingActions';
 type TileTone = 'emerald' | 'rose' | 'violet' | 'blue' | 'amber' | 'slate' | 'indigo';
 type BadgeTone = 'emerald' | 'amber' | 'violet' | 'indigo' | 'slate';
 
+const THEME_TILE_CLASS =
+	'rounded-xl border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary))] p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:text-neutral-100';
+
+const THEME_BADGE_CLASS =
+	'rounded-xl border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary))] p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:text-neutral-100';
+
 const tileToneClasses: Record<TileTone, string> = {
-	emerald:
-		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	rose:
-		'rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-rose-500/40 dark:from-rose-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	violet:
-		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	blue:
-		'rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-blue-500/40 dark:from-blue-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	amber:
-		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	slate:
-		'rounded-xl border border-slate-200/80 bg-white/80 p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
-	indigo:
-		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-3 2xl:p-4 text-[11px] 2xl:text-xs text-slate-700 shadow-sm backdrop-blur-sm transition hover:shadow-md dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
+	emerald: THEME_TILE_CLASS,
+	rose: THEME_TILE_CLASS,
+	violet: THEME_TILE_CLASS,
+	blue: THEME_TILE_CLASS,
+	amber: THEME_TILE_CLASS,
+	slate: THEME_TILE_CLASS,
+	indigo: THEME_TILE_CLASS,
 };
 
-	const tileAccentClasses: Record<TileTone, string> = {
-		emerald: 'text-emerald-600 dark:text-emerald-200',
-		rose: 'text-rose-600 dark:text-rose-200',
-		violet: 'text-violet-600 dark:text-violet-200',
-		blue: 'text-blue-600 dark:text-blue-200',
-		amber: 'text-amber-600 dark:text-amber-300',
-		slate: 'text-slate-500 dark:text-neutral-400',
-		indigo: 'text-indigo-600 dark:text-indigo-200',
-	};
+const tileAccentClasses: Record<TileTone, string> = {
+	emerald: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	rose: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	violet: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	blue: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	amber: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	slate: 'text-slate-500 dark:text-neutral-400',
+	indigo: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+};
 
 const badgeToneClasses: Record<BadgeTone, string> = {
-	emerald:
-		'rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-emerald-500/40 dark:from-emerald-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	amber:
-		'rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-amber-500/40 dark:from-amber-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	violet:
-		'rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-violet-500/40 dark:from-violet-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	indigo:
-		'rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-white p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent dark:text-neutral-100',
-	slate:
-		'rounded-xl border border-slate-200/80 bg-white/80 p-2 2xl:p-3 text-[10px] 2xl:text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300',
+	emerald: THEME_BADGE_CLASS,
+	amber: THEME_BADGE_CLASS,
+	violet: THEME_BADGE_CLASS,
+	indigo: THEME_BADGE_CLASS,
+	slate: THEME_BADGE_CLASS,
 };
 
 const badgeAccentClasses: Record<BadgeTone, string> = {
-	emerald: 'text-emerald-600 dark:text-emerald-200',
-	amber: 'text-amber-600 dark:text-amber-300',
-	violet: 'text-violet-600 dark:text-violet-200',
-	indigo: 'text-indigo-600 dark:text-indigo-200',
+	emerald: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	amber: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	violet: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
+	indigo: 'text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.88)]',
 	slate: 'text-slate-600 dark:text-neutral-300',
 };
 
@@ -162,7 +156,7 @@ export function CurrentPlanStatus({
 
 			{!isActive ? (
 				<>
-					<div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
+					<div className="rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary)_/_0.65)] p-6 text-center shadow-sm backdrop-blur-sm dark:bg-[color:rgb(var(--bg-secondary)_/_0.45)]">
 						{resolvedEmpty.heading ? (
 							<div className="text-lg font-semibold text-slate-800 dark:text-neutral-100">{resolvedEmpty.heading}</div>
 						) : null}
@@ -180,29 +174,29 @@ export function CurrentPlanStatus({
 			) : (
 				<div className="space-y-5">
 					{cancellationNotice ? (
-						<div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-							<div className="font-semibold text-amber-700 dark:text-amber-100">{cancellationNotice.heading}</div>
-							<p className="mt-1 text-amber-700/90 dark:text-amber-200/80">{cancellationNotice.body}</p>
+						<div className="rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary))] p-4 text-sm shadow-sm backdrop-blur-sm">
+							<div className="font-semibold text-[color:rgb(var(--accent-primary)_/_0.90)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]">{cancellationNotice.heading}</div>
+							<p className="mt-1 text-[color:rgb(var(--text-secondary))]">{cancellationNotice.body}</p>
 						</div>
 					) : null}
 
 					{pendingSwitchNotice ? (
-						<div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm shadow-sm dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100">
-							<div className="font-semibold text-blue-700 dark:text-blue-100">{pendingSwitchNotice.heading}</div>
-							<p className="mt-1 text-blue-700/90 dark:text-blue-200/80">{pendingSwitchNotice.body}</p>
+						<div className="rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary))] p-4 text-sm shadow-sm backdrop-blur-sm">
+							<div className="font-semibold text-[color:rgb(var(--accent-primary)_/_0.90)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]">{pendingSwitchNotice.heading}</div>
+							<p className="mt-1 text-[color:rgb(var(--text-secondary))]">{pendingSwitchNotice.body}</p>
 						</div>
 					) : null}
 
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-						<div className="rounded-2xl border border-purple-200/70 relative h-full overflow-hidden bg-gradient-to-br from-purple-50 via-white to-white transition-shadow hover:shadow-lg dark:border-purple-500/40 dark:from-purple-500/10 dark:via-neutral-900/60 dark:to-transparent">
+						<div className="rounded-2xl border border-[color:rgb(var(--accent-primary)_/_0.20)] relative h-full overflow-hidden bg-[linear-gradient(135deg,var(--theme-page-gradient-from),var(--theme-page-gradient-via),var(--theme-page-gradient-to))] transition-shadow hover:shadow-lg dark:border-[color:rgb(var(--accent-primary)_/_0.32)]">
 							<div
-								className="pointer-events-none absolute inset-0 opacity-75 bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.22),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.32),_transparent_60%)]"
+								className="pointer-events-none absolute inset-0 opacity-75 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]"
 								aria-hidden="true"
 							/>
 							<div className="relative z-10 space-y-6 p-6">
 								<div>
 									{planSummary?.eyebrow ? (
-										<p className="text-xs uppercase tracking-[0.18em] text-purple-600 dark:text-purple-200">{planSummary.eyebrow}</p>
+										<p className="text-xs uppercase tracking-[0.18em] text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.90)]">{planSummary.eyebrow}</p>
 									) : null}
 									{planSummary?.name ? (
 										<h3 className="mt-3 text-xl font-semibold text-slate-900 dark:text-neutral-50">{planSummary.name}</h3>
@@ -240,25 +234,25 @@ export function CurrentPlanStatus({
 							</div>
 						</div>
 
-									<div className="rounded-2xl border border-indigo-200/70 relative flex h-full flex-col overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-white transition-shadow hover:shadow-lg dark:border-indigo-500/40 dark:from-indigo-500/10 dark:via-neutral-900/60 dark:to-transparent">
+									<div className="rounded-2xl border border-[color:rgb(var(--accent-primary)_/_0.20)] relative flex h-full flex-col overflow-hidden bg-[linear-gradient(135deg,var(--theme-page-gradient-from),var(--theme-page-gradient-via),var(--theme-page-gradient-to))] transition-shadow hover:shadow-lg dark:border-[color:rgb(var(--accent-primary)_/_0.32)]">
 							<div
-								className="pointer-events-none absolute inset-0 opacity-75 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.28),_transparent_55%)]"
+											className="pointer-events-none absolute inset-0 opacity-75 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.16),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.26),_transparent_55%)]"
 								aria-hidden="true"
 							/>
 										<div className="relative z-10 flex h-full flex-col gap-6 p-6">
 											{progress?.label || progress?.dateDisplay ? (
-																	<div className="flex flex-col items-start gap-2 text-indigo-600 dark:text-indigo-200 2xl:flex-row 2xl:items-center 2xl:justify-between 2xl:gap-3">
+												<div className="flex flex-col items-start gap-2 text-[color:rgb(var(--accent-primary)_/_0.82)] dark:text-[color:rgb(var(--accent-primary)_/_0.90)] 2xl:flex-row 2xl:items-center 2xl:justify-between 2xl:gap-3">
 																		<span className="uppercase tracking-[0.18em] text-[11px]">{progress?.label}</span>
-																		<span className="rounded-full border border-indigo-100/70 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-indigo-700 shadow-sm dark:border-white/10 dark:bg-neutral-900/40 dark:text-neutral-100">
+													<span className="rounded-full border border-[color:rgb(var(--border-primary)_/_0.7)] bg-[color:rgb(var(--bg-secondary)_/_0.65)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-800 shadow-sm backdrop-blur-sm dark:bg-[color:rgb(var(--bg-secondary)_/_0.45)] dark:text-neutral-100">
 																			{progress?.dateDisplay ?? '—'}
 																		</span>
 									</div>
 								) : null}
 
 								<div className="flex-1 flex flex-col justify-center space-y-4">
-									<div className="h-2 w-full overflow-hidden rounded-full bg-indigo-100/70 dark:bg-neutral-800/50">
+									<div className="h-2 w-full overflow-hidden rounded-full bg-[color:rgb(var(--border-primary)_/_0.30)] dark:bg-[color:rgb(var(--border-primary)_/_0.18)]">
 										<div
-											className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-fuchsia-400 transition-all"
+											className="h-full rounded-full bg-[linear-gradient(90deg,_rgb(var(--accent-primary)_/_0.95),_rgb(var(--accent-primary)_/_0.55))] transition-all"
 											style={{ width: `${progressWidth}%` }}
 											aria-hidden="true"
 										/>

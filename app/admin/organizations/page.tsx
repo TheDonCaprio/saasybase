@@ -91,28 +91,28 @@ export default async function AdminOrganizationsPage() {
       value: formatNumber(avgMembers),
       helper: `${formatNumber(totalCount)} active orgs`,
       icon: faUsersGear,
-      accent: 'violet'
+      accent: 'theme'
     },
     {
       label: 'Seat-limited workspaces',
       value: formatNumber(seatLimitedCount),
       helper: `${formatNumber(totalCount)} total`,
       icon: faBuilding,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Hard cap orgs',
       value: formatNumber(hardCapCount),
       helper: 'Using strict token ceilings',
       icon: faSitemap,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Pending invites',
       value: formatNumber(pendingInviteCount),
       helper: 'Awaiting approval',
       icon: faEnvelopeOpenText,
-      accent: 'rose'
+      accent: 'theme'
     }
   ];
 

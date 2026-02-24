@@ -249,28 +249,28 @@ export default async function AdminPurchasesPage() {
       value: formatCurrency(lifetimeVolumeCents / 100),
       helper: `Total refunds ${formatCurrency(refundedVolumeCents / 100)}`,
       icon: faSackDollar,
-      accent: 'emerald'
+      accent: 'theme'
     },
     {
       label: '30-day revenue',
       value: formatCurrency(last30VolumeCents / 100),
       helper: `${formatNumber(last30CompletedCount)} completed purchases`,
       icon: faCalendarDay,
-      accent: 'indigo'
+      accent: 'theme'
     },
     {
       label: 'Pending purchases',
       value: formatNumber(pendingCount),
       helper: `${formatNumber(failedCount)} failed overall`,
       icon: faReceipt,
-      accent: 'amber'
+      accent: 'theme'
     },
     {
       label: 'Average order value',
       value: formatCurrency(averageOrderValue),
       helper: `Across ${formatNumber(completedCount)} completed purchases`,
       icon: faUsers,
-      accent: 'violet'
+      accent: 'theme'
     }
   ];
 

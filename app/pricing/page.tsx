@@ -233,9 +233,7 @@ export default async function PricingPage() {
             isActive={isActive}
             description=""
             planSummary={{
-              eyebrow: 'Plan overview',
               name: currentSubscription?.plan?.name ?? '—',
-              description: planDescription,
             }}
             infoTiles={planInfoTiles}
             progress={planProgress}

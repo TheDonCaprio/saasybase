@@ -885,7 +885,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
             id="settings-tab-select"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full appearance-none rounded-2xl border border-purple-200/70 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 shadow-lg focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 dark:border-purple-500/40 dark:from-purple-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:text-neutral-100"
+            className="w-full appearance-none rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 shadow-lg focus:border-[rgb(var(--accent-primary)_/_0.45)] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary)_/_0.35)] dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:text-neutral-100"
           >
             {tabs.map((tab) => (
               <option key={tab.id} value={tab.id}>
@@ -894,7 +894,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-            <svg className="h-5 w-5 text-purple-500 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-5 w-5 text-[rgb(var(--accent-primary))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -907,11 +907,11 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
 
       {/* Desktop: Horizontal tabs */}
       <div
-        className="relative hidden md:flex overflow-hidden rounded-2xl border border-purple-200/70 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-white shadow-[0_12px_45px_rgba(109,40,217,0.12)] transition-shadow dark:border-purple-500/40 dark:from-purple-500/15 dark:via-fuchsia-500/10 dark:to-transparent dark:shadow-[0_0_40px_rgba(168,85,247,0.18)]"
+        className="relative hidden md:flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
         role="tablist"
         aria-label="Admin settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -922,7 +922,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
             className={cx(
               'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all lg:px-6',
               activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow-md dark:bg-black dark:text-neutral-100'
+                ? 'bg-white text-[rgb(var(--accent-primary))] shadow-md dark:bg-black dark:text-[rgb(var(--accent-primary))]'
                 : 'text-slate-700/85 hover:bg-white/60 hover:text-slate-900 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-neutral-50'
             )}
           >

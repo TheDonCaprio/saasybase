@@ -885,7 +885,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
             id="settings-tab-select"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full appearance-none rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 shadow-lg focus:border-[rgb(var(--accent-primary)_/_0.45)] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary)_/_0.35)] dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:text-neutral-100"
+            className="w-full appearance-none rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 shadow-lg focus:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.45))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:text-neutral-100"
           >
             {tabs.map((tab) => (
               <option key={tab.id} value={tab.id}>
@@ -907,11 +907,11 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
 
       {/* Desktop: Horizontal tabs */}
       <div
-        className="relative hidden md:flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
+        className="relative hidden md:flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
         role="tablist"
         aria-label="Admin settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}

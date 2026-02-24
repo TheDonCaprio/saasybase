@@ -160,11 +160,11 @@ export function UserSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
+        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
         role="tablist"
         aria-label="User settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}

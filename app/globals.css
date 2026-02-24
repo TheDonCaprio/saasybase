@@ -48,11 +48,12 @@
   --accent-hover: 37 99 235; /* blue-600 */
 }
 
-html, body { height: 100%; }
+html { min-height: 100%; }
 body { 
+  min-height: 100%;
   /* Prevent horizontal overflow on small devices */
   overflow-x: hidden;
-  background-color: rgb(var(--bg-primary));
+  background-color: transparent;
   color: rgb(var(--text-primary));
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;

@@ -142,6 +142,11 @@ export const SETTING_KEYS = {
   THEME_COLOR_PRESETS: 'THEME_COLOR_PRESETS',
   PRICING_MAX_COLUMNS: 'PRICING_MAX_COLUMNS',
   PRICING_CENTER_UNEVEN: 'PRICING_CENTER_UNEVEN',
+  HEADER_STYLE: 'HEADER_STYLE',
+  HEADER_HEIGHT: 'HEADER_HEIGHT',
+  HEADER_STICKY_ENABLED: 'HEADER_STICKY_ENABLED',
+  HEADER_STICKY_SCROLL_Y: 'HEADER_STICKY_SCROLL_Y',
+  HEADER_STICKY_HEIGHT: 'HEADER_STICKY_HEIGHT',
   BLOG_LISTING_STYLE: 'BLOG_LISTING_STYLE',
   BLOG_LISTING_PAGE_SIZE: 'BLOG_LISTING_PAGE_SIZE',
   BLOG_SIDEBAR_ENABLED: 'BLOG_SIDEBAR_ENABLED',
@@ -184,6 +189,18 @@ export type ThemeColorTokens = {
   accentHover: string;
   headerBg: string;
   headerOpacity: number;
+  headerText: string;
+  headerBlur: number;
+  headerBorder: string;
+  headerBorderOpacity: number;
+  headerBorderWidth: number;
+  stickyHeaderBg: string;
+  stickyHeaderOpacity: number;
+  stickyHeaderBlur: number;
+  stickyHeaderText: string;
+  stickyHeaderBorder: string;
+  stickyHeaderBorderOpacity: number;
+  stickyHeaderBorderWidth: number;
   sidebarBg: string;
   sidebarOpacity: number;
   pageGradientFrom: string;
@@ -227,6 +244,18 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     accentHover: '#2563eb',
     headerBg: '#ffffff',
     headerOpacity: 0.8,
+    headerText: '#111827',
+    headerBlur: 12,
+    headerBorder: '#d1d5db',
+    headerBorderOpacity: 0.8,
+    headerBorderWidth: 1,
+    stickyHeaderBg: '#ffffff',
+    stickyHeaderOpacity: 0.92,
+    stickyHeaderBlur: 14,
+    stickyHeaderText: '#111827',
+    stickyHeaderBorder: '#d1d5db',
+    stickyHeaderBorderOpacity: 0.65,
+    stickyHeaderBorderWidth: 1,
     sidebarBg: '#ffffff',
     sidebarOpacity: 0.9,
     pageGradientFrom: '#f0f9ff',
@@ -260,6 +289,18 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     accentHover: '#2563eb',
     headerBg: '#0a0a0a',
     headerOpacity: 0.7,
+    headerText: '#f5f5f5',
+    headerBlur: 12,
+    headerBorder: '#404040',
+    headerBorderOpacity: 0.7,
+    headerBorderWidth: 1,
+    stickyHeaderBg: '#0a0a0a',
+    stickyHeaderOpacity: 0.82,
+    stickyHeaderBlur: 14,
+    stickyHeaderText: '#f5f5f5',
+    stickyHeaderBorder: '#404040',
+    stickyHeaderBorderOpacity: 0.55,
+    stickyHeaderBorderWidth: 1,
     sidebarBg: '#171717',
     sidebarOpacity: 0.5,
     pageGradientFrom: '#171717',
@@ -323,7 +364,12 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.THEME_COLOR_PALETTE]: JSON.stringify(DEFAULT_THEME_COLOR_PALETTE),
   [SETTING_KEYS.THEME_COLOR_PRESETS]: '[]',
   [SETTING_KEYS.PRICING_MAX_COLUMNS]: '0', // 0 means no limit (auto-fit)
-  [SETTING_KEYS.PRICING_CENTER_UNEVEN]: 'false'
+  [SETTING_KEYS.PRICING_CENTER_UNEVEN]: 'false',
+  [SETTING_KEYS.HEADER_STYLE]: 'right',
+  [SETTING_KEYS.HEADER_HEIGHT]: '80',
+  [SETTING_KEYS.HEADER_STICKY_ENABLED]: 'false',
+  [SETTING_KEYS.HEADER_STICKY_SCROLL_Y]: '120',
+  [SETTING_KEYS.HEADER_STICKY_HEIGHT]: '64'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_ONE_TIME]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_RECURRING]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_ONE_TIME]: 'false'
@@ -334,7 +380,7 @@ export const SETTING_DEFAULTS = {
   ,[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]: '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
 } as const;
 
-const THEME_HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const THEME_HEX_RE = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
 const sanitizeThemeHex = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
@@ -350,12 +396,26 @@ const clamp01 = (value: unknown, fallback: number): number => {
   return n;
 };
 
+const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  const rounded = Math.round(n);
+  if (rounded < min) return min;
+  if (rounded > max) return max;
+  return rounded;
+};
+
 const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeColorTokens => {
   const rec = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const legacySurface = rec.bgSecondary;
   const pageFrom = sanitizeThemeHex(rec.pageGradientFrom, fallback.pageGradientFrom);
   const pageVia = sanitizeThemeHex(rec.pageGradientVia, fallback.pageGradientVia);
   const pageTo = sanitizeThemeHex(rec.pageGradientTo, fallback.pageGradientTo);
+  const stickyBgFallback = sanitizeThemeHex(rec.headerBg, fallback.stickyHeaderBg ?? fallback.headerBg);
+  const stickyTextFallback = sanitizeThemeHex(rec.textPrimary, fallback.stickyHeaderText ?? fallback.textPrimary);
+  const headerTextFallback = sanitizeThemeHex(rec.textPrimary, fallback.headerText ?? fallback.textPrimary);
+  const headerBorderFallback = sanitizeThemeHex(rec.borderPrimary, fallback.headerBorder ?? fallback.borderPrimary);
+  const stickyBorderFallback = sanitizeThemeHex(rec.headerBorder ?? rec.borderPrimary, fallback.stickyHeaderBorder ?? fallback.headerBorder ?? fallback.borderPrimary);
   return {
     bgPrimary: sanitizeThemeHex(rec.bgPrimary, fallback.bgPrimary),
     bgSecondary: sanitizeThemeHex(rec.bgSecondary, fallback.bgSecondary),
@@ -372,6 +432,18 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     accentHover: sanitizeThemeHex(rec.accentHover, fallback.accentHover),
     headerBg: sanitizeThemeHex(rec.headerBg, fallback.headerBg),
     headerOpacity: clamp01(rec.headerOpacity, fallback.headerOpacity),
+    headerText: sanitizeThemeHex(rec.headerText, headerTextFallback),
+    headerBlur: clampInt(rec.headerBlur, 0, 40, fallback.headerBlur ?? 12),
+    headerBorder: sanitizeThemeHex(rec.headerBorder, headerBorderFallback),
+    headerBorderOpacity: clamp01(rec.headerBorderOpacity, fallback.headerBorderOpacity ?? 0.8),
+    headerBorderWidth: clampInt(rec.headerBorderWidth, 0, 4, fallback.headerBorderWidth ?? 1),
+    stickyHeaderBg: sanitizeThemeHex(rec.stickyHeaderBg, stickyBgFallback),
+    stickyHeaderOpacity: clamp01(rec.stickyHeaderOpacity, fallback.stickyHeaderOpacity ?? fallback.headerOpacity),
+    stickyHeaderBlur: clampInt(rec.stickyHeaderBlur, 0, 40, fallback.stickyHeaderBlur ?? 14),
+    stickyHeaderText: sanitizeThemeHex(rec.stickyHeaderText, stickyTextFallback),
+    stickyHeaderBorder: sanitizeThemeHex(rec.stickyHeaderBorder, stickyBorderFallback),
+    stickyHeaderBorderOpacity: clamp01(rec.stickyHeaderBorderOpacity, fallback.stickyHeaderBorderOpacity ?? 0.65),
+    stickyHeaderBorderWidth: clampInt(rec.stickyHeaderBorderWidth, 0, 4, fallback.stickyHeaderBorderWidth ?? fallback.headerBorderWidth ?? 1),
     sidebarBg: sanitizeThemeHex(rec.sidebarBg, fallback.sidebarBg),
     sidebarOpacity: clamp01(rec.sidebarOpacity, fallback.sidebarOpacity),
     pageGradientFrom: pageFrom,
@@ -625,6 +697,33 @@ export function clearSettingsCache(key?: string) {
   } else {
     settingsCache.clear();
   }
+}
+
+export type HeaderStyle = 'right' | 'left-nav' | 'center-nav';
+
+export async function getHeaderLayoutSettings(): Promise<{
+  style: HeaderStyle;
+  height: number;
+  stickyEnabled: boolean;
+  stickyScrollY: number;
+  stickyHeight: number;
+}> {
+  const clampInt = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+  const rawStyle = await getSetting(SETTING_KEYS.HEADER_STYLE, SETTING_DEFAULTS[SETTING_KEYS.HEADER_STYLE]);
+  const style: HeaderStyle = (rawStyle === 'left-nav' || rawStyle === 'center-nav' || rawStyle === 'right') ? rawStyle : 'right';
+
+  const height = parseInt(await getSetting(SETTING_KEYS.HEADER_HEIGHT, SETTING_DEFAULTS[SETTING_KEYS.HEADER_HEIGHT]), 10);
+  const stickyEnabled = await getSetting(SETTING_KEYS.HEADER_STICKY_ENABLED, SETTING_DEFAULTS[SETTING_KEYS.HEADER_STICKY_ENABLED]) === 'true';
+  const stickyScrollY = parseInt(await getSetting(SETTING_KEYS.HEADER_STICKY_SCROLL_Y, SETTING_DEFAULTS[SETTING_KEYS.HEADER_STICKY_SCROLL_Y]), 10);
+  const stickyHeight = parseInt(await getSetting(SETTING_KEYS.HEADER_STICKY_HEIGHT, SETTING_DEFAULTS[SETTING_KEYS.HEADER_STICKY_HEIGHT]), 10);
+
+  return {
+    style,
+    height: clampInt(Number.isFinite(height) ? height : 80, 48, 160),
+    stickyEnabled,
+    stickyScrollY: clampInt(Number.isFinite(stickyScrollY) ? stickyScrollY : 120, 0, 2000),
+    stickyHeight: clampInt(Number.isFinite(stickyHeight) ? stickyHeight : 64, 40, 160),
+  };
 }
 
 /**

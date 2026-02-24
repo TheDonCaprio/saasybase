@@ -22,10 +22,10 @@ const accentMap: Record<AdminStatAccent, {
   overlay: string;
 }> = {
   theme: {
-    border: 'border-[color:rgb(var(--accent-primary)_/_0.22)] dark:border-[color:rgb(var(--accent-primary)_/_0.35)]',
-    gradient: 'bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.78),rgb(var(--surface-card)_/_0.78)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.58),rgb(var(--surface-card)_/_0.58)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))]',
-    icon: 'bg-[color:rgb(var(--accent-primary)_/_0.15)] text-[color:rgb(var(--accent-primary)_/_0.90)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
-    overlay: 'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.16),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.26),_transparent_60%)]'
+    border: 'border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))]',
+    gradient: 'bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.58)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.58))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))]',
+    icon: 'bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.15))] text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]',
+    overlay: 'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.26)),_transparent_60%)]'
   },
   indigo: {
     border: 'border-indigo-200/70 dark:border-indigo-500/40',

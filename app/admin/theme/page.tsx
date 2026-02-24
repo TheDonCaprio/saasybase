@@ -16,6 +16,7 @@ import {
   SETTING_DEFAULTS,
   SETTING_KEYS,
   getPricingSettings,
+  getHeaderLayoutSettings,
   getBlogListingStyle,
   getBlogListingPageSize,
   getBlogSidebarSettings,
@@ -44,7 +45,7 @@ export default async function AdminThemePage() {
     console.warn('Admin theme: requireAdmin check failed or redirected', e?.message);
   }
 
-  const [siteName, headerLinks, footerLinks, footerText, customCss, customHead, customBody, legacyBody, pricingSettings, blogListingStyle, blogListingPageSize, blogSidebarSettings, relatedPostsEnabled, blogHtmlSnippets, colorPalette] = await Promise.all([
+  const [siteName, headerLinks, footerLinks, footerText, customCss, customHead, customBody, legacyBody, pricingSettings, headerLayoutSettings, blogListingStyle, blogListingPageSize, blogSidebarSettings, relatedPostsEnabled, blogHtmlSnippets, colorPalette] = await Promise.all([
     getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
     getThemeHeaderLinks(),
     getThemeFooterLinks(),
@@ -54,6 +55,7 @@ export default async function AdminThemePage() {
     getThemeCustomBodySnippet(),
     getThemeCustomSnippet(),
     getPricingSettings(),
+    getHeaderLayoutSettings(),
     getBlogListingStyle(),
     getBlogListingPageSize(),
     getBlogSidebarSettings(),
@@ -81,6 +83,7 @@ export default async function AdminThemePage() {
         initialColorPalette={colorPalette}
         initialColorPresets={colorPresets}
         initialPricingSettings={pricingSettings}
+        initialHeaderLayoutSettings={headerLayoutSettings}
         initialBlogListingStyle={blogListingStyle}
         initialBlogListingPageSize={blogListingPageSize}
         initialBlogSidebarSettings={blogSidebarSettings}

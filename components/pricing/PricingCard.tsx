@@ -888,9 +888,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
-    <div className="group relative flex h-full w-full max-w-[420px] mx-auto flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-blue-100/40 transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgba(14,165,233,0.32)]">
+    <div className="group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-[0_28px_70px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))]">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_65%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12)),_transparent_65%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22)),_transparent_60%)]"
         aria-hidden="true"
       />
       <div className="relative flex flex-col gap-6">
@@ -923,7 +923,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
           </div>
           <div className="min-w-[120px] text-right">
             <div className="text-3xl font-semibold text-slate-900 dark:text-white">{formatPrice(plan.priceCents, currency)}</div>
-            <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-blue-200/80">{priceFrequency}</div>
+            <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-300/80">{priceFrequency}</div>
           </div>
         </div>
 
@@ -943,9 +943,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
             {features.map((feature) => (
               <div
                 key={feature.label}
-                className="flex items-center gap-3 rounded-xl border border-transparent bg-white px-3 py-2 shadow-sm transition-colors group-hover:border-blue-100 group-hover:bg-blue-50/80 dark:border-white/0 dark:bg-white/5 dark:shadow-none dark:group-hover:border-white/10 dark:group-hover:bg-white/[0.08]"
+                className="flex items-center gap-3 rounded-xl border border-transparent bg-white px-3 py-2 shadow-sm transition-colors group-hover:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))] group-hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.07))] dark:border-white/0 dark:bg-white/5 dark:shadow-none dark:group-hover:border-white/10 dark:group-hover:bg-white/[0.08]"
               >
-                <span className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 via-cyan-400/15 to-white text-blue-500 dark:from-blue-500/30 dark:via-cyan-400/10 dark:to-transparent dark:text-cyan-200">
+                <span className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.20)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10)),rgb(var(--bg-primary)))] text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] dark:bg-[linear-gradient(135deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.30)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12)),transparent)] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))]">
                   <FontAwesomeIcon icon={feature.icon} className="h-4 w-4" />
                 </span>
                 <p className="text-xs text-slate-600 dark:text-neutral-200">{feature.label}</p>
@@ -960,7 +960,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         <button
           disabled={isButtonDisabled}
           onClick={onBuyClick}
-          className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 px-5 py-3 text-sm font-semibold text-[#ffffff] shadow-[0_20px_45px_rgba(167,139,250,0.35)] transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(90deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.78)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)))] px-5 py-3 text-sm font-semibold text-white text-actual-white shadow-[0_20px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28))] transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
           aria-disabled={isButtonDisabled}
           title={isCurrentAutoRenewPlan ? 'You are already subscribed to this plan.' : undefined}
         >
@@ -996,7 +996,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                     Cancel
                   </button>
                   <button
-                    className="rounded bg-blue-500 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+                    className="rounded bg-[color:rgb(var(--accent-primary))] px-3 py-1 text-sm text-white text-actual-white transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))]"
                     onClick={() => {
                       setShowExtendModal(false);
                       void beginCheckoutFlow();
@@ -1046,7 +1046,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                     Cancel
                   </button>
                   <button
-                    className="rounded bg-blue-500 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+                    className="rounded bg-[color:rgb(var(--accent-primary))] px-3 py-1 text-sm text-white text-actual-white transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))]"
                     onClick={() => {
                       setShowRecurringTopupModal(false);
                       void beginCheckoutFlow();
@@ -1179,7 +1179,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                   </div>
                 ) : (
                   <div className="mt-4 flex items-center justify-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-                    <span className="h-3 w-3 animate-ping rounded-full bg-blue-500/60" />
+                    <span className="h-3 w-3 animate-ping rounded-full bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.60))]" />
                     Calculating proration…
                   </div>
                 )}
@@ -1194,7 +1194,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                   </button>
                   <button
                     onClick={confirmProration}
-                    className="rounded bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded bg-[color:rgb(var(--accent-primary))] px-4 py-1.5 text-sm font-semibold text-white text-actual-white shadow-sm transition hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={prorationConfirming || !prorationPreview}
                   >
                     {prorationConfirming
@@ -1502,7 +1502,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
                   <button
-                    className="text-xs text-blue-600 hover:text-blue-500 dark:text-neutral-400 dark:hover:text-neutral-100"
+                    className="text-xs text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] hover:text-[color:rgb(var(--accent-primary))] dark:text-neutral-400 dark:hover:text-neutral-100"
                     onClick={() => confirmCouponSelection(false)}
                   >
                     Skip coupon
@@ -1518,7 +1518,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                       Cancel
                     </button>
                     <button
-                      className="rounded bg-blue-500 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded bg-[color:rgb(var(--accent-primary))] px-3 py-1 text-sm text-white text-actual-white transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => confirmCouponSelection(true)}
                       disabled={couponOptions.length === 0}
                     >

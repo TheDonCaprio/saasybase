@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { ThemeLink } from '../../../lib/settings';
@@ -45,6 +46,11 @@ type ColorHexKey =
   | 'accentPrimary'
   | 'accentHover'
   | 'headerBg'
+  | 'headerText'
+  | 'headerBorder'
+  | 'stickyHeaderBg'
+  | 'stickyHeaderText'
+  | 'stickyHeaderBorder'
   | 'sidebarBg'
   | 'pageGradientFrom'
   | 'pageGradientVia'
@@ -60,7 +66,7 @@ type ColorHexKey =
   | 'tabsGradientTo'
   | 'pageGlow';
 
-type OpacityKey = 'headerOpacity' | 'sidebarOpacity' | 'glowOpacity';
+type OpacityKey = 'headerOpacity' | 'sidebarOpacity' | 'glowOpacity' | 'headerBorderOpacity' | 'stickyHeaderBorderOpacity';
 
 type ColorTokens = {
   bgPrimary: string;
@@ -78,6 +84,18 @@ type ColorTokens = {
   accentHover: string;
   headerBg: string;
   headerOpacity: number;
+  headerText: string;
+  headerBlur: number;
+  headerBorder: string;
+  headerBorderOpacity: number;
+  headerBorderWidth: number;
+  stickyHeaderBg: string;
+  stickyHeaderOpacity: number;
+  stickyHeaderBlur: number;
+  stickyHeaderText: string;
+  stickyHeaderBorder: string;
+  stickyHeaderBorderOpacity: number;
+  stickyHeaderBorderWidth: number;
   sidebarBg: string;
   sidebarOpacity: number;
   pageGradientFrom: string;
@@ -107,11 +125,38 @@ type ElementGradientKeys =
   | 'tabsGradientVia'
   | 'tabsGradientTo';
 
-type PartialColorTokens = Omit<ColorTokens, ElementGradientKeys> & Partial<Pick<ColorTokens, ElementGradientKeys>>;
+type OptionalPresetKeys =
+  | ElementGradientKeys
+  | 'headerText'
+  | 'headerBlur'
+  | 'headerBorder'
+  | 'headerBorderOpacity'
+  | 'headerBorderWidth'
+  | 'stickyHeaderBg'
+  | 'stickyHeaderOpacity'
+  | 'stickyHeaderBlur'
+  | 'stickyHeaderText'
+  | 'stickyHeaderBorder'
+  | 'stickyHeaderBorderOpacity'
+  | 'stickyHeaderBorderWidth';
+
+type PartialColorTokens = Omit<ColorTokens, OptionalPresetKeys> & Partial<Pick<ColorTokens, OptionalPresetKeys>>;
 
 const fillElementGradients = (t: PartialColorTokens): ColorTokens => {
   return {
     ...(t as Omit<ColorTokens, ElementGradientKeys>),
+    headerText: t.headerText ?? t.textPrimary,
+    headerBlur: typeof t.headerBlur === 'number' ? t.headerBlur : 12,
+    headerBorder: t.headerBorder ?? t.borderPrimary,
+    headerBorderOpacity: typeof t.headerBorderOpacity === 'number' ? t.headerBorderOpacity : 0.8,
+    headerBorderWidth: typeof t.headerBorderWidth === 'number' ? t.headerBorderWidth : 1,
+    stickyHeaderBg: t.stickyHeaderBg ?? t.headerBg,
+    stickyHeaderOpacity: typeof t.stickyHeaderOpacity === 'number' ? t.stickyHeaderOpacity : (typeof t.headerOpacity === 'number' ? t.headerOpacity : 0.9),
+    stickyHeaderBlur: typeof t.stickyHeaderBlur === 'number' ? t.stickyHeaderBlur : 14,
+    stickyHeaderText: t.stickyHeaderText ?? t.headerText ?? t.textPrimary,
+    stickyHeaderBorder: t.stickyHeaderBorder ?? t.headerBorder ?? t.borderPrimary,
+    stickyHeaderBorderOpacity: typeof t.stickyHeaderBorderOpacity === 'number' ? t.stickyHeaderBorderOpacity : 0.65,
+    stickyHeaderBorderWidth: typeof t.stickyHeaderBorderWidth === 'number' ? t.stickyHeaderBorderWidth : (typeof t.headerBorderWidth === 'number' ? t.headerBorderWidth : 1),
     heroGradientFrom: t.heroGradientFrom ?? t.pageGradientFrom,
     heroGradientVia: t.heroGradientVia ?? t.pageGradientVia,
     heroGradientTo: t.heroGradientTo ?? t.pageGradientTo,
@@ -134,6 +179,10 @@ const DEFAULT_LIGHT_COLORS: ColorTokens = {
   borderPrimary: '#d1d5db', borderSecondary: '#9ca3af',
   accentPrimary: '#3b82f6', accentHover: '#2563eb',
   headerBg: '#ffffff', headerOpacity: 0.8,
+  headerText: '#111827', headerBlur: 12,
+  headerBorder: '#d1d5db', headerBorderOpacity: 0.8, headerBorderWidth: 1,
+  stickyHeaderBg: '#ffffff', stickyHeaderOpacity: 0.92, stickyHeaderBlur: 14, stickyHeaderText: '#111827',
+  stickyHeaderBorder: '#d1d5db', stickyHeaderBorderOpacity: 0.65, stickyHeaderBorderWidth: 1,
   sidebarBg: '#ffffff', sidebarOpacity: 0.9,
   pageGradientFrom: '#f0f9ff', pageGradientVia: '#eef2ff', pageGradientTo: '#ffffff',
   heroGradientFrom: '#f0f9ff', heroGradientVia: '#eef2ff', heroGradientTo: '#ffffff',
@@ -148,6 +197,10 @@ const DEFAULT_DARK_COLORS: ColorTokens = {
   borderPrimary: '#404040', borderSecondary: '#525252',
   accentPrimary: '#3b82f6', accentHover: '#2563eb',
   headerBg: '#0a0a0a', headerOpacity: 0.7,
+  headerText: '#f5f5f5', headerBlur: 12,
+  headerBorder: '#404040', headerBorderOpacity: 0.7, headerBorderWidth: 1,
+  stickyHeaderBg: '#0a0a0a', stickyHeaderOpacity: 0.82, stickyHeaderBlur: 14, stickyHeaderText: '#f5f5f5',
+  stickyHeaderBorder: '#404040', stickyHeaderBorderOpacity: 0.55, stickyHeaderBorderWidth: 1,
   sidebarBg: '#171717', sidebarOpacity: 0.5,
   pageGradientFrom: '#171717', pageGradientVia: '#312e81', pageGradientTo: '#0a0a0a',
   heroGradientFrom: '#171717', heroGradientVia: '#312e81', heroGradientTo: '#0a0a0a',
@@ -157,7 +210,7 @@ const DEFAULT_DARK_COLORS: ColorTokens = {
 };
 
 const COLOR_LABELS: Record<ColorHexKey, string> = {
-  bgPrimary:       'Page background',
+  bgPrimary:       'Base background',
   bgSecondary:     'Stat / info cards',
   heroBg:          'Top hero',
   panelBg:         'Panels',
@@ -171,10 +224,15 @@ const COLOR_LABELS: Record<ColorHexKey, string> = {
   accentPrimary:   'Primary accent',
   accentHover:     'Accent hover',
   headerBg:        'Header background',
+  headerText:      'Header text',
+  headerBorder:    'Header border (bottom)',
+  stickyHeaderBg:  'Sticky header background',
+  stickyHeaderText: 'Sticky header text',
+  stickyHeaderBorder: 'Sticky header border (bottom)',
   sidebarBg:       'Sidebar background',
-  pageGradientFrom:'Content area (from)',
-  pageGradientVia: 'Content area (via)',
-  pageGradientTo:  'Content area (to)',
+  pageGradientFrom:'Page background (from)',
+  pageGradientVia: 'Page background (via)',
+  pageGradientTo:  'Page background (to)',
   heroGradientFrom:'Top hero gradient (from)',
   heroGradientVia: 'Top hero gradient (via)',
   heroGradientTo:  'Top hero gradient (to)',
@@ -193,8 +251,9 @@ const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
   { title: 'Text',        keys: ['textPrimary', 'textSecondary', 'textTertiary'] },
   { title: 'Borders',     keys: ['borderPrimary', 'borderSecondary'] },
   { title: 'Accents',     keys: ['accentPrimary', 'accentHover'] },
-  { title: 'Layout',      keys: ['headerBg', 'sidebarBg'] },
-  { title: 'Content Area', keys: ['pageGradientFrom', 'pageGradientVia', 'pageGradientTo'] },
+  { title: 'Header',      keys: ['headerBg', 'headerText', 'headerBorder', 'stickyHeaderBorder'] },
+  { title: 'Layout',      keys: ['sidebarBg'] },
+  { title: 'Page Background Gradient', keys: ['pageGradientFrom', 'pageGradientVia', 'pageGradientTo'] },
   { title: 'Top Hero Gradient', keys: ['heroGradientFrom', 'heroGradientVia', 'heroGradientTo'] },
   { title: 'Stat / Info Gradient', keys: ['cardGradientFrom', 'cardGradientVia', 'cardGradientTo'] },
   { title: 'Tab Strip Gradient', keys: ['tabsGradientFrom', 'tabsGradientVia', 'tabsGradientTo'] },
@@ -422,6 +481,12 @@ function ColorTabContent({
     return keys.every((k) => colors[k] === preset[k]);
   };
 
+  const clampInt = (n: unknown, min: number, max: number, fallback: number) => {
+    const num = typeof n === 'number' ? n : typeof n === 'string' ? Number(n) : NaN;
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(min, Math.min(max, Math.round(num)));
+  };
+
   return (
     <div className="space-y-8">
       {/* Mode toggle */}
@@ -528,8 +593,8 @@ function ColorTabContent({
                     />
                     <input
                       type="color"
-                      value={colors[key]}
-                      onChange={(e) => updateColor(key, e.target.value)}
+                      value={stripHexAlpha(colors[key])}
+                      onChange={(e) => updateColor(key, replaceHexRgbPreserveAlpha(colors[key], e.target.value))}
                       className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 dark:border-neutral-600"
                       title={COLOR_LABELS[key]}
                     />
@@ -538,17 +603,116 @@ function ColorTabContent({
                       value={colors[key]}
                       onChange={(e) => {
                         const v = e.target.value;
-                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) updateColor(key, v.length === 7 ? v : v);
+                        if (THEME_HEX_EDITING_RE.test(v)) updateColor(key, v);
                       }}
-                      maxLength={7}
-                      className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                      maxLength={9}
+                      className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                     />
+					<input
+						type="number"
+						min={0}
+						max={100}
+						step={1}
+						value={Math.round(getHexAlpha01(colors[key]) * 100)}
+						onChange={(e) => updateColor(key, setHexAlpha01(colors[key], Number(e.target.value) / 100))}
+						className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+						aria-label={`${COLOR_LABELS[key]} alpha percent`}
+						title="Alpha %"
+					/>
                   </div>
                 </label>
               ))}
             </div>
           </div>
         ))}
+      </section>
+
+      {/* Header effects */}
+      <section>
+        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Header</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={1}
+                value={clampInt(colors.headerBlur, 0, 40, 12)}
+                onChange={(e) => setColors({ ...colors, headerBlur: clampInt(e.target.value, 0, 40, 12) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={40}
+                step={1}
+                value={clampInt(colors.headerBlur, 0, 40, 12)}
+                onChange={(e) => setColors({ ...colors, headerBlur: clampInt(e.target.value, 0, 40, 12) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–40px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header border width (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.headerBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, headerBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.headerBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, headerBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header border width pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Set to 0 to disable.</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Sticky header border width (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.stickyHeaderBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, stickyHeaderBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.stickyHeaderBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, stickyHeaderBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Sticky header border width pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Applies only while sticky.</p>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
+          Border colors are under the <span className="font-semibold">Header</span> group above.
+        </p>
       </section>
 
       {/* Opacity controls */}
@@ -564,6 +728,8 @@ function ColorTabContent({
 
             const opacityFields: Array<{ key: OpacityKey; label: string }> = [
               { key: 'headerOpacity', label: 'Header opacity' },
+              { key: 'headerBorderOpacity', label: 'Header border opacity' },
+              { key: 'stickyHeaderBorderOpacity', label: 'Sticky header border opacity' },
               { key: 'sidebarOpacity', label: 'Sidebar opacity' },
               { key: 'glowOpacity', label: 'Backdrop glow opacity' },
             ];
@@ -612,17 +778,21 @@ function ColorTabContent({
           {/* ── Topbar / header ── */}
           <div
             className="flex items-center justify-between gap-3 px-4 py-2.5"
-            style={{ backgroundColor: colors.headerBg, borderBottom: `1px solid ${colors.borderPrimary}` }}
+            style={{
+              backgroundColor: colors.headerBg,
+              borderBottom: `${clampInt(colors.headerBorderWidth, 0, 4, 1)}px solid ${colors.headerBorder}`,
+              backdropFilter: `blur(${clampInt(colors.headerBlur, 0, 40, 12)}px)`,
+            }}
           >
             {/* Brand */}
             <div className="flex items-center gap-2">
               <div className="h-5 w-5 rounded-md flex-shrink-0" style={{ backgroundColor: colors.accentPrimary }} />
-              <span className="text-xs font-bold tracking-tight" style={{ color: colors.textPrimary }}>SaaSyBase</span>
+              <span className="text-xs font-bold tracking-tight" style={{ color: colors.headerText }}>SaaSyBase</span>
             </div>
             {/* Nav links */}
             <div className="hidden sm:flex items-center gap-4">
               {['Pricing', 'Blog', 'Docs'].map((label) => (
-                <span key={label} className="text-xs" style={{ color: colors.textSecondary }}>{label}</span>
+                <span key={label} className="text-xs" style={{ color: colors.headerText }}>{label}</span>
               ))}
             </div>
             {/* CTA + avatar */}
@@ -778,6 +948,14 @@ interface PricingSettings {
   centerUneven: boolean;
 }
 
+interface HeaderLayoutSettings {
+  style: 'right' | 'left-nav' | 'center-nav';
+  height: number;
+  stickyEnabled: boolean;
+  stickyScrollY: number;
+  stickyHeight: number;
+}
+
 interface BlogSidebarWidget {
   id: string;
   type: 'recent-posts' | 'rich-content' | 'raw-html';
@@ -799,6 +977,7 @@ interface ThemeSettingsTabsProps {
   initialCustomHead: string;
   initialCustomBody: string;
   initialPricingSettings: PricingSettings;
+  initialHeaderLayoutSettings: HeaderLayoutSettings;
   initialBlogListingStyle: string;
   initialBlogListingPageSize?: number;
   initialBlogSidebarSettings: {
@@ -826,6 +1005,46 @@ const MAX_LINKS = 10;
 const isSafeHref = (href: string) => /^(https?:\/\/|\/)/i.test(href);
 const emptyLink = (): ThemeLink => ({ label: '', href: '' });
 
+const THEME_HEX_6_OR_8_RE = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const THEME_HEX_EDITING_RE = /^#[0-9a-fA-F]{0,8}$/;
+
+const hasHexAlpha = (hex: string): boolean => {
+  const v = (hex || '').trim();
+  return THEME_HEX_6_OR_8_RE.test(v) && v.length === 9;
+};
+
+const stripHexAlpha = (hex: string, fallback = '#000000'): string => {
+  const v = (hex || '').trim();
+  if (!THEME_HEX_6_OR_8_RE.test(v)) return fallback;
+  return `#${v.slice(1, 7)}`;
+};
+
+const getHexAlpha01 = (hex: string): number => {
+  const v = (hex || '').trim();
+  if (!THEME_HEX_6_OR_8_RE.test(v)) return 1;
+  if (v.length !== 9) return 1;
+  const a = Number.parseInt(v.slice(7, 9), 16) / 255;
+  return Number.isFinite(a) ? Math.max(0, Math.min(1, a)) : 1;
+};
+
+const setHexAlpha01 = (hex: string, alpha01: number): string => {
+  const a = Math.max(0, Math.min(1, alpha01));
+  const rgb6 = stripHexAlpha(hex, '#000000');
+  if (a >= 0.999) {
+    return hasHexAlpha(hex) ? `${rgb6}ff` : rgb6;
+  }
+  const aHex = Math.round(a * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${rgb6}${aHex}`;
+};
+
+const replaceHexRgbPreserveAlpha = (existingHex: string, nextRgbHex: string): string => {
+  if (!hasHexAlpha(existingHex)) return stripHexAlpha(nextRgbHex, '#000000');
+  const aHex = existingHex.trim().slice(7, 9);
+  return `${stripHexAlpha(nextRgbHex, stripHexAlpha(existingHex))}${aHex}`;
+};
+
 export function ThemeSettingsTabs({
   initialHeaderLinks,
   initialFooterLinks,
@@ -834,6 +1053,7 @@ export function ThemeSettingsTabs({
   initialCustomHead,
   initialCustomBody,
   initialPricingSettings,
+  initialHeaderLayoutSettings,
   initialBlogListingStyle,
   initialBlogListingPageSize,
   initialBlogSidebarSettings,
@@ -844,54 +1064,108 @@ export function ThemeSettingsTabs({
   initialColorPalette,
   initialColorPresets,
 }: ThemeSettingsTabsProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('navigation');
 
-  const hexToSpaceRgb = useCallback((hex: string): string => {
-    const clean = (hex || '').replace('#', '');
-    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '0 0 0';
+  const parseHexColor = useCallback((hex: string): { rgb: string; a: number } => {
+    const clean = (hex || '').trim().replace(/^#/, '');
+    if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(clean)) return { rgb: '0 0 0', a: 1 };
     const r = parseInt(clean.slice(0, 2), 16);
     const g = parseInt(clean.slice(2, 4), 16);
     const b = parseInt(clean.slice(4, 6), 16);
-    return `${r} ${g} ${b}`;
+    const a = clean.length === 8 ? parseInt(clean.slice(6, 8), 16) / 255 : 1;
+    return { rgb: `${r} ${g} ${b}`, a: Math.max(0, Math.min(1, a)) };
+  }, []);
+
+  const fmtAlpha = useCallback((a: number): string => {
+    const fixed = Math.max(0, Math.min(1, a)).toFixed(4);
+    return fixed.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
   }, []);
 
   const applyPaletteToDocument = useCallback((palette: ThemeColorPalette) => {
     if (typeof document === 'undefined') return;
 
     const buildBlock = (t: ColorTokens, mode: 'light' | 'dark') => {
-      const headerOpacity = (typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7)).toFixed(2);
-      const sidebarOpacity = (typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5)).toFixed(2);
-      const glowOpacity = (typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12)).toFixed(2);
+      const headerOpacityNum = typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7);
+      const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.headerBlur) ? t.headerBlur : 12)));
+      const headerBorderOpacityNum = typeof t.headerBorderOpacity === 'number' ? t.headerBorderOpacity : 0.8;
+      const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.headerBorderWidth) ? t.headerBorderWidth : 1)));
+
+      const stickyHeaderOpacityNum = typeof t.stickyHeaderOpacity === 'number' ? t.stickyHeaderOpacity : (mode === 'light' ? 0.92 : 0.82);
+      const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.stickyHeaderBlur) ? t.stickyHeaderBlur : 14)));
+      const stickyHeaderBorderOpacityNum = typeof t.stickyHeaderBorderOpacity === 'number' ? t.stickyHeaderBorderOpacity : 0.65;
+      const stickyHeaderBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.stickyHeaderBorderWidth) ? t.stickyHeaderBorderWidth : 1)));
+
+      const sidebarOpacityNum = typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5);
+      const glowOpacityNum = typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12);
+
+      const cssToken = (name: string, hex: string) => {
+        const p = parseHexColor(hex);
+        const a = fmtAlpha(p.a);
+        return [`  --${name}: ${p.rgb} / ${a};`, `  --${name}-rgb: ${p.rgb};`, `  --${name}-a: ${a};`];
+      };
+
+      const headerBg = parseHexColor(t.headerBg);
+      const headerText = parseHexColor(t.headerText ?? t.textPrimary);
+      const headerBorder = parseHexColor(t.headerBorder ?? t.borderPrimary);
+      const stickyHeaderBg = parseHexColor(t.stickyHeaderBg ?? t.headerBg);
+      const stickyHeaderText = parseHexColor(t.stickyHeaderText ?? t.textPrimary);
+      const stickyHeaderBorder = parseHexColor(t.stickyHeaderBorder ?? t.headerBorder ?? t.borderPrimary);
+      const sidebarBg = parseHexColor(t.sidebarBg);
+      const pageGlow = parseHexColor(t.pageGlow);
+
+      const pageFrom = parseHexColor(t.pageGradientFrom);
+      const pageVia = parseHexColor(t.pageGradientVia);
+      const pageTo = parseHexColor(t.pageGradientTo);
+      const heroFrom = parseHexColor(t.heroGradientFrom ?? t.pageGradientFrom);
+      const heroVia = parseHexColor(t.heroGradientVia ?? t.pageGradientVia);
+      const heroTo = parseHexColor(t.heroGradientTo ?? t.pageGradientTo);
+      const cardFrom = parseHexColor(t.cardGradientFrom ?? t.pageGradientFrom);
+      const cardVia = parseHexColor(t.cardGradientVia ?? t.pageGradientVia);
+      const cardTo = parseHexColor(t.cardGradientTo ?? t.pageGradientTo);
+      const tabsFrom = parseHexColor(t.tabsGradientFrom ?? t.pageGradientFrom);
+      const tabsVia = parseHexColor(t.tabsGradientVia ?? t.pageGradientVia);
+      const tabsTo = parseHexColor(t.tabsGradientTo ?? t.pageGradientTo);
+
       return [
-        `  --bg-primary: ${hexToSpaceRgb(t.bgPrimary)};`,
-        `  --bg-secondary: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
-        `  --surface-panel: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
-        `  --surface-card: ${hexToSpaceRgb(t.bgSecondary)};`,
-        `  --surface-hero: ${hexToSpaceRgb(t.heroBg ?? t.bgSecondary)};`,
-        `  --bg-tertiary: ${hexToSpaceRgb(t.bgTertiary)};`,
-        `  --bg-quaternary: ${hexToSpaceRgb(t.bgQuaternary)};`,
-        `  --text-primary: ${hexToSpaceRgb(t.textPrimary)};`,
-        `  --text-secondary: ${hexToSpaceRgb(t.textSecondary)};`,
-        `  --text-tertiary: ${hexToSpaceRgb(t.textTertiary)};`,
-        `  --border-primary: ${hexToSpaceRgb(t.borderPrimary)};`,
-        `  --border-secondary: ${hexToSpaceRgb(t.borderSecondary)};`,
-        `  --accent-primary: ${hexToSpaceRgb(t.accentPrimary)};`,
-        `  --accent-hover: ${hexToSpaceRgb(t.accentHover)};`,
-        `  --theme-header-bg: rgb(${hexToSpaceRgb(t.headerBg)} / ${headerOpacity});`,
-        `  --theme-sidebar-bg: rgb(${hexToSpaceRgb(t.sidebarBg)} / ${sidebarOpacity});`,
-        `  --theme-page-gradient-from: rgb(${hexToSpaceRgb(t.pageGradientFrom)});`,
-        `  --theme-page-gradient-via: rgb(${hexToSpaceRgb(t.pageGradientVia)});`,
-        `  --theme-page-gradient-to: rgb(${hexToSpaceRgb(t.pageGradientTo)});`,
-        `  --theme-hero-gradient-from: rgb(${hexToSpaceRgb(t.heroGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-hero-gradient-via: rgb(${hexToSpaceRgb(t.heroGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-hero-gradient-to: rgb(${hexToSpaceRgb(t.heroGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-card-gradient-from: rgb(${hexToSpaceRgb(t.cardGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-card-gradient-via: rgb(${hexToSpaceRgb(t.cardGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-card-gradient-to: rgb(${hexToSpaceRgb(t.cardGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-tabs-gradient-from: rgb(${hexToSpaceRgb(t.tabsGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-tabs-gradient-via: rgb(${hexToSpaceRgb(t.tabsGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-tabs-gradient-to: rgb(${hexToSpaceRgb(t.tabsGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-page-glow: rgb(${hexToSpaceRgb(t.pageGlow)} / ${glowOpacity});`,
+        ...cssToken('bg-primary', t.bgPrimary),
+        ...cssToken('bg-secondary', t.panelBg ?? t.bgSecondary),
+        ...cssToken('surface-panel', t.panelBg ?? t.bgSecondary),
+        ...cssToken('surface-card', t.bgSecondary),
+        ...cssToken('surface-hero', t.heroBg ?? t.bgSecondary),
+        ...cssToken('bg-tertiary', t.bgTertiary),
+        ...cssToken('bg-quaternary', t.bgQuaternary),
+        ...cssToken('text-primary', t.textPrimary),
+        ...cssToken('text-secondary', t.textSecondary),
+        ...cssToken('text-tertiary', t.textTertiary),
+        ...cssToken('border-primary', t.borderPrimary),
+        ...cssToken('border-secondary', t.borderSecondary),
+        ...cssToken('accent-primary', t.accentPrimary),
+        ...cssToken('accent-hover', t.accentHover),
+        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a * headerOpacityNum)});`,
+        `  --theme-header-text: rgb(${headerText.rgb} / ${fmtAlpha(headerText.a)});`,
+        `  --theme-header-blur: ${headerBlurPx}px;`,
+        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a * headerBorderOpacityNum)});`,
+        `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
+        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a * stickyHeaderOpacityNum)});`,
+        `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
+        `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
+        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a * stickyHeaderBorderOpacityNum)});`,
+        `  --theme-sticky-header-border-width: ${stickyHeaderBorderWidthPx}px;`,
+        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a * sidebarOpacityNum)});`,
+        `  --theme-page-gradient-from: rgb(${pageFrom.rgb} / ${fmtAlpha(pageFrom.a)});`,
+        `  --theme-page-gradient-via: rgb(${pageVia.rgb} / ${fmtAlpha(pageVia.a)});`,
+        `  --theme-page-gradient-to: rgb(${pageTo.rgb} / ${fmtAlpha(pageTo.a)});`,
+        `  --theme-hero-gradient-from: rgb(${heroFrom.rgb} / ${fmtAlpha(heroFrom.a)});`,
+        `  --theme-hero-gradient-via: rgb(${heroVia.rgb} / ${fmtAlpha(heroVia.a)});`,
+        `  --theme-hero-gradient-to: rgb(${heroTo.rgb} / ${fmtAlpha(heroTo.a)});`,
+        `  --theme-card-gradient-from: rgb(${cardFrom.rgb} / ${fmtAlpha(cardFrom.a)});`,
+        `  --theme-card-gradient-via: rgb(${cardVia.rgb} / ${fmtAlpha(cardVia.a)});`,
+        `  --theme-card-gradient-to: rgb(${cardTo.rgb} / ${fmtAlpha(cardTo.a)});`,
+        `  --theme-tabs-gradient-from: rgb(${tabsFrom.rgb} / ${fmtAlpha(tabsFrom.a)});`,
+        `  --theme-tabs-gradient-via: rgb(${tabsVia.rgb} / ${fmtAlpha(tabsVia.a)});`,
+        `  --theme-tabs-gradient-to: rgb(${tabsTo.rgb} / ${fmtAlpha(tabsTo.a)});`,
+        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a * glowOpacityNum)});`,
       ].join('\n');
     };
 
@@ -905,7 +1179,7 @@ export function ThemeSettingsTabs({
       document.head.appendChild(tag);
     }
     tag.textContent = css;
-  }, [hexToSpaceRgb]);
+  }, [fmtAlpha, parseHexColor]);
   
   // Navigation state
   const [headerLinks, setHeaderLinks] = useState<ThemeLink[]>(() => 
@@ -984,6 +1258,12 @@ export function ThemeSettingsTabs({
   // Layout state
   const [pricingMaxColumns, setPricingMaxColumns] = useState(initialPricingSettings.maxColumns);
   const [pricingCenterUneven, setPricingCenterUneven] = useState(initialPricingSettings.centerUneven);
+
+  const [headerStyle, setHeaderStyle] = useState<HeaderLayoutSettings['style']>(initialHeaderLayoutSettings.style);
+  const [headerHeight, setHeaderHeight] = useState<number>(initialHeaderLayoutSettings.height);
+  const [headerStickyEnabled, setHeaderStickyEnabled] = useState<boolean>(initialHeaderLayoutSettings.stickyEnabled);
+  const [headerStickyScrollY, setHeaderStickyScrollY] = useState<number>(initialHeaderLayoutSettings.stickyScrollY);
+  const [headerStickyHeight, setHeaderStickyHeight] = useState<number>(initialHeaderLayoutSettings.stickyHeight);
   
   // Color state
   const [lightColors, setLightColors] = useState<ColorTokens>(
@@ -1160,6 +1440,11 @@ export function ThemeSettingsTabs({
         .map(w => w.type);
       const widgetOrderString = enabledWidgets.length > 0 ? enabledWidgets.join(',') : 'recent-posts,rich-content,raw-html';
 
+      const clampInt = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+      const safeHeaderHeight = clampInt(Number.isFinite(headerHeight) ? headerHeight : 80, 48, 160);
+      const safeStickyScrollY = clampInt(Number.isFinite(headerStickyScrollY) ? headerStickyScrollY : 120, 0, 2000);
+      const safeStickyHeight = clampInt(Number.isFinite(headerStickyHeight) ? headerStickyHeight : 64, 40, 160);
+
       const bulkSettingsResponse = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1168,6 +1453,12 @@ export function ThemeSettingsTabs({
             // pricing + listing settings
             { key: 'PRICING_MAX_COLUMNS', value: pricingMaxColumns.toString() },
             { key: 'PRICING_CENTER_UNEVEN', value: pricingCenterUneven.toString() },
+            // header layout settings
+            { key: 'HEADER_STYLE', value: headerStyle },
+            { key: 'HEADER_HEIGHT', value: safeHeaderHeight.toString() },
+            { key: 'HEADER_STICKY_ENABLED', value: headerStickyEnabled.toString() },
+            { key: 'HEADER_STICKY_SCROLL_Y', value: safeStickyScrollY.toString() },
+            { key: 'HEADER_STICKY_HEIGHT', value: safeStickyHeight.toString() },
             { key: 'BLOG_LISTING_STYLE', value: blogListingStyle },
             { key: 'BLOG_LISTING_PAGE_SIZE', value: blogListingPageSize.toString() },
             // blog sidebar settings
@@ -1211,6 +1502,10 @@ export function ThemeSettingsTabs({
         applyPaletteToDocument(merged);
       }
       showToast('Theme settings saved successfully', 'success');
+
+      // The actual site header reads layout settings server-side.
+      // Refresh the route so the updated header height/style apply immediately.
+      router.refresh();
     } catch (error) {
       console.error('Failed to save settings', error);
       showToast('Unexpected error saving settings', 'error');
@@ -1219,12 +1514,15 @@ export function ThemeSettingsTabs({
     }
   }, [
     saving, headerLinks, footerLinks, footerText, customCss, customHead, customBody,
-    normalizeLinks, pricingMaxColumns, pricingCenterUneven, blogListingStyle,
+    normalizeLinks, pricingMaxColumns, pricingCenterUneven,
+    headerStyle, headerHeight, headerStickyEnabled, headerStickyScrollY, headerStickyHeight,
+    blogListingStyle,
     blogListingPageSize, blogSidebarEnabledIndex, blogSidebarEnabledSingle,
     blogSidebarEnabledArchive, blogSidebarEnabledPages, sidebarWidgets,
     blogRelatedPostsEnabled, blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
     lightColors, darkColors,
     applyPaletteToDocument,
+    router,
   ]);
 
   const handleReset = useCallback(async () => {
@@ -1946,6 +2244,326 @@ export function ThemeSettingsTabs({
         <div className="space-y-8">
           <section>
             <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-neutral-50 mb-6">
+              <FontAwesomeIcon icon={faTableCells} className="h-5 w-5" />
+              Header Layout
+            </div>
+            <p className="text-sm text-slate-600 dark:text-neutral-300 mb-6">Adjust how the header is positioned and how it behaves when scrolling.</p>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-slate-900 dark:text-neutral-100">Header style</div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {([
+                    { id: 'right' as const, label: 'Right cluster', hint: 'Logo left, links + actions right' },
+                    { id: 'center-nav' as const, label: 'Centered links', hint: 'Logo left, links centered' },
+                    { id: 'left-nav' as const, label: 'Left links', hint: 'Logo + links left' },
+                  ]).map((opt) => {
+                    const selected = headerStyle === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setHeaderStyle(opt.id)}
+                        aria-pressed={selected}
+                        className={cx(
+                          'rounded-xl border p-3 text-left transition-colors',
+                          selected
+                            ? 'border-slate-400 bg-white dark:border-neutral-600 dark:bg-neutral-900'
+                            : 'border-slate-200 bg-slate-50 hover:bg-white dark:border-neutral-800 dark:bg-neutral-900/50 dark:hover:bg-neutral-900'
+                        )}
+                      >
+                        <div className="mb-2 rounded-lg border border-slate-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <div className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 px-2 dark:border-neutral-800 dark:bg-neutral-900">
+                            {opt.id === 'right' ? (
+                              <div className="flex h-full items-center justify-between">
+                                <div className="h-2 w-6 rounded bg-slate-300 dark:bg-neutral-700" />
+                                <div className="flex items-center gap-1">
+                                  <div className="h-2 w-10 rounded bg-slate-200 dark:bg-neutral-800" />
+                                  <div className="h-2 w-5 rounded bg-slate-300 dark:bg-neutral-700" />
+                                </div>
+                              </div>
+                            ) : opt.id === 'center-nav' ? (
+                              <div className="flex h-full items-center">
+                                <div className="h-2 w-6 rounded bg-slate-300 dark:bg-neutral-700" />
+                                <div className="flex-1 flex items-center justify-center">
+                                  <div className="h-2 w-12 rounded bg-slate-200 dark:bg-neutral-800" />
+                                </div>
+                                <div className="h-2 w-5 rounded bg-slate-300 dark:bg-neutral-700" />
+                              </div>
+                            ) : (
+                              <div className="flex h-full items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  <div className="h-2 w-6 rounded bg-slate-300 dark:bg-neutral-700" />
+                                  <div className="h-2 w-10 rounded bg-slate-200 dark:bg-neutral-800" />
+                                </div>
+                                <div className="h-2 w-5 rounded bg-slate-300 dark:bg-neutral-700" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{opt.label}</div>
+                        <div className="text-xs text-slate-500 dark:text-neutral-400">{opt.hint}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="header-height" className="block text-sm font-medium text-slate-900 dark:text-neutral-100">
+                      Header height (px)
+                    </label>
+                    <input
+                      id="header-height"
+                      type="number"
+                      min={48}
+                      max={160}
+                      value={headerHeight}
+                      onChange={(e) => setHeaderHeight(parseInt(e.target.value || '0', 10) || 0)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-neutral-500">Applies to the normal (non-sticky) header.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Sticky header</div>
+                    <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-100">
+                      <input
+                        type="checkbox"
+                        checked={headerStickyEnabled}
+                        onChange={(e) => setHeaderStickyEnabled(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      Enable sticky header
+                    </label>
+                    <p className="text-xs text-slate-500 dark:text-neutral-500">When enabled, the header becomes fixed after the scroll point.</p>
+                  </div>
+                </div>
+
+                <div className={cx('grid gap-4 sm:grid-cols-2', !headerStickyEnabled && 'opacity-60')}>
+                  <div className="space-y-2">
+                    <label htmlFor="header-sticky-scroll" className="block text-sm font-medium text-slate-900 dark:text-neutral-100">
+                      Scroll point (px)
+                    </label>
+                    <input
+                      id="header-sticky-scroll"
+                      type="number"
+                      min={0}
+                      max={2000}
+                      disabled={!headerStickyEnabled}
+                      value={headerStickyScrollY}
+                      onChange={(e) => setHeaderStickyScrollY(parseInt(e.target.value || '0', 10) || 0)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-neutral-500">Distance from the top before stickiness activates.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="header-sticky-height" className="block text-sm font-medium text-slate-900 dark:text-neutral-100">
+                      Sticky height (px)
+                    </label>
+                    <input
+                      id="header-sticky-height"
+                      type="number"
+                      min={40}
+                      max={160}
+                      disabled={!headerStickyEnabled}
+                      value={headerStickyHeight}
+                      onChange={(e) => setHeaderStickyHeight(parseInt(e.target.value || '0', 10) || 0)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-neutral-500">Height of the header while sticky.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-neutral-50 mb-6">
+              <FontAwesomeIcon icon={faPalette} className="h-5 w-5" />
+              Sticky header colors
+            </div>
+            <p className="text-sm text-slate-600 dark:text-neutral-300 mb-6">Configure background, transparency, blur, and text color while the header is sticky.</p>
+
+            <div className={cx('space-y-4', !headerStickyEnabled && 'opacity-60')}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {([
+                  { title: 'Light mode', mode: 'light' as const, value: lightColors, setValue: setLightColors },
+                  { title: 'Dark mode', mode: 'dark' as const, value: darkColors, setValue: setDarkColors },
+                ]).map(({ title, mode, value, setValue }) => {
+                  const updateHex = (key: 'stickyHeaderBg' | 'stickyHeaderText', hex: string) => {
+                    setValue({ ...value, [key]: hex });
+                  };
+
+				  const updateAlphaPercent = (key: 'stickyHeaderBg' | 'stickyHeaderText', percent: number) => {
+					const clamped = Math.max(0, Math.min(100, percent));
+					updateHex(key, setHexAlpha01(value[key], Math.round(clamped) / 100));
+				  };
+
+                  const updateOpacityPercent = (percent: number) => {
+                    const clamped = Math.max(0, Math.min(100, percent));
+                    setValue({ ...value, stickyHeaderOpacity: Math.round(clamped) / 100 });
+                  };
+
+                  const updateBlur = (px: number) => {
+                    const clamped = Math.max(0, Math.min(40, Math.round(px)));
+                    setValue({ ...value, stickyHeaderBlur: clamped });
+                  };
+
+                  return (
+                    <div
+                      key={`sticky-colors-${mode}`}
+                      className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50"
+                    >
+                      <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{title}</div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <span className="text-sm text-slate-700 dark:text-neutral-300">Background</span>
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded border border-black/10 flex-shrink-0" style={{ backgroundColor: value.stickyHeaderBg }} />
+                            <input
+                              type="color"
+                              disabled={!headerStickyEnabled}
+                              value={stripHexAlpha(value.stickyHeaderBg)}
+                              onChange={(e) => updateHex('stickyHeaderBg', replaceHexRgbPreserveAlpha(value.stickyHeaderBg, e.target.value))}
+                              className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 disabled:cursor-not-allowed dark:border-neutral-600"
+                              title="Sticky header background"
+                            />
+                            <input
+                              type="text"
+                              disabled={!headerStickyEnabled}
+                              value={value.stickyHeaderBg}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (THEME_HEX_EDITING_RE.test(v)) updateHex('stickyHeaderBg', v);
+                              }}
+                              maxLength={9}
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                            />
+							<input
+								type="number"
+								min={0}
+								max={100}
+								step={1}
+								disabled={!headerStickyEnabled}
+								value={Math.round(getHexAlpha01(value.stickyHeaderBg) * 100)}
+								onChange={(e) => updateAlphaPercent('stickyHeaderBg', Number(e.target.value))}
+								className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+								aria-label="Sticky header background alpha percent"
+								title="Alpha %"
+							/>
+                          </div>
+                        </label>
+
+                        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <span className="text-sm text-slate-700 dark:text-neutral-300">Text</span>
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded border border-black/10 flex-shrink-0" style={{ backgroundColor: value.stickyHeaderText }} />
+                            <input
+                              type="color"
+                              disabled={!headerStickyEnabled}
+                              value={stripHexAlpha(value.stickyHeaderText)}
+                              onChange={(e) => updateHex('stickyHeaderText', replaceHexRgbPreserveAlpha(value.stickyHeaderText, e.target.value))}
+                              className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 disabled:cursor-not-allowed dark:border-neutral-600"
+                              title="Sticky header text"
+                            />
+                            <input
+                              type="text"
+                              disabled={!headerStickyEnabled}
+                              value={value.stickyHeaderText}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (THEME_HEX_EDITING_RE.test(v)) updateHex('stickyHeaderText', v);
+                              }}
+                              maxLength={9}
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                            />
+							<input
+								type="number"
+								min={0}
+								max={100}
+								step={1}
+								disabled={!headerStickyEnabled}
+								value={Math.round(getHexAlpha01(value.stickyHeaderText) * 100)}
+								onChange={(e) => updateAlphaPercent('stickyHeaderText', Number(e.target.value))}
+								className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+								aria-label="Sticky header text alpha percent"
+								title="Alpha %"
+							/>
+                          </div>
+                        </label>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Background opacity</label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={1}
+                              disabled={!headerStickyEnabled}
+                              value={Math.round((value.stickyHeaderOpacity ?? 0) * 100)}
+                              onChange={(e) => updateOpacityPercent(Number(e.target.value))}
+                              className="h-2 w-full flex-1 cursor-pointer disabled:cursor-not-allowed"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={1}
+                              disabled={!headerStickyEnabled}
+                              value={Math.round((value.stickyHeaderOpacity ?? 0) * 100)}
+                              onChange={(e) => updateOpacityPercent(Number(e.target.value))}
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                              aria-label="Sticky header background opacity percent"
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">Percent (0–100)</p>
+                        </div>
+
+                        <div className="space-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Blur (px)</label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={0}
+                              max={40}
+                              step={1}
+                              disabled={!headerStickyEnabled}
+                              value={Math.max(0, Math.min(40, Math.round(Number.isFinite(value.stickyHeaderBlur) ? value.stickyHeaderBlur : 0)))}
+                              onChange={(e) => updateBlur(Number(e.target.value))}
+                              className="h-2 w-full flex-1 cursor-pointer disabled:cursor-not-allowed"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              max={40}
+                              step={1}
+                              disabled={!headerStickyEnabled}
+                              value={Math.max(0, Math.min(40, Math.round(Number.isFinite(value.stickyHeaderBlur) ? value.stickyHeaderBlur : 0)))}
+                              onChange={(e) => updateBlur(Number(e.target.value))}
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                              aria-label="Sticky header blur pixels"
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">0–40px</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-neutral-500">These apply only while the header is sticky.</p>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-neutral-50 mb-6">
               <FontAwesomeIcon icon={faTable} className="h-5 w-5" />
               Pricing Layout
             </div>
@@ -1979,7 +2597,7 @@ export function ThemeSettingsTabs({
               </div>
               <div className="space-y-3">
                 <label htmlFor="pricing-center-uneven" className="block text-sm font-medium text-slate-900 dark:text-neutral-100">
-                  Center uneven rows
+                  Center incomplete rows
                 </label>
                 <select
                   id="pricing-center-uneven"
@@ -2000,180 +2618,9 @@ export function ThemeSettingsTabs({
             </div>
           </section>
 
-          <section className="space-y-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-xl font-semibold text-slate-900 dark:text-neutral-50">Header & Background</div>
-                <p className="text-sm text-slate-600 dark:text-neutral-300">Adjust header, sidebar, content area, and backdrop glow styling for light and dark mode.</p>
-              </div>
-              <div role="tablist" className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-neutral-700 dark:bg-neutral-900">
-                {(['light', 'dark'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    role="tab"
-                    aria-selected={colorMode === m}
-                    onClick={() => setColorMode(m)}
-                    className={cx(
-                      'rounded-md px-4 py-1.5 text-sm font-medium transition-all',
-                      colorMode === m
-                        ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
-                        : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-100',
-                    )}
-                  >
-                    {m === 'light' ? 'Light' : 'Dark'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
-              <div className="flex flex-wrap gap-3">
-                {(() => {
-                  const colors = colorMode === 'light' ? lightColors : darkColors;
-                  const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
-                  const builtInPresets = colorMode === 'light' ? LIGHT_PRESETS : DARK_PRESETS;
-                  const custom = colorPresets.map((preset) => {
-                    const modeColors = colorMode === 'light' ? preset.light : preset.dark;
-                    return { name: preset.name, accent: modeColors.accentPrimary, colors: fillElementGradients(modeColors) };
-                  });
-                  const presets = [
-                    ...builtInPresets.map((p) => ({ ...p, colors: fillElementGradients(p.colors) })),
-                    ...custom
-                  ];
-                  const layoutStringKeys = [
-                    'headerBg',
-                    'sidebarBg',
-                    'pageGradientFrom',
-                    'pageGradientVia',
-                    'pageGradientTo',
-                    'pageGlow',
-                  ] as const;
-                  const layoutNumberKeys = ['headerOpacity', 'sidebarOpacity', 'glowOpacity'] as const;
-                  const layoutKeys = [...layoutStringKeys, ...layoutNumberKeys] as const;
-
-                  const isActive = (preset: ColorTokens) => layoutKeys.every((k) => colors[k] === preset[k]);
-
-                  return presets.map((preset) => {
-                    const active = isActive(preset.colors);
-                    return (
-                      <button
-                        key={`${colorMode}-${preset.name}`}
-                        type="button"
-                        onClick={() => {
-                          setColors({
-                            ...colors,
-                            headerBg: preset.colors.headerBg,
-                            headerOpacity: preset.colors.headerOpacity,
-                            sidebarBg: preset.colors.sidebarBg,
-                            sidebarOpacity: preset.colors.sidebarOpacity,
-                            pageGradientFrom: preset.colors.pageGradientFrom,
-                            pageGradientVia: preset.colors.pageGradientVia,
-                            pageGradientTo: preset.colors.pageGradientTo,
-                            pageGlow: preset.colors.pageGlow,
-                            glowOpacity: preset.colors.glowOpacity,
-                          });
-                        }}
-                        className={cx(
-                          'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
-                          active
-                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-inner dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
-                        )}
-                      >
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: preset.accent }} />
-                        {preset.name}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              {(() => {
-                const colors = colorMode === 'light' ? lightColors : darkColors;
-                const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
-                const update = (key: ColorHexKey, value: string) => setColors({ ...colors, [key]: value });
-
-                const fields: Array<{ key: ColorHexKey; label: string }> = [
-                  { key: 'headerBg', label: 'Header background' },
-                  { key: 'sidebarBg', label: 'Sidebar background' },
-                  { key: 'pageGradientFrom', label: 'Content area (from)' },
-                  { key: 'pageGradientVia', label: 'Content area (via)' },
-                  { key: 'pageGradientTo', label: 'Content area (to)' },
-                  { key: 'pageGlow', label: 'Backdrop glow accent' },
-                ];
-
-                return fields.map((f) => (
-                  <div key={`${colorMode}-${String(f.key)}`} className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={colors[f.key]}
-                        onChange={(e) => update(f.key, e.target.value)}
-                        className="h-10 w-12 rounded-lg border border-slate-300 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-900"
-                      />
-                      <input
-                        type="text"
-                        value={colors[f.key]}
-                        onChange={(e) => update(f.key, e.target.value)}
-                        placeholder="#rrggbb"
-                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-                      />
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-3">
-              {(() => {
-                const colors = colorMode === 'light' ? lightColors : darkColors;
-                const setColors = colorMode === 'light' ? setLightColors : setDarkColors;
-                const updateOpacityPercent = (key: OpacityKey, percent: number) => {
-                  const clamped = Math.max(0, Math.min(100, percent));
-                  const next = Math.round(clamped) / 100;
-                  setColors({ ...colors, [key]: next });
-                };
-
-                const opacityFields: Array<{ key: OpacityKey; label: string }> = [
-                  { key: 'headerOpacity', label: 'Header opacity' },
-                  { key: 'sidebarOpacity', label: 'Sidebar opacity' },
-                  { key: 'glowOpacity', label: 'Backdrop glow opacity' },
-                ];
-
-                return opacityFields.map((f) => (
-                  <div key={`${colorMode}-${f.key}`} className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={Math.round((colors[f.key] ?? 0) * 100)}
-                        onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
-                        className="h-2 w-full flex-1 cursor-pointer"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={Math.round((colors[f.key] ?? 0) * 100)}
-                        onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
-                        className="w-20 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-                        aria-label={`${f.label} percent`}
-                      />
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </section>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-300">
+            Header, sidebar, page background gradient, and glow colors live under the <span className="font-semibold text-slate-900 dark:text-neutral-100">Colors</span> tab. Sticky header colors are configured above.
+          </div>
         </div>
       )
     },
@@ -2242,6 +2689,8 @@ export function ThemeSettingsTabs({
     setBlogSidebarEnabledArchive, setBlogSidebarEnabledPages, setBlogRelatedPostsEnabled,
     addWidget, removeWidget, toggleWidget, updateWidgetSettings, updateWidgetTitle, moveWidget, canMoveUp, canMoveDown,
     pricingMaxColumns, pricingCenterUneven, setPricingMaxColumns, setPricingCenterUneven,
+    headerStyle, headerHeight, headerStickyEnabled, headerStickyScrollY, headerStickyHeight,
+    setHeaderStyle, setHeaderHeight, setHeaderStickyEnabled, setHeaderStickyScrollY, setHeaderStickyHeight,
     customCss, customHead, customBody, setCustomCss, setCustomHead, setCustomBody,
     blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
     lightColors, darkColors, colorMode, setColorMode,
@@ -2252,11 +2701,11 @@ export function ThemeSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary)_/_0.25)] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] transition-shadow dark:border-[rgb(var(--accent-primary)_/_0.35)] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]"
+        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
         role="tablist"
         aria-label="Theme settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}

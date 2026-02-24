@@ -175,7 +175,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                         href={item.href}
                                 className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 transition ${
                                   active
-                                    ? 'bg-[rgb(var(--accent-primary)_/_0.12)] text-[rgb(var(--accent-primary))] dark:bg-[rgb(var(--accent-primary)_/_0.18)]'
+                                    ? 'bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] text-[rgb(var(--accent-primary))] dark:bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]'
                                     : 'text-slate-500 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800/50'
                                 }`}
                         style={{ fontSize: '0.85rem' }}
@@ -243,7 +243,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
               href={it.href}
               className={`flex items-center justify-between gap-2 rounded px-3 py-2 text-sm border transition ${
                 active
-                  ? 'bg-[rgb(var(--accent-primary)_/_0.16)] text-[rgb(var(--accent-primary))] border-[rgb(var(--accent-primary)_/_0.35)]'
+                  ? 'bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))] text-[rgb(var(--accent-primary))] border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))]'
                   : 'border-transparent text-neutral-400 hover:text-white hover:bg-neutral-800/60'
               }`}
             >

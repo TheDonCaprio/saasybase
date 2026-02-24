@@ -3,11 +3,8 @@ import React from 'react';
 import DevClerkProvider from '../components/DevClerkProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';
 import { ToastContainer } from '../components/ui/Toast';
-import { ConditionalAccountMenu } from '../components/ConditionalAccountMenu';
-import { ConditionalDashboardDrawer } from '../components/ConditionalDashboardDrawer';
-import { ConditionalAdminDrawer } from '../components/ConditionalAdminDrawer';
-import { HeaderMobileMenu } from '../components/HeaderMobileMenu';
 import PaymentProviderScripts from '../components/PaymentProviderScripts';
+import { SiteHeader } from '../components/SiteHeader';
 import {
   getSiteName,
   getSiteLogo,
@@ -23,15 +20,13 @@ import {
   getThemeCustomHeadSnippet,
   getThemeCustomBodySnippet,
   getThemeColorPalette,
+  getHeaderLayoutSettings,
   type ThemeLink
 } from '../lib/settings';
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
-import Image from 'next/image';
 import Script from 'next/script';
 import Link from 'next/link';
-import Brand from '../components/Brand';
 import TwitterLoader from '../components/twitter/TwitterLoader';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 
@@ -51,60 +46,110 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const faviconHref = (siteFavicon ?? '').trim() || '/favicon.ico';
   const logoHeightNum = Number(siteLogoHeight) || 48;
   const formatSettings = await getFormatSetting().catch(() => ({ mode: 'short' as const, timezone: undefined }));
-  const [headerLinks, footerLinks, footerText, customCss, customHeadSnippet, customBodySnippet, colorPalette] = await Promise.all([
+  const [headerLinks, footerLinks, footerText, customCss, customHeadSnippet, customBodySnippet, colorPalette, headerLayoutSettings] = await Promise.all([
     getThemeHeaderLinks().catch(() => [] as ThemeLink[]),
     getThemeFooterLinks().catch(() => [] as ThemeLink[]),
     getThemeFooterText(siteName).catch(() => `© ${new Date().getFullYear()} ${siteName}`),
     getThemeCustomCss().catch(() => ''),
     getThemeCustomHeadSnippet().catch(() => ''),
     getThemeCustomBodySnippet().catch(() => ''),
-    getThemeColorPalette()
+    getThemeColorPalette(),
+    getHeaderLayoutSettings()
   ]);
 
-  const hexToSpaceRgb = (hex: string): string => {
-    const clean = (hex || '').replace('#', '');
-    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '0 0 0';
+  const parseHexColor = (hex: string): { rgb: string; a: number } => {
+    const clean = (hex || '').trim().replace(/^#/, '');
+    if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(clean)) return { rgb: '0 0 0', a: 1 };
     const r = parseInt(clean.slice(0, 2), 16);
     const g = parseInt(clean.slice(2, 4), 16);
     const b = parseInt(clean.slice(4, 6), 16);
-    return `${r} ${g} ${b}`;
+    const a = clean.length === 8 ? parseInt(clean.slice(6, 8), 16) / 255 : 1;
+    return { rgb: `${r} ${g} ${b}`, a: Math.max(0, Math.min(1, a)) };
+  };
+
+  const fmtAlpha = (a: number): string => {
+    const fixed = Math.max(0, Math.min(1, a)).toFixed(4);
+    return fixed.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
   };
 
   const buildThemeColorVarsCss = () => {
     const buildBlock = (t: typeof colorPalette.light, mode: 'light' | 'dark') => {
-      const headerOpacity = (typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7)).toFixed(2);
-      const sidebarOpacity = (typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5)).toFixed(2);
-      const glowOpacity = (typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12)).toFixed(2);
+      const headerOpacityNum = typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7);
+      const stickyHeaderOpacityNum =
+        typeof (t as any).stickyHeaderOpacity === 'number' ? (t as any).stickyHeaderOpacity : (mode === 'light' ? 0.92 : 0.82);
+      const headerBlurNum = typeof (t as any).headerBlur === 'number' ? (t as any).headerBlur : 12;
+      const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(headerBlurNum) ? headerBlurNum : 12)));
+      const headerBorderOpacityNum = typeof (t as any).headerBorderOpacity === 'number' ? (t as any).headerBorderOpacity : 0.8;
+      const headerBorderWidthNum = typeof (t as any).headerBorderWidth === 'number' ? (t as any).headerBorderWidth : 1;
+      const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(headerBorderWidthNum) ? headerBorderWidthNum : 1)));
+      const stickyHeaderBlurNum = typeof (t as any).stickyHeaderBlur === 'number' ? (t as any).stickyHeaderBlur : 14;
+      const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(stickyHeaderBlurNum) ? stickyHeaderBlurNum : 14)));
+      const stickyHeaderBorderOpacityNum = typeof (t as any).stickyHeaderBorderOpacity === 'number' ? (t as any).stickyHeaderBorderOpacity : 0.65;
+      const stickyHeaderBorderWidthNum =
+        typeof (t as any).stickyHeaderBorderWidth === 'number' ? (t as any).stickyHeaderBorderWidth : headerBorderWidthPx;
+      const stickyHeaderBorderWidthPx = Math.max(
+        0,
+        Math.min(4, Math.round(Number.isFinite(stickyHeaderBorderWidthNum) ? stickyHeaderBorderWidthNum : headerBorderWidthPx))
+      );
+      const sidebarOpacityNum = typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5);
+      const glowOpacityNum = typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12);
+
+      const cssToken = (name: string, hex: string) => {
+        const p = parseHexColor(hex);
+        const a = fmtAlpha(p.a);
+        return [`  --${name}: ${p.rgb} / ${a};`, `  --${name}-rgb: ${p.rgb};`, `  --${name}-a: ${a};`];
+      };
+
+      const headerBg = parseHexColor(t.headerBg);
+      const headerText = parseHexColor((t as any).headerText ?? t.textPrimary);
+      const headerBorder = parseHexColor((t as any).headerBorder ?? t.borderPrimary);
+      const stickyHeaderBg = parseHexColor((t as any).stickyHeaderBg ?? t.headerBg);
+      const stickyHeaderText = parseHexColor((t as any).stickyHeaderText ?? t.textPrimary);
+      const stickyHeaderBorder = parseHexColor(
+        (t as any).stickyHeaderBorder ?? (t as any).headerBorder ?? t.borderPrimary
+      );
+      const sidebarBg = parseHexColor(t.sidebarBg);
+      const pageGlow = parseHexColor(t.pageGlow);
+
       return [
-        `  --bg-primary: ${hexToSpaceRgb(t.bgPrimary)};`,
-        `  --bg-secondary: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
-        `  --surface-panel: ${hexToSpaceRgb(t.panelBg ?? t.bgSecondary)};`,
-        `  --surface-card: ${hexToSpaceRgb(t.bgSecondary)};`,
-        `  --surface-hero: ${hexToSpaceRgb(t.heroBg ?? t.bgSecondary)};`,
-        `  --bg-tertiary: ${hexToSpaceRgb(t.bgTertiary)};`,
-        `  --bg-quaternary: ${hexToSpaceRgb(t.bgQuaternary)};`,
-        `  --text-primary: ${hexToSpaceRgb(t.textPrimary)};`,
-        `  --text-secondary: ${hexToSpaceRgb(t.textSecondary)};`,
-        `  --text-tertiary: ${hexToSpaceRgb(t.textTertiary)};`,
-        `  --border-primary: ${hexToSpaceRgb(t.borderPrimary)};`,
-        `  --border-secondary: ${hexToSpaceRgb(t.borderSecondary)};`,
-        `  --accent-primary: ${hexToSpaceRgb(t.accentPrimary)};`,
-        `  --accent-hover: ${hexToSpaceRgb(t.accentHover)};`,
-        `  --theme-header-bg: rgb(${hexToSpaceRgb(t.headerBg)} / ${headerOpacity});`,
-        `  --theme-sidebar-bg: rgb(${hexToSpaceRgb(t.sidebarBg)} / ${sidebarOpacity});`,
-        `  --theme-page-gradient-from: rgb(${hexToSpaceRgb(t.pageGradientFrom)});`,
-        `  --theme-page-gradient-via: rgb(${hexToSpaceRgb(t.pageGradientVia)});`,
-        `  --theme-page-gradient-to: rgb(${hexToSpaceRgb(t.pageGradientTo)});`,
-        `  --theme-hero-gradient-from: rgb(${hexToSpaceRgb(t.heroGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-hero-gradient-via: rgb(${hexToSpaceRgb(t.heroGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-hero-gradient-to: rgb(${hexToSpaceRgb(t.heroGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-card-gradient-from: rgb(${hexToSpaceRgb(t.cardGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-card-gradient-via: rgb(${hexToSpaceRgb(t.cardGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-card-gradient-to: rgb(${hexToSpaceRgb(t.cardGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-tabs-gradient-from: rgb(${hexToSpaceRgb(t.tabsGradientFrom ?? t.pageGradientFrom)});`,
-        `  --theme-tabs-gradient-via: rgb(${hexToSpaceRgb(t.tabsGradientVia ?? t.pageGradientVia)});`,
-        `  --theme-tabs-gradient-to: rgb(${hexToSpaceRgb(t.tabsGradientTo ?? t.pageGradientTo)});`,
-        `  --theme-page-glow: rgb(${hexToSpaceRgb(t.pageGlow)} / ${glowOpacity});`,
+        ...cssToken('bg-primary', t.bgPrimary),
+        ...cssToken('bg-secondary', t.panelBg ?? t.bgSecondary),
+        ...cssToken('surface-panel', t.panelBg ?? t.bgSecondary),
+        ...cssToken('surface-card', t.bgSecondary),
+        ...cssToken('surface-hero', t.heroBg ?? t.bgSecondary),
+        ...cssToken('bg-tertiary', t.bgTertiary),
+        ...cssToken('bg-quaternary', t.bgQuaternary),
+        ...cssToken('text-primary', t.textPrimary),
+        ...cssToken('text-secondary', t.textSecondary),
+        ...cssToken('text-tertiary', t.textTertiary),
+        ...cssToken('border-primary', t.borderPrimary),
+        ...cssToken('border-secondary', t.borderSecondary),
+        ...cssToken('accent-primary', t.accentPrimary),
+        ...cssToken('accent-hover', t.accentHover),
+        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a * headerOpacityNum)});`,
+        `  --theme-header-text: rgb(${headerText.rgb} / ${fmtAlpha(headerText.a)});`,
+        `  --theme-header-blur: ${headerBlurPx}px;`,
+        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a * headerBorderOpacityNum)});`,
+        `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
+        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a * stickyHeaderOpacityNum)});`,
+        `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
+        `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
+        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a * stickyHeaderBorderOpacityNum)});`,
+        `  --theme-sticky-header-border-width: ${stickyHeaderBorderWidthPx}px;`,
+        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a * sidebarOpacityNum)});`,
+        `  --theme-page-gradient-from: rgb(${parseHexColor(t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientFrom).a)});`,
+        `  --theme-page-gradient-via: rgb(${parseHexColor(t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientVia).a)});`,
+        `  --theme-page-gradient-to: rgb(${parseHexColor(t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientTo).a)});`,
+        `  --theme-hero-gradient-from: rgb(${parseHexColor((t as any).heroGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-hero-gradient-via: rgb(${parseHexColor((t as any).heroGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-hero-gradient-to: rgb(${parseHexColor((t as any).heroGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-card-gradient-from: rgb(${parseHexColor((t as any).cardGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-card-gradient-via: rgb(${parseHexColor((t as any).cardGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-card-gradient-to: rgb(${parseHexColor((t as any).cardGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-tabs-gradient-from: rgb(${parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-tabs-gradient-via: rgb(${parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-tabs-gradient-to: rgb(${parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a * glowOpacityNum)});`,
       ].join('\n');
     };
 
@@ -120,24 +165,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const DEFAULT_LOGO_W = 160;
   const DEFAULT_LOGO_H = 48;
   const aspectRatioCss = `${DEFAULT_LOGO_W} / ${DEFAULT_LOGO_H}`;
-  const renderNavLink = (link: ThemeLink) => {
-    const isExternal = /^https?:\/\//i.test(link.href);
-    const className = 'transition-colors hover:text-slate-900 dark:hover:text-neutral-100';
-    if (isExternal) {
-      return (
-        <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={className}>
-          {link.label}
-        </a>
-      );
-    }
-    return (
-      <Link key={`${link.label}-${link.href}`} href={link.href} className={className}>
-        {link.label}
-      </Link>
-    );
-  };
   return (
-      <html lang="en" suppressHydrationWarning={true}>
+      <html
+        lang="en"
+        suppressHydrationWarning={true}
+        style={{
+          backgroundColor: 'rgb(var(--bg-primary))',
+          backgroundImage: 'linear-gradient(to bottom, var(--theme-page-gradient-from), var(--theme-page-gradient-via), var(--theme-page-gradient-to))',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%'
+        }}
+      >
         <head>
           <link rel="icon" href={faviconHref} />
           {/* Theme script must run before body renders to prevent hydration mismatch */}
@@ -160,7 +198,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           markup and client theme application.
         */}
         <body
-          className="min-h-screen flex flex-col bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] transition-colors duration-150"
+          className="min-h-screen flex flex-col text-[rgb(var(--text-primary))] transition-colors duration-150"
           suppressHydrationWarning={true}
         >
           <DevClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
@@ -189,78 +227,19 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
           ) : null}
           {/* Payment provider scripts (loaded dynamically based on active provider) */}
           <PaymentProviderScripts provider={process.env.PAYMENT_PROVIDER} />
-          <header className="px-6 py-4 flex items-center justify-between bg-[color:var(--theme-header-bg)] backdrop-blur relative z-40">
-            <a href="/" className="font-semibold text-lg flex items-center gap-3">
-              {/* Prefer theme-specific logos: show dark variant when html has .dark, otherwise light. If none, fall back to SITE_LOGO or Brand */}
-              {(
-                // Render both imgs but show/hide via CSS so the correct one is loaded for the chosen theme.
-                // This keeps server-rendered markup stable; CSS classes toggle visibility client-side.
-                <> 
-                  {siteLogoLight ? (
-                    <div className="relative inline-block dark:hidden" style={{ height: logoHeightNum, aspectRatio: aspectRatioCss }}>
-                      <Image 
-                        src={siteLogoLight} 
-                        alt={siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} 
-                        fill 
-                        style={{ objectFit: 'contain' }} 
-                        sizes="(max-width: 768px) 100px, 200px"
-                        priority
-                      />
-                    </div>
-                  ) : null}
-                  {siteLogoDark ? (
-                    <div className="relative hidden dark:inline-block" style={{ height: logoHeightNum, aspectRatio: aspectRatioCss }}>
-                      <Image 
-                        src={siteLogoDark} 
-                        alt={siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} 
-                        fill 
-                        style={{ objectFit: 'contain' }} 
-                        sizes="(max-width: 768px) 100px, 200px"
-                        priority
-                      />
-                    </div>
-                  ) : null}
-
-                  {/* If neither theme-specific logo, use generic SITE_LOGO */}
-                  {!siteLogoLight && !siteLogoDark && siteLogo ? (
-                    <div className="relative inline-block" style={{ height: logoHeightNum, aspectRatio: aspectRatioCss }}>
-                      <Image 
-                        src={siteLogo} 
-                        alt={siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} 
-                        fill 
-                        style={{ objectFit: 'contain' }} 
-                        sizes="(max-width: 768px) 100px, 200px"
-                        priority
-                      />
-                    </div>
-                  ) : null}
-
-                  {/* Brand fallback if no images available */}
-                  {!siteLogo && !siteLogoLight && !siteLogoDark ? <Brand siteName={siteName} /> : null}
-                </>
-              )}
-            </a>
-            <div className="flex items-center gap-4">
-              {headerLinks.length ? (
-                <nav className="hidden lg:flex gap-4 text-sm text-slate-600 dark:text-neutral-300">
-                  {headerLinks.map(renderNavLink)}
-                </nav>
-              ) : null}
-              <ThemeToggle />
-              <ConditionalAccountMenu />
-              <ConditionalDashboardDrawer />
-              <ConditionalAdminDrawer />
-              {headerLinks.length ? (
-                <HeaderMobileMenu links={headerLinks} />
-              ) : null}
-            </div>
-          </header>
+          <SiteHeader
+            siteName={siteName}
+            siteLogo={siteLogo}
+            siteLogoLight={siteLogoLight}
+            siteLogoDark={siteLogoDark}
+            logoHeight={logoHeightNum}
+            aspectRatioCss={aspectRatioCss}
+            headerLinks={headerLinks}
+            layout={headerLayoutSettings}
+          />
           {/* top-down page-level gradient and soft radial highlight at the top */}
           <main
             className="flex-1 w-full p-6 relative"
-            style={{
-              backgroundImage: 'linear-gradient(to bottom, var(--theme-page-gradient-from), var(--theme-page-gradient-via), var(--theme-page-gradient-to))'
-            }}
           >
             {/* bluish/purplish top radial glow for 'light from above' */}
             <div

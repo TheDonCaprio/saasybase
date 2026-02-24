@@ -30,12 +30,12 @@ const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
 const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: string; dot: string }> = {
 	theme: {
 		wrapper:
-			'border-[color:rgb(var(--accent-primary)_/_0.18)] bg-[linear-gradient(135deg,rgb(var(--surface-hero)_/_0.72),rgb(var(--surface-hero)_/_0.72)),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary)_/_0.12)] dark:border-[color:rgb(var(--accent-primary)_/_0.30)] dark:bg-[linear-gradient(135deg,rgb(var(--surface-hero)_/_0.42),rgb(var(--surface-hero)_/_0.42)),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] dark:shadow-[0_0_40px_rgb(var(--accent-primary)_/_0.18)]',
+			'border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))] bg-[linear-gradient(135deg,rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.72)),rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.72))),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.30))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.42)),rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.42))),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]',
 		overlay:
-			'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary)_/_0.28),_transparent_60%)]',
+			'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]',
 		pill:
-			'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--accent-primary)_/_0.25)] bg-[color:rgb(var(--accent-primary)_/_0.08)] px-3 py-1 text-xs font-medium text-[color:rgb(var(--accent-primary)_/_0.88)] dark:border-[color:rgb(var(--accent-primary)_/_0.35)] dark:bg-[color:rgb(var(--accent-primary)_/_0.12)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
-		dot: 'h-2 w-2 rounded-full bg-[color:rgb(var(--accent-primary)_/_0.9)] animate-pulse dark:bg-[color:rgb(var(--accent-primary)_/_0.95)]'
+			'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.08))] px-3 py-1 text-xs font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.88))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]',
+		dot: 'h-2 w-2 rounded-full bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.9))] animate-pulse dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]'
 	},
 	indigo: {
 		wrapper:
@@ -88,13 +88,13 @@ const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: str
 const statToneStyles: Record<Tone, { wrapper: string; label: string; value: string; helper: string }> = {
 	theme: {
 		wrapper:
-			'rounded-2xl border border-[color:rgb(var(--accent-primary)_/_0.20)] bg-[color:rgb(var(--accent-primary)_/_0.06)] px-3 py-2 shadow-sm dark:border-[color:rgb(var(--accent-primary)_/_0.30)] dark:bg-[color:rgb(var(--accent-primary)_/_0.10)]',
+			'rounded-2xl border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.20))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.06))] px-3 py-2 shadow-sm dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.30))] dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))]',
 		label:
-			'text-xs uppercase tracking-wide text-[color:rgb(var(--accent-primary)_/_0.78)] dark:text-[color:rgb(var(--accent-primary)_/_0.75)]',
+			'text-xs uppercase tracking-wide text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.78))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.75))]',
 		value:
-			'mt-1 text-base font-semibold text-[color:rgb(var(--accent-primary)_/_0.92)] dark:text-[color:rgb(var(--accent-primary)_/_0.95)]',
+			'mt-1 text-base font-semibold text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]',
 		helper:
-			'text-xs text-[color:rgb(var(--accent-primary)_/_0.70)] dark:text-[color:rgb(var(--accent-primary)_/_0.70)]'
+			'text-xs text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.70))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.70))]'
 	},
 	indigo: {
 		wrapper: 'rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10',
@@ -134,10 +134,10 @@ const statToneStyles: Record<Tone, { wrapper: string; label: string; value: stri
 	},
 	slate: {
 		wrapper:
-			'rounded-2xl border border-[color:rgb(var(--border-primary)_/_0.55)] bg-[linear-gradient(135deg,rgb(var(--surface-card)_/_0.75),rgb(var(--surface-card)_/_0.75)),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2 shadow-sm backdrop-blur-sm',
-		label: 'text-xs uppercase tracking-wide text-[color:rgb(var(--text-secondary)_/_0.85)]',
+			'rounded-2xl border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2 shadow-sm backdrop-blur-sm',
+		label: 'text-xs uppercase tracking-wide text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.85))]',
 		value: 'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
-		helper: 'text-xs text-[color:rgb(var(--text-secondary)_/_0.80)]'
+		helper: 'text-xs text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.80))]'
 	}
 };
 

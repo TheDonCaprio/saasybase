@@ -11,6 +11,7 @@ import {
   DEFAULT_THEME_FOOTER_LINKS,
   DEFAULT_THEME_COLOR_PALETTE,
   type ThemeColorPalette,
+  type ThemeColorTokens,
   getThemeHeaderLinks,
   getThemeFooterLinks,
   getThemeFooterTextRaw,
@@ -111,6 +112,36 @@ const clampInt = (value: unknown, min: number, max: number, fallback: number): n
   return rounded;
 };
 
+/** Bake a legacy 0-1 opacity value into the hex alpha channel. */
+const bakeOpacity = (hex: string, opacity: number): string => {
+  if (opacity >= 1) return hex;
+  const clean = hex.replace(/^#/, '');
+  const existingA = clean.length === 8 ? parseInt(clean.slice(6, 8), 16) / 255 : 1;
+  const newA = Math.max(0, Math.min(1, existingA * opacity));
+  const aByte = Math.round(newA * 255).toString(16).padStart(2, '0');
+  return `#${clean.slice(0, 6)}${aByte}`;
+};
+
+const migrateModeOpacity = (
+  modeIn: Record<string, unknown>,
+  result: ThemeColorTokens,
+): ThemeColorTokens => {
+  const out = { ...result };
+  out.headerBg = bakeOpacity(out.headerBg, clamp01(modeIn.headerOpacity, 1));
+  out.headerBorder = bakeOpacity(out.headerBorder, clamp01(modeIn.headerBorderOpacity, 1));
+  out.stickyHeaderBg = bakeOpacity(out.stickyHeaderBg, clamp01(modeIn.stickyHeaderOpacity, 1));
+  out.stickyHeaderBorder = bakeOpacity(out.stickyHeaderBorder, clamp01(modeIn.stickyHeaderBorderOpacity, 1));
+  out.sidebarBg = bakeOpacity(out.sidebarBg, clamp01(modeIn.sidebarOpacity, 1));
+  out.pageGlow = bakeOpacity(out.pageGlow, clamp01(modeIn.glowOpacity, 1));
+  out.headerOpacity = 1;
+  out.headerBorderOpacity = 1;
+  out.stickyHeaderOpacity = 1;
+  out.stickyHeaderBorderOpacity = 1;
+  out.sidebarOpacity = 1;
+  out.glowOpacity = 1;
+  return out;
+};
+
 const sanitizePalette = (input: unknown): ThemeColorPalette => {
   const rec = (input && typeof input === 'object') ? (input as Record<string, unknown>) : {};
   const lightIn = (rec.light && typeof rec.light === 'object') ? (rec.light as Record<string, unknown>) : {};
@@ -147,8 +178,7 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
     d.stickyHeaderBorder ?? d.headerBorder ?? d.borderPrimary
   );
 
-  return {
-    light: {
+  const lightResult: ThemeColorTokens = {
       bgPrimary: sanitizeHex(lightIn.bgPrimary, l.bgPrimary),
       bgSecondary: sanitizeHex(lightIn.bgSecondary, l.bgSecondary),
       panelBg: sanitizeHex(lightIn.panelBg ?? lightIn.bgSecondary, l.panelBg),
@@ -163,21 +193,21 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       accentPrimary: sanitizeHex(lightIn.accentPrimary, l.accentPrimary),
       accentHover: sanitizeHex(lightIn.accentHover, l.accentHover),
       headerBg: sanitizeHex(lightIn.headerBg, l.headerBg),
-      headerOpacity: clamp01(lightIn.headerOpacity, l.headerOpacity),
+      headerOpacity: 1,
       headerText: sanitizeHex(lightIn.headerText, lightHeaderTextFallback),
       headerBlur: clampInt(lightIn.headerBlur, 0, 40, l.headerBlur ?? 12),
       headerBorder: sanitizeHex(lightIn.headerBorder, lightHeaderBorderFallback),
-      headerBorderOpacity: clamp01(lightIn.headerBorderOpacity, l.headerBorderOpacity ?? 0.8),
+      headerBorderOpacity: 1,
       headerBorderWidth: clampInt(lightIn.headerBorderWidth, 0, 4, l.headerBorderWidth ?? 1),
       stickyHeaderBg: sanitizeHex(lightIn.stickyHeaderBg, lightStickyBgFallback),
-      stickyHeaderOpacity: clamp01(lightIn.stickyHeaderOpacity, l.stickyHeaderOpacity ?? l.headerOpacity),
+      stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(lightIn.stickyHeaderBlur, 0, 40, l.stickyHeaderBlur ?? 14),
       stickyHeaderText: sanitizeHex(lightIn.stickyHeaderText, lightStickyTextFallback),
       stickyHeaderBorder: sanitizeHex(lightIn.stickyHeaderBorder, lightStickyBorderFallback),
-      stickyHeaderBorderOpacity: clamp01(lightIn.stickyHeaderBorderOpacity, l.stickyHeaderBorderOpacity ?? 0.65),
+      stickyHeaderBorderOpacity: 1,
       stickyHeaderBorderWidth: clampInt(lightIn.stickyHeaderBorderWidth, 0, 4, l.stickyHeaderBorderWidth ?? l.headerBorderWidth ?? 1),
       sidebarBg: sanitizeHex(lightIn.sidebarBg, l.sidebarBg),
-      sidebarOpacity: clamp01(lightIn.sidebarOpacity, l.sidebarOpacity),
+      sidebarOpacity: 1,
       pageGradientFrom: lightPageFrom,
       pageGradientVia: lightPageVia,
       pageGradientTo: lightPageTo,
@@ -191,9 +221,10 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       tabsGradientVia: sanitizeHex(lightIn.tabsGradientVia, lightPageVia),
       tabsGradientTo: sanitizeHex(lightIn.tabsGradientTo, lightPageTo),
       pageGlow: sanitizeHex(lightIn.pageGlow, l.pageGlow),
-      glowOpacity: clamp01(lightIn.glowOpacity, l.glowOpacity),
-    },
-    dark: {
+      glowOpacity: 1,
+  };
+
+  const darkResult: ThemeColorTokens = {
       bgPrimary: sanitizeHex(darkIn.bgPrimary, d.bgPrimary),
       bgSecondary: sanitizeHex(darkIn.bgSecondary, d.bgSecondary),
       panelBg: sanitizeHex(darkIn.panelBg ?? darkIn.bgSecondary, d.panelBg),
@@ -208,21 +239,21 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       accentPrimary: sanitizeHex(darkIn.accentPrimary, d.accentPrimary),
       accentHover: sanitizeHex(darkIn.accentHover, d.accentHover),
       headerBg: sanitizeHex(darkIn.headerBg, d.headerBg),
-      headerOpacity: clamp01(darkIn.headerOpacity, d.headerOpacity),
+      headerOpacity: 1,
       headerText: sanitizeHex(darkIn.headerText, darkHeaderTextFallback),
       headerBlur: clampInt(darkIn.headerBlur, 0, 40, d.headerBlur ?? 12),
       headerBorder: sanitizeHex(darkIn.headerBorder, darkHeaderBorderFallback),
-      headerBorderOpacity: clamp01(darkIn.headerBorderOpacity, d.headerBorderOpacity ?? 0.8),
+      headerBorderOpacity: 1,
       headerBorderWidth: clampInt(darkIn.headerBorderWidth, 0, 4, d.headerBorderWidth ?? 1),
       stickyHeaderBg: sanitizeHex(darkIn.stickyHeaderBg, darkStickyBgFallback),
-      stickyHeaderOpacity: clamp01(darkIn.stickyHeaderOpacity, d.stickyHeaderOpacity ?? d.headerOpacity),
+      stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(darkIn.stickyHeaderBlur, 0, 40, d.stickyHeaderBlur ?? 14),
       stickyHeaderText: sanitizeHex(darkIn.stickyHeaderText, darkStickyTextFallback),
       stickyHeaderBorder: sanitizeHex(darkIn.stickyHeaderBorder, darkStickyBorderFallback),
-      stickyHeaderBorderOpacity: clamp01(darkIn.stickyHeaderBorderOpacity, d.stickyHeaderBorderOpacity ?? 0.65),
+      stickyHeaderBorderOpacity: 1,
       stickyHeaderBorderWidth: clampInt(darkIn.stickyHeaderBorderWidth, 0, 4, d.stickyHeaderBorderWidth ?? d.headerBorderWidth ?? 1),
       sidebarBg: sanitizeHex(darkIn.sidebarBg, d.sidebarBg),
-      sidebarOpacity: clamp01(darkIn.sidebarOpacity, d.sidebarOpacity),
+      sidebarOpacity: 1,
       pageGradientFrom: darkPageFrom,
       pageGradientVia: darkPageVia,
       pageGradientTo: darkPageTo,
@@ -236,8 +267,12 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       tabsGradientVia: sanitizeHex(darkIn.tabsGradientVia, darkPageVia),
       tabsGradientTo: sanitizeHex(darkIn.tabsGradientTo, darkPageTo),
       pageGlow: sanitizeHex(darkIn.pageGlow, d.pageGlow),
-      glowOpacity: clamp01(darkIn.glowOpacity, d.glowOpacity),
-    },
+      glowOpacity: 1,
+  };
+
+  return {
+    light: migrateModeOpacity(lightIn, lightResult),
+    dark: migrateModeOpacity(darkIn, darkResult),
   };
 };
 

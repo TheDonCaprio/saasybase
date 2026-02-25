@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -148,14 +149,14 @@ const fillElementGradients = (t: PartialColorTokens): ColorTokens => {
     headerText: t.headerText ?? t.textPrimary,
     headerBlur: typeof t.headerBlur === 'number' ? t.headerBlur : 12,
     headerBorder: t.headerBorder ?? t.borderPrimary,
-    headerBorderOpacity: typeof t.headerBorderOpacity === 'number' ? t.headerBorderOpacity : 0.8,
+    headerBorderOpacity: typeof t.headerBorderOpacity === 'number' ? t.headerBorderOpacity : 1,
     headerBorderWidth: typeof t.headerBorderWidth === 'number' ? t.headerBorderWidth : 1,
     stickyHeaderBg: t.stickyHeaderBg ?? t.headerBg,
-    stickyHeaderOpacity: typeof t.stickyHeaderOpacity === 'number' ? t.stickyHeaderOpacity : (typeof t.headerOpacity === 'number' ? t.headerOpacity : 0.9),
+    stickyHeaderOpacity: typeof t.stickyHeaderOpacity === 'number' ? t.stickyHeaderOpacity : 1,
     stickyHeaderBlur: typeof t.stickyHeaderBlur === 'number' ? t.stickyHeaderBlur : 14,
     stickyHeaderText: t.stickyHeaderText ?? t.headerText ?? t.textPrimary,
     stickyHeaderBorder: t.stickyHeaderBorder ?? t.headerBorder ?? t.borderPrimary,
-    stickyHeaderBorderOpacity: typeof t.stickyHeaderBorderOpacity === 'number' ? t.stickyHeaderBorderOpacity : 0.65,
+    stickyHeaderBorderOpacity: typeof t.stickyHeaderBorderOpacity === 'number' ? t.stickyHeaderBorderOpacity : 1,
     stickyHeaderBorderWidth: typeof t.stickyHeaderBorderWidth === 'number' ? t.stickyHeaderBorderWidth : (typeof t.headerBorderWidth === 'number' ? t.headerBorderWidth : 1),
     heroGradientFrom: t.heroGradientFrom ?? t.pageGradientFrom,
     heroGradientVia: t.heroGradientVia ?? t.pageGradientVia,
@@ -178,17 +179,17 @@ const DEFAULT_LIGHT_COLORS: ColorTokens = {
   textPrimary: '#111827', textSecondary: '#4b5563', textTertiary: '#6b7280',
   borderPrimary: '#d1d5db', borderSecondary: '#9ca3af',
   accentPrimary: '#3b82f6', accentHover: '#2563eb',
-  headerBg: '#ffffff', headerOpacity: 0.8,
+  headerBg: '#ffffffcc', headerOpacity: 1,
   headerText: '#111827', headerBlur: 12,
-  headerBorder: '#d1d5db', headerBorderOpacity: 0.8, headerBorderWidth: 1,
-  stickyHeaderBg: '#ffffff', stickyHeaderOpacity: 0.92, stickyHeaderBlur: 14, stickyHeaderText: '#111827',
-  stickyHeaderBorder: '#d1d5db', stickyHeaderBorderOpacity: 0.65, stickyHeaderBorderWidth: 1,
-  sidebarBg: '#ffffff', sidebarOpacity: 0.9,
+  headerBorder: '#d1d5dbcc', headerBorderOpacity: 1, headerBorderWidth: 1,
+  stickyHeaderBg: '#ffffffeb', stickyHeaderOpacity: 1, stickyHeaderBlur: 14, stickyHeaderText: '#111827',
+  stickyHeaderBorder: '#d1d5dba6', stickyHeaderBorderOpacity: 1, stickyHeaderBorderWidth: 1,
+  sidebarBg: '#ffffffe6', sidebarOpacity: 1,
   pageGradientFrom: '#f0f9ff', pageGradientVia: '#eef2ff', pageGradientTo: '#ffffff',
   heroGradientFrom: '#f0f9ff', heroGradientVia: '#eef2ff', heroGradientTo: '#ffffff',
   cardGradientFrom: '#f0f9ff', cardGradientVia: '#eef2ff', cardGradientTo: '#ffffff',
   tabsGradientFrom: '#f0f9ff', tabsGradientVia: '#eef2ff', tabsGradientTo: '#ffffff',
-  pageGlow: '#3b82f6', glowOpacity: 0.18,
+  pageGlow: '#3b82f62e', glowOpacity: 1,
 };
 
 const DEFAULT_DARK_COLORS: ColorTokens = {
@@ -196,17 +197,17 @@ const DEFAULT_DARK_COLORS: ColorTokens = {
   textPrimary: '#f5f5f5', textSecondary: '#a3a3a3', textTertiary: '#737373',
   borderPrimary: '#404040', borderSecondary: '#525252',
   accentPrimary: '#3b82f6', accentHover: '#2563eb',
-  headerBg: '#0a0a0a', headerOpacity: 0.7,
+  headerBg: '#0a0a0ab3', headerOpacity: 1,
   headerText: '#f5f5f5', headerBlur: 12,
-  headerBorder: '#404040', headerBorderOpacity: 0.7, headerBorderWidth: 1,
-  stickyHeaderBg: '#0a0a0a', stickyHeaderOpacity: 0.82, stickyHeaderBlur: 14, stickyHeaderText: '#f5f5f5',
-  stickyHeaderBorder: '#404040', stickyHeaderBorderOpacity: 0.55, stickyHeaderBorderWidth: 1,
-  sidebarBg: '#171717', sidebarOpacity: 0.5,
+  headerBorder: '#404040b3', headerBorderOpacity: 1, headerBorderWidth: 1,
+  stickyHeaderBg: '#0a0a0ad1', stickyHeaderOpacity: 1, stickyHeaderBlur: 14, stickyHeaderText: '#f5f5f5',
+  stickyHeaderBorder: '#4040408c', stickyHeaderBorderOpacity: 1, stickyHeaderBorderWidth: 1,
+  sidebarBg: '#17171780', sidebarOpacity: 1,
   pageGradientFrom: '#171717', pageGradientVia: '#312e81', pageGradientTo: '#0a0a0a',
   heroGradientFrom: '#171717', heroGradientVia: '#312e81', heroGradientTo: '#0a0a0a',
   cardGradientFrom: '#171717', cardGradientVia: '#312e81', cardGradientTo: '#0a0a0a',
   tabsGradientFrom: '#171717', tabsGradientVia: '#312e81', tabsGradientTo: '#0a0a0a',
-  pageGlow: '#6366f1', glowOpacity: 0.12,
+  pageGlow: '#6366f11f', glowOpacity: 1,
 };
 
 const COLOR_LABELS: Record<ColorHexKey, string> = {
@@ -274,10 +275,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#1c1009', textSecondary: '#78461d', textTertiary: '#9a6b3c',
       borderPrimary: '#f5d9a0', borderSecondary: '#e8bc6a',
       accentPrimary: '#f59e0b', accentHover: '#d97706',
-      headerBg: '#fffbf5', headerOpacity: 0.8,
-      sidebarBg: '#fffbf5', sidebarOpacity: 0.9,
+      headerBg: '#fffbf5cc', headerOpacity: 1,
+      sidebarBg: '#fffbf5e6', sidebarOpacity: 1,
       pageGradientFrom: '#fffbf5', pageGradientVia: '#fef3dc', pageGradientTo: '#ffffff',
-      pageGlow: '#f59e0b', glowOpacity: 0.18,
+      pageGlow: '#f59e0b2e', glowOpacity: 1,
     },
   },
   {
@@ -288,10 +289,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#0c2d48', textSecondary: '#0369a1', textTertiary: '#0284c7',
       borderPrimary: '#bae6fd', borderSecondary: '#7dd3fc',
       accentPrimary: '#0ea5e9', accentHover: '#0284c7',
-      headerBg: '#f0f9ff', headerOpacity: 0.8,
-      sidebarBg: '#f0f9ff', sidebarOpacity: 0.9,
+      headerBg: '#f0f9ffcc', headerOpacity: 1,
+      sidebarBg: '#f0f9ffe6', sidebarOpacity: 1,
       pageGradientFrom: '#f0f9ff', pageGradientVia: '#e0f2fe', pageGradientTo: '#ffffff',
-      pageGlow: '#0ea5e9', glowOpacity: 0.18,
+      pageGlow: '#0ea5e92e', glowOpacity: 1,
     },
   },
   {
@@ -302,10 +303,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#2e1065', textSecondary: '#7e22ce', textTertiary: '#9333ea',
       borderPrimary: '#e9d5ff', borderSecondary: '#d8b4fe',
       accentPrimary: '#a855f7', accentHover: '#9333ea',
-      headerBg: '#faf5ff', headerOpacity: 0.8,
-      sidebarBg: '#faf5ff', sidebarOpacity: 0.9,
+      headerBg: '#faf5ffcc', headerOpacity: 1,
+      sidebarBg: '#faf5ffe6', sidebarOpacity: 1,
       pageGradientFrom: '#faf5ff', pageGradientVia: '#f3e8ff', pageGradientTo: '#ffffff',
-      pageGlow: '#a855f7', glowOpacity: 0.18,
+      pageGlow: '#a855f72e', glowOpacity: 1,
     },
   },
   {
@@ -316,10 +317,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#052e16', textSecondary: '#15803d', textTertiary: '#16a34a',
       borderPrimary: '#bbf7d0', borderSecondary: '#86efac',
       accentPrimary: '#22c55e', accentHover: '#16a34a',
-      headerBg: '#f0fdf4', headerOpacity: 0.8,
-      sidebarBg: '#f0fdf4', sidebarOpacity: 0.9,
+      headerBg: '#f0fdf4cc', headerOpacity: 1,
+      sidebarBg: '#f0fdf4e6', sidebarOpacity: 1,
       pageGradientFrom: '#f0fdf4', pageGradientVia: '#dcfce7', pageGradientTo: '#ffffff',
-      pageGlow: '#22c55e', glowOpacity: 0.18,
+      pageGlow: '#22c55e2e', glowOpacity: 1,
     },
   },
   {
@@ -330,10 +331,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#1f0b0f', textSecondary: '#7f1d1d', textTertiary: '#9f1239',
       borderPrimary: '#fecdd3', borderSecondary: '#fda4af',
       accentPrimary: '#fb7185', accentHover: '#e11d48',
-      headerBg: '#fff7f7', headerOpacity: 0.82,
-      sidebarBg: '#fff7f7', sidebarOpacity: 0.92,
+      headerBg: '#fff7f7d1', headerOpacity: 1,
+      sidebarBg: '#fff7f7eb', sidebarOpacity: 1,
       pageGradientFrom: '#fff7f7', pageGradientVia: '#ffe4e6', pageGradientTo: '#ffffff',
-      pageGlow: '#fb7185', glowOpacity: 0.18,
+      pageGlow: '#fb71852e', glowOpacity: 1,
     },
   },
   {
@@ -344,10 +345,10 @@ const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorT
       textPrimary: '#1f1500', textSecondary: '#78350f', textTertiary: '#92400e',
       borderPrimary: '#fde68a', borderSecondary: '#fbbf24',
       accentPrimary: '#f59e0b', accentHover: '#b45309',
-      headerBg: '#fffbeb', headerOpacity: 0.8,
-      sidebarBg: '#fffbeb', sidebarOpacity: 0.9,
+      headerBg: '#fffbebcc', headerOpacity: 1,
+      sidebarBg: '#fffbebe6', sidebarOpacity: 1,
       pageGradientFrom: '#fffbeb', pageGradientVia: '#fef3c7', pageGradientTo: '#ffffff',
-      pageGlow: '#f59e0b', glowOpacity: 0.16,
+      pageGlow: '#f59e0b29', glowOpacity: 1,
     },
   },
 ];
@@ -366,10 +367,10 @@ const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTo
       textPrimary: '#e0f2fe', textSecondary: '#7dd3fc', textTertiary: '#38bdf8',
       borderPrimary: '#1e3a5f', borderSecondary: '#2e4e7e',
       accentPrimary: '#38bdf8', accentHover: '#0ea5e9',
-      headerBg: '#020616', headerOpacity: 0.7,
-      sidebarBg: '#0a1628', sidebarOpacity: 0.5,
+      headerBg: '#020616b3', headerOpacity: 1,
+      sidebarBg: '#0a162880', sidebarOpacity: 1,
       pageGradientFrom: '#020616', pageGradientVia: '#0a1628', pageGradientTo: '#020616',
-      pageGlow: '#38bdf8', glowOpacity: 0.12,
+      pageGlow: '#38bdf81f', glowOpacity: 1,
     },
   },
   {
@@ -380,10 +381,10 @@ const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTo
       textPrimary: '#ede9fe', textSecondary: '#c084fc', textTertiary: '#a855f7',
       borderPrimary: '#3d2468', borderSecondary: '#5b3a8a',
       accentPrimary: '#c084fc', accentHover: '#a855f7',
-      headerBg: '#0f0a1f', headerOpacity: 0.7,
-      sidebarBg: '#1a0f2e', sidebarOpacity: 0.5,
+      headerBg: '#0f0a1fb3', headerOpacity: 1,
+      sidebarBg: '#1a0f2e80', sidebarOpacity: 1,
       pageGradientFrom: '#0f0a1f', pageGradientVia: '#1a0f2e', pageGradientTo: '#0a0a0a',
-      pageGlow: '#c084fc', glowOpacity: 0.12,
+      pageGlow: '#c084fc1f', glowOpacity: 1,
     },
   },
   {
@@ -394,10 +395,10 @@ const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTo
       textPrimary: '#ffffff', textSecondary: '#a0a0a0', textTertiary: '#6b6b6b',
       borderPrimary: '#1f1f1f', borderSecondary: '#2d2d2d',
       accentPrimary: '#6366f1', accentHover: '#4f46e5',
-      headerBg: '#000000', headerOpacity: 0.7,
-      sidebarBg: '#0a0a0a', sidebarOpacity: 0.5,
+      headerBg: '#000000b3', headerOpacity: 1,
+      sidebarBg: '#0a0a0a80', sidebarOpacity: 1,
       pageGradientFrom: '#000000', pageGradientVia: '#0a0a0a', pageGradientTo: '#000000',
-      pageGlow: '#6366f1', glowOpacity: 0.12,
+      pageGlow: '#6366f11f', glowOpacity: 1,
     },
   },
   {
@@ -408,10 +409,10 @@ const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTo
       textPrimary: '#d1fae5', textSecondary: '#6ee7b7', textTertiary: '#34d399',
       borderPrimary: '#1c4d3a', borderSecondary: '#276048',
       accentPrimary: '#34d399', accentHover: '#10b981',
-      headerBg: '#071612', headerOpacity: 0.7,
-      sidebarBg: '#0d261e', sidebarOpacity: 0.5,
+      headerBg: '#071612b3', headerOpacity: 1,
+      sidebarBg: '#0d261e80', sidebarOpacity: 1,
       pageGradientFrom: '#071612', pageGradientVia: '#0d261e', pageGradientTo: '#071612',
-      pageGlow: '#34d399', glowOpacity: 0.12,
+      pageGlow: '#34d3991f', glowOpacity: 1,
     },
   },
   {
@@ -422,10 +423,10 @@ const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTo
       textPrimary: '#f5f5f5', textSecondary: '#fbcfe8', textTertiary: '#fda4af',
       borderPrimary: '#1f1f3a', borderSecondary: '#2b2b55',
       accentPrimary: '#fb7185', accentHover: '#e11d48',
-      headerBg: '#070712', headerOpacity: 0.72,
-      sidebarBg: '#0b0b14', sidebarOpacity: 0.52,
+      headerBg: '#070712b8', headerOpacity: 1,
+      sidebarBg: '#0b0b1485', sidebarOpacity: 1,
       pageGradientFrom: '#070712', pageGradientVia: '#131326', pageGradientTo: '#000000',
-      pageGlow: '#fb7185', glowOpacity: 0.13,
+      pageGlow: '#fb718521', glowOpacity: 1,
     },
   },
 ];
@@ -584,43 +585,14 @@ function ColorTabContent({
             <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">{group.title}</div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.keys.map((key) => (
-                <label key={key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+                <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
                   <span className="text-sm text-slate-700 dark:text-neutral-300">{COLOR_LABELS[key]}</span>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-6 w-6 rounded border border-black/10 flex-shrink-0"
-                      style={{ backgroundColor: colors[key] }}
-                    />
-                    <input
-                      type="color"
-                      value={stripHexAlpha(colors[key])}
-                      onChange={(e) => updateColor(key, replaceHexRgbPreserveAlpha(colors[key], e.target.value))}
-                      className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 dark:border-neutral-600"
-                      title={COLOR_LABELS[key]}
-                    />
-                    <input
-                      type="text"
-                      value={colors[key]}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (THEME_HEX_EDITING_RE.test(v)) updateColor(key, v);
-                      }}
-                      maxLength={9}
-                      className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                    />
-					<input
-						type="number"
-						min={0}
-						max={100}
-						step={1}
-						value={Math.round(getHexAlpha01(colors[key]) * 100)}
-						onChange={(e) => updateColor(key, setHexAlpha01(colors[key], Number(e.target.value) / 100))}
-						className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-						aria-label={`${COLOR_LABELS[key]} alpha percent`}
-						title="Alpha %"
-					/>
-                  </div>
-                </label>
+                  <ColorPickerWithAlpha
+                    value={colors[key]}
+                    onChange={(v) => updateColor(key, v)}
+                    label={undefined}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -713,56 +685,6 @@ function ColorTabContent({
         <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
           Border colors are under the <span className="font-semibold">Header</span> group above.
         </p>
-      </section>
-
-      {/* Opacity controls */}
-      <section>
-        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Opacity</div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {(() => {
-            const updateOpacityPercent = (key: OpacityKey, percent: number) => {
-              const clamped = Math.max(0, Math.min(100, percent));
-              const next = Math.round(clamped) / 100;
-              setColors({ ...colors, [key]: next });
-            };
-
-            const opacityFields: Array<{ key: OpacityKey; label: string }> = [
-              { key: 'headerOpacity', label: 'Header opacity' },
-              { key: 'headerBorderOpacity', label: 'Header border opacity' },
-              { key: 'stickyHeaderBorderOpacity', label: 'Sticky header border opacity' },
-              { key: 'sidebarOpacity', label: 'Sidebar opacity' },
-              { key: 'glowOpacity', label: 'Backdrop glow opacity' },
-            ];
-
-            return opacityFields.map((f) => (
-              <div key={`${colorMode}-${f.key}`} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
-                <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">{f.label}</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round((colors[f.key] ?? 0) * 100)}
-                    onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
-                    className="h-2 w-full flex-1 cursor-pointer"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round((colors[f.key] ?? 0) * 100)}
-                    onChange={(e) => updateOpacityPercent(f.key, Number(e.target.value))}
-                    className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                    aria-label={`${f.label} percent`}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-neutral-400">Percent (0–100)</p>
-              </div>
-            ));
-          })()}
-        </div>
       </section>
 
       {/* Live preview */}
@@ -1045,6 +967,408 @@ const replaceHexRgbPreserveAlpha = (existingHex: string, nextRgbHex: string): st
   return `${stripHexAlpha(nextRgbHex, stripHexAlpha(existingHex))}${aHex}`;
 };
 
+/* ── HSV ↔ RGB helpers ────────────────────────────────────── */
+type HSV = { h: number; s: number; v: number };
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = stripHexAlpha(hex, '#000000').replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const f = (n: number) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0');
+  return `#${f(r)}${f(g)}${f(b)}`;
+}
+
+function rgbToHsv(r: number, g: number, b: number): HSV {
+  const rr = r / 255, gg = g / 255, bb = b / 255;
+  const max = Math.max(rr, gg, bb), min = Math.min(rr, gg, bb);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === rr) h = ((gg - bb) / d + 6) % 6;
+    else if (max === gg) h = (bb - rr) / d + 2;
+    else h = (rr - gg) / d + 4;
+    h *= 60;
+  }
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}
+
+function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
+  const c = v * s, hp = h / 60, x = c * (1 - Math.abs(hp % 2 - 1));
+  let r1 = 0, g1 = 0, b1 = 0;
+  if (hp < 1) { r1 = c; g1 = x; }
+  else if (hp < 2) { r1 = x; g1 = c; }
+  else if (hp < 3) { g1 = c; b1 = x; }
+  else if (hp < 4) { g1 = x; b1 = c; }
+  else if (hp < 5) { r1 = x; b1 = c; }
+  else { r1 = c; b1 = x; }
+  const m = v - c;
+  return [(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255];
+}
+
+/* ── ColorPickerWithAlpha ─────────────────────────────────── */
+function ColorPickerWithAlpha({
+  value,
+  onChange,
+  label,
+  disabled,
+}: {
+  value: string;
+  onChange: (hex8: string) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const svCanvasRef = useRef<HTMLCanvasElement>(null);
+  const draggingSV = useRef(false);
+  const draggingHue = useRef(false);
+  const draggingAlpha = useRef(false);
+
+  /* derive HSV + alpha from prop */
+  const rgb = hexToRgb(value);
+  const hsv = rgbToHsv(...rgb);
+  const alpha01 = getHexAlpha01(value);
+
+  const [localH, setLocalH] = useState(hsv.h);
+  const [localS, setLocalS] = useState(hsv.s);
+  const [localV, setLocalV] = useState(hsv.v);
+  const [localA, setLocalA] = useState(alpha01);
+  const [hexInput, setHexInput] = useState(value);
+
+  /* sync from parent when value changes externally */
+  const prevValue = useRef(value);
+  useEffect(() => {
+    if (value !== prevValue.current) {
+      prevValue.current = value;
+      const r2 = hexToRgb(value);
+      const h2 = rgbToHsv(...r2);
+      setLocalH(h2.h);
+      setLocalS(h2.s);
+      setLocalV(h2.v);
+      setLocalA(getHexAlpha01(value));
+      setHexInput(value);
+    }
+  }, [value]);
+
+  /* emit change */
+  const emit = useCallback(
+    (h: number, s: number, v: number, a: number) => {
+      const [r, g, b] = hsvToRgb(h, s, v);
+      let hex = rgbToHex(r, g, b);
+      hex = setHexAlpha01(hex, a);
+      setHexInput(hex);
+      onChange(hex);
+    },
+    [onChange],
+  );
+
+  /* redraw saturation / value canvas whenever hue changes */
+  useEffect(() => {
+    const cv = svCanvasRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext('2d', { willReadFrequently: false });
+    if (!ctx) return;
+    const w = cv.width, h = cv.height;
+
+    /* base hue fill */
+    const [hr, hg, hb] = hsvToRgb(localH, 1, 1);
+    ctx.fillStyle = `rgb(${hr},${hg},${hb})`;
+    ctx.fillRect(0, 0, w, h);
+
+    /* white → transparent horizontal gradient (saturation) */
+    const white = ctx.createLinearGradient(0, 0, w, 0);
+    white.addColorStop(0, 'rgba(255,255,255,1)');
+    white.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = white;
+    ctx.fillRect(0, 0, w, h);
+
+    /* transparent → black vertical gradient (value) */
+    const black = ctx.createLinearGradient(0, 0, 0, h);
+    black.addColorStop(0, 'rgba(0,0,0,0)');
+    black.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.fillStyle = black;
+    ctx.fillRect(0, 0, w, h);
+  }, [localH, open]);
+
+  /* pointer helpers for SV canvas */
+  const applySV = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      const cv = svCanvasRef.current;
+      if (!cv) return;
+      const rect = cv.getBoundingClientRect();
+      const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+      setLocalS(s);
+      setLocalV(v);
+      emit(localH, s, v, localA);
+    },
+    [localH, localA, emit],
+  );
+
+  /* pointer helpers for hue bar */
+  const applyHue = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      const bar = (e.currentTarget ?? e.target) as HTMLElement;
+      const rect = bar.getBoundingClientRect();
+      const h = Math.max(0, Math.min(359.99, ((e.clientX - rect.left) / rect.width) * 360));
+      setLocalH(h);
+      emit(h, localS, localV, localA);
+    },
+    [localS, localV, localA, emit],
+  );
+
+  /* pointer helpers for alpha bar */
+  const applyAlpha = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      const bar = (e.currentTarget ?? e.target) as HTMLElement;
+      const rect = bar.getBoundingClientRect();
+      const a = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      setLocalA(a);
+      emit(localH, localS, localV, a);
+    },
+    [localH, localS, localV, emit],
+  );
+
+  /* global pointer events for drag */
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (draggingSV.current) {
+        const cv = svCanvasRef.current;
+        if (!cv) return;
+        const rect = cv.getBoundingClientRect();
+        const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+        setLocalS(s);
+        setLocalV(v);
+        emit(localH, s, v, localA);
+      }
+      if (draggingHue.current) {
+        const bar = document.getElementById('cpwa-hue-bar');
+        if (!bar) return;
+        const rect = bar.getBoundingClientRect();
+        const h = Math.max(0, Math.min(359.99, ((e.clientX - rect.left) / rect.width) * 360));
+        setLocalH(h);
+        emit(h, localS, localV, localA);
+      }
+      if (draggingAlpha.current) {
+        const bar = document.getElementById('cpwa-alpha-bar');
+        if (!bar) return;
+        const rect = bar.getBoundingClientRect();
+        const a = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        setLocalA(a);
+        emit(localH, localS, localV, a);
+      }
+    };
+    const onUp = () => {
+      draggingSV.current = false;
+      draggingHue.current = false;
+      draggingAlpha.current = false;
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [localH, localS, localV, localA, emit]);
+
+  /* close on outside click */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node) &&
+        btnRef.current &&
+        !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  /* panel position — re-anchor on scroll / resize so the panel sticks to the swatch */
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const reposition = () => {
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
+      const panelW = 272;
+      const panelH = panelRef.current?.offsetHeight ?? 275;
+      const gap = 4;
+      let top = r.bottom + gap;
+      let left = r.left;
+      if (top + panelH > window.innerHeight) top = r.top - panelH - gap;
+      if (left + panelW > window.innerWidth) left = window.innerWidth - panelW - 8;
+      if (left < 4) left = 4;
+      setPos({ top, left });
+    };
+    reposition();
+    /* re-run after panel paints so we use its real measured height */
+    const raf = requestAnimationFrame(reposition);
+    /* capture: true so we catch scrolls inside any ancestor container */
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]);
+
+  /* preview color string */
+  const previewRgb = hsvToRgb(localH, localS, localV);
+  const previewHex = rgbToHex(...previewRgb);
+
+  const panel = open
+    ? createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999 }}
+          className="w-[272px] rounded-xl border border-gray-200 bg-white p-3 shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+        >
+          {/* Saturation / Value area */}
+          <div className="relative mb-3 h-[160px] w-full overflow-hidden rounded-lg" style={{ cursor: 'crosshair' }}>
+            <canvas
+              ref={svCanvasRef}
+              width={256}
+              height={160}
+              className="h-full w-full rounded-lg"
+              onPointerDown={(e) => {
+                draggingSV.current = true;
+                applySV(e as unknown as PointerEvent);
+              }}
+            />
+            {/* thumb */}
+            <div
+              className="pointer-events-none absolute h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white"
+              style={{
+                left: `${localS * 100}%`,
+                top: `${(1 - localV) * 100}%`,
+                background: previewHex,
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.4)',
+              }}
+            />
+          </div>
+
+          {/* Hue slider */}
+          <div
+            id="cpwa-hue-bar"
+            className="relative mb-2 h-3 w-full cursor-pointer rounded-full"
+            style={{
+              background:
+                'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+            }}
+            onPointerDown={(e) => {
+              draggingHue.current = true;
+              applyHue(e);
+            }}
+          >
+            <div
+              className="pointer-events-none absolute top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white"
+              style={{
+                left: `${(localH / 360) * 100}%`,
+                background: `hsl(${localH}, 100%, 50%)`,
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.4)',
+              }}
+            />
+          </div>
+
+          {/* Alpha slider */}
+          <div className="relative mb-3 h-3 w-full cursor-pointer overflow-hidden rounded-full"
+            id="cpwa-alpha-bar"
+            style={{
+              backgroundImage:
+                `linear-gradient(to right, rgba(${previewRgb[0]},${previewRgb[1]},${previewRgb[2]},0), rgba(${previewRgb[0]},${previewRgb[1]},${previewRgb[2]},1)), ` +
+                'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%)',
+              backgroundSize: '100% 100%, 8px 8px',
+            }}
+            onPointerDown={(e) => {
+              draggingAlpha.current = true;
+              applyAlpha(e);
+            }}
+          >
+            <div
+              className="pointer-events-none absolute top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white"
+              style={{
+                left: `${localA * 100}%`,
+                background: `rgba(${previewRgb[0]},${previewRgb[1]},${previewRgb[2]},${localA})`,
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.4)',
+              }}
+            />
+          </div>
+
+          {/* Hex input + alpha % */}
+          <div className="flex items-center gap-2">
+            <div
+              className="h-8 w-8 shrink-0 rounded-md border border-gray-300 dark:border-gray-600"
+              style={{
+                backgroundImage:
+                  `linear-gradient(${previewHex}${Math.round(localA * 255)
+                    .toString(16)
+                    .padStart(2, '0')}, ${previewHex}${Math.round(localA * 255)
+                    .toString(16)
+                    .padStart(2, '0')}), ` +
+                  'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%)',
+                backgroundSize: '100% 100%, 8px 8px',
+              }}
+            />
+            <input
+              type="text"
+              className="h-8 flex-1 rounded-md border border-gray-300 bg-transparent px-2 font-mono text-xs dark:border-gray-600"
+              value={hexInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                setHexInput(v);
+                if (THEME_HEX_6_OR_8_RE.test(v)) {
+                  const r2 = hexToRgb(v);
+                  const h2 = rgbToHsv(...r2);
+                  setLocalH(h2.h);
+                  setLocalS(h2.s);
+                  setLocalV(h2.v);
+                  setLocalA(getHexAlpha01(v));
+                  onChange(v);
+                }
+              }}
+              spellCheck={false}
+            />
+            <span className="shrink-0 text-xs text-gray-500">{Math.round(localA * 100)}%</span>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        ref={btnRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className="group relative h-8 w-8 shrink-0 rounded-md border border-gray-300 transition-shadow hover:ring-2 hover:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+        style={{
+          backgroundImage:
+            `linear-gradient(${value}, ${value}), ` +
+            'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%)',
+          backgroundSize: '100% 100%, 8px 8px',
+        }}
+        title={label ?? 'Pick color'}
+      />
+      {label && (
+        <span className="truncate text-xs text-gray-600 dark:text-gray-400">{label}</span>
+      )}
+      {panel}
+    </div>
+  );
+}
+
 export function ThemeSettingsTabs({
   initialHeaderLinks,
   initialFooterLinks,
@@ -1085,19 +1409,12 @@ export function ThemeSettingsTabs({
   const applyPaletteToDocument = useCallback((palette: ThemeColorPalette) => {
     if (typeof document === 'undefined') return;
 
-    const buildBlock = (t: ColorTokens, mode: 'light' | 'dark') => {
-      const headerOpacityNum = typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7);
+    const buildBlock = (t: ColorTokens, _mode: 'light' | 'dark') => {
       const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.headerBlur) ? t.headerBlur : 12)));
-      const headerBorderOpacityNum = typeof t.headerBorderOpacity === 'number' ? t.headerBorderOpacity : 0.8;
       const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.headerBorderWidth) ? t.headerBorderWidth : 1)));
 
-      const stickyHeaderOpacityNum = typeof t.stickyHeaderOpacity === 'number' ? t.stickyHeaderOpacity : (mode === 'light' ? 0.92 : 0.82);
       const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.stickyHeaderBlur) ? t.stickyHeaderBlur : 14)));
-      const stickyHeaderBorderOpacityNum = typeof t.stickyHeaderBorderOpacity === 'number' ? t.stickyHeaderBorderOpacity : 0.65;
       const stickyHeaderBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.stickyHeaderBorderWidth) ? t.stickyHeaderBorderWidth : 1)));
-
-      const sidebarOpacityNum = typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5);
-      const glowOpacityNum = typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12);
 
       const cssToken = (name: string, hex: string) => {
         const p = parseHexColor(hex);
@@ -1142,17 +1459,17 @@ export function ThemeSettingsTabs({
         ...cssToken('border-secondary', t.borderSecondary),
         ...cssToken('accent-primary', t.accentPrimary),
         ...cssToken('accent-hover', t.accentHover),
-        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a * headerOpacityNum)});`,
+        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a)});`,
         `  --theme-header-text: rgb(${headerText.rgb} / ${fmtAlpha(headerText.a)});`,
         `  --theme-header-blur: ${headerBlurPx}px;`,
-        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a * headerBorderOpacityNum)});`,
+        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a)});`,
         `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
-        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a * stickyHeaderOpacityNum)});`,
+        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a)});`,
         `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
         `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
-        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a * stickyHeaderBorderOpacityNum)});`,
+        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a)});`,
         `  --theme-sticky-header-border-width: ${stickyHeaderBorderWidthPx}px;`,
-        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a * sidebarOpacityNum)});`,
+        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a)});`,
         `  --theme-page-gradient-from: rgb(${pageFrom.rgb} / ${fmtAlpha(pageFrom.a)});`,
         `  --theme-page-gradient-via: rgb(${pageVia.rgb} / ${fmtAlpha(pageVia.a)});`,
         `  --theme-page-gradient-to: rgb(${pageTo.rgb} / ${fmtAlpha(pageTo.a)});`,
@@ -1165,7 +1482,7 @@ export function ThemeSettingsTabs({
         `  --theme-tabs-gradient-from: rgb(${tabsFrom.rgb} / ${fmtAlpha(tabsFrom.a)});`,
         `  --theme-tabs-gradient-via: rgb(${tabsVia.rgb} / ${fmtAlpha(tabsVia.a)});`,
         `  --theme-tabs-gradient-to: rgb(${tabsTo.rgb} / ${fmtAlpha(tabsTo.a)});`,
-        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a * glowOpacityNum)});`,
+        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a)});`,
       ].join('\n');
     };
 
@@ -2396,16 +2713,6 @@ export function ThemeSettingsTabs({
                     setValue({ ...value, [key]: hex });
                   };
 
-				  const updateAlphaPercent = (key: 'stickyHeaderBg' | 'stickyHeaderText', percent: number) => {
-					const clamped = Math.max(0, Math.min(100, percent));
-					updateHex(key, setHexAlpha01(value[key], Math.round(clamped) / 100));
-				  };
-
-                  const updateOpacityPercent = (percent: number) => {
-                    const clamped = Math.max(0, Math.min(100, percent));
-                    setValue({ ...value, stickyHeaderOpacity: Math.round(clamped) / 100 });
-                  };
-
                   const updateBlur = (px: number) => {
                     const clamped = Math.max(0, Math.min(40, Math.round(px)));
                     setValue({ ...value, stickyHeaderBlur: clamped });
@@ -2419,112 +2726,26 @@ export function ThemeSettingsTabs({
                       <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{title}</div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
                           <span className="text-sm text-slate-700 dark:text-neutral-300">Background</span>
-                          <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded border border-black/10 flex-shrink-0" style={{ backgroundColor: value.stickyHeaderBg }} />
-                            <input
-                              type="color"
-                              disabled={!headerStickyEnabled}
-                              value={stripHexAlpha(value.stickyHeaderBg)}
-                              onChange={(e) => updateHex('stickyHeaderBg', replaceHexRgbPreserveAlpha(value.stickyHeaderBg, e.target.value))}
-                              className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 disabled:cursor-not-allowed dark:border-neutral-600"
-                              title="Sticky header background"
-                            />
-                            <input
-                              type="text"
-                              disabled={!headerStickyEnabled}
-                              value={value.stickyHeaderBg}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (THEME_HEX_EDITING_RE.test(v)) updateHex('stickyHeaderBg', v);
-                              }}
-                              maxLength={9}
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                            />
-							<input
-								type="number"
-								min={0}
-								max={100}
-								step={1}
-								disabled={!headerStickyEnabled}
-								value={Math.round(getHexAlpha01(value.stickyHeaderBg) * 100)}
-								onChange={(e) => updateAlphaPercent('stickyHeaderBg', Number(e.target.value))}
-								className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-								aria-label="Sticky header background alpha percent"
-								title="Alpha %"
-							/>
-                          </div>
-                        </label>
+                          <ColorPickerWithAlpha
+                            value={value.stickyHeaderBg}
+                            onChange={(hex) => updateHex('stickyHeaderBg', hex)}
+                            disabled={!headerStickyEnabled}
+                          />
+                        </div>
 
-                        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
                           <span className="text-sm text-slate-700 dark:text-neutral-300">Text</span>
-                          <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded border border-black/10 flex-shrink-0" style={{ backgroundColor: value.stickyHeaderText }} />
-                            <input
-                              type="color"
-                              disabled={!headerStickyEnabled}
-                              value={stripHexAlpha(value.stickyHeaderText)}
-                              onChange={(e) => updateHex('stickyHeaderText', replaceHexRgbPreserveAlpha(value.stickyHeaderText, e.target.value))}
-                              className="h-7 w-10 cursor-pointer rounded border border-slate-300 bg-transparent p-0.5 disabled:cursor-not-allowed dark:border-neutral-600"
-                              title="Sticky header text"
-                            />
-                            <input
-                              type="text"
-                              disabled={!headerStickyEnabled}
-                              value={value.stickyHeaderText}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (THEME_HEX_EDITING_RE.test(v)) updateHex('stickyHeaderText', v);
-                              }}
-                              maxLength={9}
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                            />
-							<input
-								type="number"
-								min={0}
-								max={100}
-								step={1}
-								disabled={!headerStickyEnabled}
-								value={Math.round(getHexAlpha01(value.stickyHeaderText) * 100)}
-								onChange={(e) => updateAlphaPercent('stickyHeaderText', Number(e.target.value))}
-								className="w-16 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-								aria-label="Sticky header text alpha percent"
-								title="Alpha %"
-							/>
-                          </div>
-                        </label>
+                          <ColorPickerWithAlpha
+                            value={value.stickyHeaderText}
+                            onChange={(hex) => updateHex('stickyHeaderText', hex)}
+                            disabled={!headerStickyEnabled}
+                          />
+                        </div>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
-                          <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Background opacity</label>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={1}
-                              disabled={!headerStickyEnabled}
-                              value={Math.round((value.stickyHeaderOpacity ?? 0) * 100)}
-                              onChange={(e) => updateOpacityPercent(Number(e.target.value))}
-                              className="h-2 w-full flex-1 cursor-pointer disabled:cursor-not-allowed"
-                            />
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              step={1}
-                              disabled={!headerStickyEnabled}
-                              value={Math.round((value.stickyHeaderOpacity ?? 0) * 100)}
-                              onChange={(e) => updateOpacityPercent(Number(e.target.value))}
-                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-                              aria-label="Sticky header background opacity percent"
-                            />
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-neutral-400">Percent (0–100)</p>
-                        </div>
-
                         <div className="space-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
                           <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Blur (px)</label>
                           <div className="flex items-center gap-3">

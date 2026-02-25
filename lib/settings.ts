@@ -242,22 +242,22 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     borderSecondary: '#9ca3af',
     accentPrimary: '#3b82f6',
     accentHover: '#2563eb',
-    headerBg: '#ffffff',
-    headerOpacity: 0.8,
+    headerBg: '#ffffffcc',
+    headerOpacity: 1,
     headerText: '#111827',
     headerBlur: 12,
-    headerBorder: '#d1d5db',
-    headerBorderOpacity: 0.8,
+    headerBorder: '#d1d5dbcc',
+    headerBorderOpacity: 1,
     headerBorderWidth: 1,
-    stickyHeaderBg: '#ffffff',
-    stickyHeaderOpacity: 0.92,
+    stickyHeaderBg: '#ffffffeb',
+    stickyHeaderOpacity: 1,
     stickyHeaderBlur: 14,
     stickyHeaderText: '#111827',
-    stickyHeaderBorder: '#d1d5db',
-    stickyHeaderBorderOpacity: 0.65,
+    stickyHeaderBorder: '#d1d5dba6',
+    stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: 1,
-    sidebarBg: '#ffffff',
-    sidebarOpacity: 0.9,
+    sidebarBg: '#ffffffe6',
+    sidebarOpacity: 1,
     pageGradientFrom: '#f0f9ff',
     pageGradientVia: '#eef2ff',
     pageGradientTo: '#ffffff',
@@ -270,8 +270,8 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     tabsGradientFrom: '#f0f9ff',
     tabsGradientVia: '#eef2ff',
     tabsGradientTo: '#ffffff',
-    pageGlow: '#3b82f6',
-    glowOpacity: 0.18,
+    pageGlow: '#3b82f62e',
+    glowOpacity: 1,
   },
   dark: {
     bgPrimary: '#0a0a0a',
@@ -287,22 +287,22 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     borderSecondary: '#525252',
     accentPrimary: '#3b82f6',
     accentHover: '#2563eb',
-    headerBg: '#0a0a0a',
-    headerOpacity: 0.7,
+    headerBg: '#0a0a0ab3',
+    headerOpacity: 1,
     headerText: '#f5f5f5',
     headerBlur: 12,
-    headerBorder: '#404040',
-    headerBorderOpacity: 0.7,
+    headerBorder: '#404040b3',
+    headerBorderOpacity: 1,
     headerBorderWidth: 1,
-    stickyHeaderBg: '#0a0a0a',
-    stickyHeaderOpacity: 0.82,
+    stickyHeaderBg: '#0a0a0ad1',
+    stickyHeaderOpacity: 1,
     stickyHeaderBlur: 14,
     stickyHeaderText: '#f5f5f5',
-    stickyHeaderBorder: '#404040',
-    stickyHeaderBorderOpacity: 0.55,
+    stickyHeaderBorder: '#4040408c',
+    stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: 1,
-    sidebarBg: '#171717',
-    sidebarOpacity: 0.5,
+    sidebarBg: '#17171780',
+    sidebarOpacity: 1,
     pageGradientFrom: '#171717',
     pageGradientVia: '#312e81',
     pageGradientTo: '#0a0a0a',
@@ -315,8 +315,8 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     tabsGradientFrom: '#171717',
     tabsGradientVia: '#312e81',
     tabsGradientTo: '#0a0a0a',
-    pageGlow: '#6366f1',
-    glowOpacity: 0.12,
+    pageGlow: '#6366f11f',
+    glowOpacity: 1,
   },
 };
 
@@ -416,7 +416,18 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
   const headerTextFallback = sanitizeThemeHex(rec.textPrimary, fallback.headerText ?? fallback.textPrimary);
   const headerBorderFallback = sanitizeThemeHex(rec.borderPrimary, fallback.headerBorder ?? fallback.borderPrimary);
   const stickyBorderFallback = sanitizeThemeHex(rec.headerBorder ?? rec.borderPrimary, fallback.stickyHeaderBorder ?? fallback.headerBorder ?? fallback.borderPrimary);
-  return {
+
+  /** Bake a legacy 0-1 opacity into the hex alpha channel and reset opacity to 1. */
+  const bakeOpacity = (hex: string, opacity: number): string => {
+    if (opacity >= 1) return hex;
+    const clean = hex.replace(/^#/, '');
+    const existingA = clean.length === 8 ? parseInt(clean.slice(6, 8), 16) / 255 : 1;
+    const newA = Math.max(0, Math.min(1, existingA * opacity));
+    const aByte = Math.round(newA * 255).toString(16).padStart(2, '0');
+    return `#${clean.slice(0, 6)}${aByte}`;
+  };
+
+  const result: ThemeColorTokens = {
     bgPrimary: sanitizeThemeHex(rec.bgPrimary, fallback.bgPrimary),
     bgSecondary: sanitizeThemeHex(rec.bgSecondary, fallback.bgSecondary),
     panelBg: sanitizeThemeHex(rec.panelBg ?? legacySurface, fallback.panelBg),
@@ -431,21 +442,21 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     accentPrimary: sanitizeThemeHex(rec.accentPrimary, fallback.accentPrimary),
     accentHover: sanitizeThemeHex(rec.accentHover, fallback.accentHover),
     headerBg: sanitizeThemeHex(rec.headerBg, fallback.headerBg),
-    headerOpacity: clamp01(rec.headerOpacity, fallback.headerOpacity),
+    headerOpacity: 1,
     headerText: sanitizeThemeHex(rec.headerText, headerTextFallback),
     headerBlur: clampInt(rec.headerBlur, 0, 40, fallback.headerBlur ?? 12),
     headerBorder: sanitizeThemeHex(rec.headerBorder, headerBorderFallback),
-    headerBorderOpacity: clamp01(rec.headerBorderOpacity, fallback.headerBorderOpacity ?? 0.8),
+    headerBorderOpacity: 1,
     headerBorderWidth: clampInt(rec.headerBorderWidth, 0, 4, fallback.headerBorderWidth ?? 1),
     stickyHeaderBg: sanitizeThemeHex(rec.stickyHeaderBg, stickyBgFallback),
-    stickyHeaderOpacity: clamp01(rec.stickyHeaderOpacity, fallback.stickyHeaderOpacity ?? fallback.headerOpacity),
+    stickyHeaderOpacity: 1,
     stickyHeaderBlur: clampInt(rec.stickyHeaderBlur, 0, 40, fallback.stickyHeaderBlur ?? 14),
     stickyHeaderText: sanitizeThemeHex(rec.stickyHeaderText, stickyTextFallback),
     stickyHeaderBorder: sanitizeThemeHex(rec.stickyHeaderBorder, stickyBorderFallback),
-    stickyHeaderBorderOpacity: clamp01(rec.stickyHeaderBorderOpacity, fallback.stickyHeaderBorderOpacity ?? 0.65),
+    stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: clampInt(rec.stickyHeaderBorderWidth, 0, 4, fallback.stickyHeaderBorderWidth ?? fallback.headerBorderWidth ?? 1),
     sidebarBg: sanitizeThemeHex(rec.sidebarBg, fallback.sidebarBg),
-    sidebarOpacity: clamp01(rec.sidebarOpacity, fallback.sidebarOpacity),
+    sidebarOpacity: 1,
     pageGradientFrom: pageFrom,
     pageGradientVia: pageVia,
     pageGradientTo: pageTo,
@@ -459,8 +470,25 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     tabsGradientVia: sanitizeThemeHex(rec.tabsGradientVia, pageVia),
     tabsGradientTo: sanitizeThemeHex(rec.tabsGradientTo, pageTo),
     pageGlow: sanitizeThemeHex(rec.pageGlow, fallback.pageGlow),
-    glowOpacity: clamp01(rec.glowOpacity, fallback.glowOpacity),
+    glowOpacity: 1,
   };
+
+  /* ── Migrate legacy opacity fields into hex alpha ─────────── */
+  const legacyHeaderOpacity = clamp01(rec.headerOpacity, 1);
+  const legacyHeaderBorderOpacity = clamp01(rec.headerBorderOpacity, 1);
+  const legacyStickyHeaderOpacity = clamp01(rec.stickyHeaderOpacity, 1);
+  const legacyStickyHeaderBorderOpacity = clamp01(rec.stickyHeaderBorderOpacity, 1);
+  const legacySidebarOpacity = clamp01(rec.sidebarOpacity, 1);
+  const legacyGlowOpacity = clamp01(rec.glowOpacity, 1);
+
+  result.headerBg = bakeOpacity(result.headerBg, legacyHeaderOpacity);
+  result.headerBorder = bakeOpacity(result.headerBorder, legacyHeaderBorderOpacity);
+  result.stickyHeaderBg = bakeOpacity(result.stickyHeaderBg, legacyStickyHeaderOpacity);
+  result.stickyHeaderBorder = bakeOpacity(result.stickyHeaderBorder, legacyStickyHeaderBorderOpacity);
+  result.sidebarBg = bakeOpacity(result.sidebarBg, legacySidebarOpacity);
+  result.pageGlow = bakeOpacity(result.pageGlow, legacyGlowOpacity);
+
+  return result;
 };
 
 const MAX_THEME_COLOR_PRESETS = 25;

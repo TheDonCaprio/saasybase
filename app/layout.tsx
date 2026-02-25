@@ -74,25 +74,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const buildThemeColorVarsCss = () => {
     const buildBlock = (t: typeof colorPalette.light, mode: 'light' | 'dark') => {
-      const headerOpacityNum = typeof t.headerOpacity === 'number' ? t.headerOpacity : (mode === 'light' ? 0.8 : 0.7);
-      const stickyHeaderOpacityNum =
-        typeof (t as any).stickyHeaderOpacity === 'number' ? (t as any).stickyHeaderOpacity : (mode === 'light' ? 0.92 : 0.82);
       const headerBlurNum = typeof (t as any).headerBlur === 'number' ? (t as any).headerBlur : 12;
       const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(headerBlurNum) ? headerBlurNum : 12)));
-      const headerBorderOpacityNum = typeof (t as any).headerBorderOpacity === 'number' ? (t as any).headerBorderOpacity : 0.8;
       const headerBorderWidthNum = typeof (t as any).headerBorderWidth === 'number' ? (t as any).headerBorderWidth : 1;
       const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(headerBorderWidthNum) ? headerBorderWidthNum : 1)));
       const stickyHeaderBlurNum = typeof (t as any).stickyHeaderBlur === 'number' ? (t as any).stickyHeaderBlur : 14;
       const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(stickyHeaderBlurNum) ? stickyHeaderBlurNum : 14)));
-      const stickyHeaderBorderOpacityNum = typeof (t as any).stickyHeaderBorderOpacity === 'number' ? (t as any).stickyHeaderBorderOpacity : 0.65;
       const stickyHeaderBorderWidthNum =
         typeof (t as any).stickyHeaderBorderWidth === 'number' ? (t as any).stickyHeaderBorderWidth : headerBorderWidthPx;
       const stickyHeaderBorderWidthPx = Math.max(
         0,
         Math.min(4, Math.round(Number.isFinite(stickyHeaderBorderWidthNum) ? stickyHeaderBorderWidthNum : headerBorderWidthPx))
       );
-      const sidebarOpacityNum = typeof t.sidebarOpacity === 'number' ? t.sidebarOpacity : (mode === 'light' ? 0.9 : 0.5);
-      const glowOpacityNum = typeof t.glowOpacity === 'number' ? t.glowOpacity : (mode === 'light' ? 0.18 : 0.12);
 
       const cssToken = (name: string, hex: string) => {
         const p = parseHexColor(hex);
@@ -126,17 +119,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ...cssToken('border-secondary', t.borderSecondary),
         ...cssToken('accent-primary', t.accentPrimary),
         ...cssToken('accent-hover', t.accentHover),
-        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a * headerOpacityNum)});`,
+        `  --theme-header-bg: rgb(${headerBg.rgb} / ${fmtAlpha(headerBg.a)});`,
         `  --theme-header-text: rgb(${headerText.rgb} / ${fmtAlpha(headerText.a)});`,
         `  --theme-header-blur: ${headerBlurPx}px;`,
-        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a * headerBorderOpacityNum)});`,
+        `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a)});`,
         `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
-        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a * stickyHeaderOpacityNum)});`,
+        `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a)});`,
         `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
         `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
-        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a * stickyHeaderBorderOpacityNum)});`,
+        `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a)});`,
         `  --theme-sticky-header-border-width: ${stickyHeaderBorderWidthPx}px;`,
-        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a * sidebarOpacityNum)});`,
+        `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a)});`,
         `  --theme-page-gradient-from: rgb(${parseHexColor(t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientFrom).a)});`,
         `  --theme-page-gradient-via: rgb(${parseHexColor(t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientVia).a)});`,
         `  --theme-page-gradient-to: rgb(${parseHexColor(t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientTo).a)});`,
@@ -149,7 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `  --theme-tabs-gradient-from: rgb(${parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).a)});`,
         `  --theme-tabs-gradient-via: rgb(${parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).a)});`,
         `  --theme-tabs-gradient-to: rgb(${parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).a)});`,
-        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a * glowOpacityNum)});`,
+        `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a)});`,
       ].join('\n');
     };
 

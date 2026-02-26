@@ -22,6 +22,8 @@ type SubscriptionUpdateDbSubShape = {
     cancelAtPeriodEnd: boolean;
     planId: string;
     plan: SubscriptionUpdatePlanShape;
+    /** Used for Paddle cancel-artifact detection in deriveSubscriptionWebhookState */
+    createdAt?: Date | null;
 };
 
 export function buildImmediateCancellationData(cancellationTime: Date) {
@@ -212,6 +214,15 @@ export async function resolveAndApplySubscriptionUpdatedState<TSub extends Subsc
             Logger.warn('Received subscription update with unknown priceId', { subscriptionId: params.subscriptionId, priceId });
         },
     });
+
+    // Log when the Paddle post-checkout cancel artifact is suppressed so it's
+    // visible in the terminal without any DB write occurring.
+    if (!shouldApply && normalizedStatus === 'CANCELLED' && params.providerKey === 'paddle') {
+        Logger.info('Suppressed Paddle post-checkout cancel artifact on subscription.updated', {
+            subscriptionId: params.subscriptionId,
+            effectiveStatus,
+        });
+    }
 
     if (shouldApply) {
         Logger.info('Updating subscription from webhook', {

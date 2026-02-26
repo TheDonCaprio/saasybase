@@ -120,7 +120,9 @@ export async function processSubscriptionCreatedExistingRecord<TSubscription ext
             dbStatus: string;
             dbCanceledAt: Date | null;
             dbExpiresAt: Date;
+            dbCancelAtPeriodEnd: boolean;
             providerKey: string;
+            dbCreatedAt?: Date | null;
         }) => {
             effectiveStatus: string;
             effectiveExpiresAt: Date;
@@ -163,6 +165,7 @@ export async function processSubscriptionCreatedExistingRecord<TSubscription ext
         dbStatus: params.dbSub.status,
         dbCanceledAt: params.dbSub.canceledAt,
         dbExpiresAt: params.dbSub.expiresAt,
+        dbCancelAtPeriodEnd: params.dbSub.cancelAtPeriodEnd,
         providerKey: params.providerKey,
     });
 

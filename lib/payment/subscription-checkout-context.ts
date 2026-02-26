@@ -303,6 +303,34 @@ export async function prepareCheckoutSessionForProcessing(params: {
             const userForCid = await prisma.user.findUnique({ where: { id: userId }, select: { externalCustomerIds: true } });
             const mergedCids = params.mergeIdMap(userForCid?.externalCustomerIds, params.providerKey, params.session.customerId);
 
+            // Prevent ambiguous customerId → user attribution.
+            // If the same provider/customerId is already associated to a different user,
+            // do not add it to this user's `externalCustomerIds` map.
+            let canMergeCustomerIdMap = true;
+            try {
+                const usersWithMaps = await prisma.user.findMany({
+                    where: { externalCustomerIds: { not: null } },
+                    select: { id: true, externalCustomerIds: true },
+                });
+                for (const u of usersWithMaps) {
+                    if (u.id === userId) continue;
+                    const map = (u.externalCustomerIds ?? {}) as Record<string, unknown>;
+                    if (map[params.providerKey] === params.session.customerId) {
+                        canMergeCustomerIdMap = false;
+                        Logger.warn('customerId already associated to a different user; skipping externalCustomerIds merge', {
+                            sessionId: params.session.id,
+                            provider: params.providerKey,
+                            userId,
+                            otherUserId: u.id,
+                            customerId: params.session.customerId,
+                        });
+                        break;
+                    }
+                }
+            } catch {
+                // best-effort; if this fails we fall back to existing behavior
+            }
+
             let canSetLegacyCid = true;
             try {
                 const cidOwner = await prisma.user.findUnique({
@@ -319,7 +347,7 @@ export async function prepareCheckoutSessionForProcessing(params: {
                 where: { id: userId },
                 data: {
                     ...(canSetLegacyCid ? { externalCustomerId: params.session.customerId } : null),
-                    externalCustomerIds: mergedCids ?? userForCid?.externalCustomerIds,
+                    externalCustomerIds: (canMergeCustomerIdMap ? (mergedCids ?? userForCid?.externalCustomerIds) : userForCid?.externalCustomerIds),
                     paymentProvider: params.providerKey,
                 },
             });

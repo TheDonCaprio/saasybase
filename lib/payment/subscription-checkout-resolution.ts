@@ -64,11 +64,32 @@ export async function resolveSubscriptionCheckoutState<TExisting extends Existin
 
     const { existingActive, planToUse, userId, startedAt, expiresAt, sub, session } = params;
 
-    if (existingActive) {
-        if (existingActive.plan.autoRenew === false && planToUse.autoRenew === true) {
+    const isExistingActiveSameProviderSubscription = (() => {
+        if (!existingActive) return false;
+        if (existingActive.externalSubscriptionId && existingActive.externalSubscriptionId === sub.id) return true;
+
+        try {
+            const idMap = params.deps.parseIdMap(existingActive.externalSubscriptionIds);
+            return Object.values(idMap).includes(sub.id);
+        } catch {
+            return false;
+        }
+    })();
+
+    const effectiveExistingActive = isExistingActiveSameProviderSubscription ? null : existingActive;
+    if (existingActive && isExistingActiveSameProviderSubscription) {
+        Logger.info('resolveSubscriptionCheckoutState: existingActive matches incoming subscription; skipping switch logic', {
+            userId,
+            dbSubscriptionId: existingActive.id,
+            providerSubscriptionId: sub.id,
+        });
+    }
+
+    if (effectiveExistingActive) {
+        if (effectiveExistingActive.plan.autoRenew === false && planToUse.autoRenew === true) {
             const cancellationTime = new Date();
             await prisma.subscription.update({
-                where: { id: existingActive.id },
+                where: { id: effectiveExistingActive.id },
                 data: params.deps.buildImmediateCancellationData(cancellationTime)
             });
 
@@ -94,43 +115,43 @@ export async function resolveSubscriptionCheckoutState<TExisting extends Existin
             }
 
             desiredStatus = 'ACTIVE';
-        } else if (existingActive.plan.autoRenew === true && planToUse.autoRenew === true) {
-            replacedRecurringSubscription = existingActive;
+        } else if (effectiveExistingActive.plan.autoRenew === true && planToUse.autoRenew === true) {
+            replacedRecurringSubscription = effectiveExistingActive;
             resetTokensOnRenewal = await shouldClearPaidTokensOnRenewal(Boolean(planToUse.autoRenew));
 
-            isUpgrade = planToUse.priceCents > existingActive.plan.priceCents;
-            isDowngrade = planToUse.priceCents < existingActive.plan.priceCents;
+            isUpgrade = planToUse.priceCents > effectiveExistingActive.plan.priceCents;
+            isDowngrade = planToUse.priceCents < effectiveExistingActive.plan.priceCents;
 
             if (switchAtPeriodEnd) {
                 desiredStatus = 'PENDING';
-                effectiveStartedAt = existingActive.expiresAt;
+                effectiveStartedAt = effectiveExistingActive.expiresAt;
                 const periodMs = params.deps.computePlanPeriodMs(planToUse);
                 effectiveExpiresAt = new Date(effectiveStartedAt.getTime() + periodMs);
 
                 try {
-                    const existingProvider = params.deps.getProviderForRecord(existingActive.paymentProvider);
-                    const existingProviderKey = existingActive.paymentProvider || existingProvider.name;
-                    const idMap = params.deps.parseIdMap(existingActive.externalSubscriptionIds);
-                    const existingProviderSubId = idMap[existingProviderKey] || existingActive.externalSubscriptionId;
+                    const existingProvider = params.deps.getProviderForRecord(effectiveExistingActive.paymentProvider);
+                    const existingProviderKey = effectiveExistingActive.paymentProvider || existingProvider.name;
+                    const idMap = params.deps.parseIdMap(effectiveExistingActive.externalSubscriptionIds);
+                    const existingProviderSubId = idMap[existingProviderKey] || effectiveExistingActive.externalSubscriptionId;
 
                     if (existingProviderSubId) {
                         await existingProvider.cancelSubscription(existingProviderSubId, false);
                     } else {
                         Logger.warn('Missing provider subscription id when scheduling cancel-at-period-end', {
                             userId,
-                            dbSubscriptionId: existingActive.id,
-                            paymentProvider: existingActive.paymentProvider,
+                            dbSubscriptionId: effectiveExistingActive.id,
+                            paymentProvider: effectiveExistingActive.paymentProvider,
                         });
                     }
 
                     await prisma.subscription.update({
-                        where: { id: existingActive.id },
-                        data: { cancelAtPeriodEnd: true, canceledAt: existingActive.expiresAt },
+                        where: { id: effectiveExistingActive.id },
+                        data: { cancelAtPeriodEnd: true, canceledAt: effectiveExistingActive.expiresAt },
                     });
                 } catch (err) {
                     Logger.warn('Failed to schedule cancel-at-period-end for existing subscription', {
                         userId,
-                        dbSubscriptionId: existingActive.id,
+                        dbSubscriptionId: effectiveExistingActive.id,
                         error: toError(err).message,
                     });
                 }
@@ -138,39 +159,39 @@ export async function resolveSubscriptionCheckoutState<TExisting extends Existin
                 desiredStatus = 'ACTIVE';
 
                 try {
-                    const existingProvider = params.deps.getProviderForRecord(existingActive.paymentProvider);
-                    const existingProviderKey = existingActive.paymentProvider || existingProvider.name;
-                    const idMap = params.deps.parseIdMap(existingActive.externalSubscriptionIds);
-                    const existingProviderSubId = idMap[existingProviderKey] || existingActive.externalSubscriptionId;
+                    const existingProvider = params.deps.getProviderForRecord(effectiveExistingActive.paymentProvider);
+                    const existingProviderKey = effectiveExistingActive.paymentProvider || existingProvider.name;
+                    const idMap = params.deps.parseIdMap(effectiveExistingActive.externalSubscriptionIds);
+                    const existingProviderSubId = idMap[existingProviderKey] || effectiveExistingActive.externalSubscriptionId;
 
                     if (existingProviderSubId) {
                         await existingProvider.cancelSubscription(existingProviderSubId, true);
                     } else {
                         Logger.warn('Missing provider subscription id when performing immediate switch cancellation', {
                             userId,
-                            dbSubscriptionId: existingActive.id,
-                            paymentProvider: existingActive.paymentProvider,
+                            dbSubscriptionId: effectiveExistingActive.id,
+                            paymentProvider: effectiveExistingActive.paymentProvider,
                         });
                     }
                 } catch (err) {
                     Logger.warn('Failed to cancel existing provider subscription during immediate switch', {
                         userId,
-                        dbSubscriptionId: existingActive.id,
+                        dbSubscriptionId: effectiveExistingActive.id,
                         error: toError(err).message,
                     });
                 }
 
                 const cancellationTime = new Date();
                 await prisma.subscription.update({
-                    where: { id: existingActive.id },
+                    where: { id: effectiveExistingActive.id },
                     data: params.deps.buildImmediateCancellationData(cancellationTime)
                 });
             }
         } else {
             desiredStatus = 'PENDING';
-            if (planToUse.autoRenew === true && existingActive.plan.autoRenew === true) {
-                isUpgrade = planToUse.priceCents > existingActive.plan.priceCents;
-                isDowngrade = planToUse.priceCents < existingActive.plan.priceCents;
+            if (planToUse.autoRenew === true && effectiveExistingActive.plan.autoRenew === true) {
+                isUpgrade = planToUse.priceCents > effectiveExistingActive.plan.priceCents;
+                isDowngrade = planToUse.priceCents < effectiveExistingActive.plan.priceCents;
             }
         }
     }

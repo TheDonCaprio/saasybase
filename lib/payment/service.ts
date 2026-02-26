@@ -213,20 +213,32 @@ export class PaymentService {
     }
 
     private async resolveUserByCustomerId(customerId: string): Promise<string | null> {
+        const legacyOr: Array<Record<string, unknown>> = [
+            // `externalCustomerId` is legacy and not inherently provider-scoped.
+            // Restrict to the currently-active provider to avoid misattribution.
+            { externalCustomerId: customerId, paymentProvider: this.providerKey },
+        ];
+
+        // `stripeCustomerId` is Stripe-specific; avoid matching it for other providers.
+        if (this.providerKey === 'stripe') {
+            legacyOr.push({ stripeCustomerId: customerId });
+        }
+
         const legacy = await prisma.user.findFirst({
             where: {
-                OR: [
-                    { externalCustomerId: customerId },
-                    { stripeCustomerId: customerId }
-                ]
+                OR: legacyOr as any,
             },
-            select: { id: true }
+            select: { id: true },
         });
         if (legacy) return legacy.id;
 
-        const users = await prisma.user.findMany({ where: { externalCustomerIds: { not: null } }, select: { id: true, externalCustomerIds: true } });
+        const users = await prisma.user.findMany({
+            where: { externalCustomerIds: { not: null } },
+            select: { id: true, externalCustomerIds: true },
+        });
         for (const user of users) {
-            if (this.mapHasValue(user.externalCustomerIds, customerId)) return user.id;
+            const map = (user.externalCustomerIds ?? {}) as Record<string, unknown>;
+            if (map[this.providerKey] === customerId) return user.id;
         }
 
         // Fallback: check PaymentAuthorization table — the authorization from
@@ -234,7 +246,7 @@ export class PaymentService {
         // on the User record.
         try {
             const authRecord = await prisma.paymentAuthorization.findFirst({
-                where: { customerId },
+                where: { customerId, provider: this.providerKey },
                 select: { userId: true },
                 orderBy: { updatedAt: 'desc' },
             });

@@ -75,10 +75,7 @@ describe('Paddle proration', () => {
 
 		const previewCall = seen.find((c) => c.url.includes('/subscriptions/sub_123/preview'));
 		expect(previewCall?.body?.proration_billing_mode).toBe('prorated_immediately');
-		expect(previewCall?.body?.items).toEqual([
-			{ price_id: 'pri_new', quantity: 1 },
-			{ price_id: 'pri_addon', quantity: 2 },
-		]);
+		expect(previewCall?.body?.items).toEqual([{ price_id: 'pri_new', quantity: 1 }]);
 	});
 
 	it('updates subscription with prorated_immediately and returns new period end + expected amount', async () => {
@@ -216,7 +213,7 @@ describe('Paddle proration', () => {
 		expect(result?.newPeriodEnd?.toISOString()).toBe('2026-02-01T00:00:00.000Z');
 
 		const updateCall = seen.find((c) => c.url.includes('/subscriptions/sub_123') && c.method === 'PATCH' && !c.url.includes('/preview'));
-		expect(updateCall?.body?.proration_billing_mode).toBe('full_next_billing_period');
+		expect(updateCall?.body?.proration_billing_mode).toBe('do_not_bill');
 		expect(updateCall?.body?.items).toEqual([{ price_id: 'pri_new', quantity: 1 }]);
 		expect(updateCall?.body?.on_payment_failure).toBe('prevent_change');
 	});

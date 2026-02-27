@@ -30,6 +30,7 @@ import {
 } from '../types';
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
 import { asRecord } from '../../runtime-guards';
+import { Logger } from '../../logger';
 
 type PaddleEnvelope<T> = {
 	data: T;
@@ -159,10 +160,12 @@ export class PaddlePaymentProvider implements PaymentProvider {
 	name = 'paddle';
 	private apiKey: string;
 	private apiBaseUrl: string;
+	private debugSubscriptionUpdates: boolean;
 
 	constructor(apiKey: string) {
 		if (!apiKey) throw new ConfigurationError('Paddle API key is missing');
 		this.apiKey = apiKey;
+		this.debugSubscriptionUpdates = process.env.PADDLE_DEBUG_SUBSCRIPTION_UPDATES === '1';
 
 		const explicit = process.env.PADDLE_API_BASE_URL;
 		if (explicit) {
@@ -173,6 +176,28 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		const env = (process.env.PADDLE_ENV || '').toLowerCase();
 		const isSandbox = env === 'sandbox' || process.env.PADDLE_SANDBOX === '1';
 		this.apiBaseUrl = isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+	}
+
+	private getSubscriptionItemSummaries(subscription: unknown): Array<{ priceId: string; quantity: number }> {
+		const data = asRecord(subscription) || {};
+		const rawItems = Array.isArray(data.items) ? data.items : [];
+		return rawItems
+			.map((item) => {
+				const rec = asRecord(item) || {};
+				const priceRec = asRecord(rec.price) || {};
+				const priceId = typeof priceRec.id === 'string' ? priceRec.id : null;
+				const quantityRaw = rec.quantity;
+				const quantity = typeof quantityRaw === 'number' && Number.isFinite(quantityRaw)
+					? Math.max(1, Math.floor(quantityRaw))
+					: 1;
+				return priceId ? ({ priceId, quantity }) : null;
+			})
+			.filter(Boolean) as Array<{ priceId: string; quantity: number }>;
+	}
+
+	private summarizeItemIds(items: Array<{ priceId: string; quantity: number }>): Array<{ priceId: string; quantity: number }> {
+		// Keep log payloads small and safe.
+		return items.slice(0, 10);
 	}
 
 	getWebhookSignatureHeader(): string {
@@ -196,40 +221,15 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		subscription: unknown,
 		newPriceId: string,
 	): Array<{ price_id: string; quantity: number }> {
-		const data = asRecord(subscription) || {};
-		const rawItems = Array.isArray(data.items) ? data.items : [];
-
-		const parsedItems = rawItems
-			.map((item) => {
-				const rec = asRecord(item) || {};
-				const priceRec = asRecord(rec.price) || {};
-				const priceId = typeof priceRec.id === 'string' ? priceRec.id : null;
-				const quantityRaw = rec.quantity;
-				const quantity = typeof quantityRaw === 'number' && Number.isFinite(quantityRaw)
-					? Math.max(1, Math.floor(quantityRaw))
-					: 1;
-				return priceId ? ({ price_id: priceId, quantity }) : null;
-			})
-			.filter(Boolean) as Array<{ price_id: string; quantity: number }>;
+		const parsedItems = this.getSubscriptionItemSummaries(subscription).map((i) => ({ price_id: i.priceId, quantity: i.quantity }));
 
 		if (parsedItems.length === 0) {
 			throw new PaymentProviderError('SUBSCRIPTION_ITEMS_NOT_FOUND');
 		}
 
-		let swapped = false;
-		const updated = parsedItems.map((item, idx) => {
-			if (!swapped && idx === 0) {
-				swapped = true;
-				return { ...item, price_id: newPriceId };
-			}
-			return item;
-		});
-
-		if (!swapped) {
-			throw new PaymentProviderError('PRIMARY_SUBSCRIPTION_ITEM_NOT_FOUND');
-		}
-
-		return updated;
+		// We currently don't support add-ons or seat-based quantities.
+		// Always collapse to a single item with quantity=1 to avoid unintended doubled renewals.
+		return [{ price_id: newPriceId, quantity: 1 }];
 	}
 
 	private async request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -1091,18 +1091,82 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		try {
 			const subResponse = await this.request<PaddleEnvelope<PaddleSubscription>>(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
 			const sub = subResponse.data;
+			const beforeItems = this.getSubscriptionItemSummaries(sub);
 			const updatedItems = this.buildUpdatedSubscriptionItems(sub, newPriceId);
 
-			const updateResponse = await this.request<PaddleEnvelope<PaddleSubscription>>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+			if (this.debugSubscriptionUpdates) {
+				Logger.info('Paddle scheduled plan change: updating subscription items', {
+					subscriptionId,
+					newPriceId,
+					beforeItems: this.summarizeItemIds(beforeItems),
+					payloadItems: updatedItems,
+				});
+			}
+
+			const patchBody = {
+				// IMPORTANT: We use 'do_not_bill' instead of 'full_next_billing_period'.
+				// With 'full_next_billing_period', Paddle appends new items alongside old ones
+				// (deferring the billing delta to renewal) which causes doubled renewal charges.
+				// With 'do_not_bill', Paddle replaces items immediately without any charge.
+				// The next regular renewal then bills the new plan at full price — achieving
+				// the same "switch at end of cycle" semantics without item duplication.
+				proration_billing_mode: 'do_not_bill',
+				items: updatedItems,
+				on_payment_failure: 'prevent_change',
+			} as const;
+
+			let updateResponse = await this.request<PaddleEnvelope<PaddleSubscription>>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
 				method: 'PATCH',
-				body: JSON.stringify({
-					// Bill the new plan on renewal; do not charge immediately.
-					proration_billing_mode: 'full_next_billing_period',
-					items: updatedItems,
-					on_payment_failure: 'prevent_change',
-				}),
+				body: JSON.stringify(patchBody),
 			});
-			const updated = updateResponse.data;
+			let updated = updateResponse.data;
+
+			// Defensive: if Paddle still reports multiple recurring items after a scheduled switch,
+			// retry once with the same payload. If it still doesn't normalize, attempt to revert.
+			const afterItems = this.getSubscriptionItemSummaries(updated);
+			const hasMultiple = afterItems.length > 1;
+			const hasUnexpectedPrice = afterItems.some((i) => i.priceId !== newPriceId);
+			if (hasMultiple || hasUnexpectedPrice) {
+				Logger.warn('Paddle scheduled plan change returned unexpected items; retrying once', {
+					subscriptionId,
+					newPriceId,
+					afterItems: this.summarizeItemIds(afterItems),
+					payloadItems: updatedItems,
+				});
+
+				updateResponse = await this.request<PaddleEnvelope<PaddleSubscription>>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+					method: 'PATCH',
+					body: JSON.stringify(patchBody),
+				});
+				updated = updateResponse.data;
+
+				const afterRetryItems = this.getSubscriptionItemSummaries(updated);
+				const stillMultiple = afterRetryItems.length > 1;
+				const stillUnexpected = afterRetryItems.some((i) => i.priceId !== newPriceId);
+				if (stillMultiple || stillUnexpected) {
+					Logger.error('Paddle scheduled plan change could not normalize subscription items; attempting revert', {
+						subscriptionId,
+						newPriceId,
+						afterRetryItems: this.summarizeItemIds(afterRetryItems),
+						beforeItems: this.summarizeItemIds(beforeItems),
+					});
+
+					try {
+						await this.request<PaddleEnvelope<PaddleSubscription>>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+							method: 'PATCH',
+							body: JSON.stringify({
+								proration_billing_mode: 'do_not_bill',
+								items: beforeItems.map((i) => ({ price_id: i.priceId, quantity: i.quantity })),
+								on_payment_failure: 'prevent_change',
+							}),
+						});
+					} catch (revertErr) {
+						Logger.error('Paddle scheduled plan change revert failed', revertErr, { subscriptionId });
+					}
+
+					throw new PaymentProviderError('PADDLE_SUBSCRIPTION_ITEM_NORMALIZATION_FAILED');
+				}
+			}
 
 			const endRaw = updated.current_billing_period?.ends_at || null;
 			const nextRaw = (asRecord(updated as unknown)?.next_billed_at as unknown) || null;

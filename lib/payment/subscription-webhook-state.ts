@@ -71,6 +71,9 @@ export async function resolveNextPlanIdForSubscriptionUpdate(params: {
     priceId?: string | null;
     metadataPlanId?: string | null;
     currentPlanId: string;
+    providerKey: string;
+    scheduledPlanId?: string | null;
+    scheduledPlanDate?: Date | null;
     findPlanByPriceIdentifier: (priceId: string, metadataPlanId?: string | null) => Promise<{ id: string } | null>;
     onUnknownPriceId?: (priceId: string) => void;
 }): Promise<string | null> {
@@ -86,6 +89,21 @@ export async function resolveNextPlanIdForSubscriptionUpdate(params: {
     const nextPlan = await params.findPlanByPriceIdentifier(priceId, params.metadataPlanId);
     if (!nextPlan) {
         params.onUnknownPriceId?.(priceId);
+        return null;
+    }
+
+    // Paddle scheduled plan changes (bill next cycle) update the subscription items/price immediately.
+    // Preserve the current plan locally until the scheduled effective date so the app can show
+    // "current plan" + "scheduled plan" accurately.
+    if (
+        params.providerKey === 'paddle'
+        && typeof params.scheduledPlanId === 'string'
+        && params.scheduledPlanId.length > 0
+        && params.scheduledPlanDate instanceof Date
+        && Number.isFinite(params.scheduledPlanDate.getTime())
+        && params.scheduledPlanDate.getTime() > Date.now()
+        && nextPlan.id === params.scheduledPlanId
+    ) {
         return null;
     }
 
@@ -124,6 +142,8 @@ export async function resolveSubscriptionWebhookMutationPlan(params: {
         expiresAt: Date;
         cancelAtPeriodEnd: boolean;
         planId: string;
+        scheduledPlanId?: string | null;
+        scheduledPlanDate?: Date | null;
     };
     status: string;
     currentPeriodEnd: Date;
@@ -168,6 +188,9 @@ export async function resolveSubscriptionWebhookMutationPlan(params: {
         priceId: params.priceId,
         metadataPlanId: params.metadataPlanId,
         currentPlanId: params.dbSub.planId,
+        providerKey: params.providerKey,
+        scheduledPlanId: params.dbSub.scheduledPlanId ?? null,
+        scheduledPlanDate: params.dbSub.scheduledPlanDate ?? null,
         findPlanByPriceIdentifier: params.findPlanByPriceIdentifier,
         onUnknownPriceId: params.onUnknownPriceId,
     });

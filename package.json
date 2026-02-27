@@ -6,6 +6,7 @@
     "predev": "node ./scripts/validate-env.js",
     "prebuild": "node ./scripts/validate-env.js",
     "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
     "dev:full": "npx concurrently \"npm run dev -- -p 3000\" \"stripe listen --forward-to localhost:3000/api/stripe/webhook\"",
     "build": "prisma generate && next build --webpack",
     "compile-lib": "npx tsc -p tsconfig.lib.json",

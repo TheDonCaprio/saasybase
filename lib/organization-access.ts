@@ -122,6 +122,14 @@ export async function getOrganizationAccessSummary(userId: string): Promise<Team
   });
 
   if (membership?.organization) {
+    // Verify the organization owner still has an active (or in-grace) team subscription.
+    // Without this check, members retain access after the owner's plan fully expires
+    // until the cron job or lazy dashboard check runs cleanup.
+    const ownerSub = await getActiveTeamSubscription(membership.organization.ownerUserId, { includeGrace: true });
+    if (!ownerSub) {
+      return { allowed: false, reason: 'NO_PLAN' };
+    }
+
     return {
       allowed: true,
       kind: 'MEMBER',

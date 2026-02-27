@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
+import { getPaidTokensNaturalExpiryGraceHours } from '@/lib/settings';
 import { auth } from '@clerk/nextjs/server';
 import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getRequestIp } from '@/lib/request-ip';
@@ -78,6 +79,7 @@ async function resolveSharedContext(params: {
       organization: {
         select: {
           id: true,
+          ownerUserId: true,
           tokenBalance: true,
           memberTokenCap: true,
           memberCapStrategy: true,
@@ -89,6 +91,28 @@ async function resolveSharedContext(params: {
 
   if (!membership?.organization?.id) {
     return { ok: false, status: 404, error: 'no_shared_context' };
+  }
+
+  // Verify the organization owner still has a valid team subscription.
+  const ownerUserId = membership.organization.ownerUserId;
+  if (ownerUserId) {
+    const now = new Date();
+    const graceHours = await getPaidTokensNaturalExpiryGraceHours();
+    const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
+    const ownerSub = await tx.subscription.findFirst({
+      where: {
+        userId: ownerUserId,
+        plan: { supportsOrganizations: true },
+        OR: [
+          { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
+          { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!ownerSub) {
+      return { ok: false, status: 403, error: 'owner_subscription_expired' };
+    }
   }
 
   const poolBalance = Math.max(0, Number(membership.organization.tokenBalance ?? 0));

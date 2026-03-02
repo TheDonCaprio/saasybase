@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { recordAdminAction } from '../../../../lib/admin-actions';
 import { adminRateLimit } from '../../../../lib/rateLimit';
@@ -339,6 +340,7 @@ export async function PUT(req: NextRequest) {
         setSetting(SETTING_KEYS.THEME_COLOR_PALETTE, SETTING_DEFAULTS[SETTING_KEYS.THEME_COLOR_PALETTE])
       ]);
       clearSettingsCache();
+      revalidatePath('/', 'layout');
       Logger.info('Admin reset theme settings to defaults', { actorId });
       await recordAdminAction({
         actorId,
@@ -379,6 +381,9 @@ export async function PUT(req: NextRequest) {
       setSetting(SETTING_KEYS.THEME_COLOR_PALETTE, JSON.stringify(colorPalette))
     ]);
     clearSettingsCache();
+    // Purge the Next.js Full Route Cache so the root layout re-renders
+    // with the updated theme values on the very next page load.
+    revalidatePath('/', 'layout');
 
     Logger.info('Admin updated theme settings', {
       actorId,

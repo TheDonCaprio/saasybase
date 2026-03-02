@@ -291,10 +291,12 @@ async function handleEmbeddedCheckout(req: NextRequest) {
         // implemented by swapping to a discounted provider plan id, without subtracting from amount.
         let inAppDiscountCents = 0;
         let discountCentsApplied = 0;
+        let couponSummaryDiscountCents = 0;
         let razorpayOfferId: string | null = null;
         let subscriptionDiscountApplied = false;
         let originalPriceIdForMetadata: string | null = null;
         let discountedPriceIdForMetadata: string | null = null;
+        let providerPromotionCodeId: string | null = null;
         let couponRedemptionId: string | undefined;
         let appliedCoupon: { id: string; code: string } | null = null;
 
@@ -373,7 +375,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             // Ensure provider artifacts when supported (Stripe, etc.). For providers that don't support
             // native coupons, we apply a best-effort discount in-app (one-time) or require a provider offer (subscription).
             const couponResult = await ensureProviderCoupon(coupon);
-            void couponResult; // keep for future parity; embedded flow mostly uses in-app/offer mechanisms
+            providerPromotionCodeId = couponResult.promotionCodeId;
 
             // Razorpay: subscriptions have fixed plan pricing and do not support arbitrary
             // amount overrides at subscription creation. To keep this region/currency agnostic,
@@ -503,18 +505,32 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
             if (!razorpayOfferId && !subscriptionDiscountApplied) {
                 if (checkoutMode === 'subscription') {
-                    return jsonError(
-                        `Coupons are not supported for subscription checkouts with ${activeProviderKey}.`,
-                        400,
-                        'COUPON_SUBSCRIPTION_UNSUPPORTED',
-                    );
+                    // Stripe + Paddle support provider-native subscription discounts.
+                    // For other providers, require an offer-based or plan-swap mechanism.
+                    if (!providerPromotionCodeId) {
+                        return jsonError(
+                            `Coupons are not supported for subscription checkouts with ${activeProviderKey}.`,
+                            400,
+                            'COUPON_SUBSCRIPTION_UNSUPPORTED',
+                        );
+                    }
+                    // Provider-native subscription discounts: we do not adjust `resolvedAmount` here,
+                    // but we can still return a summary value for display.
+                    couponSummaryDiscountCents = calculateCouponDiscountCents(coupon, resolvedAmount);
+                } else {
+                    inAppDiscountCents = calculateCouponDiscountCents(coupon, resolvedAmount);
+                    discountCentsApplied = inAppDiscountCents;
+                    couponSummaryDiscountCents = discountCentsApplied;
                 }
-                inAppDiscountCents = calculateCouponDiscountCents(coupon, resolvedAmount);
-                discountCentsApplied = inAppDiscountCents;
             }
 
             couponRedemptionId = redemption.id;
             appliedCoupon = { id: coupon.id, code: coupon.code };
+        }
+
+        // For subscription plan-swap discounts we already set the final amount; prefer that discount value.
+        if (subscriptionDiscountApplied && discountCentsApplied > 0) {
+            couponSummaryDiscountCents = discountCentsApplied;
         }
 
         if (inAppDiscountCents > 0) {
@@ -641,7 +657,9 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             mode,
             customerId,
             customerEmail: user.email || undefined,
+            promotionCodeId: providerPromotionCodeId || undefined,
             metadata,
+            subscriptionMetadata: metadata,
             successUrl,
             cancelUrl,
             dedupeKey,
@@ -678,7 +696,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                 provider: providerName,
                 amount: resolvedAmount,
                 originalAmount: originalAmountCents,
-                discountCents: discountCentsApplied,
+                discountCents: couponSummaryDiscountCents,
                 couponCode: appliedCoupon?.code ?? null,
                 currency: currency || 'USD',
                 planName,
@@ -703,7 +721,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                 provider: providerName,
                 amount: resolvedAmount,
                 originalAmount: originalAmountCents,
-                discountCents: discountCentsApplied,
+                discountCents: couponSummaryDiscountCents,
                 couponCode: appliedCoupon?.code ?? null,
                 currency: currency || 'NGN',
                 planName,
@@ -727,6 +745,9 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             ...result,
             provider: paymentService.provider.name,
             amount: resolvedAmount,
+            originalAmount: originalAmountCents,
+            discountCents: couponSummaryDiscountCents,
+            couponCode: appliedCoupon?.code ?? null,
             email: user.email,
             currency: currency || 'NGN',
             planName,

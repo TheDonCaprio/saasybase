@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import AdminSettingsForm from './AdminSettingsForm';
@@ -9,7 +9,7 @@ import { PaymentProvidersPanel } from './PaymentProvidersPanel';
 import { MODERATOR_SECTIONS, type ModeratorPermissions, type ModeratorSection } from '../../lib/moderator-shared';
 import { showToast } from '../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPalette, faCog, faShieldAlt, faServer, faClock, faCreditCard, faBell, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { faPalette, faCog, faShieldAlt, faServer, faClock, faCreditCard, faBell, faEnvelope, faFileExport, faFileImport } from '@fortawesome/free-solid-svg-icons';
 
 interface Setting {
   key: string;
@@ -647,6 +647,9 @@ const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; descri
 export function AdminSettingsTabs({ databaseSettings, environmentSettings, moderatorPermissions }: AdminSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('branding');
   const [moderatorAccess, setModeratorAccess] = useState<ModeratorPermissions>(moderatorPermissions);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [savingSections, setSavingSections] = useState<Record<ModeratorSection, boolean>>(() => {
     return MODERATOR_SECTIONS.reduce<Record<ModeratorSection, boolean>>((acc, section) => {
       acc[section] = false;
@@ -688,6 +691,66 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       setSavingSections((prev) => ({ ...prev, [section]: false }));
     }
   }, [moderatorAccess]);
+
+  const handleExportSettings = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch('/api/admin/settings/export');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Export failed' }));
+        showToast(err?.error || 'Failed to export settings', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = /filename="?([^"]+)"?/.exec(disposition);
+      a.download = match?.[1] || `settings-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('Settings exported successfully', 'success');
+    } catch {
+      showToast('Unexpected error exporting settings', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting]);
+
+  const handleImportSettings = useCallback(async (file: File) => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        showToast('Invalid JSON file', 'error');
+        return;
+      }
+      const res = await fetch('/api/admin/settings/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({ error: 'Import failed' }));
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to import settings', 'error');
+        return;
+      }
+      showToast(`Imported ${data.imported} settings. Reload to see changes.`, 'success');
+    } catch {
+      showToast('Unexpected error importing settings', 'error');
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  }, [importing]);
 
   const tabs = useMemo(
     () => [
@@ -939,6 +1002,38 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
         className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6 dark:border-neutral-800 dark:bg-neutral-950/60"
       >
         {activeContent.content}
+      </div>
+
+      {/* Export / Import actions */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImportSettings(file);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => importInputRef.current?.click()}
+          disabled={importing}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+        >
+          <FontAwesomeIcon icon={faFileImport} className="h-4 w-4" />
+          {importing ? 'Importing…' : 'Import settings'}
+        </button>
+        <button
+          type="button"
+          onClick={handleExportSettings}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+        >
+          <FontAwesomeIcon icon={faFileExport} className="h-4 w-4" />
+          {exporting ? 'Exporting…' : 'Export settings'}
+        </button>
       </div>
     </div>
   );

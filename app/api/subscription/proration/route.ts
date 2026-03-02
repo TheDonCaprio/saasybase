@@ -34,6 +34,8 @@ type SubscriptionWithPlan = {
   status: string;
   canceledAt: Date | null;
   cancelAtPeriodEnd: boolean;
+  scheduledPlanId?: string | null;
+  scheduledPlanDate?: Date | null;
   externalSubscriptionId: string | null;
   externalSubscriptionIds: string | null;
   paymentProvider: string | null;
@@ -87,6 +89,8 @@ async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWit
       status: true,
       canceledAt: true,
       cancelAtPeriodEnd: true,
+      scheduledPlanId: true,
+      scheduledPlanDate: true,
       externalSubscriptionId: true,
       externalSubscriptionIds: true,
       paymentProvider: true,
@@ -497,20 +501,40 @@ export async function POST(req: NextRequest) {
         return prorationDisabledResponse('PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED');
       }
 
-      // Paystack implements pay-at-renewal by disabling the current subscription.
-      // Mark the local record BEFORE calling the provider so that a racing
-      // subscription.disable webhook does not set conflicting state.
+      // Paystack can emit subscription.create very quickly after /subscription is called.
+      // Pre-mark the scheduled plan on our local subscription so webhook hydration can
+      // infer organization context even if provider metadata is missing.
+      let paystackPreMarkedSchedule = false;
       let paystackPreMarkedLocalCancel = false;
-      if (provider.name === 'paystack' && ctx.currentSubscription.cancelAtPeriodEnd !== true) {
+      const previousScheduledPlanId = ctx.currentSubscription.scheduledPlanId ?? null;
+      const previousScheduledPlanDate = ctx.currentSubscription.scheduledPlanDate ?? null;
+      const previousCancelAtPeriodEnd = ctx.currentSubscription.cancelAtPeriodEnd ?? false;
+      const previousCanceledAt = ctx.currentSubscription.canceledAt ?? null;
+
+      if (provider.name === 'paystack') {
+        const preMarkData: Record<string, unknown> = {
+          scheduledPlanId: ctx.targetPlan.id,
+          scheduledPlanDate: ctx.currentSubscription.expiresAt ?? null,
+        };
+
+        // Paystack implements pay-at-renewal by disabling the current subscription.
+        // Mark the local record BEFORE calling the provider so that a racing
+        // subscription.disable webhook does not set conflicting state.
+        if (ctx.currentSubscription.cancelAtPeriodEnd !== true) {
+          preMarkData.cancelAtPeriodEnd = true;
+          preMarkData.canceledAt = ctx.currentSubscription.expiresAt;
+        }
+
         try {
           await prisma.subscription.update({
             where: { id: ctx.currentSubscription.id },
-            data: { cancelAtPeriodEnd: true, canceledAt: ctx.currentSubscription.expiresAt },
+            data: preMarkData,
           });
-          paystackPreMarkedLocalCancel = true;
+          paystackPreMarkedSchedule = true;
+          paystackPreMarkedLocalCancel = ctx.currentSubscription.cancelAtPeriodEnd !== true;
         } catch (err) {
           const e = toError(err);
-          Logger.warn('Failed to mark subscription as non-renewing before Paystack schedule', {
+          Logger.warn('Failed to pre-mark subscription before Paystack schedule', {
             userId: ctx.userId,
             subscriptionId: ctx.currentSubscription.id,
             error: e.message,
@@ -526,22 +550,24 @@ export async function POST(req: NextRequest) {
           ctx.userId
         );
       } catch (err) {
-        if (provider.name === 'paystack' && paystackPreMarkedLocalCancel) {
+        if (provider.name === 'paystack' && (paystackPreMarkedSchedule || paystackPreMarkedLocalCancel)) {
           try {
             await prisma.subscription.update({
               where: { id: ctx.currentSubscription.id },
               data: {
-                cancelAtPeriodEnd: ctx.currentSubscription.cancelAtPeriodEnd,
-                canceledAt: ctx.currentSubscription.canceledAt,
+                scheduledPlanId: previousScheduledPlanId,
+                scheduledPlanDate: previousScheduledPlanDate,
+                cancelAtPeriodEnd: previousCancelAtPeriodEnd,
+                canceledAt: previousCanceledAt,
               },
             });
-            Logger.info('Rolled back local non-renewing mark after Paystack schedule failure', {
+            Logger.info('Rolled back Paystack pre-mark after schedule failure', {
               subscriptionId: ctx.currentSubscription.id,
               userId: ctx.userId,
             });
           } catch (rollbackErr) {
             const re = toError(rollbackErr);
-            Logger.error('Failed to roll back local non-renewing mark after Paystack schedule failure', {
+            Logger.error('Failed to roll back Paystack pre-mark after schedule failure', {
               subscriptionId: ctx.currentSubscription.id,
               userId: ctx.userId,
               error: re.message,

@@ -45,6 +45,9 @@ function EmbeddedCheckoutContent() {
     const [provider, setProvider] = useState<string>('stripe');
     const [email, setEmail] = useState<string | null>(null);
     const [amount, setAmount] = useState<number | null>(null);
+    const [originalAmount, setOriginalAmount] = useState<number | null>(null);
+    const [discountCents, setDiscountCents] = useState<number | null>(null);
+    const [couponCode, setCouponCode] = useState<string | null>(null);
     const [currency, setCurrency] = useState<string | null>(null);
     const [metadata, setMetadata] = useState<Record<string, string> | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -186,6 +189,9 @@ function EmbeddedCheckoutContent() {
                     setProvider(data.provider || 'stripe');
                     setEmail(data.email || null);
                     setAmount(typeof data.amount === 'number' ? data.amount : null);
+                    setOriginalAmount(typeof data.originalAmount === 'number' ? data.originalAmount : null);
+                    setDiscountCents(typeof data.discountCents === 'number' ? data.discountCents : null);
+                    setCouponCode(typeof data.couponCode === 'string' ? data.couponCode : null);
                     setCurrency(typeof data.currency === 'string' ? data.currency : null);
                     setMetadata(data.metadata && typeof data.metadata === 'object' ? data.metadata : null);
                 }
@@ -567,6 +573,9 @@ function EmbeddedCheckoutContent() {
         planId: planId || '—',
         priceId: priceId || '—',
         amount: amount ?? 0,
+        originalAmount,
+        discountCents,
+        couponCode,
         currency: currency || 'NGN',
         provider: provider || 'paystack',
     };
@@ -630,6 +639,29 @@ function EmbeddedCheckoutContent() {
                                         {formatCurrency(summary.amount, summary.currency)}
                                     </span>
                                 </div>
+
+                                {summary.couponCode ? (
+                                    <div className="rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 px-4 py-3">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-600 dark:text-slate-400">Coupon</span>
+                                            <span className="font-semibold text-slate-900 dark:text-white">{summary.couponCode}</span>
+                                        </div>
+                                        {typeof summary.discountCents === 'number' && summary.discountCents > 0 ? (
+                                            <div className="flex items-center justify-between text-sm mt-2">
+                                                <span className="text-slate-600 dark:text-slate-400">Discount</span>
+                                                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                                                    -{formatCurrency(summary.discountCents, summary.currency)}
+                                                </span>
+                                            </div>
+                                        ) : null}
+                                        {typeof summary.originalAmount === 'number' && Number.isFinite(summary.originalAmount) && summary.originalAmount > 0 && summary.originalAmount !== summary.amount ? (
+                                            <div className="flex items-center justify-between text-xs mt-2 text-slate-500 dark:text-slate-400">
+                                                <span>Original</span>
+                                                <span className="line-through">{formatCurrency(summary.originalAmount, summary.currency)}</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ) : null}
 
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center justify-between text-sm">

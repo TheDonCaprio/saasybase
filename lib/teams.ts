@@ -404,6 +404,38 @@ export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
 	if (!clerkOrganizationId) return false;
 	let clerkAttempted = false;
 	try {
+		// Detach any historical references before deletion; otherwise FK constraints can
+		// prevent local deletion (payments/subscriptions may outlive the org).
+		const existing = await prisma.organization.findUnique({
+			where: { clerkOrganizationId },
+			select: { id: true },
+		});
+		if (existing?.id) {
+			try {
+				await prisma.subscription.updateMany({
+					where: { organizationId: existing.id },
+					data: { organizationId: null },
+				});
+			} catch (err: unknown) {
+				Logger.warn('deleteOrganizationByClerkId: failed to detach subscriptions', {
+					clerkOrganizationId,
+					error: toError(err).message,
+				});
+			}
+
+			try {
+				await prisma.payment.updateMany({
+					where: { organizationId: existing.id },
+					data: { organizationId: null },
+				});
+			} catch (err: unknown) {
+				Logger.warn('deleteOrganizationByClerkId: failed to detach payments', {
+					clerkOrganizationId,
+					error: toError(err).message,
+				});
+			}
+		}
+
 		clerkAttempted = true;
 		try {
 			const client = await clerkClient();

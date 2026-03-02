@@ -901,6 +901,13 @@ export class PaymentService {
                 previousPlan,
             });
 
+            // Fallback consumption path for providers/flows where the initial subscription
+            // purchase may not emit a `checkout.completed` event (e.g. Stripe Elements
+            // subscription intents). Safe to call repeatedly (idempotent).
+            if (isProviderSubscriptionActiveStatusExternal(status)) {
+                await this.consumeCouponRedemptionFromMetadata(subscription.metadata);
+            }
+
             Logger.info('Processed subscription update', { subscriptionId, status, isNewlyCreated });
 
         } catch (err) {

@@ -294,11 +294,54 @@ export async function ensureProviderBackedSubscriptionRecord(params: {
         return null;
     }
 
+    let resolvedOrganizationId = organizationId;
+
+    // Fallback: some providers (notably Paystack) do not reliably round-trip metadata
+    // on scheduled plan changes (cancel+recreate at renewal). If we can’t extract an
+    // organization id from provider metadata, infer it from the existing local
+    // subscription that scheduled this plan change.
+    if (!resolvedOrganizationId && plan.supportsOrganizations) {
+        try {
+            const lookbackMs = 7 * 24 * 60 * 60 * 1000;
+            const candidate = await prisma.subscription.findFirst({
+                where: {
+                    userId,
+                    paymentProvider: params.providerKey,
+                    scheduledPlanId: plan.id,
+                    organizationId: { not: null },
+                    expiresAt: { gte: new Date(Date.now() - lookbackMs) },
+                },
+                orderBy: { updatedAt: 'desc' },
+                select: { organizationId: true, id: true },
+            });
+
+            if (candidate?.organizationId) {
+                resolvedOrganizationId = candidate.organizationId;
+                Logger.info('Inferred organizationId for provider subscription via scheduled plan fallback', {
+                    subscriptionId: params.subscriptionId,
+                    providerKey: params.providerKey,
+                    userId,
+                    planId: plan.id,
+                    sourceSubscriptionId: candidate.id,
+                    organizationId: candidate.organizationId,
+                });
+            }
+        } catch (err) {
+            Logger.warn('Failed to infer organizationId for provider subscription via scheduled plan fallback', {
+                subscriptionId: params.subscriptionId,
+                providerKey: params.providerKey,
+                userId,
+                planId: plan.id,
+                error: toError(err).message,
+            });
+        }
+    }
+
     return upsertHydratedProviderSubscription({
         subscriptionId: params.subscriptionId,
         providerKey: params.providerKey,
         userId,
-        organizationId,
+        organizationId: resolvedOrganizationId,
         plan,
         providerSubscription,
         mergeIdMap: params.mergeIdMap,

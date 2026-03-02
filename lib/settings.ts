@@ -3,9 +3,12 @@ import { emitUnmigratedDbHealthWarningOnce, Logger } from './logger';
 
 export type AppFormatMode = 'short' | 'datetime' | 'iso' | 'locale';
 
-// Cache for settings to avoid database hits
+// Cache for settings to avoid redundant database hits within a single render.
+// The TTL is intentionally short (5 s) so that after an admin saves new values
+// the next page load always reads fresh data from the database, even when the
+// save handler and the page renderer run in separate processes / workers.
 const settingsCache = new Map<string, { value: string; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 1000; // 5 seconds – just enough to deduplicate reads within one request
 let settingTableMissing = false;
 
 function isMissingSettingTableError(error: unknown): boolean {
@@ -172,6 +175,48 @@ export const SETTING_KEYS = {
   ,ADMIN_ALERT_EMAIL_TYPES: 'ADMIN_ALERT_EMAIL_TYPES'
   ,SUPPORT_EMAIL_NOTIFICATION_TYPES: 'SUPPORT_EMAIL_NOTIFICATION_TYPES'
 } as const;
+
+/**
+ * Setting keys that are managed by the Admin Theme page and therefore considered
+ * part of the "theme" snapshot (navigation, layout, pricing/blog presentation,
+ * colors/presets, and custom code snippets).
+ */
+export const THEME_SETTING_KEYS = [
+  SETTING_KEYS.THEME_HEADER_LINKS,
+  SETTING_KEYS.THEME_FOOTER_LINKS,
+  SETTING_KEYS.THEME_FOOTER_TEXT,
+  SETTING_KEYS.THEME_CUSTOM_CSS,
+  SETTING_KEYS.THEME_CUSTOM_JS,
+  SETTING_KEYS.THEME_CUSTOM_HEAD,
+  SETTING_KEYS.THEME_CUSTOM_BODY,
+  SETTING_KEYS.THEME_COLOR_PALETTE,
+  SETTING_KEYS.THEME_COLOR_PRESETS,
+  SETTING_KEYS.HEADER_STYLE,
+  SETTING_KEYS.HEADER_HEIGHT,
+  SETTING_KEYS.HEADER_STICKY_ENABLED,
+  SETTING_KEYS.HEADER_STICKY_SCROLL_Y,
+  SETTING_KEYS.HEADER_STICKY_HEIGHT,
+  SETTING_KEYS.PRICING_MAX_COLUMNS,
+  SETTING_KEYS.PRICING_CENTER_UNEVEN,
+  SETTING_KEYS.BLOG_LISTING_STYLE,
+  SETTING_KEYS.BLOG_LISTING_PAGE_SIZE,
+  SETTING_KEYS.BLOG_SIDEBAR_ENABLED,
+  SETTING_KEYS.BLOG_SIDEBAR_ENABLED_INDEX,
+  SETTING_KEYS.BLOG_SIDEBAR_ENABLED_PAGES,
+  SETTING_KEYS.BLOG_SIDEBAR_ENABLED_SINGLE,
+  SETTING_KEYS.BLOG_SIDEBAR_ENABLED_ARCHIVE,
+  SETTING_KEYS.BLOG_SIDEBAR_SHOW_RECENT,
+  SETTING_KEYS.BLOG_SIDEBAR_RECENT_COUNT,
+  SETTING_KEYS.BLOG_SIDEBAR_CONTENT,
+  SETTING_KEYS.BLOG_SIDEBAR_HTML,
+  SETTING_KEYS.BLOG_SIDEBAR_WIDGET_ORDER,
+  SETTING_KEYS.BLOG_RELATED_POSTS_ENABLED,
+  SETTING_KEYS.BLOG_HTML_BEFORE_FIRST_PARAGRAPH,
+  SETTING_KEYS.BLOG_HTML_AFTER_LAST_PARAGRAPH,
+  SETTING_KEYS.BLOG_HTML_MIDDLE_OF_POST,
+] as const;
+
+export const THEME_SETTING_KEY_SET: ReadonlySet<string> = new Set<string>(THEME_SETTING_KEYS);
 
 export type ThemeColorTokens = {
   bgPrimary: string;

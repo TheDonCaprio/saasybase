@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { getSetting, setSetting, clearSettingsCache, SETTING_DEFAULTS } from '../../../../lib/settings';
 import { prisma } from '../../../../lib/prisma';
@@ -94,6 +95,8 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await setSetting(key, String(value ?? ''));
+    clearSettingsCache();
+    revalidatePath('/', 'layout');
     await recordAdminAction({
       actorId,
       actorRole: 'ADMIN',
@@ -149,6 +152,8 @@ export async function PATCH(req: NextRequest) {
 
       // Invalidate cache so clients and server helpers pick up the change immediately
       clearSettingsCache();
+      // Tell Next.js to re-render the root layout (theme colours, header, etc.)
+      revalidatePath('/', 'layout');
       Logger.info('Admin setting upsert', { key: setting.key });
       await recordAdminAction({
         actorId,
@@ -212,6 +217,9 @@ export async function PATCH(req: NextRequest) {
     );
 
     clearSettingsCache();
+    // Tell Next.js to re-render the root layout so saved theme / header
+    // values are visible immediately on the next page load.
+    revalidatePath('/', 'layout');
     Logger.info('Admin settings bulk upsert', { count: settings.length });
     await recordAdminAction({
       actorId,

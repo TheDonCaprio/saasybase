@@ -6,34 +6,65 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCreditCard, faLock, faBuilding, faTag, faGauge, faEnvelope,
   faArrowsRotate, faShield, faNewspaper, faFileLines, faHeadset, faUserShield,
-  faUsers, faLayerGroup, faChartLine, faCode, faDollarSign, faTicket,
+  faUsers, faLayerGroup, faChartLine, faCode, faDollarSign, faTicket, faBars,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { PAYMENT_PROVIDERS } from '../lib/payment/provider-config';
+import { PaymentProviderBadge } from './ui/PaymentProviderBadge';
 
 /* ─── Fake data for the animated dashboard demo ─── */
 const FAKE_TRANSACTIONS = [
-  { id: '1', plan: 'Pro Plan',      amount: '$49.00', status: 'SUCCEEDED', provider: 'Stripe',    user: 'alex@demo.com',    time: '2s ago'   },
-  { id: '2', plan: 'Starter Plan',  amount: '$19.00', status: 'SUCCEEDED', provider: 'Paystack',  user: 'maya@demo.com',    time: '14s ago'  },
-  { id: '3', plan: 'Business Plan', amount: '$129.00',status: 'SUCCEEDED', provider: 'Razorpay',  user: 'carlos@demo.com',  time: '1m ago'   },
-  { id: '4', plan: 'Pro Plan',      amount: '$49.00', status: 'SUCCEEDED', provider: 'Paddle',    user: 'nina@demo.com',    time: '3m ago'   },
-  { id: '5', plan: 'Starter Plan',  amount: '$19.00', status: 'REFUNDED',  provider: 'Stripe',    user: 'joe@demo.com',     time: '7m ago'   },
-  { id: '6', plan: 'Business Plan', amount: '$129.00',status: 'SUCCEEDED', provider: 'Stripe',    user: 'priya@demo.com',   time: '11m ago'  },
-  { id: '7', plan: 'Pro Plan',      amount: '$49.00', status: 'SUCCEEDED', provider: 'Razorpay',  user: 'sam@demo.com',     time: '18m ago'  },
+  { id: '1',  ref: 'pi_3N7Yk9…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Stripe',   user: 'alex@demo.com',    time: '2s ago'  },
+  { id: '2',  ref: 'psk_89ad…', plan: 'Starter Plan',    amount: '$19.00',  status: 'SUCCEEDED', provider: 'Paystack', user: 'maya@demo.com',    time: '14s ago' },
+  { id: '3',  ref: 'rzp_41f2…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Razorpay', user: 'carlos@demo.com',  time: '1m ago'  },
+  { id: '4',  ref: 'pad_2f10…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Paddle',   user: 'nina@demo.com',    time: '3m ago'  },
+  { id: '5',  ref: 'in_7a0c…',  plan: 'Starter Plan',    amount: '$19.00',  status: 'REFUNDED',  provider: 'Stripe',   user: 'joe@demo.com',     time: '7m ago'  },
+  { id: '6',  ref: 'pi_a91b…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Stripe',   user: 'priya@demo.com',   time: '11m ago' },
+  { id: '7',  ref: 'rzp_12c3…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Razorpay', user: 'sam@demo.com',     time: '18m ago' },
+  { id: '8',  ref: 'pi_8d2e…', plan: 'Starter Plan',    amount: '$19.00',  status: 'FAILED',    provider: 'Stripe',   user: 'jamie@demo.com',   time: '24m ago' },
+  { id: '9',  ref: 'psk_1c5b…', plan: 'Pro Plan',        amount: '$49.00',  status: 'PENDING',   provider: 'Paystack', user: 'omar@demo.com',    time: '31m ago' },
+  { id: '10', ref: 'rzp_90aa…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Razorpay', user: 'grace@demo.com',   time: '46m ago' },
+  { id: '11', ref: 'pad_aa19…', plan: 'Starter Plan',    amount: '$19.00',  status: 'SUCCEEDED', provider: 'Paddle',   user: 'wei@demo.com',     time: '1h ago'  },
+  { id: '12', ref: 'pi_001a…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Stripe',   user: 'lena@demo.com',    time: '2h ago'  },
+  { id: '13', ref: 'psk_7d10…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Paystack', user: 'tim@demo.com',     time: '4h ago'  },
+  { id: '14', ref: 'rzp_d12a…', plan: 'Starter Plan',    amount: '$19.00',  status: 'REFUNDED',  provider: 'Razorpay', user: 'denton@demo.com',  time: '6h ago'  },
+  { id: '15', ref: 'pad_0b7c…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Paddle',   user: 'sara@demo.com',    time: '9h ago'  },
+  { id: '16', ref: 'pi_77b2…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Stripe',   user: 'ken@demo.com',     time: '12h ago' },
+  { id: '17', ref: 'psk_5510…', plan: 'Starter Plan',    amount: '$19.00',  status: 'FAILED',    provider: 'Paystack', user: 'zoe@demo.com',     time: '18h ago' },
+  { id: '18', ref: 'rzp_08ae…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Razorpay', user: 'noah@demo.com',    time: '1d ago'  },
+  { id: '19', ref: 'pad_19f0…', plan: 'Business Plan',   amount: '$129.00', status: 'PENDING',   provider: 'Paddle',   user: 'ivy@demo.com',     time: '1d ago'  },
+  { id: '20', ref: 'pi_2c10…', plan: 'Starter Plan',    amount: '$19.00',  status: 'SUCCEEDED', provider: 'Stripe',   user: 'ben@demo.com',     time: '2d ago'  },
+  { id: '21', ref: 'psk_32ab…', plan: 'Pro Plan',        amount: '$49.00',  status: 'SUCCEEDED', provider: 'Paystack', user: 'hana@demo.com',    time: '2d ago'  },
+  { id: '22', ref: 'rzp_1f80…', plan: 'Business Plan',   amount: '$129.00', status: 'SUCCEEDED', provider: 'Razorpay', user: 'liam@demo.com',    time: '3d ago'  },
 ];
 
 const FAKE_USERS = [
-  { email: 'caprio+1@demo.com', name: 'Tim Adekile',   role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 21, 2025', payments: 22, avatarBg: '#6366f1' },
-  { email: 'caprio+2@demo.com', name: 'Sugaga Ade',    role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 19, 2025', payments: 8,  avatarBg: '#8b5cf6' },
-  { email: 'caprio@demo.com',   name: 'AdeWale Ad',    role: 'ADMIN', plan: 'One Day Team', status: 'Active', joined: 'Dec 18, 2025', payments: 92, avatarBg: '#0ea5e9' },
-  { email: 'lena@demo.com',     name: 'Lena Fischer',  role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 5, 2025',  payments: 4,  avatarBg: '#10b981' },
+  { email: 'john@demo.com',   name: 'John Doe',        role: 'ADMIN', plan: 'Business', status: 'Active', joined: 'Dec 18, 2025', payments: 92, avatarBg: '#0ea5e9' },
+  { email: 'maya@demo.com',   name: 'Maya Patel',      role: 'ADMIN', plan: 'Pro',      status: 'Active', joined: 'Dec 20, 2025', payments: 41, avatarBg: '#6366f1' },
+  { email: 'tim@demo.com',    name: 'Tim Carlos',      role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 21, 2025', payments: 22, avatarBg: '#6366f1' },
+  { email: 'lena@demo.com',   name: 'Lena Fischer',    role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 5, 2025',  payments: 4,  avatarBg: '#10b981' },
+  { email: 'denton@demo.com', name: 'Denton Zane',     role: 'USER',  plan: 'Starter',  status: 'Active', joined: 'Dec 19, 2025', payments: 8,  avatarBg: '#8b5cf6' },
+  { email: 'alex@demo.com',   name: 'Alex Kim',        role: 'USER',  plan: 'Pro',      status: 'Active', joined: 'Dec 17, 2025', payments: 12, avatarBg: '#0ea5e9' },
+  { email: 'carlos@demo.com', name: 'Carlos Ruiz',     role: 'USER',  plan: 'Business', status: 'Active', joined: 'Dec 15, 2025', payments: 19, avatarBg: '#10b981' },
+  { email: 'nina@demo.com',   name: 'Nina Park',       role: 'USER',  plan: 'Pro',      status: 'Active', joined: 'Dec 14, 2025', payments: 6,  avatarBg: '#6366f1' },
+  { email: 'priya@demo.com',  name: 'Priya Singh',     role: 'USER',  plan: 'Business', status: 'Active', joined: 'Dec 13, 2025', payments: 27, avatarBg: '#8b5cf6' },
+  { email: 'sam@demo.com',    name: 'Sam Jordan',      role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 12, 2025', payments: 1,  avatarBg: '#0ea5e9' },
+  { email: 'wei@demo.com',    name: 'Wei Chen',        role: 'USER',  plan: 'Starter',  status: 'Active', joined: 'Dec 10, 2025', payments: 3,  avatarBg: '#10b981' },
+  { email: 'omar@demo.com',   name: 'Omar Ali',        role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 9, 2025',  payments: 0,  avatarBg: '#6366f1' },
+  { email: 'grace@demo.com',  name: 'Grace Lee',       role: 'USER',  plan: 'Pro',      status: 'Active', joined: 'Dec 8, 2025',  payments: 9,  avatarBg: '#8b5cf6' },
+  { email: 'joe@demo.com',    name: 'Joe Martin',      role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 7, 2025',  payments: 2,  avatarBg: '#0ea5e9' },
+  { email: 'sara@demo.com',   name: 'Sara Novak',      role: 'USER',  plan: 'Starter',  status: 'Active', joined: 'Dec 6, 2025',  payments: 5,  avatarBg: '#10b981' },
+  { email: 'ken@demo.com',    name: 'Ken Adams',       role: 'USER',  plan: 'None',     status: 'Active', joined: 'Dec 4, 2025',  payments: 0,  avatarBg: '#6366f1' },
+  { email: 'zoe@demo.com',    name: 'Zoe Alvarez',     role: 'USER',  plan: 'Pro',      status: 'Active', joined: 'Dec 2, 2025',  payments: 14, avatarBg: '#8b5cf6' },
+  { email: 'hana@demo.com',   name: 'Hana Ito',        role: 'USER',  plan: 'None',     status: 'Active', joined: 'Nov 30, 2025', payments: 1,  avatarBg: '#0ea5e9' },
+  { email: 'liam@demo.com',   name: 'Liam Walker',     role: 'USER',  plan: 'Business', status: 'Active', joined: 'Nov 28, 2025', payments: 33, avatarBg: '#10b981' },
 ];
 
 const USER_STATS = [
-  { label: 'TOTAL USERS',        value: '3', sub: '+0 in 7 days',           faIcon: faUsers,       iconBg: 'rgba(59,130,246,0.18)',  iconColor: '#3b82f6' },
-  { label: 'NEW USERS TODAY',    value: '0', sub: '0 this month',             faIcon: faArrowsRotate,iconBg: 'rgba(16,185,129,0.18)', iconColor: '#10b981' },
-  { label: 'TEAM ADMINS',        value: '1', sub: 'Users with admin role',    faIcon: faUsers,       iconBg: 'rgba(139,92,246,0.18)', iconColor: '#8b5cf6' },
-  { label: 'RENEWALS IN 14 DAYS',value: '1', sub: 'Upcoming expirations',     faIcon: faTicket,      iconBg: 'rgba(251,191,36,0.18)', iconColor: '#d97706' },
+  { label: 'TOTAL USERS',        value: '19', sub: '+5 in 7 days',           faIcon: faUsers,       iconBg: 'rgba(59,130,246,0.18)',  iconColor: '#3b82f6' },
+  { label: 'NEW USERS TODAY',    value: '2', sub: '7 this month',            faIcon: faArrowsRotate,iconBg: 'rgba(16,185,129,0.18)', iconColor: '#10b981' },
+  { label: 'TEAM ADMINS',        value: '2', sub: 'Users with admin role',   faIcon: faUsers,       iconBg: 'rgba(139,92,246,0.18)', iconColor: '#8b5cf6' },
+  { label: 'RENEWALS IN 14 DAYS',value: '4', sub: 'Upcoming expirations',    faIcon: faTicket,      iconBg: 'rgba(251,191,36,0.18)', iconColor: '#d97706' },
 ];
 
 const FINANCE_SUBMENU = [
@@ -45,7 +76,7 @@ const FINANCE_SUBMENU = [
 
 type DemoView = 'finance' | 'users' | 'overview';
 const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
-const DEMO_HOLD_MS = [5200, 4200, 4200];
+const DEMO_HOLD_MS = [9500, 8500, 6500];
 
 const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string }> = [
   { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle — all wired up. Switch providers with one env var.' },
@@ -153,6 +184,7 @@ function DashboardDemo() {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tiltRef = useRef<HTMLDivElement>(null);
   const viewIdxRef = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // stagger initial rows
   useEffect(() => {
@@ -167,6 +199,7 @@ function DashboardDemo() {
       setBlink(true);
       const newRow = {
         id: String(Date.now()),
+        ref: 'pi_live…',
         plan: ['Pro Plan', 'Business Plan', 'Starter Plan'][Math.floor(Math.random() * 3)],
         amount: ['$49.00', '$129.00', '$19.00'][Math.floor(Math.random() * 3)],
         status: 'SUCCEEDED',
@@ -198,6 +231,28 @@ function DashboardDemo() {
     return () => clearTimeout(timer);
   }, []);
 
+  // auto-scroll each view slowly
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || transitioning) return;
+    el.scrollTop = 0;
+    let raf = 0;
+    const delay = setTimeout(() => {
+      const target = el.scrollHeight - el.clientHeight;
+      if (target <= 0) return;
+      const dur = Math.max(target * 22, 3500);
+      const start = performance.now();
+      const step = (now: number) => {
+        const p = Math.min((now - start) / dur, 1);
+        const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        el.scrollTop = ease * target;
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, 900);
+    return () => { clearTimeout(delay); cancelAnimationFrame(raf); };
+  }, [demoView, transitioning]);
+
   // 3D tilt
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = tiltRef.current?.getBoundingClientRect();
@@ -214,12 +269,15 @@ function DashboardDemo() {
     overview: 'app.saasybase.com/admin',
   };
 
+  const paidUsers = FAKE_USERS.filter((u) => u.plan !== 'None');
+  const freeUsers = FAKE_USERS.filter((u) => u.plan === 'None');
+
   return (
     <div
       ref={tiltRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ position: 'relative', maxWidth: 920, margin: '0 auto' }}
+      style={{ position: 'relative', maxWidth: 1060, margin: '0 auto' }}
     >
       {/* outward ambient glow */}
       <div style={{
@@ -229,7 +287,7 @@ function DashboardDemo() {
       }} />
 
       {/* 3D tilt wrapper */}
-      <div style={{
+      <div className="lp-dd-tilt" style={{
         position: 'relative', zIndex: 1,
         transform: `perspective(450px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${tilt.x === 0 && tilt.y === 0 ? 1 : 1.01})`,
         transition: 'transform 1.15s ease-out',
@@ -252,9 +310,15 @@ function DashboardDemo() {
           </div>
 
           {/* app shell */}
-          <div style={{ display: 'flex', height: 386 }}>
+          <div className="lp-dd-shell" style={{ display: 'flex', height: 520 }}>
+            {/* mobile header – visible only on small screens */}
+            <div className="lp-dd-mobile-hdr">
+              <FontAwesomeIcon icon={faBars} style={{ fontSize: 14, color: 'var(--lp-dd-nav-text)' }} />
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--lp-dd-brand)', letterSpacing: '-.3px' }}>SaasyBase</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--lp-dd-muted)', fontWeight: 500 }}>Admin Panel</span>
+            </div>
             {/* sidebar */}
-            <nav style={{ width: 194, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
+            <nav className="lp-dd-sidebar" style={{ width: 194, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
               {/* Brand */}
               <div style={{ padding: '0 14px 10px', fontSize: 13, fontWeight: 700, color: 'var(--lp-dd-brand)', letterSpacing: 0.3 }}>SaasyBase</div>
               {/* ADMIN section label */}
@@ -271,7 +335,7 @@ function DashboardDemo() {
               </div>
               {/* Users child (active for users view) */}
               {[
-                { label: 'Users',         view: 'users' as DemoView | null,    badge: 3,  icon: faUsers },
+                { label: 'Users',         view: 'users' as DemoView | null,    badge: FAKE_USERS.length,  icon: faUsers },
                 { label: 'Organizations', view: null,                            badge: null, icon: faBuilding },
                 { label: 'Moderation',    view: null,                            badge: 99, icon: faUserShield },
               ].map(item => {
@@ -316,11 +380,11 @@ function DashboardDemo() {
 
             {/* ── Finance / Transactions view ── */}
             {demoView === 'finance' && (
-              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
                 {/* Gradient page banner */}
                 <div style={{ margin: '12px 14px 0', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--lp-dd-banner-border-users)', flexShrink: 0 }}>
                 <div style={{ background: 'var(--lp-dd-banner-bg-users)', padding: '12px 14px 14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div className="lp-dd-banner-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '4px 10px', fontSize: 10, color: 'rgba(255,255,255,0.75)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />
@@ -343,12 +407,12 @@ function DashboardDemo() {
                 </div>
                 </div>
                 {/* 4 stat cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, padding: '10px 14px 8px', flexShrink: 0 }}>
+                <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 10px', flexShrink: 0 }}>
                   {STATS.map(stat => (
-                    <div key={stat.label} style={{ background: `linear-gradient(145deg, ${stat.gradColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 8, padding: '8px 10px' }}>
-                      <div style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', marginBottom: 3, fontWeight: 600, letterSpacing: 0.3 }}>{stat.label}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
-                      <div style={{ fontSize: 8, color: 'var(--lp-dd-stat-sub)', marginTop: 2 }}>{stat.sub}</div>
+                    <div key={stat.label} style={{ background: `linear-gradient(145deg, ${stat.gradColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ fontSize: 10, color: 'var(--lp-dd-col-hdr)', marginBottom: 4, fontWeight: 600, letterSpacing: 0.3 }}>{stat.label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
+                      <div style={{ fontSize: 9, color: 'var(--lp-dd-stat-sub)', marginTop: 3 }}>{stat.sub}</div>
                     </div>
                   ))}
                 </div>
@@ -359,29 +423,89 @@ function DashboardDemo() {
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--lp-dd-title-text)' }}>Recent Transactions</span>
                       {blink && <span style={{ fontSize: 9, color: '#10b981', animation: 'lpPulse 0.5s ease' }}>● New payment</span>}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '5px 12px', gap: 8 }}>
-                      {['User', 'Plan', 'Amount', 'Provider', 'Status'].map(h => (
-                        <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</div>
+                    {/* Desktop grid table */}
+                    <div className="lp-dd-tbl-desktop">
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '5px 12px', gap: 8 }}>
+                        {['Provider', 'Payment', 'User', 'Plan / Amount', 'Status', 'Date'].map(h => (
+                          <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</div>
+                        ))}
+                      </div>
+                      {liveRow && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '6px 12px', gap: 8, alignItems: 'center', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                            <PaymentProviderBadge provider={liveRow.provider} size="xs" showName={false} />
+                          </div>
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', letterSpacing: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveRow.ref}</div>
+                          <div style={{ fontSize: 10.5, color: 'var(--lp-dd-title-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveRow.user}</div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveRow.plan.replace(' Plan','')}</span>
+                            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--lp-dd-amount)', flexShrink: 0 }}>{liveRow.amount}</span>
+                          </div>
+                          <StatusBadge status={liveRow.status} />
+                          <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{liveRow.time}</div>
+                        </div>
+                      )}
+                      {FAKE_TRANSACTIONS.map((tx, i) => (
+                        <div key={tx.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                            <PaymentProviderBadge provider={tx.provider} size="xs" showName={false} />
+                          </div>
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', letterSpacing: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.ref}</div>
+                          <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.user}</div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.plan.replace(' Plan','')}</span>
+                            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--lp-dd-amount)', flexShrink: 0 }}>{tx.amount}</span>
+                          </div>
+                          <StatusBadge status={tx.status} />
+                          <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{tx.time}</div>
+                        </div>
                       ))}
                     </div>
-                    {liveRow && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '6px 12px', gap: 8, alignItems: 'center', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-title-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveRow.user}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text2)' }}>{liveRow.plan.replace(' Plan','')}</div>
-                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--lp-dd-amount)' }}>{liveRow.amount}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text3)' }}>{liveRow.provider}</div>
-                        <StatusBadge status={liveRow.status} />
-                      </div>
-                    )}
-                    {FAKE_TRANSACTIONS.slice(0, 4).map((tx, i) => (
-                      <div key={tx.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.user}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text2)' }}>{tx.plan.replace(' Plan','')}</div>
-                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--lp-dd-amount)' }}>{tx.amount}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text3)' }}>{tx.provider}</div>
-                        <StatusBadge status={tx.status} />
-                      </div>
-                    ))}
+                    {/* Mobile card layout */}
+                    <div className="lp-dd-tbl-mobile">
+                      {liveRow && (
+                        <div style={{ padding: '8px 12px', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--lp-dd-title-text)', fontWeight: 500 }}>{liveRow.user}</span>
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{liveRow.amount}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{liveRow.plan.replace(' Plan','')}</span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>·</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                              <PaymentProviderBadge provider={liveRow.provider} size="xs" showName={false} />
+                            </span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>·</span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{liveRow.time}</span>
+                            <span style={{ marginLeft: 'auto' }}><StatusBadge status={liveRow.status} /></span>
+                          </div>
+                          <div style={{ marginTop: 4, fontSize: 9, color: 'var(--lp-dd-row-text3)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', letterSpacing: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {liveRow.ref}
+                          </div>
+                        </div>
+                      )}
+                      {FAKE_TRANSACTIONS.map((tx, i) => (
+                        <div key={tx.id} style={{ padding: '8px 12px', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{tx.user}</span>
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{tx.amount}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{tx.plan.replace(' Plan','')}</span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>·</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                              <PaymentProviderBadge provider={tx.provider} size="xs" showName={false} />
+                            </span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>·</span>
+                            <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{tx.time}</span>
+                            <span style={{ marginLeft: 'auto' }}><StatusBadge status={tx.status} /></span>
+                          </div>
+                          <div style={{ marginTop: 4, fontSize: 9, color: 'var(--lp-dd-row-text3)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', letterSpacing: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {tx.ref}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -389,11 +513,11 @@ function DashboardDemo() {
 
             {/* ── Users view ── */}
             {demoView === 'users' && (
-              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
                 {/* Gradient page banner */}
                 <div style={{ margin: '12px 14px 0', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--lp-dd-banner-border)', flexShrink: 0 }}>
                 <div style={{ background: 'var(--lp-dd-banner-bg)', padding: '12px 14px 14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div className="lp-dd-banner-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '4px 10px', fontSize: 10, color: 'rgba(255,255,255,0.75)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
@@ -405,12 +529,12 @@ function DashboardDemo() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', minWidth: 110 }}>
                         <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>Active Paid Accounts</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-chip-num)', lineHeight: 1.2, marginTop: 1 }}>1</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-chip-num)', lineHeight: 1.2, marginTop: 1 }}>{paidUsers.length}</div>
                         <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-sub)' }}>1 renewal in 14 days</div>
                       </div>
                       <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', minWidth: 80 }}>
                         <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>Free Users</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-free-num)', lineHeight: 1.2, marginTop: 1 }}>2</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-free-num)', lineHeight: 1.2, marginTop: 1 }}>{freeUsers.length}</div>
                         <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-sub)' }}>0 new yesterday</div>
                       </div>
                     </div>
@@ -418,50 +542,76 @@ function DashboardDemo() {
                 </div>
                 </div>
                 {/* 4 stat cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, padding: '10px 14px 0', flexShrink: 0 }}>
+                <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 4px', flexShrink: 0 }}>
                   {USER_STATS.map(s => (
-                    <div key={s.label} style={{ background: `linear-gradient(145deg, ${s.iconColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 8, padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 }}>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.3, lineHeight: 1.3, paddingRight: 4 }}>{s.label}</div>
-                        <div style={{ width: 22, height: 22, borderRadius: 6, background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <FontAwesomeIcon icon={s.faIcon} style={{ width: 10, color: s.iconColor }} />
+                    <div key={s.label} style={{ background: `linear-gradient(145deg, ${s.iconColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <div style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.3, lineHeight: 1.3, paddingRight: 4 }}>{s.label}</div>
+                        <div style={{ width: 26, height: 26, borderRadius: 7, background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <FontAwesomeIcon icon={s.faIcon} style={{ width: 12, color: s.iconColor }} />
                         </div>
                       </div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{s.value}</div>
-                      <div style={{ fontSize: 8, color: 'var(--lp-dd-stat-sub)', marginTop: 2 }}>{s.sub}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{s.value}</div>
+                      <div style={{ fontSize: 9, color: 'var(--lp-dd-stat-sub)', marginTop: 3 }}>{s.sub}</div>
                     </div>
                   ))}
                 </div>
                 {/* User table */}
                 <div style={{ padding: '8px 14px 10px' }}>
                   <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 2fr 0.8fr 1.4fr 1fr', padding: '5px 12px', gap: 6, borderBottom: '1px solid var(--lp-dd-hdr-border)' }}>
-                      {['NAME', 'EMAIL', 'ROLE', 'JOINED', 'PAYMENTS'].map(h => (
-                        <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>{h}</div>
+                    {/* Desktop grid table */}
+                    <div className="lp-dd-tbl-desktop">
+                      <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr', padding: '5px 12px', gap: 6, borderBottom: '1px solid var(--lp-dd-hdr-border)' }}>
+                        {['NAME', 'EMAIL', 'ROLE', 'JOINED', 'SUBSCRIPTION', 'PAYMENTS'].map(h => (
+                          <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>{h}</div>
+                        ))}
+                      </div>
+                      {FAKE_USERS.map((u) => (
+                        <div key={u.email} style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr', padding: '7px 12px', gap: 6, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)' }}>
+                          {/* Name with avatar */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: u.avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0, letterSpacing: 0.2 }}>
+                              {u.name.split(' ').map(n => n[0]).join('').slice(0,2)}
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                              <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
+                              <div style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email.split('@')[0]}@...</div>
+                            </div>
+                          </div>
+                          {/* Email */}
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email.replace('demo.com', 'demo...')}</div>
+                          {/* Role badge */}
+                          <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
+                          {/* Joined */}
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{u.joined}</div>
+                          {/* Subscription */}
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{u.plan}</div>
+                          {/* Payments */}
+                          <div style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>{u.payments} payments</div>
+                        </div>
                       ))}
                     </div>
-                    {FAKE_USERS.map((u) => (
-                      <div key={u.email} style={{ display: 'grid', gridTemplateColumns: '2.2fr 2fr 0.8fr 1.4fr 1fr', padding: '7px 12px', gap: 6, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)' }}>
-                        {/* Name with avatar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: u.avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0, letterSpacing: 0.2 }}>
-                            {u.name.split(' ').map(n => n[0]).join('').slice(0,2)}
+                    {/* Mobile card layout */}
+                    <div className="lp-dd-tbl-mobile">
+                      {FAKE_USERS.map((u) => (
+                        <div key={u.email} style={{ padding: '8px 12px', borderTop: '1px solid var(--lp-dd-row-border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: u.avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                              {u.name.split(' ').map(n => n[0]).join('').slice(0,2)}
+                            </div>
+                            <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</span>
+                            <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
                           </div>
-                          <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                            <div style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email.split('@')[0]}@...</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 29, gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                              <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                              <span style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)' }}>Plan: {u.plan}</span>
+                            </div>
+                            <span style={{ fontSize: 9.5, color: '#6366f1', fontWeight: 600, flexShrink: 0 }}>{u.payments} payments</span>
                           </div>
                         </div>
-                        {/* Email */}
-                        <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email.replace('demo.com', 'demo...')}</div>
-                        {/* Role badge */}
-                        <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
-                        {/* Joined */}
-                        <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{u.joined}</div>
-                        {/* Payments */}
-                        <div style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>{u.payments} payments</div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -469,35 +619,35 @@ function DashboardDemo() {
 
             {/* ── Overview / Dashboard view ── */}
             {demoView === 'overview' && (
-              <div style={{ flex: 1, padding: 20, overflow: 'hidden', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lp-dd-title-text)', marginBottom: 14 }}>Dashboard Overview</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, padding: 20, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--lp-dd-title-text)', marginBottom: 16 }}>Dashboard Overview</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                   {STATS.map(stat => (
-                    <div key={stat.label} style={{ background: 'var(--lp-dd-stat-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '14px 16px' }}>
-                      <div style={{ fontSize: 11, color: 'var(--lp-dd-stat-label)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <FontAwesomeIcon icon={stat.faIcon} style={{ width: 12 }} />
+                    <div key={stat.label} style={{ background: 'var(--lp-dd-stat-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 12, padding: '16px 18px' }}>
+                      <div style={{ fontSize: 12, color: 'var(--lp-dd-stat-label)', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <FontAwesomeIcon icon={stat.faIcon} style={{ width: 13 }} />
                         {stat.label}
                       </div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
-                      <div style={{ fontSize: 10, color: 'var(--lp-dd-stat-sub)', marginTop: 3 }}>{stat.sub}</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--lp-dd-stat-sub)', marginTop: 4 }}>{stat.sub}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--lp-dd-title-text)', marginBottom: 8 }}>Recent Activity</div>
+                <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 12, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--lp-dd-title-text)', marginBottom: 10 }}>Recent Activity</div>
                   {[
                     { icon: '💳', text: 'New Pro subscription',  sub: 'alex@demo.com',  time: '2s ago'  },
                     { icon: '👤', text: 'User registered',        sub: 'wei@demo.com',   time: '14s ago' },
                     { icon: '🔄', text: 'Subscription renewed',   sub: 'maya@demo.com',  time: '1m ago'  },
                     { icon: '🎫', text: 'Support ticket opened',  sub: 'carlos@demo.com',time: '4m ago'  },
                   ].map(a => (
-                    <div key={a.text} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: '1px solid var(--lp-dd-row-border)' }}>
-                      <span style={{ fontSize: 13 }}>{a.icon}</span>
+                    <div key={a.text} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderTop: '1px solid var(--lp-dd-row-border)' }}>
+                      <span style={{ fontSize: 15 }}>{a.icon}</span>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{a.text}</div>
-                        <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{a.sub}</div>
+                        <div style={{ fontSize: 12, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{a.text}</div>
+                        <div style={{ fontSize: 11, color: 'var(--lp-dd-row-text3)' }}>{a.sub}</div>
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{a.time}</div>
+                      <div style={{ fontSize: 11, color: 'var(--lp-dd-row-text3)' }}>{a.time}</div>
                     </div>
                   ))}
                 </div>
@@ -557,6 +707,8 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
   return (
     <>
       <style>{`
+        html, body { overflow-x: hidden; }
+
         /* ── CSS vars: dark default ───────────────────────── */
         .lp-root {
           --lp-text1:        #f1f1f7;
@@ -593,35 +745,36 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           --lp-divider:      rgba(255,255,255,.07);
           --lp-section-tag:  #6366f1;
           --lp-blob-op:      1;
-          /* Dashboard demo — dark defaults */
-          --lp-dd-outer-bg:           #0d0c16;
-          --lp-dd-chrome-bg:          #14131f;
-          --lp-dd-sidebar-bg:         #0c0c18;
-          --lp-dd-sidebar-border:     rgba(255,255,255,.06);
-          --lp-dd-border:             rgba(255,255,255,.07);
-          --lp-dd-border2:            rgba(255,255,255,.08);
-          --lp-dd-border-main:        rgba(99,102,241,.4);
-          --lp-dd-url-bg:             #0e0d1c;
-          --lp-dd-url-text:           rgba(255,255,255,.32);
-          --lp-dd-brand:              #818cf8;
-          --lp-dd-user-text:          rgba(255,255,255,.3);
-          --lp-dd-nav-text:           rgba(255,255,255,.35);
-          --lp-dd-nav-active-text:    #e0e7ff;
-          --lp-dd-stat-bg:            rgba(255,255,255,.025);
-          --lp-dd-stat-label:         rgba(255,255,255,.35);
-          --lp-dd-stat-num:           #e0e7ff;
+          /* Dashboard demo — theme-aware */
+          --lp-dd-outer-bg:           rgb(var(--bg-primary));
+          --lp-dd-chrome-bg:          rgb(var(--bg-secondary));
+          --lp-dd-sidebar-bg:         rgb(var(--bg-primary));
+          --lp-dd-sidebar-border:     rgb(var(--border-primary) / 0.5);
+          --lp-dd-border:             rgb(var(--border-primary) / 0.4);
+          --lp-dd-border2:            rgb(var(--border-primary) / 0.5);
+          --lp-dd-border-main:        rgb(var(--accent-primary) / 0.4);
+          --lp-dd-url-bg:             rgb(var(--bg-tertiary));
+          --lp-dd-url-text:           rgb(var(--text-tertiary));
+          --lp-dd-brand:              rgb(var(--accent-primary));
+          --lp-dd-muted:              rgb(var(--text-tertiary));
+          --lp-dd-user-text:          rgb(var(--text-tertiary));
+          --lp-dd-nav-text:           rgb(var(--text-tertiary));
+          --lp-dd-nav-active-text:    rgb(var(--text-primary));
+          --lp-dd-stat-bg:            rgb(var(--bg-secondary) / 0.5);
+          --lp-dd-stat-label:         rgb(var(--text-tertiary));
+          --lp-dd-stat-num:           rgb(var(--text-primary));
           --lp-dd-stat-sub:           #6ee7b7;
-          --lp-dd-table-bg:           rgba(255,255,255,.02);
-          --lp-dd-hdr-border:         rgba(255,255,255,.07);
-          --lp-dd-col-hdr:            rgba(255,255,255,.3);
-          --lp-dd-title-text:         #e0e7ff;
-          --lp-dd-row-text:           rgba(255,255,255,.75);
-          --lp-dd-row-text2:          rgba(255,255,255,.5);
-          --lp-dd-row-text3:          rgba(255,255,255,.38);
-          --lp-dd-row-border:         rgba(255,255,255,.05);
+          --lp-dd-table-bg:           rgb(var(--bg-secondary) / 0.35);
+          --lp-dd-hdr-border:         rgb(var(--border-primary) / 0.4);
+          --lp-dd-col-hdr:            rgb(var(--text-tertiary));
+          --lp-dd-title-text:         rgb(var(--text-primary));
+          --lp-dd-row-text:           rgb(var(--text-primary) / 0.85);
+          --lp-dd-row-text2:          rgb(var(--text-secondary));
+          --lp-dd-row-text3:          rgb(var(--text-tertiary));
+          --lp-dd-row-border:         rgb(var(--border-primary) / 0.3);
           --lp-dd-amount:             #a5f3fc;
-          --lp-dd-live-bg:            rgba(99,102,241,.09);
-          --lp-dd-live-border:        rgba(99,102,241,.22);
+          --lp-dd-live-bg:            rgb(var(--accent-primary) / 0.09);
+          --lp-dd-live-border:        rgb(var(--accent-primary) / 0.22);
           --lp-dd-banner-bg:          linear-gradient(315deg, rgba(80,40,160,0.65) 0%, rgba(60,30,120,0.45) 55%, rgba(18,12,50,0.4) 100%);
           --lp-dd-banner-border:      rgba(139,92,246,0.35);
           --lp-dd-banner-bg-users:    linear-gradient(315deg, rgba(16,185,129,0.78) 0%, rgba(6,182,212,0.32) 55%, rgba(6,20,30,0.32) 100%);
@@ -669,35 +822,9 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           --lp-divider:      rgba(0,0,0,.07);
           --lp-section-tag:  #4f46e5;
           --lp-blob-op:      0.5;
-          /* Dashboard demo — light overrides */
-          --lp-dd-outer-bg:           #ffffff;
-          --lp-dd-chrome-bg:          #eaeaf4;
-          --lp-dd-sidebar-bg:         #f4f4fb;
-          --lp-dd-sidebar-border:     rgba(0,0,0,.08);
-          --lp-dd-border:             rgba(0,0,0,.09);
-          --lp-dd-border2:            rgba(0,0,0,.09);
-          --lp-dd-border-main:        rgba(99,102,241,.28);
-          --lp-dd-url-bg:             #e0e0ec;
-          --lp-dd-url-text:           rgba(0,0,0,.4);
-          --lp-dd-brand:              #5b52d5;
-          --lp-dd-user-text:          rgba(0,0,0,.4);
-          --lp-dd-nav-text:           rgba(0,0,0,.45);
-          --lp-dd-nav-active-text:    #1e1b4b;
-          --lp-dd-stat-bg:            #ffffff;
-          --lp-dd-stat-label:         rgba(0,0,0,.48);
-          --lp-dd-stat-num:           #1e1b4b;
+          /* Dashboard demo — light overrides (decorative only) */
           --lp-dd-stat-sub:           #059669;
-          --lp-dd-table-bg:           #ffffff;
-          --lp-dd-hdr-border:         rgba(0,0,0,.08);
-          --lp-dd-col-hdr:            rgba(0,0,0,.4);
-          --lp-dd-title-text:         #111827;
-          --lp-dd-row-text:           #111827;
-          --lp-dd-row-text2:          rgba(0,0,0,.6);
-          --lp-dd-row-text3:          rgba(0,0,0,.45);
-          --lp-dd-row-border:         rgba(0,0,0,.06);
           --lp-dd-amount:             #0e7490;
-          --lp-dd-live-bg:            rgba(99,102,241,.05);
-          --lp-dd-live-border:        rgba(99,102,241,.2);
           --lp-dd-banner-bg:          linear-gradient(315deg, rgba(180,170,250,0.45) 0%, rgba(200,190,255,0.3) 55%, rgba(240,238,255,0.35) 100%);
           --lp-dd-banner-border:      rgba(99,102,241,0.22);
           --lp-dd-banner-bg-users:    linear-gradient(315deg, rgba(198,252,233,0.6) 0%, rgba(220,253,240,0.35) 55%, rgba(255,255,255,0.35) 100%);
@@ -881,9 +1008,61 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         /* Responsive */
         @media(max-width:640px) {
           .lp-feature-grid { grid-template-columns:1fr 1fr; }
+          .lp-feature-card { flex-direction:column; align-items:center; text-align:center; }
+          .lp-feature-icon { margin:0 0 10px 0; }
           .lp-metrics { flex-wrap:wrap; }
           .lp-metric-item { flex:0 0 50%; border-bottom:1px solid var(--lp-divider); }
           .lp-cta-section { padding:40px 20px; }
+        }
+
+        /* ── Demo: mobile responsive ── */
+        .lp-dd-mobile-hdr { display:none; }
+        .lp-dd-tbl-mobile { display:none; }
+        .lp-dd-content { overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
+        .lp-dd-content::-webkit-scrollbar { display:none; }
+
+        @media(max-width:768px) {
+          /* Hide sidebar, show mobile header bar */
+          .lp-dd-sidebar { display:none !important; }
+          .lp-dd-mobile-hdr {
+            display:flex !important;
+            align-items:center;
+            gap:10px;
+            padding:8px 14px;
+            border-bottom:1px solid var(--lp-dd-border);
+            background:var(--lp-dd-sidebar-bg);
+            flex-shrink:0;
+          }
+
+          /* Shell: column layout, auto height */
+          .lp-dd-shell {
+            flex-direction:column !important;
+            height:auto !important;
+            max-height:540px;
+            overflow-y:auto;
+          }
+
+          /* Disable 3D tilt on touch */
+          .lp-dd-tilt {
+            transform:none !important;
+            transition:none !important;
+          }
+
+          /* Stat grids → 2 columns */
+          .lp-dd-stat-grid {
+            grid-template-columns:repeat(2,1fr) !important;
+          }
+
+          /* Banner: stack title and chips vertically */
+          .lp-dd-banner-flex {
+            flex-direction:column !important;
+            align-items:flex-start !important;
+            gap:8px !important;
+          }
+
+          /* Toggle desktop table ↔ mobile cards */
+          .lp-dd-tbl-desktop { display:none !important; }
+          .lp-dd-tbl-mobile  { display:block !important; }
         }
       `}</style>
 

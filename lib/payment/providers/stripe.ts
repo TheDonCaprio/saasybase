@@ -1144,6 +1144,7 @@ export class StripePaymentProvider implements PaymentProvider {
             const subscription = await this.stripe.subscriptions.create({
                 customer: customerId,
                 items: [{ price: opts.priceId }],
+                discounts: opts.promotionCodeId ? [{ promotion_code: opts.promotionCodeId }] : undefined,
                 payment_behavior: 'default_incomplete',
                 payment_settings: { save_default_payment_method: 'on_subscription' },
                 expand: ['latest_invoice.payment_intent'],

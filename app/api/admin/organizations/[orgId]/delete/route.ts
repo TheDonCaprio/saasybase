@@ -70,7 +70,33 @@ export async function DELETE(
             }
         }
 
-        // Delete the organization locally (cascading deletes will handle related records)
+        // Detach historical references before deletion; otherwise FK constraints can
+        // prevent local deletion (payments/subscriptions may outlive the org).
+        try {
+            await prisma.subscription.updateMany({
+                where: { organizationId: orgId },
+                data: { organizationId: null },
+            });
+        } catch (err: unknown) {
+            Logger.warn('Admin delete org: failed to detach subscriptions', {
+                orgId,
+                error: toError(err).message,
+            });
+        }
+
+        try {
+            await prisma.payment.updateMany({
+                where: { organizationId: orgId },
+                data: { organizationId: null },
+            });
+        } catch (err: unknown) {
+            Logger.warn('Admin delete org: failed to detach payments', {
+                orgId,
+                error: toError(err).message,
+            });
+        }
+
+        // Delete the organization locally (cascade handles memberships/invites)
         await prisma.organization.delete({
             where: { id: orgId }
         });

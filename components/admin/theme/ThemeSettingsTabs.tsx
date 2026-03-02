@@ -28,6 +28,8 @@ import {
   faArrowUp,
   faArrowDown,
   faPalette,
+  faFileExport,
+  faFileImport,
 } from '@fortawesome/free-solid-svg-icons';
 import SimplePageEditor from '../pages/SimplePageEditor';
 
@@ -253,7 +255,7 @@ const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
   { title: 'Text',        keys: ['textPrimary', 'textSecondary', 'textTertiary'] },
   { title: 'Borders',     keys: ['borderPrimary', 'borderSecondary'] },
   { title: 'Accents',     keys: ['accentPrimary', 'accentHover'] },
-  { title: 'Header',      keys: ['headerBg', 'headerText', 'headerBorder', 'stickyHeaderBorder'] },
+  { title: 'Header',      keys: ['headerBg', 'headerText', 'headerBorder'] },
   { title: 'Layout',      keys: ['sidebarBg'] },
   { title: 'Page Background Gradient', keys: ['pageGradientFrom', 'pageGradientVia', 'pageGradientTo'] },
   { title: 'Top Hero Gradient', keys: ['heroGradientFrom', 'heroGradientVia', 'heroGradientTo'] },
@@ -458,6 +460,14 @@ function ColorTabContent({
   const colors  = colorMode === 'light' ? lightColors  : darkColors;
   const builtInPresets = colorMode === 'light' ? LIGHT_PRESETS : DARK_PRESETS;
   const setColors = colorMode === 'light' ? onLightChange : onDarkChange;
+
+  // Opacity for these tokens is encoded in the hex alpha channel (#RRGGBBAA).
+  const showAlphaForKey = (key: ColorHexKey) =>
+    key === 'headerBg' ||
+    key === 'headerBorder' ||
+    key === 'stickyHeaderBg' ||
+    key === 'sidebarBg' ||
+    key === 'pageGlow';
 
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [savePresetName, setSavePresetName] = useState('');
@@ -720,7 +730,14 @@ function ColorTabContent({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.keys.map((key) => (
                 <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
-                  <span className="text-sm text-slate-700 dark:text-neutral-300">{COLOR_LABELS[key]}</span>
+                  <span className="text-sm text-slate-700 dark:text-neutral-300">
+                    {COLOR_LABELS[key]}
+                    {showAlphaForKey(key) ? (
+                      <span className="ml-2 text-xs text-slate-500 dark:text-neutral-400">
+                        ({Math.round(getHexAlpha01(colors[key]) * 100)}%)
+                      </span>
+                    ) : null}
+                  </span>
                   <ColorPickerWithAlpha
                     value={colors[key]}
                     onChange={(v) => updateColor(key, v)}
@@ -817,7 +834,8 @@ function ColorTabContent({
         </div>
 
         <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
-          Border colors are under the <span className="font-semibold">Header</span> group above.
+          Header border color is under the <span className="font-semibold">Header</span> group above.
+          Sticky header border color lives under the <span className="font-semibold">Layout</span> tab.
         </p>
       </section>
 
@@ -1847,6 +1865,9 @@ export function ThemeSettingsTabs({
   // UI state
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [themeExporting, setThemeExporting] = useState(false);
+  const [themeImporting, setThemeImporting] = useState(false);
+  const themeImportInputRef = useRef<HTMLInputElement>(null);
   const [blogRelatedPostsEnabled, setBlogRelatedPostsEnabled] = useState<boolean>(!!initialRelatedPostsEnabled);
 
   const canAddHeader = headerLinks.length < MAX_LINKS;
@@ -1965,6 +1986,12 @@ export function ThemeSettingsTabs({
         return;
       }
 
+      // Snap local UI state to the effective persisted values.
+      // This prevents confusing "it reset" moments (e.g. when a user typed 0 or out-of-range).
+      setHeaderHeight(safeHeaderHeight);
+      setHeaderStickyScrollY(safeStickyScrollY);
+      setHeaderStickyHeight(safeStickyHeight);
+
       const themePayload = await themeResponse.json();
       setHeaderLinks(themePayload.headerLinks.length ? themePayload.headerLinks : [emptyLink()]);
       setFooterLinks(themePayload.footerLinks.length ? themePayload.footerLinks : [emptyLink()]);
@@ -2082,6 +2109,71 @@ export function ThemeSettingsTabs({
       setResetting(false);
     }
   }, [resetting]);
+
+  const handleThemeExport = useCallback(async () => {
+    if (themeExporting) return;
+    setThemeExporting(true);
+    try {
+      const res = await fetch('/api/admin/theme/export');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Export failed' }));
+        showToast(err?.error || 'Failed to export theme', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = /filename="?([^"]+)"?/.exec(disposition);
+      a.download = match?.[1] || `theme-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('Theme exported successfully', 'success');
+    } catch {
+      showToast('Unexpected error exporting theme', 'error');
+    } finally {
+      setThemeExporting(false);
+    }
+  }, [themeExporting]);
+
+  const handleThemeImport = useCallback(async (file: File) => {
+    if (themeImporting) return;
+    setThemeImporting(true);
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        showToast('Invalid JSON file', 'error');
+        return;
+      }
+      const res = await fetch('/api/admin/theme/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({ error: 'Import failed' }));
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to import theme', 'error');
+        return;
+      }
+      const msg = data.skipped
+        ? `Imported ${data.imported} theme settings (${data.skipped} skipped). Reload to see changes.`
+        : `Imported ${data.imported} theme settings. Reload to see changes.`;
+      showToast(msg, 'success');
+      // Refresh the page to load the updated theme values
+      router.refresh();
+    } catch {
+      showToast('Unexpected error importing theme', 'error');
+    } finally {
+      setThemeImporting(false);
+      if (themeImportInputRef.current) themeImportInputRef.current.value = '';
+    }
+  }, [themeImporting, router]);
 
   // Navigation helpers
   const updateHeaderLink = useCallback((index: number, field: keyof ThemeLink, value: string) => {
@@ -2802,6 +2894,11 @@ export function ThemeSettingsTabs({
                       max={160}
                       value={headerHeight}
                       onChange={(e) => setHeaderHeight(parseInt(e.target.value || '0', 10) || 0)}
+                      onBlur={() => {
+                        const n = Number.isFinite(headerHeight) ? headerHeight : 80;
+                        const clamped = Math.max(48, Math.min(160, Math.round(n || 80)));
+                        if (clamped !== headerHeight) setHeaderHeight(clamped);
+                      }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
                     />
                     <p className="text-xs text-slate-500 dark:text-neutral-500">Applies to the normal (non-sticky) header.</p>
@@ -2834,6 +2931,11 @@ export function ThemeSettingsTabs({
                       disabled={!headerStickyEnabled}
                       value={headerStickyScrollY}
                       onChange={(e) => setHeaderStickyScrollY(parseInt(e.target.value || '0', 10) || 0)}
+                      onBlur={() => {
+                        const n = Number.isFinite(headerStickyScrollY) ? headerStickyScrollY : 120;
+                        const clamped = Math.max(0, Math.min(2000, Math.round(n || 0)));
+                        if (clamped !== headerStickyScrollY) setHeaderStickyScrollY(clamped);
+                      }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
                     />
                     <p className="text-xs text-slate-500 dark:text-neutral-500">Distance from the top before stickiness activates.</p>
@@ -2850,6 +2952,11 @@ export function ThemeSettingsTabs({
                       disabled={!headerStickyEnabled}
                       value={headerStickyHeight}
                       onChange={(e) => setHeaderStickyHeight(parseInt(e.target.value || '0', 10) || 0)}
+                      onBlur={() => {
+                        const n = Number.isFinite(headerStickyHeight) ? headerStickyHeight : 64;
+                        const clamped = Math.max(40, Math.min(160, Math.round(n || 64)));
+                        if (clamped !== headerStickyHeight) setHeaderStickyHeight(clamped);
+                      }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
                     />
                     <p className="text-xs text-slate-500 dark:text-neutral-500">Height of the header while sticky.</p>
@@ -2872,7 +2979,7 @@ export function ThemeSettingsTabs({
                   { title: 'Light mode', mode: 'light' as const, value: lightColors, setValue: setLightColors },
                   { title: 'Dark mode', mode: 'dark' as const, value: darkColors, setValue: setDarkColors },
                 ]).map(({ title, mode, value, setValue }) => {
-                  const updateHex = (key: 'stickyHeaderBg' | 'stickyHeaderText', hex: string) => {
+                  const updateHex = (key: 'stickyHeaderBg' | 'stickyHeaderText' | 'stickyHeaderBorder', hex: string) => {
                     setValue({ ...value, [key]: hex });
                   };
 
@@ -2890,7 +2997,12 @@ export function ThemeSettingsTabs({
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
-                          <span className="text-sm text-slate-700 dark:text-neutral-300">Background</span>
+                          <span className="text-sm text-slate-700 dark:text-neutral-300">
+                            Background
+                            <span className="ml-2 text-xs text-slate-500 dark:text-neutral-400">
+                              ({Math.round(getHexAlpha01(value.stickyHeaderBg) * 100)}%)
+                            </span>
+                          </span>
                           <ColorPickerWithAlpha
                             value={value.stickyHeaderBg}
                             onChange={(hex) => updateHex('stickyHeaderBg', hex)}
@@ -2903,6 +3015,22 @@ export function ThemeSettingsTabs({
                           <ColorPickerWithAlpha
                             value={value.stickyHeaderText}
                             onChange={(hex) => updateHex('stickyHeaderText', hex)}
+                            disabled={!headerStickyEnabled}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                          <span className="text-sm text-slate-700 dark:text-neutral-300">
+                            Border (bottom)
+                            <span className="ml-2 text-xs text-slate-500 dark:text-neutral-400">
+                              ({Math.round(getHexAlpha01(value.stickyHeaderBorder) * 100)}%)
+                            </span>
+                          </span>
+                          <ColorPickerWithAlpha
+                            value={value.stickyHeaderBorder}
+                            onChange={(hex) => updateHex('stickyHeaderBorder', hex)}
                             disabled={!headerStickyEnabled}
                           />
                         </div>
@@ -3119,15 +3247,45 @@ export function ThemeSettingsTabs({
       </div>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={resetting || saving}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-        >
-          <FontAwesomeIcon icon={faArrowRotateLeft} className="h-4 w-4" />
-          {resetting ? 'Resetting…' : 'Restore defaults'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting || saving}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <FontAwesomeIcon icon={faArrowRotateLeft} className="h-4 w-4" />
+            {resetting ? 'Resetting…' : 'Restore defaults'}
+          </button>
+          <input
+            ref={themeImportInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleThemeImport(file);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => themeImportInputRef.current?.click()}
+            disabled={themeImporting || saving}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <FontAwesomeIcon icon={faFileImport} className="h-4 w-4" />
+            {themeImporting ? 'Importing…' : 'Import theme'}
+          </button>
+          <button
+            type="button"
+            onClick={handleThemeExport}
+            disabled={themeExporting || saving}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <FontAwesomeIcon icon={faFileExport} className="h-4 w-4" />
+            {themeExporting ? 'Exporting…' : 'Export theme'}
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleSave}

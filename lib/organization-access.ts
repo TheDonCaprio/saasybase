@@ -6,6 +6,7 @@ import { upsertOrganization, syncOrganizationMembership } from './teams';
 import { getPaidTokensNaturalExpiryGraceHours } from './settings';
 
 const TEAM_SUB_STATUSES = ['ACTIVE', 'PENDING', 'CANCELLED', 'PAST_DUE'] as const;
+const TEAM_SUB_STATUSES_STRICT = ['ACTIVE', 'PENDING', 'PAST_DUE'] as const;
 type ClerkMembershipRole = 'org:admin' | 'org:member';
 type ClerkApi = Awaited<ReturnType<typeof clerkClient>>;
 type ClerkOrganizationResource = Awaited<ReturnType<ClerkApi['organizations']['createOrganization']>>;
@@ -37,8 +38,13 @@ type NoTeamAccess = { allowed: false; reason?: 'NO_PLAN' | 'NO_MEMBERSHIP' };
 
 export type TeamSubscriptionStatus = OwnerTeamAccess | MemberTeamAccess | NoTeamAccess;
 
-export async function getActiveTeamSubscription(userId: string, opts?: { includeGrace?: boolean }) {
+export async function getActiveTeamSubscription(
+  userId: string,
+  opts?: { includeGrace?: boolean; includeCancelled?: boolean }
+) {
   const now = new Date();
+  const includeCancelled = opts?.includeCancelled !== false;
+  const eligibleStatuses = includeCancelled ? TEAM_SUB_STATUSES : TEAM_SUB_STATUSES_STRICT;
 
   const baseInclude = {
     plan: {
@@ -57,7 +63,7 @@ export async function getActiveTeamSubscription(userId: string, opts?: { include
     return prisma.subscription.findFirst({
       where: {
         userId,
-        status: { in: TEAM_SUB_STATUSES as unknown as string[] },
+        status: { in: eligibleStatuses as unknown as string[] },
         expiresAt: { gt: now },
         plan: { supportsOrganizations: true },
       },
@@ -69,21 +75,31 @@ export async function getActiveTeamSubscription(userId: string, opts?: { include
   const graceHours = await getPaidTokensNaturalExpiryGraceHours();
   const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
 
+  const unexpiredAccessClause = includeCancelled
+    ? {
+        // Preserve historical behavior: any non-EXPIRED status with time remaining
+        // still confers org access.
+        status: { not: 'EXPIRED' },
+        expiresAt: { gt: now },
+      }
+    : {
+        status: { in: eligibleStatuses as unknown as string[] },
+        expiresAt: { gt: now },
+      };
+
+  const graceWindowStatuses = includeCancelled ? ['EXPIRED', 'CANCELLED', 'PAST_DUE'] : ['EXPIRED', 'PAST_DUE'];
+
   return prisma.subscription.findFirst({
     where: {
       userId,
       plan: { supportsOrganizations: true },
       OR: [
-        // Any non-EXPIRED subscription with time remaining still confers org access.
-        {
-          status: { not: 'EXPIRED' },
-          expiresAt: { gt: now },
-        },
+        unexpiredAccessClause,
         // After wall-clock expiry, keep org access during the grace window.
         // Include CANCELLED (cancel-at-period-end that has reached its end) and
         // PAST_DUE (payment issues unresolved by period end) — not just EXPIRED.
         {
-          status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] },
+          status: { in: graceWindowStatuses },
           expiresAt: { gt: graceCutoff, lte: now },
         },
       ],
@@ -148,7 +164,12 @@ export async function getOrganizationAccessSummary(userId: string): Promise<Team
 }
 
 export async function syncOrganizationEligibilityForUser(userId: string, opts?: { ignoreGrace?: boolean }) {
-  const subscription = await getActiveTeamSubscription(userId, { includeGrace: !opts?.ignoreGrace });
+  const subscription = await getActiveTeamSubscription(userId, {
+    includeGrace: !opts?.ignoreGrace,
+    // When ignoring grace (admin force-cancel/expire), we should not allow
+    // cancelled-but-unexpired subscriptions to keep org access alive.
+    includeCancelled: !opts?.ignoreGrace,
+  });
   if (subscription && subscription.plan) {
     return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan } satisfies TeamSubscriptionStatus;
   }
@@ -191,12 +212,78 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
     })
   );
 
-  const result = await prisma.organization.deleteMany({ where: { id: { in: orgs.map((o) => o.id) } } });
-  Logger.info('Removed local organizations after losing team access', {
-    userId: context?.userId,
-    removed: result.count,
-    reason: context?.reason,
-  });
+  // IMPORTANT: In this schema, historical records (payments/subscriptions) can retain
+  // references to an organization. Those foreign keys block deletion in SQLite/Postgres.
+  // Since the user has lost team eligibility, we detach those references before deleting.
+  const dbOrgIds = orgs.map((o) => o.id);
+  try {
+    await prisma.subscription.updateMany({
+      where: { organizationId: { in: dbOrgIds } },
+      data: { organizationId: null },
+    });
+  } catch (err: unknown) {
+    Logger.warn('Failed to detach subscriptions before org teardown', {
+      userId: context?.userId,
+      reason: context?.reason,
+      error: toError(err).message,
+    });
+  }
+
+  try {
+    await prisma.payment.updateMany({
+      where: { organizationId: { in: dbOrgIds } },
+      data: { organizationId: null },
+    });
+  } catch (err: unknown) {
+    Logger.warn('Failed to detach payments before org teardown', {
+      userId: context?.userId,
+      reason: context?.reason,
+      error: toError(err).message,
+    });
+  }
+
+  try {
+    const result = await prisma.organization.deleteMany({ where: { id: { in: dbOrgIds } } });
+    Logger.info('Removed local organizations after losing team access', {
+      userId: context?.userId,
+      removed: result.count,
+      reason: context?.reason,
+    });
+  } catch (err: unknown) {
+    // Fallback: even if the DB cannot delete the organization row (unexpected FK constraints),
+    // ensure access is dismantled by removing memberships/invites and zeroing the pool.
+    const error = toError(err);
+    Logger.error('Failed to delete local organizations after losing team access', {
+      userId: context?.userId,
+      reason: context?.reason,
+      error: error.message,
+    });
+
+    try {
+      await prisma.organizationMembership.deleteMany({ where: { organizationId: { in: dbOrgIds } } });
+      await prisma.organizationInvite.deleteMany({ where: { organizationId: { in: dbOrgIds } } });
+      await prisma.organization.updateMany({
+        where: { id: { in: dbOrgIds } },
+        data: {
+          clerkOrganizationId: null,
+          planId: null,
+          seatLimit: null,
+          tokenBalance: 0,
+        },
+      });
+      Logger.warn('Soft-deactivated local organizations after delete failure', {
+        userId: context?.userId,
+        reason: context?.reason,
+        organizationIds: dbOrgIds,
+      });
+    } catch (fallbackErr: unknown) {
+      Logger.error('Failed to soft-deactivate organizations after delete failure', {
+        userId: context?.userId,
+        reason: context?.reason,
+        error: toError(fallbackErr).message,
+      });
+    }
+  }
 }
 
 export async function deactivateUserOrganizations(userId: string) {

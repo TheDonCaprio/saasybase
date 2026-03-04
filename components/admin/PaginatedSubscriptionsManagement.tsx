@@ -91,6 +91,8 @@ interface PaginatedSubscriptionsManagementProps {
     Failed?: number;
     Refunded?: number;
   };
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -101,7 +103,8 @@ export function PaginatedSubscriptionsManagement({
   initialSubs,
   initialTotalCount,
   initialPage,
-  statusTotals
+  statusTotals,
+  displayCurrency
 }: PaginatedSubscriptionsManagementProps) {
   const itemsPerPage = 50;
   const {
@@ -474,17 +477,8 @@ export function PaginatedSubscriptionsManagement({
   // get unmounted (which would blur the input). We'll show the loading
   // skeleton inside the subscriptions list area below when there are no items.
 
-  const formatCurrency = (amountCents: number, currency?: string | null) => {
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: (currency || 'USD').toUpperCase()
-      }).format(amountCents / 100);
-    } catch (err) {
-      void err;
-      return formatCurrencyUtil(amountCents, currency || 'usd');
-    }
-  };
+  const formatCurrency = (amountCents: number, currency?: string | null) =>
+    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
 
   const getLatestPaymentDetails = (sub: SubRow) => {
     const payment = sub.latestPayment;

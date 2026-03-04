@@ -68,7 +68,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="-mx-6 lg:mx-0 lg:flex lg:gap-3 min-h-screen">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-56 flex-shrink-0 bg-[color:var(--theme-sidebar-bg)] lg:min-h-screen -mt-6 -ml-6 -mb-6">
+      <aside
+        className="hidden lg:block w-56 flex-shrink-0 bg-[color:var(--theme-sidebar-bg)] lg:min-h-screen -mt-6 -ml-6 -mb-6"
+        style={{ borderRight: '1px solid var(--theme-sidebar-border)' }}
+      >
         <div className="space-y-4 pr-4 pb-4 pt-10 pl-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
           <SidebarNav items={nav} />

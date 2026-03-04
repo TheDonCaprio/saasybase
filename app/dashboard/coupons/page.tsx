@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTicket } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
+import { getActiveCurrencyAsync } from '@/lib/payment/registry';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -120,6 +121,8 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
   const readyHelper = readyNowCount > 0 ? 'Apply during checkout expiry' : 'Redeem a code to start saving';
   const usedHelper = usedCount > 0 ? 'Redeemed and used codes' : 'No coupons used yet';
 
+  const activeCurrency = await getActiveCurrencyAsync();
+
   const payload = await Promise.all(redemptions.map(async (item) => ({
     id: item.id,
     couponId: item.couponId,
@@ -172,6 +175,7 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
         initialPage={page}
         pageSize={pageSize}
         initialSearch={search}
+        displayCurrency={activeCurrency}
       />
     </div>
   );

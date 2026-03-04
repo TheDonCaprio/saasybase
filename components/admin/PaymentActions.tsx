@@ -11,6 +11,8 @@ import { formatCurrency } from '../../lib/utils/currency';
 interface PaymentActionsProps {
   payment: PaymentActionsPayment;
   onPaymentUpdate: (payment: PaymentActionsPayment) => void;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
   showReceiptButton?: boolean;
   refundButtonVariant?: 'text' | 'icon';
   refundTooltip?: string;
@@ -19,6 +21,7 @@ interface PaymentActionsProps {
 export function PaymentActions({
   payment,
   onPaymentUpdate,
+  displayCurrency,
   showReceiptButton = true,
   refundButtonVariant = 'text',
   refundTooltip = 'Refund payment'
@@ -65,7 +68,10 @@ export function PaymentActions({
         onPaymentUpdate(updatedPayment);
         setShowRefundModal(false);
         setRefundError(null);
-        showToast(`Refund of ${formatCurrency(payment.amountCents, 'usd')} processed successfully`, 'success');
+        showToast(
+          `Refund of ${formatCurrency(payment.amountCents, displayCurrency ?? payment.currency ?? 'usd')} processed successfully`,
+          'success'
+        );
       } else {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || 'An unexpected error occurred while processing the refund.';
@@ -163,6 +169,7 @@ export function PaymentActions({
         onClose={handleRefundCancel}
         onConfirm={handleRefundConfirm}
         amount={payment.amountCents}
+        displayCurrency={displayCurrency ?? payment.currency ?? undefined}
         paymentId={payment.id}
         loading={loading}
         error={refundError}

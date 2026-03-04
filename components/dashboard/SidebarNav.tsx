@@ -14,6 +14,7 @@ type SidebarProfile = {
     role: string;
   };
   permissions?: Record<string, boolean>;
+  planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
@@ -77,6 +78,11 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   return (
     <nav className="space-y-1">
       {visibleItems.map(it => {
+        const label = (() => {
+          if (it.href !== '/dashboard/plan') return it.label;
+          if (!profile?.planSource) return it.label;
+          return profile.planSource === 'FREE' ? 'Upgrade' : 'Change Plan';
+        })();
         const active = (() => {
           if (!it.href) return false;
           // Avoid highlighting the dashboard root item on every subpage.
@@ -105,7 +111,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                   }`}
                 />
               )}
-              <span className="font-medium tracking-tight text-current">{it.label}</span>
+              <span className="font-medium tracking-tight text-current">{label}</span>
             </span>
             {it.badge && (
               <span className={`text-[9px] font-semibold uppercase tracking-wide rounded-full ${

@@ -290,7 +290,7 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white dark:bg-neutral-950/60">
+                <tbody className="divide-y divide-slate-200 bg-white dark:divide-neutral-800 dark:bg-neutral-950/60">
                   {organizations.map((org) => (
                     <tr key={org.id} className="hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
                       <td className="px-6 py-4">
@@ -359,7 +359,7 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
               </table>
             </div>
 
-            <div className="border-t border-slate-200 px-4 py-4 sm:px-6">
+            <div className="border-t border-slate-200 px-4 py-4 sm:px-6 dark:border-neutral-800">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

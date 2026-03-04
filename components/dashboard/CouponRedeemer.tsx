@@ -29,12 +29,9 @@ export type CouponRedemptionRow = {
 
 type RedemptionStatus = 'ready' | 'used' | 'expired' | 'inactive' | 'scheduled';
 
-// TODO: Accept currency prop when implementing multi-currency support
-const DEFAULT_CURRENCY = 'usd';
-
-function formatMoney(cents: number | null): string {
-  if (!cents) return formatCurrency(0, DEFAULT_CURRENCY);
-  return formatCurrency(cents, DEFAULT_CURRENCY);
+function formatMoney(cents: number | null, currency: string): string {
+  if (!cents) return formatCurrency(0, currency);
+  return formatCurrency(cents, currency);
 }
 
 function formatDate(value: string | null, preformatted?: string | null): string {
@@ -79,6 +76,7 @@ interface CouponRedeemerProps {
   pageSize?: number;
   initialSearch?: string;
   initialFilters?: Record<string, string | number | boolean | undefined>;
+  displayCurrency?: string;
 }
 
 export function CouponRedeemer({
@@ -88,6 +86,7 @@ export function CouponRedeemer({
   pageSize = 20,
   initialSearch = '',
   initialFilters = {},
+  displayCurrency,
 }: CouponRedeemerProps) {
   const [codeInput, setCodeInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -153,6 +152,8 @@ export function CouponRedeemer({
     }
   }
 
+  const resolvedCurrency = displayCurrency ?? 'usd';
+
   return (
     <div className="space-y-6">
       <section className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">
@@ -216,7 +217,7 @@ export function CouponRedeemer({
             {/* Mobile stacked cards */}
             <div className="md:hidden space-y-3 p-4">
               {redemptions.map((row) => {
-                const discount = row.percentOff !== null ? `${row.percentOff}% off` : formatMoney(row.amountOffCents);
+                const discount = row.percentOff !== null ? `${row.percentOff}% off` : formatMoney(row.amountOffCents, resolvedCurrency);
                 const status = statusLabel(computeStatus(row));
                 const windowText = `${formatDate(row.startsAt, row.startsAtFormatted)} → ${formatDate(row.endsAt, row.endsAtFormatted)}`;
                 return (
@@ -256,7 +257,7 @@ export function CouponRedeemer({
                 </thead>
                 <tbody>
                   {redemptions.map((row) => {
-                    const discount = row.percentOff !== null ? `${row.percentOff}% off` : formatMoney(row.amountOffCents);
+                    const discount = row.percentOff !== null ? `${row.percentOff}% off` : formatMoney(row.amountOffCents, resolvedCurrency);
                     const status = statusLabel(computeStatus(row));
                     const windowText = `${formatDate(row.startsAt, row.startsAtFormatted)} → ${formatDate(row.endsAt, row.endsAtFormatted)}`;
 

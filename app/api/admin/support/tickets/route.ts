@@ -228,6 +228,20 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireAdminOrModerator('support');
 
+    const sanitizeSubject = (value: string) =>
+      value
+        .replace(/\0/g, '')
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+        .slice(0, 200);
+
+    const sanitizeMessage = (value: string) =>
+      value
+        .replace(/\0/g, '')
+        .replace(/\r\n|\r/g, '\n')
+        .trim()
+        .slice(0, 5000);
+
     const payload = await request.json();
     const validation = createTicketSchema.safeParse(payload);
 
@@ -237,7 +251,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid ticket payload', issues }, { status: 400 });
     }
 
-    const { userId, subject, message } = validation.data;
+    const { userId } = validation.data;
+    const subject = sanitizeSubject(validation.data.subject);
+    const message = sanitizeMessage(validation.data.message);
+
+    if (!subject || !message) {
+      return NextResponse.json({ error: 'Invalid ticket payload' }, { status: 400 });
+    }
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {

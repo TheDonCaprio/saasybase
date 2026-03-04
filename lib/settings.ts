@@ -239,6 +239,8 @@ export type ThemeColorTokens = {
   headerBorder: string;
   headerBorderOpacity: number;
   headerBorderWidth: number;
+  headerMenuFontSize: number;
+  headerMenuFontWeight: number;
   stickyHeaderBg: string;
   stickyHeaderOpacity: number;
   stickyHeaderBlur: number;
@@ -247,7 +249,14 @@ export type ThemeColorTokens = {
   stickyHeaderBorderOpacity: number;
   stickyHeaderBorderWidth: number;
   sidebarBg: string;
+  sidebarBorder: string;
   sidebarOpacity: number;
+  headerShadow: string;
+  headerShadowBlur: number;
+  headerShadowSpread: number;
+  stickyHeaderShadow: string;
+  stickyHeaderShadowBlur: number;
+  stickyHeaderShadowSpread: number;
   pageGradientFrom: string;
   pageGradientVia: string;
   pageGradientTo: string;
@@ -287,35 +296,44 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     borderSecondary: '#9ca3af',
     accentPrimary: '#3b82f6',
     accentHover: '#2563eb',
-    headerBg: '#ffffffcc',
+    headerBg: '#ffffff37',
     headerOpacity: 1,
     headerText: '#111827',
-    headerBlur: 12,
-    headerBorder: '#d1d5dbcc',
+    headerBlur: 20,
+    headerBorder: '#d1d5db4c',
     headerBorderOpacity: 1,
     headerBorderWidth: 1,
-    stickyHeaderBg: '#ffffffeb',
+    headerMenuFontSize: 14,
+    headerMenuFontWeight: 600,
+    stickyHeaderBg: '#ffffff3e',
     stickyHeaderOpacity: 1,
-    stickyHeaderBlur: 14,
+    stickyHeaderBlur: 15,
     stickyHeaderText: '#111827',
-    stickyHeaderBorder: '#d1d5dba6',
+    stickyHeaderBorder: '#cccfd420',
     stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: 1,
-    sidebarBg: '#ffffffe6',
+    sidebarBg: '#ffffff80',
+    sidebarBorder: '#ececec6c',
     sidebarOpacity: 1,
-    pageGradientFrom: '#f0f9ff',
-    pageGradientVia: '#eef2ff',
+    headerShadow: '#00000062',
+    headerShadowBlur: 30,
+    headerShadowSpread: -27,
+    stickyHeaderShadow: '#9e9c9cef',
+    stickyHeaderShadowBlur: 30,
+    stickyHeaderShadowSpread: -23,
+    pageGradientFrom: '#ffffff',
+    pageGradientVia: '#d8ecfa',
     pageGradientTo: '#ffffff',
-    heroGradientFrom: '#f0f9ff',
+    heroGradientFrom: '#f0f9ff00',
     heroGradientVia: '#eef2ff',
     heroGradientTo: '#ffffff',
     cardGradientFrom: '#f0f9ff',
     cardGradientVia: '#eef2ff',
     cardGradientTo: '#ffffff',
-    tabsGradientFrom: '#f0f9ff',
+    tabsGradientFrom: '#ffffff',
     tabsGradientVia: '#eef2ff',
     tabsGradientTo: '#ffffff',
-    pageGlow: '#3b82f62e',
+    pageGlow: '#3b82f673',
     glowOpacity: 1,
   },
   dark: {
@@ -328,26 +346,35 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     textPrimary: '#f5f5f5',
     textSecondary: '#a3a3a3',
     textTertiary: '#737373',
-    borderPrimary: '#404040',
-    borderSecondary: '#525252',
+    borderPrimary: '#4040407f',
+    borderSecondary: '#4d4d4dc3',
     accentPrimary: '#3b82f6',
     accentHover: '#2563eb',
-    headerBg: '#0a0a0ab3',
+    headerBg: '#0a0a0a3e',
     headerOpacity: 1,
     headerText: '#f5f5f5',
     headerBlur: 12,
-    headerBorder: '#404040b3',
+    headerBorder: '#31313179',
     headerBorderOpacity: 1,
     headerBorderWidth: 1,
-    stickyHeaderBg: '#0a0a0ad1',
+    headerMenuFontSize: 14,
+    headerMenuFontWeight: 600,
+    stickyHeaderBg: '#0a0a0a35',
     stickyHeaderOpacity: 1,
-    stickyHeaderBlur: 14,
+    stickyHeaderBlur: 15,
     stickyHeaderText: '#f5f5f5',
-    stickyHeaderBorder: '#4040408c',
+    stickyHeaderBorder: '#40404000',
     stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: 1,
-    sidebarBg: '#17171780',
+    sidebarBg: '#1717175d',
+    sidebarBorder: '#40404000',
     sidebarOpacity: 1,
+    headerShadow: '#8e8e8e61',
+    headerShadowBlur: 30,
+    headerShadowSpread: -23,
+    stickyHeaderShadow: '#6f6f6f7d',
+    stickyHeaderShadowBlur: 30,
+    stickyHeaderShadowSpread: -19,
     pageGradientFrom: '#171717',
     pageGradientVia: '#312e81',
     pageGradientTo: '#0a0a0a',
@@ -360,7 +387,7 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     tabsGradientFrom: '#171717',
     tabsGradientVia: '#312e81',
     tabsGradientTo: '#0a0a0a',
-    pageGlow: '#6366f11f',
+    pageGlow: '#6366f1c7',
     glowOpacity: 1,
   },
 };
@@ -383,7 +410,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'one-time', // 'unlimited', 'monthly', 'one-time'
   [SETTING_KEYS.FREE_PLAN_TOKEN_NAME]: '', // empty means use default token label
   [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":true,"transactions":true,"purchases":true,"subscriptions":true,"support":true,"notifications":true,"blog":true,"analytics":false,"traffic":false}',
-  [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Pricing","href":"/pricing"},{"label":"Dashboard","href":"/dashboard"},{"label":"Admin","href":"/admin"}]',
+  [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Home","href":"/"},{"label":"Dashboard","href":"/dashboard"},{"label":"Pricing","href":"/pricing"}]',
   [SETTING_KEYS.THEME_FOOTER_LINKS]: '[{"label":"Privacy","href":"/privacy"},{"label":"Terms","href":"/terms"},{"label":"Contact","href":"/contact"}]',
   [SETTING_KEYS.BLOG_LISTING_STYLE]: 'simple',
   [SETTING_KEYS.BLOG_LISTING_PAGE_SIZE]: '10',
@@ -410,11 +437,11 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.THEME_COLOR_PRESETS]: '[]',
   [SETTING_KEYS.PRICING_MAX_COLUMNS]: '0', // 0 means no limit (auto-fit)
   [SETTING_KEYS.PRICING_CENTER_UNEVEN]: 'false',
-  [SETTING_KEYS.HEADER_STYLE]: 'right',
-  [SETTING_KEYS.HEADER_HEIGHT]: '80',
-  [SETTING_KEYS.HEADER_STICKY_ENABLED]: 'false',
-  [SETTING_KEYS.HEADER_STICKY_SCROLL_Y]: '120',
-  [SETTING_KEYS.HEADER_STICKY_HEIGHT]: '64'
+  [SETTING_KEYS.HEADER_STYLE]: 'center-nav',
+  [SETTING_KEYS.HEADER_HEIGHT]: '60',
+  [SETTING_KEYS.HEADER_STICKY_ENABLED]: 'true',
+  [SETTING_KEYS.HEADER_STICKY_SCROLL_Y]: '100',
+  [SETTING_KEYS.HEADER_STICKY_HEIGHT]: '50'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_ONE_TIME]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_RECURRING]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_ONE_TIME]: 'false'
@@ -461,6 +488,9 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
   const headerTextFallback = sanitizeThemeHex(rec.textPrimary, fallback.headerText ?? fallback.textPrimary);
   const headerBorderFallback = sanitizeThemeHex(rec.borderPrimary, fallback.headerBorder ?? fallback.borderPrimary);
   const stickyBorderFallback = sanitizeThemeHex(rec.headerBorder ?? rec.borderPrimary, fallback.stickyHeaderBorder ?? fallback.headerBorder ?? fallback.borderPrimary);
+  const sidebarBorderFallback = sanitizeThemeHex(rec.borderPrimary, fallback.sidebarBorder ?? fallback.borderPrimary);
+  const headerShadowFallback = fallback.headerShadow ?? '#00000014';
+  const stickyHeaderShadowFallback = fallback.stickyHeaderShadow ?? headerShadowFallback;
 
   /** Bake a legacy 0-1 opacity into the hex alpha channel and reset opacity to 1. */
   const bakeOpacity = (hex: string, opacity: number): string => {
@@ -493,6 +523,8 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     headerBorder: sanitizeThemeHex(rec.headerBorder, headerBorderFallback),
     headerBorderOpacity: 1,
     headerBorderWidth: clampInt(rec.headerBorderWidth, 0, 4, fallback.headerBorderWidth ?? 1),
+    headerMenuFontSize: clampInt(rec.headerMenuFontSize, 10, 20, fallback.headerMenuFontSize ?? 14),
+    headerMenuFontWeight: clampInt(rec.headerMenuFontWeight, 300, 800, fallback.headerMenuFontWeight ?? 400),
     stickyHeaderBg: sanitizeThemeHex(rec.stickyHeaderBg, stickyBgFallback),
     stickyHeaderOpacity: 1,
     stickyHeaderBlur: clampInt(rec.stickyHeaderBlur, 0, 40, fallback.stickyHeaderBlur ?? 14),
@@ -501,7 +533,24 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     stickyHeaderBorderOpacity: 1,
     stickyHeaderBorderWidth: clampInt(rec.stickyHeaderBorderWidth, 0, 4, fallback.stickyHeaderBorderWidth ?? fallback.headerBorderWidth ?? 1),
     sidebarBg: sanitizeThemeHex(rec.sidebarBg, fallback.sidebarBg),
+    sidebarBorder: sanitizeThemeHex(rec.sidebarBorder, sidebarBorderFallback),
     sidebarOpacity: 1,
+    headerShadow: sanitizeThemeHex(rec.headerShadow, headerShadowFallback),
+    headerShadowBlur: clampInt(rec.headerShadowBlur, 0, 80, fallback.headerShadowBlur ?? 30),
+    headerShadowSpread: clampInt(rec.headerShadowSpread, -80, 80, fallback.headerShadowSpread ?? -22),
+    stickyHeaderShadow: sanitizeThemeHex(rec.stickyHeaderShadow, stickyHeaderShadowFallback),
+    stickyHeaderShadowBlur: clampInt(
+      rec.stickyHeaderShadowBlur,
+      0,
+      80,
+      fallback.stickyHeaderShadowBlur ?? fallback.headerShadowBlur ?? 30,
+    ),
+    stickyHeaderShadowSpread: clampInt(
+      rec.stickyHeaderShadowSpread,
+      -80,
+      80,
+      fallback.stickyHeaderShadowSpread ?? fallback.headerShadowSpread ?? -22,
+    ),
     pageGradientFrom: pageFrom,
     pageGradientVia: pageVia,
     pageGradientTo: pageTo,

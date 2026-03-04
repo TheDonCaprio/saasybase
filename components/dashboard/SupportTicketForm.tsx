@@ -4,14 +4,16 @@ import { useState } from 'react';
 
 interface SupportTicketFormProps {
   userId: string;
+  subject: string;
+  message: string;
+  onSubjectChange: (value: string) => void;
+  onMessageChange: (value: string) => void;
   onSuccess?: () => void;
 }
 
-export function SupportTicketForm({ userId, onSuccess }: SupportTicketFormProps) {
+export function SupportTicketForm({ userId, subject, message, onSubjectChange, onMessageChange, onSuccess }: SupportTicketFormProps) {
   // userId is intentionally unused on the client form; keep a void reference to silence lint in some builds
   void userId;
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -28,10 +30,10 @@ export function SupportTicketForm({ userId, onSuccess }: SupportTicketFormProps)
 
       if (!response.ok) throw new Error('Failed to submit ticket');
 
-      setSubject('');
-      setMessage('');
+      onSubjectChange('');
+      onMessageChange('');
       setSuccess(true);
-  onSuccess?.();
+      onSuccess?.();
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('Error submitting ticket:', error);
@@ -55,7 +57,7 @@ export function SupportTicketForm({ userId, onSuccess }: SupportTicketFormProps)
         <input
           type="text"
           value={subject}
-          onChange={(e) => setSubject(e.target.value)}
+          onChange={(e) => onSubjectChange(e.target.value)}
           required
           className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"
           placeholder="Brief description of the issue"
@@ -66,7 +68,7 @@ export function SupportTicketForm({ userId, onSuccess }: SupportTicketFormProps)
         <label className="block text-sm font-medium mb-2">Message</label>
         <textarea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => onMessageChange(e.target.value)}
           required
           rows={6}
           className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"

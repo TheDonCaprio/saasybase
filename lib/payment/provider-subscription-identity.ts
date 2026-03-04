@@ -254,6 +254,22 @@ export async function ensureProviderBackedSubscriptionRecord(params: {
         }
     }
 
+    // Stripe embedded subscription intents create a Subscription immediately with
+    // `payment_behavior=default_incomplete`. If the customer abandons checkout,
+    // these remain `incomplete`/`incomplete_expired` and should NOT be hydrated
+    // into a local PENDING subscription (which would appear as activatable).
+    if (params.providerKey === 'stripe') {
+        const st = providerSubscription.status;
+        const isStripeUnpaidSetup = st === 'incomplete' || st === 'incomplete_expired' || st === 'unpaid';
+        if (isStripeUnpaidSetup) {
+            Logger.info('Skipping hydration for Stripe unpaid/incomplete subscription', {
+                subscriptionId: params.subscriptionId,
+                status: st,
+            });
+            return null;
+        }
+    }
+
     const planResolution = await resolveProviderSubscriptionPlan({
         providerSubscription,
         invoice: context.invoice,

@@ -71,8 +71,7 @@ export default async function AdminSubscriptionsPage() {
   await requireAdminSectionAccess('subscriptions');
 
   const activeCurrency = await getActiveCurrencyAsync();
-  const formatCurrency = (dollars: number) =>
-    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
+  const formatCurrencyCents = (cents: number) => formatCurrencyUtil(cents, activeCurrency);
 
   const page = 1;
   const limit = 50;
@@ -238,15 +237,7 @@ export default async function AdminSubscriptionsPage() {
           id: latestPayment.id,
           amountCents: latestPayment.amountCents,
           ...(() => {
-            const currency = (latestPayment.currency ?? 'usd').toUpperCase();
-            const formatCurrency = (cents: number) => {
-              try {
-                return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
-              } catch (e) {
-                void e;
-                return `$${(cents / 100).toFixed(2)}`;
-              }
-            };
+            const formatCurrency = (cents: number) => formatCurrencyCents(cents);
 
             const subtotalCents = typeof latestPayment.subtotalCents === 'number'
               ? latestPayment.subtotalCents
@@ -268,7 +259,7 @@ export default async function AdminSubscriptionsPage() {
             };
           })(),
           couponCode: latestPayment.couponCode ?? null,
-          currency: latestPayment.currency ?? 'usd',
+          currency: latestPayment.currency ?? activeCurrency,
           createdAt: latestPayment.createdAt.toISOString(),
           externalPaymentId: latestPayment.externalPaymentId ?? null,
           externalSessionId: latestPayment.externalSessionId ?? null,
@@ -325,14 +316,14 @@ export default async function AdminSubscriptionsPage() {
   const headerStats = [
     {
       label: 'Active recurring revenue',
-      value: formatCurrency(activeMRRCents / 100),
+      value: formatCurrencyCents(activeMRRCents),
       helper: `${formatNumber(activeCount)} active subscriptions`,
       tone: 'indigo' as const
     },
     {
       label: '30-day subscription revenue',
-      value: formatCurrency(last30RevenueCents / 100),
-      helper: `${formatCurrency(lifetimeRevenueCents / 100)} lifetime receipts`,
+      value: formatCurrencyCents(last30RevenueCents),
+      helper: `${formatCurrencyCents(lifetimeRevenueCents)} lifetime receipts`,
       tone: 'emerald' as const
     }
   ];
@@ -355,6 +346,7 @@ export default async function AdminSubscriptionsPage() {
       </section>
 
       <PaginatedSubscriptionsManagement
+        displayCurrency={activeCurrency}
         initialSubs={subs}
         initialTotalCount={totalCount}
         initialPage={page}

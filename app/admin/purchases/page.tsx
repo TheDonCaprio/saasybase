@@ -32,8 +32,7 @@ export default async function AdminPurchasesPage() {
   await requireAdminSectionAccess('purchases');
 
   const activeCurrency = await getActiveCurrencyAsync();
-  const formatCurrency = (dollars: number) =>
-    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
+  const formatCurrencyCents = (cents: number) => formatCurrencyUtil(cents, activeCurrency);
 
   const page = 1;
   const limit = 50;
@@ -186,15 +185,7 @@ export default async function AdminPurchasesPage() {
   ]);
 
   const purchases = dbPurchases.map(p => {
-    const currencyCode = (p.currency ?? 'usd').toUpperCase();
-    const formatCurrencyString = (cents: number) => {
-      try {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(cents / 100);
-      } catch (err) {
-        void err;
-        return `$${(cents / 100).toFixed(2)}`;
-      }
-    };
+    const formatCurrencyString = (cents: number) => formatCurrencyCents(cents);
 
     const subtotalCents = typeof p.subtotalCents === 'number' ? p.subtotalCents : null;
     const explicitDiscountCents = typeof p.discountCents === 'number' ? p.discountCents : null;
@@ -218,7 +209,7 @@ export default async function AdminPurchasesPage() {
       discountCents: explicitDiscountCents ?? effectiveDiscountCents,
       discountFormatted: effectiveDiscountCents != null ? formatCurrencyString(effectiveDiscountCents) : null,
       couponCode: p.couponCode ?? null,
-      currency: p.currency ?? 'usd',
+      currency: p.currency ?? activeCurrency,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
       externalPaymentId: p.externalPaymentId || null,
@@ -237,7 +228,7 @@ export default async function AdminPurchasesPage() {
   const lifetimeVolumeCents = Number(totalVolume._sum.amountCents ?? 0);
   const last30VolumeCents = Number(last30Volume._sum.amountCents ?? 0);
   const refundedVolumeCents = Number(refundedVolume._sum.amountCents ?? 0);
-  const averageOrderValue = completedCount > 0 ? lifetimeVolumeCents / completedCount / 100 : 0;
+  const averageOrderValueCents = completedCount > 0 ? Math.round(lifetimeVolumeCents / completedCount) : 0;
 
   const weekRevenueCents = Number(weekRevenueAgg?._sum?.amountCents ?? 0);
   const todayRevenueCents = Number(todayRevenueAgg?._sum?.amountCents ?? 0);
@@ -246,14 +237,14 @@ export default async function AdminPurchasesPage() {
   const metricCards: AdminStatCardProps[] = [
     {
       label: 'Lifetime revenue',
-      value: formatCurrency(lifetimeVolumeCents / 100),
-      helper: `Total refunds ${formatCurrency(refundedVolumeCents / 100)}`,
+      value: formatCurrencyCents(lifetimeVolumeCents),
+      helper: `Total refunds ${formatCurrencyCents(refundedVolumeCents)}`,
       icon: faSackDollar,
       accent: 'theme'
     },
     {
       label: '30-day revenue',
-      value: formatCurrency(last30VolumeCents / 100),
+      value: formatCurrencyCents(last30VolumeCents),
       helper: `${formatNumber(last30CompletedCount)} completed purchases`,
       icon: faCalendarDay,
       accent: 'theme'
@@ -267,7 +258,7 @@ export default async function AdminPurchasesPage() {
     },
     {
       label: 'Average order value',
-      value: formatCurrency(averageOrderValue),
+      value: formatCurrencyCents(averageOrderValueCents),
       helper: `Across ${formatNumber(completedCount)} completed purchases`,
       icon: faUsers,
       accent: 'theme'
@@ -277,8 +268,8 @@ export default async function AdminPurchasesPage() {
   const headerStats = [
     {
       label: 'Revenue this week',
-      value: formatCurrency(weekRevenueCents / 100),
-      helper: `${formatCurrency(todayRevenueCents / 100)} today`,
+      value: formatCurrencyCents(weekRevenueCents),
+      helper: `${formatCurrencyCents(todayRevenueCents)} today`,
       tone: 'emerald' as const
     },
     {
@@ -307,6 +298,7 @@ export default async function AdminPurchasesPage() {
       </section>
 
       <PaginatedPurchaseManagement
+        displayCurrency={activeCurrency}
         initialPurchases={purchases}
         initialTotalCount={totalCount}
         initialPage={page}
@@ -352,5 +344,6 @@ function getPaymentDashboardUrl(payment: {
     }
   }
 
+  // Fallback to static patterns if provider isn't configured.
   return buildDashboardUrl(providerId, 'transaction', paymentId);
 }

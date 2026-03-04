@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { showToast } from '../ui/Toast';
 import { SupportTeamIcon } from '../ui/SupportTeamIcon';
 import { formatDate } from '../../lib/formatDate';
@@ -73,11 +74,91 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [showDraftCloseConfirm, setShowDraftCloseConfirm] = useState(false);
+  const [draftCloseIntent, setDraftCloseIntent] = useState<'modal' | 'composer'>('modal');
+  const loadedDraftKeyRef = useRef<string | null>(null);
 
   // sync prop -> local when ticket changes; preserve local copy on close so exit animation can render
   useEffect(() => {
     if (ticket) setLocalTicket(ticket);
   }, [ticket]);
+
+  const draftKey = useMemo(() => {
+    const id = localTicket?.id || ticketId;
+    return id ? `support:draft:user:reply:${id}` : null;
+  }, [localTicket?.id, ticketId]);
+
+  // Load any existing draft when opening the modal (or ticket changes)
+  useEffect(() => {
+    if (!open) return;
+    if (!draftKey) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.sessionStorage.getItem(draftKey) || '';
+      loadedDraftKeyRef.current = draftKey;
+      if (stored && stored !== replyMessage) {
+        setReplyMessage(stored);
+        setShowReplyForm(true);
+      }
+    } catch {
+      // ignore storage errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftKey]);
+
+  // Persist draft as the user types (debounced)
+  useEffect(() => {
+    if (!draftKey) return;
+    if (typeof window === 'undefined') return;
+    // Only write after we've loaded/established the key for this open session
+    if (loadedDraftKeyRef.current !== draftKey) return;
+
+    const timer = window.setTimeout(() => {
+      try {
+        const text = replyMessage;
+        if (text.trim().length > 0) {
+          window.sessionStorage.setItem(draftKey, text);
+        } else {
+          window.sessionStorage.removeItem(draftKey);
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [replyMessage, draftKey]);
+
+  const hasReplyDraft = useMemo(() => replyMessage.trim().length > 0, [replyMessage]);
+
+  const discardReplyDraft = useCallback(() => {
+    setReplyMessage('');
+    setShowReplyForm(false);
+    if (!draftKey || typeof window === 'undefined') return;
+    try {
+      window.sessionStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+  }, [draftKey]);
+
+  const requestCloseModal = useCallback(() => {
+    if (hasReplyDraft) {
+      setDraftCloseIntent('modal');
+      setShowDraftCloseConfirm(true);
+      return;
+    }
+    onClose();
+  }, [hasReplyDraft, onClose]);
+
+  const requestCancelReply = useCallback(() => {
+    if (hasReplyDraft) {
+      setDraftCloseIntent('composer');
+      setShowDraftCloseConfirm(true);
+      return;
+    }
+    discardReplyDraft();
+  }, [discardReplyDraft, hasReplyDraft]);
 
   const handleReply = async () => {
     if (!replyMessage.trim() || isSubmitting) return;
@@ -92,8 +173,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
       });
 
       if (response.ok) {
-        setReplyMessage('');
-        setShowReplyForm(false);
+        discardReplyDraft();
         onUpdate();
         showToast('Reply sent successfully', 'success');
       } else {
@@ -219,16 +299,16 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
     : 0;
   const showUnreadReplies = Boolean(ticketData) && !isClosed && unreadReplies > 0;
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
+        onClick={requestCloseModal}
       />
 
       {/* Modal */}
-      <div className={`bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-transform transition-opacity duration-150 ${visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
+      <div className={`bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-all duration-150 ${visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
         {ticketData ? (
           <>
             {/* Header */}
@@ -258,7 +338,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
                   </div>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={requestCloseModal}
                   className="ml-4 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                 >
                   <svg className="w-4 h-4 text-neutral-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,8 +455,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => {
-                          setShowReplyForm(false);
-                          setReplyMessage('');
+                          requestCancelReply();
                         }}
                         disabled={isSubmitting}
                         className="px-3 py-1.5 text-xs border border-neutral-300 dark:border-neutral-600 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
@@ -409,7 +488,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
             <p>Loading ticket details…</p>
             <button
-              onClick={onClose}
+              onClick={requestCloseModal}
               className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
             >
               Close
@@ -417,6 +496,55 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
           </div>
         )}
       </div>
+
+      {showDraftCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDraftCloseConfirm(false)} />
+          <div className="relative w-full max-w-lg rounded-xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
+            <div className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Close without sending?</div>
+            <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">
+              You have an unsent reply. Do you want to keep it as a draft or discard it?
+            </p>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:flex-nowrap sm:justify-end">
+              <button
+                type="button"
+                className="whitespace-nowrap rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                onClick={() => setShowDraftCloseConfirm(false)}
+              >
+                Continue editing
+              </button>
+              <button
+                type="button"
+                className="whitespace-nowrap rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                onClick={() => {
+                  setShowDraftCloseConfirm(false);
+                  if (draftCloseIntent === 'composer') {
+                    setShowReplyForm(false);
+                    return;
+                  }
+                  onClose();
+                }}
+              >
+                Keep draft & close
+              </button>
+              <button
+                type="button"
+                className="whitespace-nowrap rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                onClick={() => {
+                  discardReplyDraft();
+                  setShowDraftCloseConfirm(false);
+                  if (draftCloseIntent === 'composer') {
+                    return;
+                  }
+                  onClose();
+                }}
+              >
+                Discard draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       <Confirm
@@ -437,4 +565,6 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
       />
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal;
 }

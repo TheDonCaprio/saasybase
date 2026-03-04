@@ -10,9 +10,11 @@ import { formatCurrency } from '../../lib/utils/currency';
 interface PaymentManagementProps {
   payments: AdminPayment[];
   onStatsUpdate?: () => void;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
 }
 
-export function PaymentManagement({ payments: initialPayments }: PaymentManagementProps) {
+export function PaymentManagement({ payments: initialPayments, displayCurrency }: PaymentManagementProps) {
   const [payments, setPayments] = useState<AdminPayment[]>(initialPayments);
   const [filter, setFilter] = useState('');
   const settings = useFormatSettings();
@@ -74,8 +76,8 @@ export function PaymentManagement({ payments: initialPayments }: PaymentManageme
         />
         <div className="text-sm text-neutral-400 space-x-4">
           <span>{filteredPayments.length} transactions</span>
-          <span>Total: {formatCurrency(totalAmount, 'usd')}</span>
-          <span>Refunded: {formatCurrency(refundedAmount, 'usd')}</span>
+          <span>Total: {formatCurrency(totalAmount, displayCurrency ?? 'usd')}</span>
+          <span>Refunded: {formatCurrency(refundedAmount, displayCurrency ?? 'usd')}</span>
         </div>
       </div>
 
@@ -106,12 +108,13 @@ export function PaymentManagement({ payments: initialPayments }: PaymentManageme
                   {payment.subscription?.plan?.name || 'No plan'}
                 </td>
                 <td className="p-3 font-mono">
-                  {formatCurrency(payment.amountCents, 'usd')}
+                  {formatCurrency(payment.amountCents, displayCurrency ?? payment.currency ?? 'usd')}
                 </td>
                 <td className="p-3">
                   <PaymentActions 
                     payment={convertToActionsPayment(payment)} 
                     onPaymentUpdate={handlePaymentUpdate} 
+                    displayCurrency={displayCurrency}
                   />
                 </td>
               </tr>

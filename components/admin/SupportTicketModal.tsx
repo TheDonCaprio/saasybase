@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { showToast } from '../ui/Toast';
 import { SupportTeamIcon } from '../ui/SupportTeamIcon';
 import { formatDate } from '../../lib/formatDate';
@@ -43,17 +44,27 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
   // local copy to allow polling/updates while modal is open
   const [localTicket, setLocalTicket] = useState<SupportTicket | null>(ticket);
   const [visible, setVisible] = useState(false);
+  const [isMounted, setIsMounted] = useState(open);
+  const [showDraftCloseConfirm, setShowDraftCloseConfirm] = useState(false);
+  const [draftCloseIntent, setDraftCloseIntent] = useState<'modal' | 'composer'>('modal');
+  const loadedDraftKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let raf = 0;
+    let timeoutId: number | undefined;
     if (open) {
+      setIsMounted(true);
       setVisible(false);
       raf = requestAnimationFrame(() => setVisible(true));
     } else {
       setVisible(false);
+      timeoutId = window.setTimeout(() => {
+        setIsMounted(false);
+      }, 180);
     }
     return () => {
       if (raf) cancelAnimationFrame(raf);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [open]);
 
@@ -65,6 +76,78 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
   const [replyMessage, setReplyMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const draftKey = useMemo(() => {
+    const id = localTicket?.id || ticket?.id;
+    return id ? `support:draft:admin:reply:${id}` : null;
+  }, [localTicket?.id, ticket?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!draftKey) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.sessionStorage.getItem(draftKey) || '';
+      loadedDraftKeyRef.current = draftKey;
+      if (stored && stored !== replyMessage) {
+        setReplyMessage(stored);
+        setShowReplyForm(true);
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftKey]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    if (typeof window === 'undefined') return;
+    if (loadedDraftKeyRef.current !== draftKey) return;
+    const timer = window.setTimeout(() => {
+      try {
+        const text = replyMessage;
+        if (text.trim().length > 0) {
+          window.sessionStorage.setItem(draftKey, text);
+        } else {
+          window.sessionStorage.removeItem(draftKey);
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [replyMessage, draftKey]);
+
+  const hasReplyDraft = useMemo(() => replyMessage.trim().length > 0, [replyMessage]);
+
+  const discardReplyDraft = useCallback(() => {
+    setReplyMessage('');
+    setShowReplyForm(false);
+    if (!draftKey || typeof window === 'undefined') return;
+    try {
+      window.sessionStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+  }, [draftKey]);
+
+  const requestCloseModal = useCallback(() => {
+    if (hasReplyDraft) {
+      setDraftCloseIntent('modal');
+      setShowDraftCloseConfirm(true);
+      return;
+    }
+    onClose();
+  }, [hasReplyDraft, onClose]);
+
+  const requestCancelReply = useCallback(() => {
+    if (hasReplyDraft) {
+      setDraftCloseIntent('composer');
+      setShowDraftCloseConfirm(true);
+      return;
+    }
+    discardReplyDraft();
+  }, [discardReplyDraft, hasReplyDraft]);
 
   const handleReply = async () => {
     if (!replyMessage.trim() || isSubmitting) return;
@@ -78,8 +161,7 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
       });
 
       if (response.ok) {
-        setReplyMessage('');
-        setShowReplyForm(false);
+        discardReplyDraft();
         onUpdate();
         showToast('Reply sent successfully', 'success');
       } else {
@@ -186,7 +268,7 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
   }, [open, localTicket?.id]);
 
   // Guard after hooks so hooks order is stable
-  if (!open || !localTicket) return null;
+  if (!isMounted || !localTicket) return null;
 
   const ticketIdLabel = `#${localTicket.id.slice(0, 12)}`;
   const senderName = localTicket.user?.name || localTicket.user?.email || 'Unknown User';
@@ -195,13 +277,13 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
   const lastReply = localTicket.replies[localTicket.replies.length - 1];
   const needsResponse = !isClosed && (!lastReply || lastReply.user?.role !== 'ADMIN');
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
+      <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`} onClick={requestCloseModal} />
       
       {/* Modal */}
-      <div className={`bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-transform transition-opacity duration-150 ${visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
+      <div className={`bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-all duration-150 ${visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
         {/* Header */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
           <div className="flex items-start justify-between mb-3">
@@ -234,7 +316,7 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={requestCloseModal}
               className="ml-4 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
             >
               <svg className="w-4 h-4 text-neutral-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,8 +455,7 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => {
-                    setShowReplyForm(false);
-                    setReplyMessage('');
+                    requestCancelReply();
                   }}
                   disabled={isSubmitting}
                   className="px-3 py-1.5 text-xs border border-neutral-300 dark:border-neutral-600 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
@@ -393,6 +474,57 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
           </div>
         )}
       </div>
+
+      {showDraftCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDraftCloseConfirm(false)} />
+          <div className="relative w-full max-w-lg rounded-xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
+            <div className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Close without sending?</div>
+            <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">
+              You have an unsent reply. Do you want to keep it as a draft or discard it?
+            </p>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:flex-nowrap sm:justify-end">
+              <button
+                type="button"
+                className="whitespace-nowrap rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                onClick={() => setShowDraftCloseConfirm(false)}
+              >
+                Continue editing
+              </button>
+              <button
+                type="button"
+                className="whitespace-nowrap rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                onClick={() => {
+                  setShowDraftCloseConfirm(false);
+                  if (draftCloseIntent === 'composer') {
+                    setShowReplyForm(false);
+                    return;
+                  }
+                  onClose();
+                }}
+              >
+                Keep draft & close
+              </button>
+              <button
+                type="button"
+                className="whitespace-nowrap rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                onClick={() => {
+                  discardReplyDraft();
+                  setShowDraftCloseConfirm(false);
+                  if (draftCloseIntent === 'composer') {
+                    return;
+                  }
+                  onClose();
+                }}
+              >
+                Discard draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal;
 }

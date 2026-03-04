@@ -29,9 +29,18 @@ export async function POST(
   try {
     const params = await context.params;
 
+    const sanitizeMessage = (value: unknown) => {
+      const raw = typeof value === 'string' ? value : '';
+      const cleaned = raw
+        .replace(/\0/g, '')
+        .replace(/\r\n|\r/g, '\n')
+        .trim();
+      return cleaned.slice(0, 5000);
+    };
+
     const body: unknown = await request.json();
     const messageRaw = typeof body === 'object' && body !== null && 'message' in body ? (body as Record<string, unknown>).message : undefined;
-    const message = typeof messageRaw === 'string' ? messageRaw.trim() : '';
+    const message = sanitizeMessage(messageRaw);
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });

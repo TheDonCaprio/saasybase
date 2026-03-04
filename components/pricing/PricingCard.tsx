@@ -156,10 +156,13 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [showRecurringTopupModal, setShowRecurringTopupModal] = useState(false);
   const [showPlanSwitchModal, setShowPlanSwitchModal] = useState(false);
+  const [showPlanSwitchConfirmModal, setShowPlanSwitchConfirmModal] = useState(false);
   const [extendVisible, setExtendVisible] = useState(false);
   const [replaceVisible, setReplaceVisible] = useState(false);
   const [recurringTopupVisible, setRecurringTopupVisible] = useState(false);
   const [planSwitchVisible, setPlanSwitchVisible] = useState(false);
+  const [planSwitchConfirmVisible, setPlanSwitchConfirmVisible] = useState(false);
+  const [planSwitchConfirmChoice, setPlanSwitchConfirmChoice] = useState<'now' | 'cycle_end' | null>(null);
   const [planSwitchSupportsProration, setPlanSwitchSupportsProration] = useState<boolean | null>(null);
   const [planSwitchCapabilityLoading, setPlanSwitchCapabilityLoading] = useState(false);
   const [planSwitchProrationPending, setPlanSwitchProrationPending] = useState(false);
@@ -378,6 +381,17 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     }
     return () => { if (raf) cancelAnimationFrame(raf); };
   }, [showPlanSwitchModal]);
+
+  useEffect(() => {
+    let raf = 0;
+    if (showPlanSwitchConfirmModal) {
+      setPlanSwitchConfirmVisible(false);
+      raf = requestAnimationFrame(() => setPlanSwitchConfirmVisible(true));
+    } else {
+      setPlanSwitchConfirmVisible(false);
+    }
+    return () => { if (raf) cancelAnimationFrame(raf); };
+  }, [showPlanSwitchConfirmModal]);
 
   useEffect(() => {
     if (!showPlanSwitchModal) return;
@@ -696,6 +710,111 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     }
   }
 
+  function openPlanSwitchConfirm(choice: 'now' | 'cycle_end') {
+    setPlanSwitchConfirmChoice(choice);
+    setShowPlanSwitchModal(false);
+    setShowPlanSwitchConfirmModal(true);
+  }
+
+  function backToPlanSwitchTiming() {
+    setShowPlanSwitchConfirmModal(false);
+    setShowPlanSwitchModal(true);
+  }
+
+  function closePlanSwitchConfirm() {
+    setShowPlanSwitchConfirmModal(false);
+    setPlanSwitchConfirmChoice(null);
+  }
+
+  function executePlanSwitchConfirm() {
+    if (!planSwitchConfirmChoice) return;
+    const choice = planSwitchConfirmChoice;
+    setShowPlanSwitchConfirmModal(false);
+
+    if (choice === 'now') {
+      if (planSwitchSupportsProration) {
+        void openProrationFlow();
+        return;
+      }
+
+      applyProrationFallback(checkoutOverridesRef, 'PROVIDER_PRORATION_UNSUPPORTED');
+      showToast('Complete checkout, then activate to switch immediately.', 'success');
+      void beginCheckoutFlow();
+      return;
+    }
+
+    // choice === 'cycle_end'
+    start(() => {
+      void (async () => {
+        try {
+          const res = await fetch('/api/subscription/proration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId: plan.id, scheduleAt: 'cycle_end' }),
+          });
+
+          const json = await res.json().catch(() => null) as unknown;
+          const obj = asRecord(json);
+          if (res.ok && obj?.ok === true && obj?.scheduled === true) {
+            showToast('Plan will switch at the end of your current cycle.', 'success');
+            return;
+          }
+
+          // Some providers (e.g. Paystack pay-at-renewal) may require a reusable
+          // payment authorization on file. In that case, prompt user action rather
+          // than falling back to immediate-charge checkout.
+          const code = typeof obj?.code === 'string' ? obj.code : '';
+          if (code === 'PAYSTACK_AUTHORIZATION_REQUIRED') {
+            try {
+              const portalRes = await fetch('/api/billing/customer-portal', { method: 'POST' });
+              const portalJson = await portalRes.json().catch(() => null) as unknown;
+              const portalObj = asRecord(portalJson);
+              const url = typeof portalObj?.url === 'string' ? portalObj.url : '';
+              const supported = portalObj?.supported === true;
+              const message = typeof portalObj?.message === 'string' ? portalObj.message : '';
+
+              if (portalRes.ok && supported && url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+                showToast('Opened billing portal to update your payment method. Retry scheduling after updating.', 'info');
+              } else {
+                showToast(
+                  message || 'Unable to open billing portal. Please contact support.',
+                  'error'
+                );
+              }
+            } catch {
+              showToast('Unable to open billing portal. Please contact support.', 'error');
+            }
+            return;
+          }
+          if (code === 'PAYSTACK_CUSTOMER_MISSING') {
+            showToast('Billing customer details are missing. Please contact support.', 'error');
+            return;
+          }
+
+          const fallbackCodes = new Set([
+            'PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED',
+            'PRORATION_DISABLED',
+          ]);
+          if (fallbackCodes.has(code)) {
+            applyProrationFallback(checkoutOverridesRef, 'SWITCH_AT_PERIOD_END');
+            showToast('Plan will be queued for your renewal (you can activate early anytime).', 'info');
+            void beginCheckoutFlow();
+            return;
+          }
+
+          const serverError = typeof obj?.error === 'string' && obj.error.trim().length > 0
+            ? obj.error
+            : 'Unable to schedule your plan switch right now. Please try again.';
+          showToast(serverError, 'error');
+        } catch {
+          showToast('Unable to schedule your plan switch right now. Please try again.', 'error');
+        }
+      })();
+      return undefined;
+    });
+  }
+
   // Called when user clicks Buy. Handles different scenarios based on existing subscription.
   // Scenario 1: Non-recurring active + buying recurring → show warning that recurring replaces existing
   // Scenario 2: Recurring active + buying non-recurring → add tokens, no expiry extension
@@ -888,7 +1007,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
-    <div className="group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-[0_28px_70px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))]">
+    <div className="group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_28px_70px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))]">
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12)),_transparent_65%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22)),_transparent_60%)]"
         aria-hidden="true"
@@ -1284,16 +1403,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                         className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={planSwitchCapabilityLoading || planSwitchProrationPending || prorationLoading || prorationConfirming || checkingExisting || loadingCoupons || pending}
                         onClick={() => {
-                          setShowPlanSwitchModal(false);
-
-                          if (planSwitchSupportsProration) {
-                            void openProrationFlow();
-                            return;
-                          }
-
-                          applyProrationFallback(checkoutOverridesRef, 'PROVIDER_PRORATION_UNSUPPORTED');
-                          showToast('Complete checkout, then activate to switch immediately.', 'success');
-                          void beginCheckoutFlow();
+                          openPlanSwitchConfirm('now');
                         }}
                       >
                         {planSwitchKind === 'upgrade' ? 'Switch now (upgrade)' : planSwitchKind === 'downgrade' ? 'Switch now (downgrade)' : 'Switch now'}
@@ -1315,77 +1425,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                         className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-900"
                         disabled={checkingExisting || loadingCoupons || pending}
                         onClick={() => {
-                          setShowPlanSwitchModal(false);
-
-                          start(() => {
-                            void (async () => {
-                              try {
-                                const res = await fetch('/api/subscription/proration', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ planId: plan.id, scheduleAt: 'cycle_end' }),
-                                });
-
-                                const json = await res.json().catch(() => null) as unknown;
-                                const obj = asRecord(json);
-                                if (res.ok && obj?.ok === true && obj?.scheduled === true) {
-                                  showToast('Plan will switch at the end of your current cycle.', 'success');
-                                  return;
-                                }
-
-                                // Some providers (e.g. Paystack pay-at-renewal) may require a reusable
-                                // payment authorization on file. In that case, prompt user action rather
-                                // than falling back to immediate-charge checkout.
-                                const code = typeof obj?.code === 'string' ? obj.code : '';
-                                if (code === 'PAYSTACK_AUTHORIZATION_REQUIRED') {
-                                  try {
-                                    const portalRes = await fetch('/api/billing/customer-portal', { method: 'POST' });
-                                    const portalJson = await portalRes.json().catch(() => null) as unknown;
-                                    const portalObj = asRecord(portalJson);
-                                    const url = typeof portalObj?.url === 'string' ? portalObj.url : '';
-                                    const supported = portalObj?.supported === true;
-                                    const message = typeof portalObj?.message === 'string' ? portalObj.message : '';
-
-                                    if (portalRes.ok && supported && url) {
-                                      window.open(url, '_blank', 'noopener,noreferrer');
-                                      showToast('Opened billing portal to update your payment method. Retry scheduling after updating.', 'info');
-                                    } else {
-                                      showToast(
-                                        message || 'Unable to open billing portal. Please contact support.',
-                                        'error'
-                                      );
-                                    }
-                                  } catch {
-                                    showToast('Unable to open billing portal. Please contact support.', 'error');
-                                  }
-                                  return;
-                                }
-                                if (code === 'PAYSTACK_CUSTOMER_MISSING') {
-                                  showToast('Billing customer details are missing. Please contact support.', 'error');
-                                  return;
-                                }
-
-                                const fallbackCodes = new Set([
-                                  'PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED',
-                                  'PRORATION_DISABLED',
-                                ]);
-                                if (fallbackCodes.has(code)) {
-                                  applyProrationFallback(checkoutOverridesRef, 'SWITCH_AT_PERIOD_END');
-                                  showToast('Plan will be queued for your renewal (you can activate early anytime).', 'info');
-                                  void beginCheckoutFlow();
-                                  return;
-                                }
-
-                                const serverError = typeof obj?.error === 'string' && obj.error.trim().length > 0
-                                  ? obj.error
-                                  : 'Unable to schedule your plan switch right now. Please try again.';
-                                showToast(serverError, 'error');
-                              } catch {
-                                showToast('Unable to schedule your plan switch right now. Please try again.', 'error');
-                              }
-                            })();
-                            return undefined;
-                          });
+                          openPlanSwitchConfirm('cycle_end');
                         }}
                       >
                         Switch at end of cycle
@@ -1404,6 +1444,100 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                     onClick={() => setShowPlanSwitchModal(false)}
                   >
                     Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ModalPortal>
+        )}
+
+        {/* Plan switch confirmation modal (extra confirmation step) */}
+        {showPlanSwitchConfirmModal && (
+          <ModalPortal>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${planSwitchConfirmVisible ? 'opacity-100' : 'opacity-0'}`}
+                onClick={closePlanSwitchConfirm}
+              />
+              <div
+                className={`relative w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 ${planSwitchConfirmVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.98]'}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Confirm plan change</h3>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      You&apos;re about to change from <strong>{recurringPlanName || 'your current plan'}</strong> to <strong>{plan.name}</strong>.
+                    </p>
+                  </div>
+                  <button
+                    onClick={closePlanSwitchConfirm}
+                    className="rounded-full bg-neutral-200/80 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-200">
+                  {planSwitchConfirmChoice === 'now' ? (
+                    planSwitchSupportsProration ? (
+                      <>
+                        <div className="font-semibold text-neutral-900 dark:text-neutral-100">Switch now</div>
+                        <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+                          The new plan applies immediately. You&apos;ll review the proration breakdown next and then confirm.
+                        </p>
+                        <p className="mt-2 text-neutral-500 dark:text-neutral-400">
+                          You may be charged or credited today.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-neutral-900 dark:text-neutral-100">Switch now</div>
+                        <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+                          You&apos;ll go through checkout to start the new plan. No proration preview is shown for your current payment provider.
+                        </p>
+                        <p className="mt-2 text-neutral-500 dark:text-neutral-400">
+                          After checkout, you can activate the new plan right away from your dashboard.
+                        </p>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <div className="font-semibold text-neutral-900 dark:text-neutral-100">Switch at end of cycle</div>
+                      <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+                        Your current plan stays active until renewal. <strong>{plan.name}</strong> will start automatically at the end of the current billing cycle.
+                      </p>
+                      <p className="mt-2 text-neutral-500 dark:text-neutral-400">
+                        This schedules the change (no proration preview).
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
+                  When a new recurring plan starts, your remaining <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is reset to the new plan&apos;s allotment.
+                </div>
+
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 transition-colors hover:border-neutral-400 hover:text-neutral-800 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-neutral-500 dark:hover:text-neutral-200"
+                    onClick={backToPlanSwitchTiming}
+                    disabled={pending}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="rounded bg-[color:rgb(var(--accent-primary))] px-4 py-1.5 text-sm font-semibold text-white text-actual-white shadow-sm transition hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={executePlanSwitchConfirm}
+                    disabled={
+                      pending ||
+                      checkingExisting ||
+                      loadingCoupons ||
+                      (planSwitchConfirmChoice === 'now'
+                        ? (planSwitchCapabilityLoading || planSwitchProrationPending || prorationLoading || prorationConfirming)
+                        : false)
+                    }
+                  >
+                    Confirm
                   </button>
                 </div>
               </div>

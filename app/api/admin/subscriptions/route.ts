@@ -7,6 +7,7 @@ import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/currency';
 import { Logger } from '../../../../lib/logger';
 import { paymentService } from '../../../../lib/payment/service';
+import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 
 export async function GET(req: Request) {
   try {
@@ -18,6 +19,9 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
+
+  const activeCurrency = await getActiveCurrencyAsync();
+
   const page = parseInt(url.searchParams.get('page') || '1');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
   const search = url.searchParams.get('search') || '';
@@ -296,16 +300,7 @@ export async function GET(req: Request) {
             : 0;
         const effectiveDiscountCents = derivedDiscountCents > 0 ? derivedDiscountCents : 0;
 
-        const currencyCode = typeof latestPaymentRec.currency === 'string' ? latestPaymentRec.currency : 'usd';
-        const currency = currencyCode?.toUpperCase?.() ? currencyCode.toUpperCase() : 'USD';
-        const formatCurrency = (cents: number) => {
-          try {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
-          } catch (err) {
-            void err;
-            return formatCurrencyUtil(cents, currency);
-          }
-        };
+        const formatCurrency = (cents: number) => formatCurrencyUtil(cents, activeCurrency);
 
         const amountFormatted = formatCurrency(amountCents);
         const subtotalFormatted = subtotalCents != null ? formatCurrency(subtotalCents) : null;

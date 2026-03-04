@@ -595,6 +595,9 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
                 const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
                 const tokenName = planTokenName || await getDefaultTokenLabel();
                 const tokenInfo = plan.tokenLimit ? ` with ${plan.tokenLimit} ${tokenName}` : '';
+                const currency = await getActiveCurrencyAsync();
+                const formattedAmount = formatCurrency(amountCents, currency);
+                const transactionId = finalPaymentIntent || session.id;
 
                 await sendBillingNotification({
                     userId,
@@ -603,6 +606,8 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
                     templateKey: 'subscription_activated',
                     variables: {
                         planName: plan.name,
+                        amount: formattedAmount,
+                        transactionId,
                         tokenBalance: String(plan.tokenLimit || 0),
                         tokenName,
                         startedAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),

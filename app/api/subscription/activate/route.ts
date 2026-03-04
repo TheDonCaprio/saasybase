@@ -26,6 +26,24 @@ export async function POST(request: Request) {
     }
 
     const now = new Date();
+
+    // Prevent forcing queued/future subscriptions early.
+    if (pending.startedAt && pending.startedAt.getTime() > now.getTime() + 1000) {
+      return jsonError('This subscription is queued and cannot be activated early.', 400, 'SUBSCRIPTION_NOT_STARTED');
+    }
+
+    // Prevent activating unpaid placeholder subscriptions created during abandoned checkouts.
+    const hasSuccessfulPayment = await prisma.payment.findFirst({
+      where: {
+        subscriptionId: pending.id,
+        status: 'SUCCEEDED',
+      },
+      select: { id: true },
+    });
+
+    if (!hasSuccessfulPayment) {
+      return jsonError('This pending subscription has no successful payment and cannot be activated.', 400, 'SUBSCRIPTION_UNPAID');
+    }
     const periodMs = (pending.plan?.durationHours || 0) * 3600 * 1000;
     const newExpires = new Date(now.getTime() + periodMs);
 

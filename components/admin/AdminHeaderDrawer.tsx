@@ -297,17 +297,17 @@ export function AdminHeaderDrawer({
               role="dialog"
               aria-modal="true"
               id="admin-header-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-900 shadow-2xl backdrop-blur-lg dark:border-neutral-800 dark:bg-neutral-950/95 dark:text-neutral-100 z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 dark:border-neutral-800">
+              <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-500">{contextLabel}</p>
-                  <p className="text-base font-semibold text-slate-900 dark:text-neutral-100">{activeItem ? activeItem.label : 'Menu'}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
+                  <p className="text-base font-semibold text-neutral-100">{activeItem ? activeItem.label : 'Menu'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={close}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-500 dark:hover:text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] text-neutral-400 transition hover:border-[color:rgb(var(--border-secondary))] hover:text-neutral-100"
                 >
                   <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
                   <span className="sr-only">Close menu</span>
@@ -316,7 +316,7 @@ export function AdminHeaderDrawer({
 
               {/* Account Info Section */}
               {isSignedIn && (
-                <div className="border-b border-slate-200 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/50">
+                <div className="border-b border-[color:rgb(var(--border-primary))] bg-neutral-900/50">
                   {loading ? (
                     <div className="p-4 space-y-3">
                       <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
@@ -326,18 +326,18 @@ export function AdminHeaderDrawer({
                     <div className="p-4 space-y-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-slate-900 dark:text-neutral-100 truncate">
+                          <p className="font-semibold text-neutral-100 truncate">
                             {profile.user.name}
                           </p>
                           <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-300">
                             {profile.user.role}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-neutral-400 truncate">
+                        <p className="text-xs text-neutral-400 truncate">
                           {profile.user.email}
                         </p>
                         {profile.organization && (
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-500 mt-1">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 mt-1">
                             {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
                           </p>
                         )}
@@ -346,7 +346,7 @@ export function AdminHeaderDrawer({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <FontAwesomeIcon icon={faCrown} className="w-4 h-4 text-amber-500" />
-                          <span className="text-slate-700 dark:text-neutral-300">
+                          <span className="text-neutral-300">
                             {profile.subscription?.planName || profile.organization?.planName || 'Free Plan'}
                           </span>
                         </div>
@@ -355,7 +355,7 @@ export function AdminHeaderDrawer({
                           <>
                             <div className="flex items-center gap-2 text-sm">
                               <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-emerald-500" />
-                              <span className="text-slate-700 dark:text-neutral-300">
+                              <span className="text-neutral-300">
                                 {profile.subscription.tokens.remaining.toLocaleString()} {profile.subscription.tokenName} remaining
                               </span>
                             </div>
@@ -364,13 +364,13 @@ export function AdminHeaderDrawer({
 
                         {shouldShowSharedTokens && profile.sharedTokens && (
                           <div className="flex items-start gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-blue-500" />
+                            <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-[rgb(var(--accent-primary-rgb))]" />
                             <div>
-                              <span className="text-slate-700 dark:text-neutral-300">
+                              <span className="text-neutral-300">
                                 {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
                                 {profile.organization ? ` (${profile.organization.name} workspace)` : ' (workspace)'}
                               </span>
-                              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+                              <p className="text-[11px] text-neutral-400">
                                 {profile.sharedTokens.cap != null
                                   ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
                                   : profile.sharedTokens.strategy === 'DISABLED'
@@ -384,14 +384,14 @@ export function AdminHeaderDrawer({
                         {profile.freeTokens && (
                           <div className="flex items-center gap-2 text-sm">
                             <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-sky-500" />
-                            <span className="text-slate-700 dark:text-neutral-300">
+                            <span className="text-neutral-300">
                               {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (free)
                             </span>
                           </div>
                         )}
 
                         {expiresAt && (
-                          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-neutral-400">
+                          <div className="flex items-center gap-2 text-xs text-neutral-400">
                             <FontAwesomeIcon icon={faCalendarDays} className="w-4 h-4" />
                             <span>Expires: {expiresAt}</span>
                           </div>
@@ -418,8 +418,8 @@ export function AdminHeaderDrawer({
                           onClick={() => toggleGroup(group.title)}
                           className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition ${
                             isExpanded || hasActiveItem
-                              ? 'text-slate-900 dark:text-neutral-100'
-                              : 'text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300'
+                              ? 'text-neutral-100'
+                              : 'text-neutral-500 hover:text-neutral-300'
                           }`}
                         >
                           <span className="text-current">{group.title}</span>
@@ -438,10 +438,10 @@ export function AdminHeaderDrawer({
                                   key={item.href}
                                   href={item.href}
                                   onClick={close}
-                                  className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-xs transition ${
+                                  className={`group flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs transition ${
                                     active
-                                      ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/30 dark:text-violet-100'
-                                      : 'text-slate-500 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800/50'
+                                      ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
+                                      : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
                                   }`}
                                 >
                                   <span className="flex items-center gap-2">
@@ -450,15 +450,15 @@ export function AdminHeaderDrawer({
                                         icon={item.icon}
                                         className={`h-3.5 w-3.5 transition ${
                                               active
-                                                ? 'text-violet-600 dark:text-violet-400'
-                                                : 'text-slate-300 dark:text-neutral-500'
+                                                ? 'text-[rgb(var(--accent-primary-rgb))]'
+                                                : 'text-neutral-500 group-hover:text-neutral-200'
                                         }`}
                                       />
                                     )}
                                     <span className="font-medium tracking-tight text-current">{item.label}</span>
                                   </span>
                                   {item.badge && (
-                                    <span className="text-[9px] font-semibold uppercase tracking-wide rounded-full bg-slate-200 px-1.5 py-0.5 text-slate-700 dark:bg-neutral-700 dark:text-neutral-300">
+                                    <span className="text-[9px] font-semibold uppercase tracking-wide rounded-full bg-neutral-800 px-1.5 py-0.5 text-neutral-200">
                                       {item.badge}
                                     </span>
                                   )}
@@ -490,10 +490,10 @@ export function AdminHeaderDrawer({
                         key={item.href}
                         href={item.href}
                         onClick={close}
-                        className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 transition ${
+                        className={`group flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition ${
                           active
-                            ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/30 dark:text-violet-100'
-                            : 'text-slate-500 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800/50'
+                            ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
+                            : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
                         }`}
                         style={{ fontSize: '0.85rem' }}
                       >
@@ -503,8 +503,8 @@ export function AdminHeaderDrawer({
                               icon={item.icon}
                               className={`h-3.5 w-3.5 transition ${
                                   active
-                                    ? 'text-violet-600 dark:text-violet-400'
-                                    : 'text-slate-300 dark:text-neutral-500'
+                                    ? 'text-[rgb(var(--accent-primary-rgb))]'
+                                    : 'text-neutral-500 group-hover:text-neutral-200'
                               }`}
                             />
                           )}
@@ -514,7 +514,7 @@ export function AdminHeaderDrawer({
                           <span className={`text-[9px] font-semibold uppercase tracking-wide rounded-full ${
                             item.badge === 'NEW'
                               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                              : 'bg-slate-200 text-slate-700 dark:bg-neutral-700 dark:text-neutral-300'
+                              : 'bg-neutral-800 text-neutral-200'
                           }`}>
                             {item.badge}
                           </span>
@@ -526,11 +526,11 @@ export function AdminHeaderDrawer({
               </nav>
 
               {/* Sign Out Button */}
-              <div className="border-t border-slate-200 px-4 py-4 dark:border-neutral-800">
+              <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <SignOutButton>
                   <button 
                     onClick={handleSignOut}
-                    className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-slate-700 transition hover:border-red-400 hover:bg-red-50 hover:text-red-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                    className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
                   >
                     {signOutLabel}
                   </button>

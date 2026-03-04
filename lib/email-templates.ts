@@ -825,6 +825,8 @@ Questions? Contact us at {{supportEmail}}.
       <div class="info-box">
         <strong>Subscription Details:</strong><br>
         Plan: {{planName}}<br>
+        Amount paid: {{amount}}<br>
+        Transaction ID: {{transactionId}}<br>
         Started: {{startedAt}}<br>
         Expires: {{expiresAt}}
       </div>
@@ -846,6 +848,8 @@ Your {{planName}} subscription is now active and ready to use.
 
 Subscription Details:
 Plan: {{planName}}
+Amount paid: {{amount}}
+Transaction ID: {{transactionId}}
 Started: {{startedAt}}
 Expires: {{expiresAt}}
 
@@ -862,6 +866,8 @@ The {{siteName}} Team`,
         lastName: 'User\'s last name',
         fullName: 'User\'s full name',
         planName: 'Name of the subscribed plan',
+        amount: 'Amount paid (formatted, e.g. $49.00)',
+        transactionId: 'Payment reference / transaction identifier',
         startedAt: 'Subscription start date',
         expiresAt: 'Subscription expiry date',
         siteName: 'Site name',

@@ -46,12 +46,14 @@ export function SiteHeader({
         color: 'var(--theme-sticky-header-text)',
         backdropFilter: 'blur(var(--theme-sticky-header-blur))',
         borderBottom: 'var(--theme-sticky-header-border-width) solid var(--theme-sticky-header-border)',
+        boxShadow: 'var(--theme-sticky-header-shadow)',
       }
     : {
         backgroundColor: 'var(--theme-header-bg)',
         color: 'var(--theme-header-text)',
         backdropFilter: 'blur(var(--theme-header-blur))',
         borderBottom: 'var(--theme-header-border-width) solid var(--theme-header-border)',
+        boxShadow: 'var(--theme-header-shadow)',
       };
   useEffect(() => {
     if (!layout.stickyEnabled) {
@@ -106,9 +108,13 @@ export function SiteHeader({
     <nav
       className={
         isSticky
-          ? 'hidden lg:flex gap-4 text-sm text-[color:var(--theme-sticky-header-text)]'
-          : 'hidden lg:flex gap-4 text-sm text-[color:var(--theme-header-text)]'
+          ? 'hidden lg:flex gap-4 text-[color:var(--theme-sticky-header-text)]'
+          : 'hidden lg:flex gap-4 text-[color:var(--theme-header-text)]'
       }
+      style={{
+        fontSize: 'var(--theme-header-menu-font-size)',
+        fontWeight: 'var(--theme-header-menu-font-weight)',
+      }}
     >
       {headerLinks.map(renderNavLink)}
     </nav>

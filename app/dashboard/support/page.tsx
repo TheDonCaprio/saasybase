@@ -6,6 +6,8 @@ import { DashboardPageHeader } from '../../../components/dashboard/DashboardPage
 import { formatDateServer } from '../../../lib/formatDate.server';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeadset } from '@fortawesome/free-solid-svg-icons';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -135,7 +137,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
       <DashboardPageHeader
         accent="theme"
         eyebrow="Help & support"
-        eyebrowIcon="💬"
+        eyebrowIcon={<FontAwesomeIcon icon={faHeadset} />}
         title="We're on your side"
         stats={headerStats}
       />

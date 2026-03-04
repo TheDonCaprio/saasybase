@@ -261,6 +261,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const sanitizeSubject = (value: unknown) => {
+    const raw = typeof value === 'string' ? value : '';
+    const cleaned = raw
+      .replace(/\0/g, '')
+      .replace(/[\r\n]+/g, ' ')
+      .trim();
+    return cleaned.slice(0, 200);
+  };
+
+  const sanitizeMessage = (value: unknown) => {
+    const raw = typeof value === 'string' ? value : '';
+    const cleaned = raw
+      .replace(/\0/g, '')
+      .replace(/\r\n|\r/g, '\n')
+      .trim();
+    return cleaned.slice(0, 5000);
+  };
+
   try {
     const clientIp = getClientIP(request);
     const limiterKey = `support-tickets:create:user:${userId}`;
@@ -303,8 +321,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as unknown;
     const bodyRec = asRecord(body) ?? {};
-    const subject = typeof bodyRec.subject === 'string' ? bodyRec.subject.trim() : '';
-    const message = typeof bodyRec.message === 'string' ? bodyRec.message.trim() : '';
+    const subject = sanitizeSubject(bodyRec.subject);
+    const message = sanitizeMessage(bodyRec.message);
 
     if (!subject || !message) {
       return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });

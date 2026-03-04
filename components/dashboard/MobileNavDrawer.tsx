@@ -69,10 +69,10 @@ export function MobileNavDrawer({
 
   return (
     <div className={wrapperClass}>
-      <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 text-slate-900 shadow-sm backdrop-blur supports-[backdrop-filter]:backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/80 dark:text-neutral-200">
+      <header className="flex items-center justify-between gap-4 border-b border-[color:var(--theme-header-border)] bg-[color:var(--theme-header-bg)] px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:backdrop-blur-md text-[color:var(--theme-header-text)]">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-500">{contextLabel}</p>
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-neutral-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
+          <p className="truncate text-sm font-semibold">
             {activeItem ? activeItem.label : 'Navigation'}
           </p>
         </div>
@@ -81,7 +81,7 @@ export function MobileNavDrawer({
           onClick={toggle}
           aria-expanded={open}
           aria-controls="mobile-nav-drawer"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary-rgb)/0.7)] text-neutral-100 transition hover:border-[color:rgb(var(--border-secondary))] hover:bg-[color:rgb(var(--bg-secondary-rgb)/1)]"
         >
           <FontAwesomeIcon icon={open ? faXmark : faGrip} className="h-5 w-5" />
           <span className="sr-only">Toggle navigation</span>
@@ -126,17 +126,17 @@ export function MobileNavDrawer({
               role="dialog"
               aria-modal="true"
               id="mobile-nav-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-900 shadow-2xl backdrop-blur-lg dark:border-neutral-800 dark:bg-neutral-950/95 dark:text-neutral-100 z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 dark:border-neutral-800">
+              <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-500">{contextLabel}</p>
-                  <p className="text-base font-semibold text-slate-900 dark:text-neutral-100">{activeItem ? activeItem.label : 'Navigation'}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
+                  <p className="text-base font-semibold text-neutral-100">{activeItem ? activeItem.label : 'Navigation'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={close}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-500 dark:hover:text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] text-neutral-400 transition hover:border-[color:rgb(var(--border-secondary))] hover:text-neutral-100"
                 >
                   <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
                   <span className="sr-only">Close navigation</span>
@@ -158,8 +158,8 @@ export function MobileNavDrawer({
                       onClick={close}
                       className={`group flex items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
                         active
-                          ? 'border-blue-400 bg-blue-50 text-blue-900 shadow-sm dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-white'
-                          : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-900/60'
+                          ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
+                          : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
                       }`}
                     >
                       <span className="flex items-center gap-3">
@@ -168,8 +168,8 @@ export function MobileNavDrawer({
                             icon={item.icon}
                             className={`h-4 w-4 transition ${
                               active
-                                ? 'text-blue-500 dark:text-blue-300'
-                                : 'text-slate-400 group-hover:text-slate-700 dark:text-neutral-500 dark:group-hover:text-neutral-200'
+                                ? 'text-[rgb(var(--accent-primary-rgb))]'
+                                : 'text-neutral-500 group-hover:text-neutral-200'
                             }`}
                           />
                         )}
@@ -180,7 +180,7 @@ export function MobileNavDrawer({
                           className={`text-[10px] font-semibold uppercase tracking-wide ${
                             item.badge === 'NEW'
                               ? 'rounded-full bg-emerald-500 px-2 py-1 text-white'
-                              : 'rounded-full bg-slate-900/10 px-2 py-1 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200'
+                              : 'rounded-full bg-neutral-800 px-2 py-1 text-neutral-200'
                           }`}
                         >
                           {item.badge}
@@ -191,9 +191,9 @@ export function MobileNavDrawer({
                 })}
               </nav>
 
-              <div className="border-t border-slate-200 px-4 py-4 dark:border-neutral-800">
+              <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <SignOutButton>
-                  <button className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-900">
+                  <button className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300">
                     {signOutLabel}
                   </button>
                 </SignOutButton>

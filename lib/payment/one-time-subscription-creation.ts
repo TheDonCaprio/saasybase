@@ -80,6 +80,7 @@ export async function processOneTimeSubscriptionCreation(params: {
                 variables: {
                     planName: params.planToUse.name,
                     amount: `$${(params.resolvedAmountCents / 100).toFixed(2)}`,
+                    transactionId: (params.finalPaymentIntent || params.session.id) as string,
                     startedAt: params.now.toLocaleDateString(),
                     expiresAt: newExpires.toLocaleDateString(),
                     tokensAdded: params.planToUse.tokenLimit ? String(params.planToUse.tokenLimit) : '0',

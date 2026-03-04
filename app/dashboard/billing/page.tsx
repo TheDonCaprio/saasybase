@@ -14,6 +14,7 @@ import PlanBillingActions from '../../../components/dashboard/PlanBillingActions
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -31,17 +32,28 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/billing', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  const now = new Date();
 
-  const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan] = await Promise.all([
+  const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan, activeCurrency] = await Promise.all([
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
       include: {
         plan: true,
         scheduledPlan: { select: { id: true, name: true, priceCents: true } }
       }
     }),
     prisma.subscription.findMany({
-      where: { userId, status: { in: ['PENDING'] } },
+      where: {
+        userId,
+        status: { in: ['PENDING'] },
+        // Only show upcoming items that are either scheduled for the future
+        // or have payment evidence. This prevents abandoned checkout placeholders
+        // from appearing as activatable subscriptions.
+        OR: [
+          { startedAt: { gt: now } },
+          { payments: { some: { status: 'SUCCEEDED' } } },
+        ],
+      },
       include: { plan: true },
       orderBy: { startedAt: 'asc' }
     }),
@@ -54,7 +66,8 @@ export default async function BillingPage({ searchParams }: PageProps) {
     getSupportEmail(),
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
-    getOrganizationPlanContext(userId)
+    getOrganizationPlanContext(userId),
+    getActiveCurrencyAsync(),
   ]);
 
   // Format upcoming subscription dates
@@ -329,7 +342,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
                       View all invoices
                     </Link>
                   </div>
-                  <PlanBillingActions />
+                  <PlanBillingActions displayCurrency={activeCurrency} />
                 </>
               ) : null
             }
@@ -389,6 +402,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <section className="lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
             <PaymentManagement
               isActive={planActive}
+              displayCurrency={activeCurrency}
               recentPayments={recentPayments}
               isCancellationScheduled={isCancellationScheduled}
               canceledAt={canceledAt}

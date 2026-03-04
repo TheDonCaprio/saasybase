@@ -25,7 +25,14 @@ import {
   faGear,
   faSackDollar,
   faUserShield,
-  faArrowUpRightFromSquare
+  faArrowUpRightFromSquare,
+  faLifeRing,
+  faGaugeHigh,
+  faBolt,
+  faWaveSquare,
+  faUserPlus,
+  faCalendarDay,
+  faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons';
 import type { ModeratorSection } from '../../lib/moderator';
 import { buildDashboardMetadata } from '../../lib/dashboardMetadata';
@@ -49,6 +56,9 @@ export default async function AdminHome() {
   // and converts to cents for the formatCurrency utility
   const formatCurrency = (dollars: number) =>
     formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   
   const [
     totalUsers,
@@ -56,7 +66,9 @@ export default async function AdminHome() {
     activeSubscriptions,
     recentPayments,
     openTickets,
-    inProgressTickets
+    inProgressTickets,
+    newUsersLast7Days,
+    paymentsToday
   ] = await Promise.all([
     prisma.user.count(),
     prisma.payment.count(),
@@ -67,8 +79,72 @@ export default async function AdminHome() {
       take: 5
     }),
     prisma.supportTicket.count({ where: { status: 'OPEN' } }),
-    prisma.supportTicket.count({ where: { status: 'IN_PROGRESS' } })
+    prisma.supportTicket.count({ where: { status: 'IN_PROGRESS' } }),
+    prisma.user.count({ where: { createdAt: { gte: startOfWeek } } }),
+    prisma.payment.count({ where: { createdAt: { gte: startOfToday } } })
   ]);
+
+  const [todayRevenueAgg, todayRefundAgg, topPlanGroup] = await Promise.all([
+    prisma.payment.aggregate({
+      _sum: { amountCents: true },
+      where: {
+        createdAt: { gte: startOfToday },
+        status: { not: 'REFUNDED' },
+      },
+    }),
+    prisma.payment.aggregate({
+      _sum: { amountCents: true },
+      where: {
+        createdAt: { gte: startOfToday },
+        status: 'REFUNDED',
+      },
+    }),
+    prisma.payment.groupBy({
+      by: ['planId'],
+      where: {
+        createdAt: { gte: startOfToday },
+        status: { not: 'REFUNDED' },
+        planId: { not: null },
+      },
+      _count: { planId: true },
+      _sum: { amountCents: true },
+      orderBy: [
+        { _count: { planId: 'desc' } },
+        { _sum: { amountCents: 'desc' } },
+      ],
+      take: 1,
+    }),
+  ]);
+
+  let errorWarningToday = 0;
+  let errorWarningWeek = 0;
+  try {
+    [errorWarningToday, errorWarningWeek] = await Promise.all([
+      prisma.systemLog.count({
+        where: {
+          createdAt: { gte: startOfToday },
+          level: { in: ['ERROR', 'WARN', 'WARNING', 'error', 'warn', 'warning'] },
+        },
+      }),
+      prisma.systemLog.count({
+        where: {
+          createdAt: { gte: startOfWeek },
+          level: { in: ['ERROR', 'WARN', 'WARNING', 'error', 'warn', 'warning'] },
+        },
+      }),
+    ]);
+  } catch {
+    // Older/unmigrated environments may not have SystemLog table.
+    errorWarningToday = 0;
+    errorWarningWeek = 0;
+  }
+
+  const topPlanTodayPlanId = topPlanGroup[0]?.planId ?? null;
+  const topPlanToday = topPlanTodayPlanId
+    ? await prisma.plan.findUnique({ where: { id: topPlanTodayPlanId }, select: { name: true } })
+    : null;
+  const topPlanTodayLabel = topPlanToday?.name ?? (topPlanTodayPlanId ? 'Unknown plan' : 'No plan sales yet');
+  const todayRevenueCents = Number(todayRevenueAgg._sum.amountCents ?? 0) - Number(todayRefundAgg._sum.amountCents ?? 0);
 
   const totalRevenue = await prisma.payment.aggregate({
     _sum: { amountCents: true },
@@ -106,6 +182,7 @@ export default async function AdminHome() {
   const netRevenueCents = totalRevenueCents - refundedCents;
   const conversionRate = totalUsers > 0 ? (activeSubscriptions / totalUsers) * 100 : 0;
   const averageTransactionValue = totalPayments > 0 ? netRevenueCents / totalPayments / 100 : 0;
+  const refundRate = totalRevenueCents > 0 ? (refundedCents / totalRevenueCents) * 100 : 0;
 
   // Fetch today's visits (compare with yesterday) using the same traffic snapshot logic as /admin/traffic.
   let visitsToday = 0;
@@ -126,6 +203,9 @@ export default async function AdminHome() {
   } catch {
     // GA unavailable — keep zeros
   }
+
+  const visitsDelta = visitsToday - visitsYesterday;
+  const visitsTrend = visitsDelta === 0 ? 'flat' : visitsDelta > 0 ? 'up' : 'down';
 
   const headerStats: DashboardPageHeaderStat[] = [];
   if (canAccess('traffic')) {
@@ -183,6 +263,46 @@ export default async function AdminHome() {
         value: formatNumber(totalPayments),
         helper: averageTransactionValue ? `${formatCurrency(averageTransactionValue)} avg.` : 'No transactions yet',
         icon: faArrowTrendUp,
+        accent: 'theme'
+      }
+    },
+    {
+      section: 'users',
+      card: {
+        label: 'New users (7d)',
+        value: formatNumber(newUsersLast7Days),
+        helper: 'Recently joined accounts',
+        icon: faUserPlus,
+        accent: 'theme'
+      }
+    },
+    {
+      section: 'transactions',
+      card: {
+        label: 'Payments today',
+        value: formatNumber(paymentsToday),
+        helper: `Refund rate ${refundRate.toFixed(1)}%`,
+        icon: faCalendarDay,
+        accent: 'theme'
+      }
+    },
+    {
+      section: 'transactions',
+      card: {
+        label: 'Revenue today',
+        value: formatCurrency(todayRevenueCents / 100),
+        helper: `Top plan: ${topPlanTodayLabel}`,
+        icon: faSackDollar,
+        accent: 'theme'
+      }
+    },
+    {
+      section: 'analytics',
+      card: {
+        label: 'Errors / warnings Today',
+        value: formatNumber(errorWarningToday),
+        helper: `${formatNumber(errorWarningWeek)} this week`,
+        icon: faTriangleExclamation,
         accent: 'theme'
       }
     }
@@ -281,6 +401,100 @@ export default async function AdminHome() {
             </div>
           )}
       </section>
+
+      <section className="grid gap-6 lg:grid-cols-3">
+        <div className={dashboardPanelClass('relative flex h-full flex-col gap-4 overflow-hidden')}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),_transparent_60%)]" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Traffic pulse</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Daily momentum</h3>
+            </div>
+            <span className={dashboardPillClass('text-indigo-700 dark:text-indigo-200')}>
+              <FontAwesomeIcon icon={faWaveSquare} className="h-3.5 w-3.5" />
+              {visitsTrend === 'up' ? '+' : visitsTrend === 'down' ? '-' : ''}{formatNumber(Math.abs(visitsDelta))}
+            </span>
+          </div>
+          <div className="relative space-y-2">
+            <div className="text-3xl font-semibold leading-none text-slate-900 dark:text-neutral-100">{formatNumber(visitsToday)}</div>
+            <p className="text-sm text-slate-600 dark:text-neutral-300">Visits today • {formatNumber(visitsYesterday)} yesterday</p>
+          </div>
+          {canAccess('traffic') ? (
+            <a
+              href="/admin/traffic"
+              className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
+            >
+              Open traffic analytics
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+        </div>
+
+        <div className={dashboardPanelClass('relative flex h-full flex-col gap-4 overflow-hidden')}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.22),_transparent_60%)]" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Revenue quality</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Transaction health</h3>
+            </div>
+            <span className={dashboardPillClass('text-emerald-700 dark:text-emerald-200')}>
+              <FontAwesomeIcon icon={faGaugeHigh} className="h-3.5 w-3.5" />
+              {averageTransactionValue ? formatCurrency(averageTransactionValue) : '—'}
+            </span>
+          </div>
+          <dl className="relative grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt className="text-slate-500 dark:text-neutral-400">Refund rate</dt>
+              <dd className="mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100">{refundRate.toFixed(1)}%</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500 dark:text-neutral-400">Net revenue</dt>
+              <dd className="mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100">{formatCurrency(netRevenueCents / 100)}</dd>
+            </div>
+          </dl>
+          {canAccess('transactions') ? (
+            <a
+              href="/admin/transactions"
+              className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
+            >
+              Open transactions
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+        </div>
+
+        <div className={dashboardPanelClass('relative flex h-full flex-col gap-4 overflow-hidden')}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.14),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.2),_transparent_60%)]" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Support load</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Queue status</h3>
+            </div>
+            <span className={dashboardPillClass('text-amber-700 dark:text-amber-200')}>
+              <FontAwesomeIcon icon={faLifeRing} className="h-3.5 w-3.5" />
+              {formatNumber(openTickets + inProgressTickets)}
+            </span>
+          </div>
+          <div className="relative grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+              <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Open</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-neutral-100">{formatNumber(openTickets)}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+              <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">In progress</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-neutral-100">{formatNumber(inProgressTickets)}</p>
+            </div>
+          </div>
+          <a
+            href="/admin/support"
+            className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
+          >
+            Open support desk
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      </section>
+
       {showTransactionsPanels || showQuickActions ? (
         <section
           className={`grid gap-6 ${
@@ -371,6 +585,19 @@ export default async function AdminHome() {
                       System logs
                     </a>
                   ) : null}
+                </div>
+                <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                    <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5" />
+                    Recommended next step
+                  </div>
+                  <p className="mt-1.5 text-sm text-slate-700 dark:text-neutral-300">
+                    {openTickets > 0
+                      ? `Resolve support backlog (${formatNumber(openTickets)} open) to keep response times healthy.`
+                      : paymentsToday > 0
+                        ? `Review today's ${formatNumber(paymentsToday)} payments for anomalies and successful renewals.`
+                        : 'No urgent issues detected — use this window to review plans, pricing, and announcement drafts.'}
+                  </p>
                 </div>
                 <div className="space-y-3">
                   {quickLinks.map((action) => (

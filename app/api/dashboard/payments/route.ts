@@ -5,6 +5,7 @@ import { prisma } from '../../../../lib/prisma';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { formatCurrency } from '../../../../lib/utils/currency';
+import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
 import type { Prisma } from '@prisma/client';
 
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
     }
+
+    const activeCurrency = await getActiveCurrencyAsync();
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -197,17 +200,11 @@ export async function GET(request: NextRequest) {
       // Prefer plan from subscription, fallback to direct plan
       const effectivePlanRec = (planRec && typeof planRec.name === 'string') ? planRec : directPlanRec;
       
-      // compute server-side formatted amounts for each row to ensure SSR/CSR match
-      const rowCurrency = typeof rec.currency === 'string' ? rec.currency.toUpperCase() : 'USD';
+      // Compute server-side formatted amounts for each row to ensure SSR/CSR match.
+      // Always use the centrally configured active currency (not the row currency).
       const formatMoney = (amt: unknown) => {
-        try {
-          const cents = typeof amt === 'number' ? amt : Number(amt ?? 0);
-          return new Intl.NumberFormat('en-US', { style: 'currency', currency: rowCurrency }).format(cents / 100);
-        } catch (e) {
-          void e;
-          const cents = typeof amt === 'number' ? amt : Number(amt ?? 0);
-          return formatCurrency(cents, rowCurrency);
-        }
+        const cents = typeof amt === 'number' ? amt : Number(amt ?? 0);
+        return formatCurrency(cents, activeCurrency);
       };
 
       return {
@@ -252,14 +249,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Build a server-side formatted totalSpent string using the primary currency (if available)
-    const primaryCurrency = (Array.isArray(mappedPayments) && mappedPayments.length > 0 && typeof mappedPayments[0].currency === 'string') ? String(mappedPayments[0].currency).toUpperCase() : 'USD';
     let totalSpentFormatted: string | null = null;
-    try {
-      totalSpentFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: primaryCurrency }).format(totalSpent / 100);
-    } catch (e) {
-      void e;
-      totalSpentFormatted = formatCurrency(totalSpent, primaryCurrency);
-    }
+    totalSpentFormatted = formatCurrency(totalSpent, activeCurrency);
 
     return NextResponse.json({
       payments: mappedPayments,

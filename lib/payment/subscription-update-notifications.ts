@@ -136,6 +136,8 @@ export async function sendActivationNotificationsFromSubscriptionUpdate(
                 tokenName,
                 startedAt,
                 expiresAt,
+                amount: '—',
+                transactionId: providerSubscriptionId,
             },
         });
 

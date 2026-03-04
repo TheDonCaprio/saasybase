@@ -67,11 +67,62 @@ export async function processInvoicePaidNotifications<TSub extends InvoicePaidNo
     const isInitialInvoice = billingReason === 'subscription_create';
 
     if (isInitialInvoice) {
-        Logger.info('Skipping renewal notification for initial subscription invoice', {
-            subscriptionId: params.subscriptionId,
-            paymentIntentId: params.paymentIntentId,
-            invoiceId: params.invoice.id
-        });
+        // For new subscription purchases (e.g. Stripe embedded subscription intents),
+        // the invoice.payment_succeeded webhook may be the only path that fires.
+        // Send an activation notification instead of a renewal, with dedup so providers
+        // whose checkout flow already notified the user won't double-notify.
+        const activationTitle = 'Subscription Active';
+        const activationMessage = `Your subscription to ${params.dbSub.plan.name} is now active.`;
+
+        const recentActivation = await params.findRecentNotificationByTitles(
+            params.dbSub.userId,
+            ['Subscription Active', 'Subscription Activated'],
+            5 * 60 * 1000
+        );
+
+        if (recentActivation) {
+            Logger.info('Skipping activation notification for initial invoice (already sent)', {
+                subscriptionId: params.subscriptionId,
+                paymentIntentId: params.paymentIntentId,
+                invoiceId: params.invoice.id,
+                existingNotificationId: recentActivation.id,
+            });
+        } else {
+            await sendBillingNotification({
+                userId: params.dbSub.userId,
+                title: activationTitle,
+                message: activationMessage,
+                templateKey: 'subscription_activated',
+                variables: {
+                    planName: params.dbSub.plan.name,
+                    amount: `$${(params.invoice.amountPaid / 100).toFixed(2)}`,
+                    transactionId: params.paymentResult.payment.externalPaymentId || params.paymentIntentId || params.invoice.id,
+                    startedAt: new Date().toLocaleDateString(),
+                    expiresAt: params.dbSub.expiresAt ? params.dbSub.expiresAt.toLocaleDateString() : undefined,
+                },
+            });
+
+            await sendAdminNotificationEmail({
+                userId: params.dbSub.userId,
+                title: 'New subscription purchase',
+                alertType: 'new_purchase',
+                message: `User ${params.dbSub.userId} purchased ${params.dbSub.plan.name}. Subscription: ${params.dbSub.id}`,
+                templateKey: 'admin_notification',
+                variables: {
+                    planName: params.dbSub.plan.name,
+                    amount: `$${(params.invoice.amountPaid / 100).toFixed(2)}`,
+                    transactionId: params.paymentResult.payment.externalPaymentId || params.paymentIntentId || params.invoice.id,
+                    startedAt: new Date().toLocaleString(),
+                },
+            });
+
+            Logger.info('Sent activation notification for initial subscription invoice', {
+                subscriptionId: params.subscriptionId,
+                paymentIntentId: params.paymentIntentId,
+                invoiceId: params.invoice.id,
+            });
+        }
+
         return { shouldReturnEarly: true };
     }
 

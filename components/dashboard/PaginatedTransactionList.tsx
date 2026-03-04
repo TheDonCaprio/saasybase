@@ -48,6 +48,7 @@ interface PaginatedTransactionListProps {
   initialPage: number;
   initialTotalSpent?: number;
   initialTotalSpentFormatted?: string;
+  displayCurrency?: string;
 }
 
 export function PaginatedTransactionList({ 
@@ -55,7 +56,8 @@ export function PaginatedTransactionList({
   initialTotalCount, 
   initialPage,
   initialTotalSpent
-  , initialTotalSpentFormatted
+  , initialTotalSpentFormatted,
+  displayCurrency
 }: PaginatedTransactionListProps) {
   const [totalSpent, setTotalSpent] = useState(initialTotalSpent ?? 0);
   // prefer a server-provided preformatted string to avoid SSR/CSR Intl differences
@@ -203,12 +205,8 @@ export function PaginatedTransactionList({
   // status counts are available via server-side metrics; client-side counts are unused here
 
   const formatCurrency = (amountCents: number, currency?: string | null) => {
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'USD').toUpperCase() }).format(amountCents / 100);
-    } catch (err) {
-      void err;
-      return formatCurrencyUtil(amountCents, currency || 'usd');
-    }
+    const resolved = displayCurrency ?? currency ?? 'usd';
+    return formatCurrencyUtil(amountCents, resolved);
   };
 
   const getPricingDetails = (payment: Payment) => {
@@ -243,7 +241,7 @@ export function PaginatedTransactionList({
   return (
     <div className="space-y-6">
       {/* keep totals referenced to avoid unused variable lint when server provides them */}
-      <span className="sr-only">{totalSpentFormatted ?? formatCurrencyUtil(totalSpent, 'usd')}</span>
+      <span className="sr-only">{totalSpentFormatted ?? formatCurrencyUtil(totalSpent, displayCurrency ?? 'usd')}</span>
       {/* Summary Stats are rendered by the page hero to avoid duplication */}
 
       <ListFilters

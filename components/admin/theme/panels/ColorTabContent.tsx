@@ -1,0 +1,777 @@
+"use client";
+
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import clsx, { type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons';
+
+import { ConfirmModal } from '../../../ui/ConfirmModal';
+import { ColorPickerWithAlpha } from '../ColorPickerWithAlpha';
+import { getHexAlpha01 } from '../colorUtils';
+import {
+  COLOR_GROUPS,
+  COLOR_LABELS,
+  DARK_PRESETS,
+  DEFAULT_LIGHT_COLORS,
+  fillElementGradients,
+  LIGHT_PRESETS,
+  type ColorHexKey,
+  type ColorTokens,
+  type ThemeColorPreset,
+} from '../colorPaletteData';
+
+const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
+
+export interface ColorTabContentProps {
+  lightColors: ColorTokens;
+  darkColors: ColorTokens;
+  colorMode: 'light' | 'dark';
+  onColorMode: (m: 'light' | 'dark') => void;
+  onLightChange: (c: ColorTokens) => void;
+  onDarkChange: (c: ColorTokens) => void;
+  customPresets?: ThemeColorPreset[];
+  onSavePreset?: (name: string, mode: 'light' | 'dark') => Promise<boolean>;
+  onDeletePreset?: (name: string) => Promise<boolean>;
+  onSelectDefaultPreset?: () => void;
+}
+
+export function ColorTabContent({
+  lightColors,
+  darkColors,
+  colorMode,
+  onColorMode,
+  onLightChange,
+  onDarkChange,
+  customPresets = [],
+  onSavePreset,
+  onDeletePreset,
+  onSelectDefaultPreset,
+}: ColorTabContentProps) {
+  const colors = colorMode === 'light' ? lightColors : darkColors;
+  const builtInPresets = colorMode === 'light' ? LIGHT_PRESETS : DARK_PRESETS;
+  const setColors = colorMode === 'light' ? onLightChange : onDarkChange;
+
+  // Opacity for these tokens is encoded in the hex alpha channel (#RRGGBBAA).
+  const showAlphaForKey = (key: ColorHexKey) => {
+    return (
+      key === 'headerBg' ||
+      key === 'headerBorder' ||
+      key === 'stickyHeaderBg' ||
+      key === 'sidebarBg' ||
+      key === 'sidebarBorder' ||
+      key === 'headerShadow' ||
+      key === 'pageGlow'
+    );
+  };
+
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [savePresetName, setSavePresetName] = useState('');
+  const [savePresetLoading, setSavePresetLoading] = useState(false);
+
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
+  const [deletePresetLoading, setDeletePresetLoading] = useState(false);
+
+  const custom = customPresets.map((preset) => {
+    const modeColors = colorMode === 'light' ? preset.light : preset.dark;
+    return {
+      name: preset.name,
+      accent: modeColors.accentPrimary,
+      colors: fillElementGradients(modeColors),
+      source: 'custom' as const,
+    };
+  });
+
+  const presets = [
+    ...builtInPresets.map((p) => ({ ...p, colors: fillElementGradients(p.colors), source: 'built-in' as const })),
+    ...custom,
+  ];
+
+  const updateColor = (key: ColorHexKey, value: string) => {
+    setColors({ ...colors, [key]: value });
+  };
+
+  const isPresetActive = (preset: ColorTokens) => {
+    const keys = Object.keys(DEFAULT_LIGHT_COLORS) as (keyof ColorTokens)[];
+    return keys.every((k) => colors[k] === preset[k]);
+  };
+
+  const clampInt = (n: unknown, min: number, max: number, fallback: number) => {
+    const num = typeof n === 'number' ? n : typeof n === 'string' ? Number(n) : NaN;
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(min, Math.min(max, Math.round(num)));
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Save preset modal */}
+      {saveModalOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
+              <div className="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-neutral-800">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Save preset</h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (savePresetLoading) return;
+                      setSaveModalOpen(false);
+                    }}
+                    className="text-slate-500 transition-colors hover:text-slate-900 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-neutral-100"
+                    aria-label="Close"
+                    disabled={savePresetLoading}
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3 p-5">
+                  <p className="text-sm text-slate-600 dark:text-neutral-300">
+                    Saves the current {colorMode === 'light' ? 'light' : 'dark'} mode colors under this name.
+                  </p>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-neutral-200" htmlFor="save-preset-name">
+                      Preset name
+                    </label>
+                    <input
+                      id="save-preset-name"
+                      value={savePresetName}
+                      onChange={(e) => setSavePresetName(e.target.value)}
+                      placeholder="e.g. Ocean"
+                      maxLength={48}
+                      disabled={savePresetLoading}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (!onSavePreset) return;
+                          const trimmed = savePresetName.trim();
+                          if (!trimmed) return;
+                          if (savePresetLoading) return;
+                          setSavePresetLoading(true);
+                          Promise.resolve(onSavePreset(trimmed, colorMode))
+                            .then((ok) => {
+                              if (ok) setSaveModalOpen(false);
+                            })
+                            .finally(() => setSavePresetLoading(false));
+                        }
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          if (savePresetLoading) return;
+                          setSaveModalOpen(false);
+                        }
+                      }}
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-blue-500 dark:focus:ring-blue-500/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 p-5 pt-0">
+                  <button
+                    type="button"
+                    onClick={() => setSaveModalOpen(false)}
+                    disabled={savePresetLoading}
+                    className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!onSavePreset) return;
+                      const trimmed = savePresetName.trim();
+                      if (!trimmed) return;
+                      if (savePresetLoading) return;
+                      setSavePresetLoading(true);
+                      Promise.resolve(onSavePreset(trimmed, colorMode))
+                        .then((ok) => {
+                          if (ok) setSaveModalOpen(false);
+                        })
+                        .finally(() => setSavePresetLoading(false));
+                    }}
+                    disabled={savePresetLoading || !savePresetName.trim()}
+                    className={cx(
+                      'flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60',
+                      savePresetLoading || !savePresetName.trim() ? 'bg-blue-600/60' : 'bg-blue-600 hover:bg-blue-700',
+                    )}
+                  >
+                    {savePresetLoading ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {/* Delete preset confirmation */}
+      <ConfirmModal
+        isOpen={!!pendingDeleteName}
+        title="Delete preset"
+        description={pendingDeleteName ? `Delete preset "${pendingDeleteName}"? This action cannot be undone.` : 'Delete this preset?'}
+        confirmLabel={deletePresetLoading ? 'Deleting…' : 'Delete'}
+        cancelLabel="Cancel"
+        loading={deletePresetLoading}
+        onClose={() => {
+          if (deletePresetLoading) return;
+          setPendingDeleteName(null);
+        }}
+        onConfirm={() => {
+          if (!onDeletePreset) return;
+          if (!pendingDeleteName) return;
+          if (deletePresetLoading) return;
+          setDeletePresetLoading(true);
+          Promise.resolve(onDeletePreset(pendingDeleteName))
+            .then((ok) => {
+              if (ok) setPendingDeleteName(null);
+            })
+            .finally(() => setDeletePresetLoading(false));
+        }}
+        confirmDisabled={!pendingDeleteName}
+      />
+
+      {/* Mode toggle */}
+      <div className="flex items-center gap-2">
+        <div
+          role="tablist"
+          className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-neutral-700 dark:bg-neutral-900"
+        >
+          {(['light', 'dark'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={colorMode === m}
+              onClick={() => onColorMode(m)}
+              className={cx(
+                'rounded-md px-4 py-1.5 text-sm font-medium transition-all',
+                colorMode === m
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+              )}
+            >
+              {m === 'light' ? 'Light mode' : 'Dark mode'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Presets */}
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
+          {onSavePreset ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSavePresetName('');
+                setSaveModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+            >
+              <FontAwesomeIcon icon={faFloppyDisk} className="h-3.5 w-3.5" />
+              Save current as preset
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {presets.map((preset) => {
+            const active = isPresetActive(preset.colors);
+            return (
+              <div key={`${preset.source}-${preset.name}`} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setColors(preset.colors);
+                    if (preset.source === 'built-in' && preset.name === 'Default') {
+                      onSelectDefaultPreset?.();
+                    }
+                  }}
+                  className={cx(
+                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
+                    active
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-inner dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
+                  )}
+                >
+                  <span
+                    className="h-4 w-4 rounded-full border border-black/10 flex-shrink-0"
+                    style={{ backgroundColor: preset.accent }}
+                  />
+                  {preset.name}
+                  {active && <span className="text-xs opacity-60">(active)</span>}
+                </button>
+
+                {preset.source === 'custom' && onDeletePreset ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setPendingDeleteName(preset.name);
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:text-neutral-100"
+                    aria-label={`Delete preset ${preset.name}`}
+                    title="Delete preset"
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Per-token pickers */}
+      <section className="space-y-6">
+        {COLOR_GROUPS.map((group) => (
+          <div key={group.title}>
+            <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">{group.title}</div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {group.keys.map((key) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+                >
+                  <span className="text-sm text-slate-700 dark:text-neutral-300">
+                    {COLOR_LABELS[key]}
+                    {showAlphaForKey(key) ? (
+                      <span className="ml-2 text-xs text-slate-500 dark:text-neutral-400">({Math.round(getHexAlpha01(colors[key]) * 100)}%)</span>
+                    ) : null}
+                  </span>
+                  <ColorPickerWithAlpha value={colors[key]} onChange={(v) => updateColor(key, v)} label={undefined} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Header effects */}
+      <section>
+        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Header</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={1}
+                value={clampInt(colors.headerBlur, 0, 40, 12)}
+                onChange={(e) => setColors({ ...colors, headerBlur: clampInt(e.target.value, 0, 40, 12) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={40}
+                step={1}
+                value={clampInt(colors.headerBlur, 0, 40, 12)}
+                onChange={(e) => setColors({ ...colors, headerBlur: clampInt(e.target.value, 0, 40, 12) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–40px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header shadow blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.headerShadowBlur, 0, 80, 30)}
+                onChange={(e) => setColors({ ...colors, headerShadowBlur: clampInt(e.target.value, 0, 80, 30) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.headerShadowBlur, 0, 80, 30)}
+                onChange={(e) => setColors({ ...colors, headerShadowBlur: clampInt(e.target.value, 0, 80, 30) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header shadow blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header shadow spread (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.headerShadowSpread, -80, 80, -22)}
+                onChange={(e) => setColors({ ...colors, headerShadowSpread: clampInt(e.target.value, -80, 80, -22) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.headerShadowSpread, -80, 80, -22)}
+                onChange={(e) => setColors({ ...colors, headerShadowSpread: clampInt(e.target.value, -80, 80, -22) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header shadow spread pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">-80–80px (negative makes it tighter)</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header border width (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.headerBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, headerBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={4}
+                step={1}
+                value={clampInt(colors.headerBorderWidth, 0, 4, 1)}
+                onChange={(e) => setColors({ ...colors, headerBorderWidth: clampInt(e.target.value, 0, 4, 1) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header border width pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Set to 0 to disable.</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header menu font size (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={10}
+                max={20}
+                step={1}
+                value={clampInt((colors as any).headerMenuFontSize, 10, 20, 14)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) } as any)}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={10}
+                max={20}
+                step={1}
+                value={clampInt((colors as any).headerMenuFontSize, 10, 20, 14)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) } as any)}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header menu font size pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">10–20px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header menu font weight</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={300}
+                max={800}
+                step={50}
+                value={clampInt((colors as any).headerMenuFontWeight, 300, 800, 400)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) } as any)}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={300}
+                max={800}
+                step={50}
+                value={clampInt((colors as any).headerMenuFontWeight, 300, 800, 400)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) } as any)}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Header menu font weight"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">300–800</p>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
+          Header border color is under the <span className="font-semibold">Header</span> group above. Sticky header border color lives under the{' '}
+          <span className="font-semibold">Layout</span> tab (including sticky border width).
+        </p>
+      </section>
+
+      {/* Live preview */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Live preview</div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+            {colorMode} mode
+          </span>
+        </div>
+
+        {/* Browser chrome */}
+        <div
+          className="relative overflow-hidden rounded-2xl border shadow-lg"
+          style={{
+            borderColor: colors.borderPrimary,
+            backgroundColor: colors.bgPrimary,
+            // Make native inputs inside the preview follow the preview mode, not the page's current mode.
+            colorScheme: colorMode,
+            // Two-layer background: glow radiates from above the frame (negative Y), then page gradient below
+            backgroundImage: [
+              `radial-gradient(ellipse 70% 45% at 50% -15%, ${colors.pageGlow}, transparent 70%)`,
+              `linear-gradient(to bottom, ${colors.pageGradientFrom}, ${colors.pageGradientVia}, ${colors.pageGradientTo})`,
+            ].join(', '),
+          }}
+        >
+
+          {/* ── Normal header ── */}
+          <div
+            className="relative flex items-center justify-between gap-3 px-4 py-2.5"
+            style={{
+              backgroundColor: colors.headerBg,
+              borderBottom: `${clampInt(colors.headerBorderWidth, 0, 4, 1)}px solid ${colors.headerBorder}`,
+              backdropFilter: `blur(${clampInt(colors.headerBlur, 0, 40, 12)}px)`,
+              boxShadow: `0 12px ${clampInt(colors.headerShadowBlur, 0, 80, 30)}px ${clampInt(colors.headerShadowSpread, -80, 80, -22)}px ${colors.headerShadow}`,
+            }}
+          >
+            {/* Brand */}
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-5 rounded-md flex-shrink-0" style={{ backgroundColor: colors.accentPrimary }} />
+              <span className="text-xs font-bold tracking-tight" style={{ color: colors.headerText }}>
+                SaaSyBase
+              </span>
+            </div>
+            {/* Nav links */}
+            <div className="hidden sm:flex items-center gap-4">
+              {['Pricing', 'Blog', 'Docs'].map((label) => (
+                <span key={label} className="text-xs" style={{ color: colors.headerText }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+            {/* CTA + avatar */}
+            <div className="flex items-center gap-2">
+              <div
+                className="rounded-md px-2.5 py-1 text-xs font-semibold"
+                style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
+              >
+                Get started
+              </div>
+              <div className="h-6 w-6 rounded-full" style={{ backgroundColor: colors.accentHover }} />
+            </div>
+          </div>
+
+          {/* ── Sticky header preview (compact strip) ── */}
+          <div
+            className="relative flex items-center justify-between gap-3 px-4 py-1.5"
+            style={{
+              backgroundColor: colors.stickyHeaderBg,
+              borderBottom: `${clampInt(colors.stickyHeaderBorderWidth, 0, 4, 1)}px solid ${colors.stickyHeaderBorder}`,
+              backdropFilter: `blur(${clampInt(colors.stickyHeaderBlur, 0, 40, 14)}px)`,
+              boxShadow: `0 12px ${clampInt(colors.stickyHeaderShadowBlur, 0, 80, 30)}px ${clampInt(colors.stickyHeaderShadowSpread, -80, 80, -22)}px ${colors.stickyHeaderShadow}`,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 rounded flex-shrink-0" style={{ backgroundColor: colors.accentPrimary }} />
+              <span className="text-[10px] font-bold tracking-tight" style={{ color: colors.stickyHeaderText }}>
+                SaaSyBase
+              </span>
+              <span
+                className="ml-1 rounded-full border px-1.5 py-px text-[9px] leading-tight"
+                style={{ borderColor: colors.stickyHeaderBorder, color: colors.stickyHeaderText, opacity: 0.6 }}
+              >
+                sticky
+              </span>
+            </div>
+            <div className="hidden sm:flex items-center gap-3">
+              {['Pricing', 'Blog'].map((label) => (
+                <span key={label} className="text-[10px]" style={{ color: colors.stickyHeaderText }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Body: sidebar + main ── */}
+          <div className="relative flex min-h-0">
+            {/* Sidebar */}
+            <div
+              className="relative w-32 flex-shrink-0 px-3 py-4 space-y-1"
+              style={{ backgroundColor: colors.sidebarBg, borderRight: `1px solid ${colors.sidebarBorder}` }}
+            >
+              {[
+                { label: 'Overview', active: true },
+                { label: 'Billing', active: false },
+                { label: 'Analytics', active: false, hovered: true },
+                { label: 'Settings', active: false },
+              ].map(({ label, active, hovered }) => (
+                <div
+                  key={label}
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: active
+                      ? `${colors.accentPrimary}18`
+                      : (hovered as boolean) ? colors.bgQuaternary : 'transparent',
+                    color: active ? colors.accentPrimary : colors.textSecondary,
+                  }}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* Main content */}
+            <div className="relative flex-1 overflow-hidden p-4 space-y-3">
+              {/* Hero strip — uses heroGradient */}
+              <div
+                className="rounded-xl px-4 py-3 flex items-center justify-between"
+                style={{
+                  backgroundColor: colors.heroBg,
+                  background: `linear-gradient(135deg, ${colors.heroGradientFrom ?? colors.pageGradientFrom}, ${colors.heroGradientVia ?? colors.pageGradientVia}, ${colors.heroGradientTo ?? colors.pageGradientTo})`,
+                  border: `1px solid ${colors.borderPrimary}`,
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: colors.textPrimary }}>
+                    Welcome back, Alex 👋
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+                    Here's what's happening today.
+                  </p>
+                </div>
+                <div
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium"
+                  style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
+                >
+                  Upgrade
+                </div>
+              </div>
+
+              {/* Stat cards — uses cardGradient */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Revenue', value: '$4,820' },
+                  { label: 'Users', value: '1,240' },
+                  { label: 'Conversions', value: '8.3%' },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-xl px-3 py-2.5"
+                    style={{
+                      backgroundColor: colors.bgSecondary,
+                      background: `linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
+                      border: `1px solid ${colors.borderPrimary}`,
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: colors.textTertiary }}>
+                      {label}
+                    </p>
+                    <p className="text-sm font-bold mt-0.5" style={{ color: colors.textPrimary }}>
+                      {value}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: colors.accentPrimary }}>
+                      ↑ 12%
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tab strip — uses tabsGradient */}
+              <div
+                className="flex items-center gap-1 rounded-xl px-2 py-1.5"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
+                  border: `1px solid ${colors.borderPrimary}`,
+                }}
+              >
+                {['Activity', 'Invoices', 'Team'].map((label, i) => (
+                  <div
+                    key={label}
+                    className="rounded-lg px-3 py-1 text-xs font-medium"
+                    style={{
+                      backgroundColor: i === 0 ? colors.bgPrimary : 'transparent',
+                      color: i === 0 ? colors.accentPrimary : colors.textSecondary,
+                      boxShadow: i === 0 ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* Panel / table card */}
+              <div
+                className="rounded-xl px-3 py-2.5"
+                style={{ backgroundColor: colors.panelBg, border: `1px solid ${colors.borderPrimary}` }}
+              >
+                <p className="text-xs font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                  Recent activity
+                </p>
+                {['Invoice #1042 paid', 'New signup: maria@co.io', 'Plan upgraded to Pro'].map((row, i) => (
+                  <div
+                    key={row}
+                    className="flex items-center justify-between py-1 text-xs"
+                    style={{ borderTop: `1px solid ${colors.borderPrimary}`, color: colors.textSecondary }}
+                  >
+                    <span>{row}</span>
+                    <span style={{ color: colors.textTertiary }}>{i === 0 ? '2 min' : i === 1 ? '5 min' : 'just now'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Input row */}
+              <div className="flex gap-2">
+                <div
+                  role="textbox"
+                  aria-readonly="true"
+                  className="flex-1 rounded-lg border px-2.5 py-1.5 text-xs"
+                  style={{
+                    backgroundColor: colors.bgTertiary,
+                    borderColor: colors.borderSecondary,
+                    color: colors.textTertiary,
+                    userSelect: 'none',
+                  }}
+                >
+                  Search…
+                </div>
+                <div
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold flex-shrink-0"
+                  style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
+                >
+                  Search
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Token-coverage legend */}
+        <p className="mt-2 text-xs text-slate-500 dark:text-neutral-500">
+          All color, gradient, shadow, glow and layout tokens are reflected above.
+          The thin strip below the header shows sticky-header colors.
+          The "Analytics" sidebar item shows the hover fill (<span className="font-semibold">bgQuaternary</span>).
+        </p>
+      </section>
+    </div>
+  );
+}

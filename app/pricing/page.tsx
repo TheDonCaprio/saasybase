@@ -268,7 +268,7 @@ export default async function PricingPage() {
               heading: "You're currently on the free tier",
               description: 'Upgrade to unlock premium features',
             }}
-            extra={<PlanBillingActions />}
+              extra={<PlanBillingActions displayCurrency={activeCurrency} />}
           />
         )}
         

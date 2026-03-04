@@ -170,6 +170,14 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
   const lightHeaderBorderFallback = sanitizeHex(lightIn.borderPrimary, l.headerBorder ?? l.borderPrimary);
   const darkHeaderBorderFallback = sanitizeHex(darkIn.borderPrimary, d.headerBorder ?? d.borderPrimary);
 
+  const lightSidebarBorderFallback = sanitizeHex(lightIn.borderPrimary, l.sidebarBorder ?? l.borderPrimary);
+  const darkSidebarBorderFallback = sanitizeHex(darkIn.borderPrimary, d.sidebarBorder ?? d.borderPrimary);
+
+  const lightHeaderShadowFallback = l.headerShadow ?? '#00000014';
+  const darkHeaderShadowFallback = d.headerShadow ?? '#00000014';
+  const lightStickyHeaderShadowFallback = l.stickyHeaderShadow ?? lightHeaderShadowFallback;
+  const darkStickyHeaderShadowFallback = d.stickyHeaderShadow ?? darkHeaderShadowFallback;
+
   const lightStickyBorderFallback = sanitizeHex(
     lightIn.headerBorder ?? lightIn.borderPrimary,
     l.stickyHeaderBorder ?? l.headerBorder ?? l.borderPrimary
@@ -200,6 +208,8 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerBorder: sanitizeHex(lightIn.headerBorder, lightHeaderBorderFallback),
       headerBorderOpacity: 1,
       headerBorderWidth: clampInt(lightIn.headerBorderWidth, 0, 4, l.headerBorderWidth ?? 1),
+      headerMenuFontSize: clampInt(lightIn.headerMenuFontSize, 10, 20, l.headerMenuFontSize ?? 14),
+      headerMenuFontWeight: clampInt(lightIn.headerMenuFontWeight, 300, 800, l.headerMenuFontWeight ?? 400),
       stickyHeaderBg: sanitizeHex(lightIn.stickyHeaderBg, lightStickyBgFallback),
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(lightIn.stickyHeaderBlur, 0, 40, l.stickyHeaderBlur ?? 14),
@@ -209,6 +219,23 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       stickyHeaderBorderWidth: clampInt(lightIn.stickyHeaderBorderWidth, 0, 4, l.stickyHeaderBorderWidth ?? l.headerBorderWidth ?? 1),
       sidebarBg: sanitizeHex(lightIn.sidebarBg, l.sidebarBg),
       sidebarOpacity: 1,
+      sidebarBorder: sanitizeHex(lightIn.sidebarBorder, lightSidebarBorderFallback),
+      headerShadow: sanitizeHex(lightIn.headerShadow, lightHeaderShadowFallback),
+      headerShadowBlur: clampInt(lightIn.headerShadowBlur, 0, 80, l.headerShadowBlur ?? 30),
+      headerShadowSpread: clampInt(lightIn.headerShadowSpread, -80, 80, l.headerShadowSpread ?? -22),
+      stickyHeaderShadow: sanitizeHex(lightIn.stickyHeaderShadow, lightStickyHeaderShadowFallback),
+      stickyHeaderShadowBlur: clampInt(
+        lightIn.stickyHeaderShadowBlur,
+        0,
+        80,
+        l.stickyHeaderShadowBlur ?? l.headerShadowBlur ?? 30,
+      ),
+      stickyHeaderShadowSpread: clampInt(
+        lightIn.stickyHeaderShadowSpread,
+        -80,
+        80,
+        l.stickyHeaderShadowSpread ?? l.headerShadowSpread ?? -22,
+      ),
       pageGradientFrom: lightPageFrom,
       pageGradientVia: lightPageVia,
       pageGradientTo: lightPageTo,
@@ -246,6 +273,8 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerBorder: sanitizeHex(darkIn.headerBorder, darkHeaderBorderFallback),
       headerBorderOpacity: 1,
       headerBorderWidth: clampInt(darkIn.headerBorderWidth, 0, 4, d.headerBorderWidth ?? 1),
+      headerMenuFontSize: clampInt(darkIn.headerMenuFontSize, 10, 20, d.headerMenuFontSize ?? 14),
+      headerMenuFontWeight: clampInt(darkIn.headerMenuFontWeight, 300, 800, d.headerMenuFontWeight ?? 400),
       stickyHeaderBg: sanitizeHex(darkIn.stickyHeaderBg, darkStickyBgFallback),
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(darkIn.stickyHeaderBlur, 0, 40, d.stickyHeaderBlur ?? 14),
@@ -255,6 +284,23 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       stickyHeaderBorderWidth: clampInt(darkIn.stickyHeaderBorderWidth, 0, 4, d.stickyHeaderBorderWidth ?? d.headerBorderWidth ?? 1),
       sidebarBg: sanitizeHex(darkIn.sidebarBg, d.sidebarBg),
       sidebarOpacity: 1,
+      sidebarBorder: sanitizeHex(darkIn.sidebarBorder, darkSidebarBorderFallback),
+      headerShadow: sanitizeHex(darkIn.headerShadow, darkHeaderShadowFallback),
+      headerShadowBlur: clampInt(darkIn.headerShadowBlur, 0, 80, d.headerShadowBlur ?? 30),
+      headerShadowSpread: clampInt(darkIn.headerShadowSpread, -80, 80, d.headerShadowSpread ?? -22),
+      stickyHeaderShadow: sanitizeHex(darkIn.stickyHeaderShadow, darkStickyHeaderShadowFallback),
+      stickyHeaderShadowBlur: clampInt(
+        darkIn.stickyHeaderShadowBlur,
+        0,
+        80,
+        d.stickyHeaderShadowBlur ?? d.headerShadowBlur ?? 30,
+      ),
+      stickyHeaderShadowSpread: clampInt(
+        darkIn.stickyHeaderShadowSpread,
+        -80,
+        80,
+        d.stickyHeaderShadowSpread ?? d.headerShadowSpread ?? -22,
+      ),
       pageGradientFrom: darkPageFrom,
       pageGradientVia: darkPageVia,
       pageGradientTo: darkPageTo,

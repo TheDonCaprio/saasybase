@@ -78,6 +78,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(headerBlurNum) ? headerBlurNum : 12)));
       const headerBorderWidthNum = typeof (t as any).headerBorderWidth === 'number' ? (t as any).headerBorderWidth : 1;
       const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(headerBorderWidthNum) ? headerBorderWidthNum : 1)));
+      const headerMenuFontSizeNum = typeof (t as any).headerMenuFontSize === 'number' ? (t as any).headerMenuFontSize : 14;
+      const headerMenuFontSizePx = Math.max(10, Math.min(20, Math.round(Number.isFinite(headerMenuFontSizeNum) ? headerMenuFontSizeNum : 14)));
+      const headerMenuFontWeightNum = typeof (t as any).headerMenuFontWeight === 'number' ? (t as any).headerMenuFontWeight : 400;
+      const headerMenuFontWeight = Math.max(300, Math.min(800, Math.round(Number.isFinite(headerMenuFontWeightNum) ? headerMenuFontWeightNum : 400)));
       const stickyHeaderBlurNum = typeof (t as any).stickyHeaderBlur === 'number' ? (t as any).stickyHeaderBlur : 14;
       const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(stickyHeaderBlurNum) ? stickyHeaderBlurNum : 14)));
       const stickyHeaderBorderWidthNum =
@@ -102,7 +106,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         (t as any).stickyHeaderBorder ?? (t as any).headerBorder ?? t.borderPrimary
       );
       const sidebarBg = parseHexColor(t.sidebarBg);
+      const sidebarBorder = parseHexColor((t as any).sidebarBorder ?? t.borderPrimary);
       const pageGlow = parseHexColor(t.pageGlow);
+      const headerShadow = parseHexColor((t as any).headerShadow ?? '#00000014');
+      const stickyHeaderShadow = parseHexColor((t as any).stickyHeaderShadow ?? (t as any).headerShadow ?? '#00000014');
+
+      const headerShadowBlurNum = typeof (t as any).headerShadowBlur === 'number' ? (t as any).headerShadowBlur : 30;
+      const headerShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(headerShadowBlurNum) ? headerShadowBlurNum : 30)));
+      const headerShadowSpreadNum = typeof (t as any).headerShadowSpread === 'number' ? (t as any).headerShadowSpread : -22;
+      const headerShadowSpreadPx = Math.max(
+        -80,
+        Math.min(80, Math.round(Number.isFinite(headerShadowSpreadNum) ? headerShadowSpreadNum : -22))
+      );
+
+      const stickyHeaderShadowBlurNum =
+        typeof (t as any).stickyHeaderShadowBlur === 'number' ? (t as any).stickyHeaderShadowBlur : headerShadowBlurPx;
+      const stickyHeaderShadowBlurPx = Math.max(
+        0,
+        Math.min(80, Math.round(Number.isFinite(stickyHeaderShadowBlurNum) ? stickyHeaderShadowBlurNum : headerShadowBlurPx))
+      );
+      const stickyHeaderShadowSpreadNum =
+        typeof (t as any).stickyHeaderShadowSpread === 'number' ? (t as any).stickyHeaderShadowSpread : headerShadowSpreadPx;
+      const stickyHeaderShadowSpreadPx = Math.max(
+        -80,
+        Math.min(80, Math.round(Number.isFinite(stickyHeaderShadowSpreadNum) ? stickyHeaderShadowSpreadNum : headerShadowSpreadPx))
+      );
 
       return [
         ...cssToken('bg-primary', t.bgPrimary),
@@ -124,12 +152,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `  --theme-header-blur: ${headerBlurPx}px;`,
         `  --theme-header-border: rgb(${headerBorder.rgb} / ${fmtAlpha(headerBorder.a)});`,
         `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
+        `  --theme-header-menu-font-size: ${headerMenuFontSizePx}px;`,
+        `  --theme-header-menu-font-weight: ${headerMenuFontWeight};`,
         `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a)});`,
         `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
         `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
         `  --theme-sticky-header-border: rgb(${stickyHeaderBorder.rgb} / ${fmtAlpha(stickyHeaderBorder.a)});`,
         `  --theme-sticky-header-border-width: ${stickyHeaderBorderWidthPx}px;`,
         `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a)});`,
+        `  --theme-sidebar-border: rgb(${sidebarBorder.rgb} / ${fmtAlpha(sidebarBorder.a)});`,
+        `  --theme-header-shadow: 0 12px ${headerShadowBlurPx}px ${headerShadowSpreadPx}px rgb(${headerShadow.rgb} / ${fmtAlpha(headerShadow.a)});`,
+        `  --theme-sticky-header-shadow: 0 12px ${stickyHeaderShadowBlurPx}px ${stickyHeaderShadowSpreadPx}px rgb(${stickyHeaderShadow.rgb} / ${fmtAlpha(stickyHeaderShadow.a)});`,
         `  --theme-page-gradient-from: rgb(${parseHexColor(t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientFrom).a)});`,
         `  --theme-page-gradient-via: rgb(${parseHexColor(t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientVia).a)});`,
         `  --theme-page-gradient-to: rgb(${parseHexColor(t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientTo).a)});`,

@@ -6,7 +6,7 @@ import { CouponRedeemer, type CouponRedemptionRow } from './CouponRedeemer';
 import { dashboardPanelClass } from './dashboardSurfaces';
 import { showToast } from '../ui/Toast';
 
-export default function PlanBillingActions() {
+export default function PlanBillingActions({ displayCurrency }: { displayCurrency?: string }) {
   const [showRedeem, setShowRedeem] = useState(false);
   const [redeemLoading] = useState(false);
   const [initialCoupons, setInitialCoupons] = useState<CouponRedemptionRow[]>([]);
@@ -130,6 +130,7 @@ export default function PlanBillingActions() {
                     initialPage={initialPage}
                     pageSize={20}
                     initialFilters={modalFilters}
+                    displayCurrency={displayCurrency}
                   />
                   <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>Need to review redeemed or expired codes? Open the full coupon manager.</span>

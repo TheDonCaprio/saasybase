@@ -26,13 +26,16 @@ interface PaginatedPaymentManagementProps {
   initialTotalCount: number;
   initialPage: number;
   statusTotals?: Record<string, number>;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
 }
 
 export function PaginatedPaymentManagement({
   initialPayments,
   initialTotalCount,
   initialPage,
-  statusTotals
+  statusTotals,
+  displayCurrency
 }: PaginatedPaymentManagementProps) {
   const {
     search: filter,
@@ -78,17 +81,8 @@ export function PaginatedPaymentManagement({
   void nextCursor;
   void isLoading;
 
-  const formatCurrency = (amountCents: number, currency?: string | null) => {
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: (currency || 'USD').toUpperCase()
-      }).format(amountCents / 100);
-    } catch (err) {
-      void err;
-      return formatCurrencyUtil(amountCents, currency || 'usd');
-    }
-  };
+  const formatCurrency = (amountCents: number, currency?: string | null) =>
+    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
 
   const getPricingDetails = (payment: AdminPayment) => {
     const subtotal = typeof payment.subtotalCents === 'number' ? payment.subtotalCents : payment.amountCents;
@@ -436,6 +430,7 @@ export function PaginatedPaymentManagement({
                       <PaymentActions
                         payment={convertToActionsPayment(payment)}
                         onPaymentUpdate={() => handlePaymentUpdate(payment.id)}
+                        displayCurrency={displayCurrency}
                         showReceiptButton={false}
                         refundButtonVariant="icon"
                       />
@@ -551,7 +546,13 @@ export function PaginatedPaymentManagement({
                       </div>
 
                       <div className="col-span-1 flex justify-end">
-                        <PaymentActions payment={convertToActionsPayment(payment)} onPaymentUpdate={() => handlePaymentUpdate(payment.id)} showReceiptButton={false} refundButtonVariant="icon" />
+                        <PaymentActions
+                          payment={convertToActionsPayment(payment)}
+                          onPaymentUpdate={() => handlePaymentUpdate(payment.id)}
+                          displayCurrency={displayCurrency}
+                          showReceiptButton={false}
+                          refundButtonVariant="icon"
+                        />
                       </div>
                     </div>
                   );

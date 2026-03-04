@@ -65,6 +65,8 @@ interface PaginatedPurchaseManagementProps {
     Active: number;
     Expired: number;
   };
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -84,7 +86,8 @@ export function PaginatedPurchaseManagement({
   initialPurchases,
   initialTotalCount,
   initialPage,
-  statusTotals
+  statusTotals,
+  displayCurrency
 }: PaginatedPurchaseManagementProps) {
   const itemsPerPage = 50;
   const {
@@ -214,17 +217,8 @@ export function PaginatedPurchaseManagement({
     };
   };
 
-  const formatCurrency = (amountCents: number, currency?: string | null) => {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: (currency || 'USD').toUpperCase()
-      }).format(amountCents / 100);
-    } catch (err) {
-      void err;
-      return formatCurrencyUtil(amountCents, currency || 'usd');
-    }
-  };
+  const formatCurrency = (amountCents: number, currency?: string | null) =>
+    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
 
   const getPricingDetails = (purchase: PurchaseRow) => {
     const subtotal = typeof purchase.subtotalCents === 'number' ? purchase.subtotalCents : purchase.amountCents;
@@ -536,6 +530,7 @@ export function PaginatedPurchaseManagement({
                       <PaymentActions
                         payment={actionsPayment}
                         onPaymentUpdate={handlePaymentUpdate}
+                        displayCurrency={displayCurrency}
                         showReceiptButton={false}
                         refundButtonVariant="icon"
                         refundTooltip="Refund purchase"
@@ -723,6 +718,7 @@ export function PaginatedPurchaseManagement({
                         <PaymentActions
                           payment={actionsPayment}
                           onPaymentUpdate={handlePaymentUpdate}
+                          displayCurrency={displayCurrency}
                           showReceiptButton={false}
                           refundButtonVariant="icon"
                           refundTooltip="Refund purchase"

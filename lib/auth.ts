@@ -279,6 +279,9 @@ export async function activatePendingSubscriptions(
       status: 'PENDING',
       startedAt: { lte: now },
       expiresAt: { gt: now },
+      // Only auto-activate subscriptions with payment evidence.
+      // This prevents abandoned checkout placeholders from granting access.
+      payments: { some: { status: 'SUCCEEDED' } },
     },
     include: { plan: true },
   });
@@ -377,6 +380,8 @@ export async function activatePendingSubscriptions(
             templateKey: 'subscription_activated',
             variables: {
               planName: plan.name,
+              amount: '—',
+              transactionId: pending.id,
               tokenBalance: String(tokenLimit),
               tokenName,
               startedAt: pending.startedAt.toLocaleDateString(),

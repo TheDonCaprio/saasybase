@@ -15,6 +15,7 @@ import { faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -36,7 +37,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const { userId } = await requireAuth(returnPath);
 
   // Get all subscriptions (active and pending) to show complete picture
-  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan] = await Promise.all([
+  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, activeCurrency] = await Promise.all([
     prisma.subscription.findFirst({
       where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
       include: {
@@ -67,7 +68,8 @@ export default async function PlanPage({ searchParams }: PageProps) {
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
-    getOrganizationPlanContext(userId)
+    getOrganizationPlanContext(userId),
+    getActiveCurrencyAsync(),
   ]);
 
   const plansForPricing = allPlansRaw.map((plan) => {

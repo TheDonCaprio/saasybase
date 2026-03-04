@@ -9,6 +9,7 @@ import { Logger } from '../../../../lib/logger';
 import type { Prisma } from '@prisma/client';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { paymentService } from '../../../../lib/payment/service';
+import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 
 export async function GET(req: NextRequest) {
   const { userId: actorId } = await requireAdminOrModerator('purchases');
@@ -45,6 +46,8 @@ export async function GET(req: NextRequest) {
       }
     );
   }
+
+  const activeCurrency = await getActiveCurrencyAsync();
 
   const url = new URL(req.url);
   const page = parseInt(url.searchParams.get('page') || '1');
@@ -333,15 +336,7 @@ export async function GET(req: NextRequest) {
       const effectiveDiscountCents = derivedDiscountCents != null && derivedDiscountCents > 0 ? derivedDiscountCents : null;
 
       const rawCurrency = typeof rec?.currency === 'string' ? rec.currency : 'usd';
-      const currencyCode = rawCurrency?.toUpperCase?.() ? rawCurrency.toUpperCase() : 'USD';
-      const formatCurrencyString = (cents: number) => {
-        try {
-          return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(cents / 100);
-        } catch (err) {
-          void err;
-          return formatCurrencyUtil(cents, currencyCode);
-        }
-      };
+      const formatCurrencyString = (cents: number) => formatCurrencyUtil(cents, activeCurrency);
 
       return {
         id: typeof rec?.id === 'string' ? rec!.id as string : String(rec?.id ?? ''),

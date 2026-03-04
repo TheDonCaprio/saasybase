@@ -60,7 +60,6 @@ type FormState = {
   planIds: string[];
 };
 
-// TODO: Accept currency prop when implementing multi-currency support
 const DEFAULT_CURRENCY = 'usd';
 
 // Combined status type for ListFilters
@@ -132,9 +131,10 @@ function normalizeCoupon(input: Record<string, unknown>): CouponRow {
   };
 }
 
-function formatMoney(cents: number | null): string {
-  if (!cents) return formatCurrency(0, DEFAULT_CURRENCY);
-  return formatCurrency(cents, DEFAULT_CURRENCY);
+function formatMoney(cents: number | null, currency: string): string {
+  const normalizedCurrency = (currency || DEFAULT_CURRENCY).toLowerCase();
+  if (!cents) return formatCurrency(0, normalizedCurrency);
+  return formatCurrency(cents, normalizedCurrency);
 }
 
 type ProviderResponse = {
@@ -255,6 +255,8 @@ interface CouponManagementProps {
   initialAccess?: AccessFilter;
   initialPublishStatus?: PublishStatus;
   statusTotals?: Record<string, number>;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
 }
 
 // Helper to convert combined status to access + publish status
@@ -295,6 +297,7 @@ export function CouponManagement({
   initialAccess = 'all',
   initialPublishStatus = 'all',
   statusTotals,
+  displayCurrency,
 }: CouponManagementProps) {
   const [searchValue, setSearchValue] = useState(initialSearch);
   const [accessFilter, setAccessFilter] = useState<AccessFilter>(initialAccess);
@@ -331,7 +334,7 @@ export function CouponManagement({
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(defaultFormState);
-  const [activeCurrency, setActiveCurrency] = useState<string>(DEFAULT_CURRENCY);
+  const [activeCurrency, setActiveCurrency] = useState<string>((displayCurrency ?? DEFAULT_CURRENCY).toLowerCase());
   const [showPlanLimits, setShowPlanLimits] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncingProviders, setSyncingProviders] = useState(false);
@@ -384,26 +387,34 @@ export function CouponManagement({
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : Math.max(1, currentPage + (nextCursor ? 1 : 0));
   const trimmedSearch = searchValue.trim();
 
-    useEffect(() => {
-      let mounted = true;
-      void (async () => {
-        try {
-          const res = await fetch('/api/admin/payment-providers');
-          const json = (await res.json().catch(() => ({}))) as ProviderResponse;
-          const nextCurrency = typeof json.activeCurrency === 'string' && json.activeCurrency.trim()
-            ? json.activeCurrency.trim().toLowerCase()
-            : DEFAULT_CURRENCY;
-          if (!mounted) return;
-          setActiveCurrency(nextCurrency);
-          setForm((prev) => ({ ...prev, currency: prev.currency || nextCurrency }));
-        } catch {
-          // Ignore; fallback to DEFAULT_CURRENCY.
-        }
-      })();
-      return () => {
-        mounted = false;
-      };
-    }, []);
+  useEffect(() => {
+    const explicit = typeof displayCurrency === 'string' ? displayCurrency.trim().toLowerCase() : '';
+    if (explicit) {
+      setActiveCurrency(explicit);
+      setForm((prev) => ({ ...prev, currency: prev.currency || explicit }));
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/admin/payment-providers');
+        const json = (await res.json().catch(() => ({}))) as ProviderResponse;
+        const nextCurrency = typeof json.activeCurrency === 'string' && json.activeCurrency.trim()
+          ? json.activeCurrency.trim().toLowerCase()
+          : DEFAULT_CURRENCY;
+        if (!mounted) return;
+        setActiveCurrency(nextCurrency);
+        setForm((prev) => ({ ...prev, currency: prev.currency || nextCurrency }));
+      } catch {
+        // Ignore; fallback to DEFAULT_CURRENCY.
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [displayCurrency]);
   const hasActiveFilters = Boolean(trimmedSearch) || accessFilter !== 'all' || publishStatusFilter !== 'all';
   const deletingCoupon = pendingDeleteId ? coupons.find((item) => item.id === pendingDeleteId) : null;
   const hasDeletionHistory = Boolean(
@@ -836,7 +847,7 @@ export function CouponManagement({
               {coupons.map((coupon) => {
                 const status = getStatusLabel(coupon);
                 const discountLabel =
-                  coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents);
+                  coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents, activeCurrency);
                 const durationBadge = getDurationBadge(coupon);
                 const scheduleLabel = formatScheduleRange(coupon);
                 const eligiblePlans =
@@ -933,7 +944,7 @@ export function CouponManagement({
                 {coupons.map((coupon) => {
                   const status = getStatusLabel(coupon);
                   const discountLabel =
-                    coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents);
+                    coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents, activeCurrency);
                   const durationBadge = getDurationBadge(coupon);
                   const scheduleLabel = formatScheduleRange(coupon);
                   const accessLabel = getAccessLabel(coupon);

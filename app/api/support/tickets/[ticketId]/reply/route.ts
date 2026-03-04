@@ -17,9 +17,19 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const { message } = await request.json();
-    
-    if (!message?.trim()) {
+    const sanitizeMessage = (value: unknown) => {
+      const raw = typeof value === 'string' ? value : '';
+      const cleaned = raw
+        .replace(/\0/g, '')
+        .replace(/\r\n|\r/g, '\n')
+        .trim();
+      return cleaned.slice(0, 5000);
+    };
+
+    const body = (await request.json()) as { message?: unknown };
+    const message = sanitizeMessage(body?.message);
+
+    if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
@@ -86,7 +96,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
       data: {
         ticketId: params.ticketId,
         userId: userId,
-        message: message.trim()
+        message
       }
     });
 
@@ -115,7 +125,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
           ticketId: ticket.id,
           ticketSubject: ticket.subject,
           ticketStatus: 'OPEN',
-          message: message.trim(),
+          message,
           actor: {
             role: 'USER',
             name: ticket.user?.name,

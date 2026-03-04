@@ -6,11 +6,14 @@ import usePaginatedList from '../hooks/usePaginatedList';
 import { Pagination } from '../ui/Pagination';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
+import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 
 
 interface Payment {
   id: string;
   amount: number;
+  amountFormatted?: string | null;
+  displayCurrency?: string | null;
   currency: string;
   status: string;
   createdAt: string;
@@ -61,12 +64,8 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, userId]);
 
-  const formatAmount = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(amount / 100);
-  };
+  const formatAmount = (amountCents: number, currency?: string | null) =>
+    formatCurrencyUtil(amountCents, currency || 'usd');
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -118,7 +117,7 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
                 <div key={payment.id} className="flex flex-col sm:flex-row items-start gap-4 py-3 px-4 transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
                   {/* Amount / plan (top on mobile, left on desktop) */}
                   <div className="w-full sm:w-32 flex-shrink-0 flex flex-col justify-start">
-                    <div className="font-semibold text-sm truncate">{formatAmount(payment.amount, payment.currency)}</div>
+                    <div className="font-semibold text-sm truncate">{payment.amountFormatted ?? formatAmount(payment.amount, payment.displayCurrency ?? payment.currency)}</div>
                     <div className="text-[11px] text-neutral-400">{payment.planName ?? ''}</div>
                   </div>
 

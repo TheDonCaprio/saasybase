@@ -7,12 +7,16 @@ import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
 import type { Prisma } from '@prisma/client';
 import { paymentService } from '../../../../lib/payment/service';
+import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
+import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/currency';
 
 export async function GET(request: NextRequest) {
   // use shared runtime guards
 
   try {
     await requireAdminOrModerator('transactions');
+
+    const activeCurrency = await getActiveCurrencyAsync();
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -279,15 +283,33 @@ export async function GET(request: NextRequest) {
       // Prefer plan from subscription if available, fallback to direct plan relation
       const effectivePlanRec = planRec && typeof planRec.id === 'string' ? planRec : directPlanRec;
 
+      const amountCents = typeof rec.amountCents === 'number' ? rec.amountCents : Number(rec.amountCents ?? 0);
+      const subtotalCents = typeof rec.subtotalCents === 'number'
+        ? rec.subtotalCents
+        : (rec.subtotalCents != null ? Number(rec.subtotalCents) : null);
+      const explicitDiscountCents = typeof rec.discountCents === 'number'
+        ? rec.discountCents
+        : (rec.discountCents != null ? Number(rec.discountCents) : null);
+
+      const derivedDiscountCents = explicitDiscountCents != null
+        ? explicitDiscountCents
+        : subtotalCents != null
+          ? Math.max(0, subtotalCents - amountCents)
+          : 0;
+      const effectiveDiscountCents = derivedDiscountCents > 0 ? derivedDiscountCents : 0;
+
+      const amountFormatted = formatCurrencyUtil(amountCents, activeCurrency);
+      const subtotalFormatted = subtotalCents != null ? formatCurrencyUtil(subtotalCents, activeCurrency) : null;
+      const discountFormatted = effectiveDiscountCents > 0 ? formatCurrencyUtil(effectiveDiscountCents, activeCurrency) : null;
+
       return {
         id: typeof rec.id === 'string' ? rec.id : String(rec.id ?? ''),
-        amountCents: typeof rec.amountCents === 'number' ? rec.amountCents : Number(rec.amountCents ?? 0),
-        subtotalCents: typeof rec.subtotalCents === 'number'
-          ? rec.subtotalCents
-          : (rec.subtotalCents != null ? Number(rec.subtotalCents) : null),
-        discountCents: typeof rec.discountCents === 'number'
-          ? rec.discountCents
-          : (rec.discountCents != null ? Number(rec.discountCents) : null),
+        amountCents,
+        amountFormatted,
+        subtotalCents,
+        subtotalFormatted,
+        discountCents: explicitDiscountCents ?? (effectiveDiscountCents > 0 ? effectiveDiscountCents : null),
+        discountFormatted,
         couponCode: typeof rec.couponCode === 'string' ? rec.couponCode : null,
         currency: typeof rec.currency === 'string' ? rec.currency : 'usd',
         status: typeof rec.status === 'string' ? rec.status : String(rec.status ?? ''),

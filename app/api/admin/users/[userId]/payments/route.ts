@@ -5,6 +5,8 @@ import { asRecord, toError } from '../../../../../../lib/runtime-guards';
 import { Logger } from '../../../../../../lib/logger';
 import { adminRateLimit } from '../../../../../../lib/rateLimit';
 import { paymentService } from '../../../../../../lib/payment/service';
+import { getActiveCurrencyAsync } from '../../../../../../lib/payment/registry';
+import { formatCurrency as formatCurrencyUtil } from '../../../../../../lib/utils/currency';
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +33,8 @@ export async function GET(
     const wantCount = searchParams.get('count') !== 'false';
     const skip = (page - 1) * limit;
 
+    const activeCurrency = await getActiveCurrencyAsync();
+
     const paymentsUnknown: unknown = await prisma.payment.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -53,9 +57,12 @@ export async function GET(
       const rec = asRecord(p) || {};
       const subRec = asRecord(rec.subscription) || {};
       const planRec = asRecord(subRec.plan) || {};
+      const amountCents = typeof rec.amountCents === 'number' ? rec.amountCents : Number(rec.amountCents ?? 0);
       return {
         id: typeof rec.id === 'string' ? rec.id : String(rec.id ?? ''),
-        amount: typeof rec.amountCents === 'number' ? rec.amountCents : Number(rec.amountCents ?? 0),
+        amount: amountCents,
+        amountFormatted: formatCurrencyUtil(amountCents, activeCurrency),
+        displayCurrency: activeCurrency,
         currency: typeof rec.currency === 'string' ? rec.currency : null,
         status: typeof rec.status === 'string' ? rec.status : String(rec.status ?? ''),
         createdAt: rec.createdAt instanceof Date ? rec.createdAt.toISOString() : (typeof rec.createdAt === 'string' ? new Date(rec.createdAt).toISOString() : null),

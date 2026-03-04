@@ -16,6 +16,8 @@ interface RefundModalProps {
     clearPaidTokens?: boolean
   ) => void;
   amount: number;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
   paymentId: string;
   loading?: boolean;
   error?: string | null;
@@ -36,6 +38,7 @@ export function RefundModal({
   onClose,
   onConfirm,
   amount,
+  displayCurrency,
   paymentId,
   loading = false,
   error = null,
@@ -152,7 +155,7 @@ export function RefundModal({
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-neutral-400 mb-1">Refund Amount</div>
-                    <div className="text-lg font-semibold text-white">{formatCurrency(amount, 'usd')}</div>
+                    <div className="text-lg font-semibold text-white">{formatCurrency(amount, displayCurrency ?? 'usd')}</div>
                   </div>
                 </div>
               </div>

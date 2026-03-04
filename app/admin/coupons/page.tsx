@@ -16,6 +16,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { formatDateServer } from '@/lib/formatDate.server';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -45,6 +46,8 @@ const formatNumber = (value: number) => numberFormatter.format(value);
 
 export default async function AdminCouponsPage({ searchParams }: PageProps) {
   await requireAdminAuth('/admin/coupons');
+
+  const activeCurrency = await getActiveCurrencyAsync();
 
   const resolvedSearchParams = await searchParams;
 
@@ -300,6 +303,7 @@ export default async function AdminCouponsPage({ searchParams }: PageProps) {
         initialAccess={accessParam}
         initialPublishStatus={statusParam}
         statusTotals={statusTotals}
+        displayCurrency={activeCurrency}
       />
     </div>
   );

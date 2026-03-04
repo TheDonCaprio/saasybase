@@ -175,9 +175,32 @@ export async function resolveAndApplySubscriptionUpdatedState<TSub extends Subsc
     let isNewlyCreated = false;
 
     if (!dbSub) {
+        // Stripe Elements subscription intents create subscriptions immediately with
+        // `payment_behavior=default_incomplete`. Abandoned checkouts can emit webhook
+        // updates for `incomplete`/`incomplete_expired`/`unpaid` subscriptions that
+        // we intentionally do not hydrate into local Subscription rows.
+        if (params.providerKey === 'stripe') {
+            const st = params.status;
+            const isStripeUnpaidSetup = st === 'incomplete' || st === 'incomplete_expired' || st === 'unpaid';
+            if (isStripeUnpaidSetup) {
+                Logger.info('Skipping Stripe subscription update for unpaid/incomplete subscription', {
+                    subscriptionId: params.subscriptionId,
+                    status: st,
+                });
+                return {
+                    shouldSkip: true,
+                    dbSub: null,
+                };
+            }
+        }
+
         dbSub = await deps.ensureProviderBackedSubscription(params.subscriptionId);
         if (!dbSub) {
-            Logger.warn('Received subscription update for unknown subscription', { subscriptionId: params.subscriptionId });
+            Logger.warn('Received subscription update for unknown subscription', {
+                subscriptionId: params.subscriptionId,
+                providerKey: params.providerKey,
+                status: params.status,
+            });
             return {
                 shouldSkip: true,
                 dbSub: null,

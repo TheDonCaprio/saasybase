@@ -65,7 +65,11 @@ export async function GET() {
     const pendingSub = await prisma.subscription.findFirst({
       where: {
         userId,
-        status: 'PENDING'
+        status: 'PENDING',
+        OR: [
+          { startedAt: { gt: now } },
+          { payments: { some: { status: 'SUCCEEDED' } } },
+        ],
       },
       include: { plan: true },
       orderBy: { createdAt: 'asc' }

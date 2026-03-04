@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CompactSupportTicket } from './CompactSupportTicket';
 import { Pagination } from '../ui/Pagination';
@@ -48,6 +48,7 @@ export function SupportTicketsList({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
   const { search, setSearch, debouncedSearch, setStatus } = useListFilterState('', 'ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'createdAt' | 'lastResponse'>('lastResponse');
@@ -215,7 +216,9 @@ export function SupportTicketsList({
     const params = new URLSearchParams(searchParams.toString());
     params.set('ticket', ticket.id);
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    });
   };
 
   const handleCloseTicket = () => {
@@ -224,7 +227,9 @@ export function SupportTicketsList({
     const params = new URLSearchParams(searchParams.toString());
     params.delete('ticket');
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    });
   };
 
   const getStatusCounts = () => {

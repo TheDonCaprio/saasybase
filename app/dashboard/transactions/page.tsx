@@ -15,6 +15,8 @@ import { dashboardMutedPanelClass } from '../../../components/dashboard/dashboar
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
+import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
+import { formatCurrency } from '../../../lib/utils/currency';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -37,7 +39,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const limit = 50;
   const skip = (page - 1) * limit;
 
-  const [payments, totalCount, allPayments, completedCount, pendingCount, failedCount, refundedCount, refundedSumResult] = await Promise.all([
+  const [payments, totalCount, allPayments, completedCount, pendingCount, failedCount, refundedCount, refundedSumResult, activeCurrency] = await Promise.all([
     prisma.payment.findMany({ 
       where: { userId }, 
       orderBy: { createdAt: 'desc' }, 
@@ -61,15 +63,14 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     prisma.payment.count({ where: { userId, status: 'FAILED' } }),
     prisma.payment.count({ where: { userId, status: 'REFUNDED' } }),
     prisma.payment.aggregate({ where: { userId, status: 'REFUNDED' }, _sum: { amountCents: true } }),
+    getActiveCurrencyAsync(),
   ]);
 
   const totalSpent = allPayments.reduce((sum, p) => sum + p.amountCents, 0);
-  const primaryCurrency = payments[0]?.currency?.toUpperCase?.() ?? 'USD';
-  const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: primaryCurrency });
-  const totalSpentFormatted = currencyFormatter.format(totalSpent / 100);
+  const totalSpentFormatted = formatCurrency(totalSpent, activeCurrency);
 
   const refundedAmountCents = refundedSumResult?._sum?.amountCents ?? 0;
-  const refundedAmountFormatted = currencyFormatter.format(refundedAmountCents / 100);
+  const refundedAmountFormatted = formatCurrency(refundedAmountCents, activeCurrency);
 
   const initialPayments = payments.map((payment) => {
     const subscriptionPlan = payment.subscription?.plan ?? null;
@@ -107,13 +108,13 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
     return {
       id: payment.id,
       amountCents: payment.amountCents,
-      amountFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: (payment.currency ?? 'usd').toUpperCase() }).format(payment.amountCents / 100),
+      amountFormatted: formatCurrency(payment.amountCents, activeCurrency),
       subtotalCents: payment.subtotalCents ?? null,
       discountCents: payment.discountCents ?? null,
-      subtotalFormatted: payment.subtotalCents != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: (payment.currency ?? 'usd').toUpperCase() }).format(payment.subtotalCents / 100) : null,
-      discountFormatted: payment.discountCents != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: (payment.currency ?? 'usd').toUpperCase() }).format(payment.discountCents / 100) : null,
+      subtotalFormatted: payment.subtotalCents != null ? formatCurrency(payment.subtotalCents, activeCurrency) : null,
+      discountFormatted: payment.discountCents != null ? formatCurrency(payment.discountCents, activeCurrency) : null,
       couponCode: payment.couponCode ?? null,
-      currency: payment.currency ?? 'usd',
+      currency: payment.currency ?? activeCurrency,
       status: payment.status,
       createdAt: payment.createdAt,
       subscription,
@@ -206,6 +207,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
               initialPayments={initialPayments}
               initialTotalCount={totalCount}
               initialPage={page}
+              displayCurrency={activeCurrency}
             />
         </section>
       )}

@@ -5,9 +5,12 @@ import { useFormatSettings } from '../../components/FormatSettingsProvider';
 import { CancelSubscriptionModal } from './CancelSubscriptionModal';
 import { showToast } from '../ui/Toast';
 import { formatDate } from '../../lib/formatDate';
+import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 
 interface PaymentManagementProps {
   isActive: boolean;
+  /** Currency code to use for display/formatting (central currency setting). */
+  displayCurrency?: string;
   recentPayments: Array<{
     id: string;
     amountCents: number;
@@ -31,6 +34,7 @@ interface PaymentManagementProps {
 
 export default function PaymentManagement({
   isActive,
+  displayCurrency,
   recentPayments,
   isCancellationScheduled,
   canceledAt,
@@ -127,12 +131,8 @@ export default function PaymentManagement({
     }
   };
 
-  const formatCurrency = (amountCents: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(amountCents / 100);
-  };
+  const formatCurrency = (amountCents: number, currency: string) =>
+    formatCurrencyUtil(amountCents, displayCurrency ?? currency ?? 'usd');
 
   return (
     <>

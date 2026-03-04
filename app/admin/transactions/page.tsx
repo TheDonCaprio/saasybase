@@ -32,8 +32,7 @@ export default async function AdminTransactionsPage() {
   await requireAdminSectionAccess('transactions');
 
   const activeCurrency = await getActiveCurrencyAsync();
-  const formatCurrency = (dollars: number) =>
-    formatCurrencyUtil(Math.round(dollars * 100), activeCurrency);
+  const formatCurrencyCents = (cents: number) => formatCurrencyUtil(cents, activeCurrency);
 
   const page = 1;
   const limit = 50;
@@ -144,7 +143,7 @@ export default async function AdminTransactionsPage() {
   const successfulVolumeCents = Number(totalVolume._sum.amountCents ?? 0);
   const last30VolumeCents = Number(last30Volume._sum.amountCents ?? 0);
   const refundedVolumeCents = Number(refundedVolume._sum.amountCents ?? 0);
-  const averageOrderValue = completedCount > 0 ? successfulVolumeCents / completedCount / 100 : 0;
+  const averageOrderValueCents = completedCount > 0 ? Math.round(successfulVolumeCents / completedCount) : 0;
 
   // newly added aggregates (normalize values)
   const weekRevenueCents = Number(weekRevenueAgg?._sum?.amountCents ?? 0);
@@ -157,14 +156,14 @@ export default async function AdminTransactionsPage() {
   const metricCards: AdminStatCardProps[] = [
     {
       label: 'Lifetime volume',
-      value: formatCurrency(successfulVolumeCents / 100),
-      helper: `Total refunds ${formatCurrency(refundedVolumeCents / 100)}`,
+      value: formatCurrencyCents(successfulVolumeCents),
+      helper: `Total refunds ${formatCurrencyCents(refundedVolumeCents)}`,
       icon: faSackDollar,
       accent: 'theme'
     },
     {
       label: '30-day volume',
-      value: formatCurrency(last30VolumeCents / 100),
+      value: formatCurrencyCents(last30VolumeCents),
       helper: `${formatNumber(last30CompletedCount)} successful charges`,
       icon: faCalendarCheck,
       accent: 'theme'
@@ -178,7 +177,7 @@ export default async function AdminTransactionsPage() {
     },
     {
       label: 'Average order value',
-      value: formatCurrency(averageOrderValue),
+      value: formatCurrencyCents(averageOrderValueCents),
       helper: `Across ${formatNumber(completedCount)} completed charges`,
       icon: faCreditCard,
       accent: 'theme'
@@ -188,8 +187,8 @@ export default async function AdminTransactionsPage() {
   const headerStats = [
     {
       label: 'Revenue this week',
-      value: formatCurrency(weekRevenueCents / 100),
-      helper: `${formatCurrency(todayRevenueCents / 100)} today`,
+      value: formatCurrencyCents(weekRevenueCents),
+      helper: `${formatCurrencyCents(todayRevenueCents)} today`,
       tone: 'emerald' as const
     },
     {
@@ -219,15 +218,35 @@ export default async function AdminTransactionsPage() {
 
       {/* Map payments to include server-formatted amounts for SSR */}
       <PaginatedPaymentManagement
-        initialPayments={payments.map((p) => ({
-          ...p,
-          amountFormatted: (() => {
-            try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: (p.currency ?? 'usd').toUpperCase() }).format((p.amountCents ?? 0) / 100); } catch (e) { void e; return `$${((p.amountCents ?? 0) / 100).toFixed(2)}`; }
-          })(),
-          subtotalFormatted: (p.subtotalCents != null) ? (() => { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: (p.currency ?? 'usd').toUpperCase() }).format((p.subtotalCents ?? 0) / 100); } catch (e) { void e; return null; } })() : null,
-          discountFormatted: (p.discountCents != null) ? (() => { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: (p.currency ?? 'usd').toUpperCase() }).format((p.discountCents ?? 0) / 100); } catch (e) { void e; return null; } })() : null,
-          dashboardUrl: getPaymentDashboardUrl(p),
-        }))}
+        displayCurrency={activeCurrency}
+        initialPayments={payments.map((p) => {
+          const amountCents = typeof p.amountCents === 'number' ? p.amountCents : Number(p.amountCents ?? 0);
+          const subtotalCents = typeof p.subtotalCents === 'number'
+            ? p.subtotalCents
+            : p.subtotalCents != null
+              ? Number(p.subtotalCents)
+              : null;
+          const explicitDiscountCents = typeof p.discountCents === 'number'
+            ? p.discountCents
+            : p.discountCents != null
+              ? Number(p.discountCents)
+              : null;
+          const derivedDiscountCents = explicitDiscountCents != null
+            ? explicitDiscountCents
+            : subtotalCents != null
+              ? Math.max(0, subtotalCents - amountCents)
+              : 0;
+          const effectiveDiscountCents = derivedDiscountCents > 0 ? derivedDiscountCents : 0;
+
+          return {
+            ...p,
+            amountFormatted: formatCurrencyCents(amountCents),
+            subtotalFormatted: subtotalCents != null ? formatCurrencyCents(subtotalCents) : null,
+            discountCents: explicitDiscountCents ?? (effectiveDiscountCents > 0 ? effectiveDiscountCents : null),
+            discountFormatted: effectiveDiscountCents > 0 ? formatCurrencyCents(effectiveDiscountCents) : null,
+            dashboardUrl: getPaymentDashboardUrl(p),
+          };
+        })}
         initialTotalCount={totalCount}
         initialPage={page}
         statusTotals={{

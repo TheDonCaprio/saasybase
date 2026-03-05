@@ -12,6 +12,7 @@ export interface AdminStatCardProps {
   footer?: string;
   icon?: IconDefinition;
   accent?: AdminStatAccent;
+  size?: 'default' | 'compact';
   className?: string;
 }
 
@@ -59,21 +60,43 @@ const accentMap: Record<AdminStatAccent, {
   }
 };
 
-export function AdminStatCard({ label, value, helper, footer, icon, accent = 'theme', className }: AdminStatCardProps) {
+export function AdminStatCard({ label, value, helper, footer, icon, accent = 'theme', size = 'default', className }: AdminStatCardProps) {
   const palette = accentMap[accent];
+  const isCompact = size === 'compact';
+  const labelClass = isCompact
+    ? 'text-[11px] uppercase tracking-wide text-slate-500 dark:text-neutral-400'
+    : 'text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400';
+  const valueClass = isCompact
+    ? 'mt-1 text-base font-semibold text-slate-900 dark:text-neutral-50'
+    : 'mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-50';
+  const helperClass = isCompact
+    ? 'mt-1 text-[11px] text-slate-500 dark:text-neutral-400'
+    : 'mt-1 text-xs text-slate-500 dark:text-neutral-400';
+  const iconWrapClass = isCompact ? 'hidden sm:flex h-7 w-7 items-center justify-center rounded-full' : 'hidden sm:flex h-8 w-8 items-center justify-center rounded-full';
+  const iconClass = isCompact ? 'h-3 w-3' : 'h-3 w-3';
 
   return (
-    <div className={dashboardCardClass(clsx('relative overflow-hidden h-full flex flex-col justify-between p-4', palette.border, palette.gradient, className))}>
+    <div
+      className={dashboardCardClass(
+        clsx(
+          'relative overflow-hidden h-full flex flex-col justify-between',
+          isCompact ? 'p-3' : 'p-4',
+          palette.border,
+          palette.gradient,
+          className
+        )
+      )}
+    >
       <div className={clsx('pointer-events-none absolute inset-0 opacity-75', palette.overlay)} />
       <div className="relative flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">{label}</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-50">{value}</p>
-          {helper ? <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{helper}</p> : null}
+          <p className={labelClass}>{label}</p>
+          <p className={valueClass}>{value}</p>
+          {helper ? <p className={helperClass}>{helper}</p> : null}
         </div>
         {icon ? (
-          <span className={clsx('hidden sm:flex h-8 w-8 items-center justify-center rounded-full', palette.icon)}>
-            <FontAwesomeIcon icon={icon} className="h-3 w-3" />
+          <span className={clsx(iconWrapClass, palette.icon)}>
+            <FontAwesomeIcon icon={icon} className={iconClass} />
           </span>
         ) : null}
       </div>

@@ -7,10 +7,15 @@ import {
   faCreditCard, faLock, faBuilding, faTag, faGauge, faEnvelope,
   faArrowsRotate, faShield, faNewspaper, faFileLines, faHeadset, faUserShield,
   faUsers, faLayerGroup, faChartLine, faCode, faDollarSign, faTicket, faBars,
+  faWaveSquare, faGaugeHigh, faLifeRing, faArrowUpRightFromSquare, faBolt, faGear, faTriangleExclamation,
+  faPen, faHourglassEnd, faHandHoldingDollar,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { PAYMENT_PROVIDERS } from '../lib/payment/provider-config';
 import { PaymentProviderBadge } from './ui/PaymentProviderBadge';
+import { AdminStatCard } from './admin/AdminStatCard';
+import { DashboardPageHeader } from './dashboard/DashboardPageHeader';
+import { dashboardPanelClass, dashboardPillClass } from './dashboard/dashboardSurfaces';
 
 /* ─── Fake data for the animated dashboard demo ─── */
 const FAKE_TRANSACTIONS = [
@@ -174,6 +179,57 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function DemoActionIconButton({
+  icon,
+  title,
+  tone = 'neutral',
+  disabled = false,
+  onClick,
+}: {
+  icon: IconDefinition;
+  title: string;
+  tone?: 'neutral' | 'danger' | 'dangerOutline';
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const disabledClass =
+    'inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-400 shadow-sm transition dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 cursor-not-allowed';
+
+  const neutralClass =
+    'inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300 dark:hover:border-neutral-500 dark:hover:bg-neutral-800';
+
+  const dangerClass =
+    'inline-flex h-6 w-6 items-center justify-center rounded-full border border-transparent bg-red-600 text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900';
+
+  const dangerOutlineClass =
+    'inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10';
+
+  const className = disabled
+    ? disabledClass
+    : tone === 'danger'
+      ? dangerClass
+      : tone === 'dangerOutline'
+        ? dangerOutlineClass
+        : neutralClass;
+
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      disabled={disabled}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick?.();
+      }}
+      className={className}
+    >
+      <FontAwesomeIcon icon={icon} className="h-3 w-3" />
+    </button>
+  );
+}
+
 /* ─── Animated dashboard "browser window" ─── */
 function DashboardDemo() {
   const [visible, setVisible] = useState<number[]>([]);
@@ -272,6 +328,15 @@ function DashboardDemo() {
   const paidUsers = FAKE_USERS.filter((u) => u.plan !== 'None');
   const freeUsers = FAKE_USERS.filter((u) => u.plan === 'None');
 
+  const visitsToday = 982;
+  const visitsYesterday = 935;
+  const visitsDelta = visitsToday - visitsYesterday;
+  const visitsTrend = visitsDelta === 0 ? 'flat' : visitsDelta > 0 ? 'up' : 'down';
+  const openTickets = 7;
+  const inProgressTickets = 3;
+  const errorWarningToday = 4;
+  const errorWarningWeek = 19;
+
   return (
     <div
       ref={tiltRef}
@@ -318,7 +383,7 @@ function DashboardDemo() {
               <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--lp-dd-muted)', fontWeight: 500 }}>Admin Panel</span>
             </div>
             {/* sidebar */}
-            <nav className="lp-dd-sidebar" style={{ width: 194, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
+            <nav className="lp-dd-sidebar" style={{ width: 174, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
               {/* Brand */}
               <div style={{ padding: '0 14px 10px', fontSize: 13, fontWeight: 700, color: 'var(--lp-dd-brand)', letterSpacing: 0.3 }}>SaasyBase</div>
               {/* ADMIN section label */}
@@ -406,14 +471,19 @@ function DashboardDemo() {
                   </div>
                 </div>
                 </div>
-                {/* 4 stat cards */}
+                {/* 4 stat cards (match real app styling) */}
                 <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 10px', flexShrink: 0 }}>
-                  {STATS.map(stat => (
-                    <div key={stat.label} style={{ background: `linear-gradient(145deg, ${stat.gradColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '12px 14px' }}>
-                      <div style={{ fontSize: 10, color: 'var(--lp-dd-col-hdr)', marginBottom: 4, fontWeight: 600, letterSpacing: 0.3 }}>{stat.label}</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
-                      <div style={{ fontSize: 9, color: 'var(--lp-dd-stat-sub)', marginTop: 3 }}>{stat.sub}</div>
-                    </div>
+                  {STATS.map((stat) => (
+                    <AdminStatCard
+                      key={stat.label}
+                      label={stat.label}
+                      value={stat.value}
+                      helper={stat.sub}
+                      icon={stat.faIcon}
+                      accent="theme"
+                      size="compact"
+                      className="rounded-xl"
+                    />
                   ))}
                 </div>
                 {/* Transactions table */}
@@ -425,13 +495,25 @@ function DashboardDemo() {
                     </div>
                     {/* Desktop grid table */}
                     <div className="lp-dd-tbl-desktop">
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '5px 12px', gap: 8 }}>
-                        {['Provider', 'Payment', 'User', 'Plan / Amount', 'Status', 'Date'].map(h => (
-                          <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '0.6fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr 0.6fr', padding: '5px 12px', gap: 8 }}>
+                        {['Provider', 'Payment', 'User', 'Plan / Amount', 'Status', 'Date', 'Actions'].map(h => (
+                          <div
+                            key={h}
+                            style={{
+                              fontSize: 9,
+                              color: 'var(--lp-dd-col-hdr)',
+                              fontWeight: 600,
+                              textTransform: 'uppercase',
+                              letterSpacing: 0.5,
+                              textAlign: h === 'Actions' ? 'right' : 'left',
+                            }}
+                          >
+                            {h}
+                          </div>
                         ))}
                       </div>
                       {liveRow && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '6px 12px', gap: 8, alignItems: 'center', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '0.6fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr 0.6fr', padding: '6px 12px', gap: 8, alignItems: 'center', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
                           <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                             <PaymentProviderBadge provider={liveRow.provider} size="xs" showName={false} />
                           </div>
@@ -443,10 +525,18 @@ function DashboardDemo() {
                           </div>
                           <StatusBadge status={liveRow.status} />
                           <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{liveRow.time}</div>
+                          <div className="flex justify-end">
+                            <DemoActionIconButton
+                              icon={faHandHoldingDollar}
+                              title="Refund payment"
+                              tone="danger"
+                              disabled={liveRow.status !== 'SUCCEEDED'}
+                            />
+                          </div>
                         </div>
                       )}
                       {FAKE_TRANSACTIONS.map((tx, i) => (
-                        <div key={tx.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                        <div key={tx.id} style={{ display: 'grid', gridTemplateColumns: '0.6fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr 0.6fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
                           <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                             <PaymentProviderBadge provider={tx.provider} size="xs" showName={false} />
                           </div>
@@ -458,6 +548,14 @@ function DashboardDemo() {
                           </div>
                           <StatusBadge status={tx.status} />
                           <div style={{ fontSize: 10, color: 'var(--lp-dd-row-text3)' }}>{tx.time}</div>
+                          <div className="flex justify-end">
+                            <DemoActionIconButton
+                              icon={faHandHoldingDollar}
+                              title="Refund payment"
+                              tone="danger"
+                              disabled={tx.status !== 'SUCCEEDED'}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -467,7 +565,15 @@ function DashboardDemo() {
                         <div style={{ padding: '8px 12px', background: 'var(--lp-dd-live-bg)', borderTop: '1px solid var(--lp-dd-live-border)', animation: 'lpSlideIn 0.3s ease' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                             <span style={{ fontSize: 10.5, color: 'var(--lp-dd-title-text)', fontWeight: 500 }}>{liveRow.user}</span>
-                            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{liveRow.amount}</span>
+                            <span className="flex items-center gap-2">
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{liveRow.amount}</span>
+                              <DemoActionIconButton
+                                icon={faHandHoldingDollar}
+                                title="Refund payment"
+                                tone="danger"
+                                disabled={liveRow.status !== 'SUCCEEDED'}
+                              />
+                            </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{liveRow.plan.replace(' Plan','')}</span>
@@ -488,7 +594,15 @@ function DashboardDemo() {
                         <div key={tx.id} style={{ padding: '8px 12px', borderTop: '1px solid var(--lp-dd-row-border)', opacity: visible.includes(i) ? 1 : 0, transform: visible.includes(i) ? 'none' : 'translateY(6px)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                             <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{tx.user}</span>
-                            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{tx.amount}</span>
+                            <span className="flex items-center gap-2">
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--lp-dd-amount)' }}>{tx.amount}</span>
+                              <DemoActionIconButton
+                                icon={faHandHoldingDollar}
+                                title="Refund payment"
+                                tone="danger"
+                                disabled={tx.status !== 'SUCCEEDED'}
+                              />
+                            </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{tx.plan.replace(' Plan','')}</span>
@@ -541,19 +655,19 @@ function DashboardDemo() {
                   </div>
                 </div>
                 </div>
-                {/* 4 stat cards */}
+                {/* 4 stat cards (match real app styling) */}
                 <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 4px', flexShrink: 0 }}>
-                  {USER_STATS.map(s => (
-                    <div key={s.label} style={{ background: `linear-gradient(145deg, ${s.iconColor}1e 0%, transparent 60%), var(--lp-dd-stat-bg)`, border: '1px solid var(--lp-dd-border2)', borderRadius: 10, padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                        <div style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.3, lineHeight: 1.3, paddingRight: 4 }}>{s.label}</div>
-                        <div style={{ width: 26, height: 26, borderRadius: 7, background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <FontAwesomeIcon icon={s.faIcon} style={{ width: 12, color: s.iconColor }} />
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{s.value}</div>
-                      <div style={{ fontSize: 9, color: 'var(--lp-dd-stat-sub)', marginTop: 3 }}>{s.sub}</div>
-                    </div>
+                  {USER_STATS.map((s) => (
+                    <AdminStatCard
+                      key={s.label}
+                      label={s.label}
+                      value={s.value}
+                      helper={s.sub}
+                      icon={s.faIcon}
+                      accent="theme"
+                      size="compact"
+                      className="rounded-xl"
+                    />
                   ))}
                 </div>
                 {/* User table */}
@@ -561,13 +675,25 @@ function DashboardDemo() {
                   <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
                     {/* Desktop grid table */}
                     <div className="lp-dd-tbl-desktop">
-                      <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr', padding: '5px 12px', gap: 6, borderBottom: '1px solid var(--lp-dd-hdr-border)' }}>
-                        {['NAME', 'EMAIL', 'ROLE', 'JOINED', 'SUBSCRIPTION', 'PAYMENTS'].map(h => (
-                          <div key={h} style={{ fontSize: 9, color: 'var(--lp-dd-col-hdr)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>{h}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr 0.7fr', padding: '5px 12px', gap: 6, borderBottom: '1px solid var(--lp-dd-hdr-border)' }}>
+                        {['NAME', 'EMAIL', 'ROLE', 'JOINED', 'SUBSCRIPTION', 'PAYMENTS', 'ACTIONS'].map(h => (
+                          <div
+                            key={h}
+                            style={{
+                              fontSize: 9,
+                              color: 'var(--lp-dd-col-hdr)',
+                              fontWeight: 600,
+                              letterSpacing: 0.5,
+                              textTransform: 'uppercase',
+                              textAlign: h === 'ACTIONS' ? 'right' : 'left',
+                            }}
+                          >
+                            {h}
+                          </div>
                         ))}
                       </div>
                       {FAKE_USERS.map((u) => (
-                        <div key={u.email} style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr', padding: '7px 12px', gap: 6, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)' }}>
+                        <div key={u.email} style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr 0.7fr', padding: '7px 12px', gap: 6, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)' }}>
                           {/* Name with avatar */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <div style={{ width: 24, height: 24, borderRadius: '50%', background: u.avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0, letterSpacing: 0.2 }}>
@@ -588,6 +714,11 @@ function DashboardDemo() {
                           <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)' }}>{u.plan}</div>
                           {/* Payments */}
                           <div style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>{u.payments} payments</div>
+                          {/* Actions */}
+                          <div className="flex justify-end gap-1.5">
+                            <DemoActionIconButton icon={faPen} title={`Edit user ${u.name}`} />
+                            <DemoActionIconButton icon={faHourglassEnd} title={`Expire subscriptions for ${u.name}`} tone="dangerOutline" />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -600,7 +731,13 @@ function DashboardDemo() {
                               {u.name.split(' ').map(n => n[0]).join('').slice(0,2)}
                             </div>
                             <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</span>
-                            <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
+                            <div className="flex items-center gap-2">
+                              <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
+                              <div className="flex items-center gap-1">
+                                <DemoActionIconButton icon={faPen} title={`Edit user ${u.name}`} />
+                                <DemoActionIconButton icon={faHourglassEnd} title={`Expire subscriptions for ${u.name}`} tone="dangerOutline" />
+                              </div>
+                            </div>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 29, gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -619,37 +756,180 @@ function DashboardDemo() {
 
             {/* ── Overview / Dashboard view ── */}
             {demoView === 'overview' && (
-              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, padding: 20, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--lp-dd-title-text)', marginBottom: 16 }}>Dashboard Overview</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {STATS.map(stat => (
-                    <div key={stat.label} style={{ background: 'var(--lp-dd-stat-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 12, padding: '16px 18px' }}>
-                      <div style={{ fontSize: 12, color: 'var(--lp-dd-stat-label)', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <FontAwesomeIcon icon={stat.faIcon} style={{ width: 13 }} />
-                        {stat.label}
+              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                <div className="space-y-4 p-4">
+                  <DashboardPageHeader
+                    eyebrow="Operations center"
+                    eyebrowIcon={<FontAwesomeIcon icon={faGear} />}
+                    title="Control room"
+                    stats={[
+                      { label: 'Visits today', value: visitsToday.toLocaleString('en-US'), helper: `vs ${visitsYesterday.toLocaleString('en-US')} yesterday` },
+                      { label: 'Open tickets', value: openTickets.toLocaleString('en-US'), helper: `${inProgressTickets.toLocaleString('en-US')} in progress` },
+                    ]}
+                    className="p-4"
+                  />
+
+                  <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <AdminStatCard label="Total users" value="19" helper="All-time accounts" icon={faUsers} accent="theme" size="compact" />
+                    <AdminStatCard label="Active subscriptions" value="847" helper="91% retention" icon={faArrowsRotate} accent="theme" size="compact" />
+                    <AdminStatCard label="Net revenue" value="$14,280" helper="Refunds: $690" icon={faDollarSign} accent="theme" size="compact" />
+                    <AdminStatCard label="Errors / warnings" value={errorWarningToday.toLocaleString('en-US')} helper={`${errorWarningWeek.toLocaleString('en-US')} this week`} icon={faTriangleExclamation} accent="theme" size="compact" />
+                  </section>
+
+                  <section className="grid gap-3 lg:grid-cols-3">
+                    <div className={dashboardPanelClass('relative flex h-full flex-col gap-3 overflow-hidden p-3')}>
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),_transparent_60%)]" />
+                      <div className="relative flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xxs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Traffic pulse</p>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Daily momentum</h3>
+                        </div>
+                        <span className={dashboardPillClass('text-indigo-700 dark:text-indigo-200')}>
+                          <FontAwesomeIcon icon={faWaveSquare} className="h-3.5 w-3.5" />
+                          {visitsTrend === 'up' ? '+' : visitsTrend === 'down' ? '-' : ''}{Math.abs(visitsDelta).toLocaleString('en-US')}
+                        </span>
                       </div>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--lp-dd-stat-num)', letterSpacing: '-0.5px' }}>{stat.value}</div>
-                      <div style={{ fontSize: 11, color: 'var(--lp-dd-stat-sub)', marginTop: 4 }}>{stat.sub}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 12, padding: '12px 16px' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--lp-dd-title-text)', marginBottom: 10 }}>Recent Activity</div>
-                  {[
-                    { icon: '💳', text: 'New Pro subscription',  sub: 'alex@demo.com',  time: '2s ago'  },
-                    { icon: '👤', text: 'User registered',        sub: 'wei@demo.com',   time: '14s ago' },
-                    { icon: '🔄', text: 'Subscription renewed',   sub: 'maya@demo.com',  time: '1m ago'  },
-                    { icon: '🎫', text: 'Support ticket opened',  sub: 'carlos@demo.com',time: '4m ago'  },
-                  ].map(a => (
-                    <div key={a.text} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderTop: '1px solid var(--lp-dd-row-border)' }}>
-                      <span style={{ fontSize: 15 }}>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{a.text}</div>
-                        <div style={{ fontSize: 11, color: 'var(--lp-dd-row-text3)' }}>{a.sub}</div>
+                      <div className="relative space-y-1">
+                        <div className="text-xl font-semibold leading-none text-slate-900 dark:text-neutral-100">{visitsToday.toLocaleString('en-US')}</div>
+                        <p className="text-[11px] text-slate-600 dark:text-neutral-300">Visits today • {visitsYesterday.toLocaleString('en-US')} yesterday</p>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--lp-dd-row-text3)' }}>{a.time}</div>
+                      <div className="relative mt-auto inline-flex items-center gap-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+                        Open traffic analytics
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+                      </div>
                     </div>
-                  ))}
+
+                    <div className={dashboardPanelClass('relative flex h-full flex-col gap-3 overflow-hidden p-3')}>
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.22),_transparent_60%)]" />
+                      <div className="relative flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xxs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Revenue quality</p>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Transactions</h3>
+                        </div>
+                        <span className={dashboardPillClass('text-emerald-700 dark:text-emerald-200')}>
+                          <FontAwesomeIcon icon={faGaugeHigh} className="h-3.5 w-3.5" />
+                          $49.00
+                        </span>
+                      </div>
+                      <dl className="relative grid grid-cols-2 gap-3 text-[11px]">
+                        <div>
+                          <dt className="text-slate-500 dark:text-neutral-400">Refund rate</dt>
+                          <dd className="mt-1 text-[12px] font-semibold text-slate-900 dark:text-neutral-100">4.8%</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500 dark:text-neutral-400">Net revenue</dt>
+                          <dd className="mt-1 text-[12px] font-semibold text-slate-900 dark:text-neutral-100">$14,280</dd>
+                        </div>
+                      </dl>
+                      <div className="relative mt-auto inline-flex items-center gap-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+                        Open transactions
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+
+                    <div className={dashboardPanelClass('relative flex h-full flex-col gap-3 overflow-hidden p-3')}>
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.14),_transparent_68%)] dark:bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.2),_transparent_60%)]" />
+                      <div className="relative flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xxs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Support load</p>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Queue status</h3>
+                        </div>
+                        <span className={dashboardPillClass('text-amber-700 dark:text-amber-200')}>
+                          <FontAwesomeIcon icon={faLifeRing} className="h-3.5 w-3.5" />
+                          {(openTickets + inProgressTickets).toLocaleString('en-US')}
+                        </span>
+                      </div>
+                      <div className="relative grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+                          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Open</p>
+                          <p className="mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100">{openTickets.toLocaleString('en-US')}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+                          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">In progress</p>
+                          <p className="mt-1 text-base font-semibold text-slate-900 dark:text-neutral-100">{inProgressTickets.toLocaleString('en-US')}</p>
+                        </div>
+                      </div>
+                      <div className="relative mt-auto inline-flex items-center gap-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+                        Open support desk
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <div className={dashboardPanelClass('space-y-3 overflow-hidden p-4') + ' relative'}>
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_65%)] opacity-70 dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),_transparent_60%)]" />
+                      <div className="relative flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Recent transactions</h3>
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">Latest five payments across the platform.</p>
+                        </div>
+                        <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>5 new</span>
+                      </div>
+
+                      <div className="relative space-y-2">
+                        {FAKE_TRANSACTIONS.slice(0, 5).map((tx) => (
+                          <div
+                            key={tx.id}
+                            className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs backdrop-blur-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-900 dark:text-neutral-100">{tx.user}</p>
+                                <p className="text-[11px] text-slate-500 dark:text-neutral-400">{tx.plan}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-mono text-[12px] text-slate-900 dark:text-neutral-100">{tx.amount}</p>
+                                <p className="text-[11px] text-slate-500 dark:text-neutral-400">{tx.time}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={dashboardPanelClass('space-y-3 p-4')}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Quick actions</h3>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                          <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5" />
+                          Recommended next step
+                        </div>
+                        <p className="mt-1.5 text-xs text-slate-700 dark:text-neutral-300">
+                          Resolve support backlog ({openTickets.toLocaleString('en-US')} open) to keep response times healthy.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        {[
+                          { title: 'Manage users', description: 'View accounts, roles, and status.', icon: faUsers },
+                          { title: 'Review transactions', description: 'Audit payments, refunds, and disputes.', icon: faFileLines },
+                          { title: 'View analytics', description: 'Traffic, revenue, and conversion snapshots.', icon: faChartLine },
+                        ].map((action) => (
+                          <div
+                            key={action.title}
+                            className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs dark:border-neutral-800/70 dark:bg-neutral-900/70"
+                          >
+                            <span className="flex items-center gap-3">
+                              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+                                <FontAwesomeIcon icon={action.icon} className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="block">
+                                <span className="font-medium text-slate-900 dark:text-neutral-100">{action.title}</span>
+                                <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-neutral-400">
+                                  {action.description}
+                                </span>
+                              </span>
+                            </span>
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5 text-slate-400" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </div>
             )}
@@ -1080,7 +1360,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
 
           <h1 className="lp-hero-h1">
             Don't re-invent the wheel,<br />
-            <span style={{ background: 'linear-gradient(135deg,#6366f1,#a78bfa,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               launch your SaaS this weekend.
             </span>
           </h1>

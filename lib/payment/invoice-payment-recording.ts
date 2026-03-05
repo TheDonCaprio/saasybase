@@ -283,6 +283,11 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                     where: { id: params.resolvedOrganizationId },
                     data: { tokenBalance: tokenLimit },
                 });
+                // Also zero out any personal paid tokens since the org resets
+                await tx.user.update({
+                    where: { id: params.dbSub.userId },
+                    data: { tokenBalance: 0 },
+                });
             } else {
                 await tx.user.update({
                     where: { id: params.dbSub.userId },

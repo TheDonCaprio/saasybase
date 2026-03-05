@@ -53,7 +53,9 @@ export function deriveSubscriptionWebhookState(params: {
         ? params.dbExpiresAt
         : (isLocallyCancelled && normalizedStatus === 'ACTIVE'
             ? params.dbExpiresAt
-            : params.currentPeriodEnd);
+            : (normalizedStatus === 'CANCELLED' && !nextCancelAtPeriodEnd)
+                ? (nextCanceledAt ?? new Date())
+                : params.currentPeriodEnd);
 
     return {
         normalizedStatus,

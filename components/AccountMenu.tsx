@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { useUser, SignInButton, SignUpButton, useClerk } from '@clerk/nextjs';
+import { useUser, useAuth, SignInButton, SignUpButton, useClerk, OrganizationSwitcher } from '@clerk/nextjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface UserProfile {
   user: {
@@ -60,7 +61,9 @@ interface SiteInfo {
 
 export default function AccountMenu() {
   const { isSignedIn, isLoaded } = useUser();
+  const { orgId } = useAuth();
   const { signOut } = useClerk();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   // pointerPos stores the left (px) where the rotated square should be centered
@@ -72,6 +75,12 @@ export default function AccountMenu() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Reset profile fetch cache when organization changes so data refreshes correctly
+    setProfile(null);
+    setHasAttemptedProfileFetch(false);
+  }, [orgId]);
 
   useEffect(() => {
     if (isSignedIn && isOpen && !profile && !loading && !hasAttemptedProfileFetch) {
@@ -230,6 +239,25 @@ export default function AccountMenu() {
               </div>
 
               <div className="p-4 space-y-3">
+                <div className="space-y-2">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-500">Workspace</p>
+                  <OrganizationSwitcher
+                    afterSelectOrganizationUrl={pathname || '/dashboard'}
+                    afterLeaveOrganizationUrl={pathname || '/dashboard'}
+                    afterSelectPersonalUrl={pathname || '/dashboard'}
+                    appearance={{
+                      elements: {
+                        organizationSwitcherTrigger:
+                          'w-full justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                        organizationSwitcherPopoverCard:
+                          'border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900',
+                        organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
+                        organizationPreviewSecondaryIdentifier: 'text-neutral-500 dark:text-neutral-400',
+                      },
+                    }}
+                  />
+                </div>
+
                 {/* Plan Info */}
                 <div className="flex items-center gap-2 text-sm">
                   <FontAwesomeIcon icon={faCrown} className="w-4 h-4 text-amber-500" />

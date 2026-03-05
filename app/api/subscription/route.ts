@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { prisma } from '../../../lib/prisma';
 import { toError } from '../../../lib/runtime-guards';
 import { syncOrganizationEligibilityForUser } from '../../../lib/organization-access';
 import { Logger } from '../../../lib/logger';
+import { getAuthSafe } from '../../../lib/auth';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 
 function jsonError(message: string, status: number, code: string) {
@@ -13,7 +13,7 @@ function jsonError(message: string, status: number, code: string) {
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId, orgId } = await getAuthSafe();
     if (!userId) return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
     
     const now = new Date();
@@ -75,7 +75,7 @@ export async function GET() {
       orderBy: { createdAt: 'asc' }
     });
     
-      const organizationPlan = sub ? null : await getOrganizationPlanContext(userId);
+      const organizationPlan = sub ? null : await getOrganizationPlanContext(userId, orgId);
 
       const response: Record<string, unknown> = { ok: true };
       if (sub) {

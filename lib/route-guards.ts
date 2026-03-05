@@ -94,12 +94,12 @@ export function buildReturnPath(basePath: string, searchParams?: RouteSearchPara
   return sanitizeReturnPath(fullPath);
 }
 
-export async function requireAuth(returnPath?: string): Promise<{ userId: string }> {
+export async function requireAuth(returnPath?: string): Promise<{ userId: string; orgId?: string | null }> {
   const auth = await getAuthSafe();
   if (!auth?.userId) {
     redirect(buildSignInRedirect(returnPath ?? DEFAULT_USER_RETURN_PATH));
   }
-  return { userId: auth.userId };
+  return { userId: auth.userId, orgId: auth.orgId };
 }
 
 export async function requireAdminAuth(returnPath?: string): Promise<{ userId: string }> {

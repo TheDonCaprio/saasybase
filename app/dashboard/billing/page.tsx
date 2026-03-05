@@ -31,7 +31,7 @@ interface PageProps {
 export default async function BillingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/billing', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
   const now = new Date();
 
   const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan, activeCurrency] = await Promise.all([
@@ -66,7 +66,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
     getSupportEmail(),
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
-    getOrganizationPlanContext(userId),
+    getOrganizationPlanContext(userId, orgId),
     getActiveCurrencyAsync(),
   ]);
 

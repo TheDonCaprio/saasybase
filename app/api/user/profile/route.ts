@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '../../../../lib/auth';
+import { requireUser, getAuthSafe } from '../../../../lib/auth';
 import { fetchModeratorPermissions, buildAdminLikePermissions } from '../../../../lib/moderator';
 import { prisma } from '../../../../lib/prisma';
 import { getDefaultTokenLabel, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
@@ -13,7 +13,10 @@ import {
 
 export async function GET() {
   try {
-    const userId = await requireUser();
+    const { userId, orgId } = await getAuthSafe();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const defaultTokenLabel = await getDefaultTokenLabel();
 
     const user = await prisma.user.findUnique({
@@ -56,7 +59,7 @@ export async function GET() {
   // Get user token balances
   const paidTokenBalance = typeof user.tokenBalance === 'number' ? user.tokenBalance : 0;
   const freeTokenBalance = typeof user.freeTokenBalance === 'number' ? user.freeTokenBalance : 0;
-  const organizationContext = await getOrganizationPlanContext(user.id);
+  const organizationContext = await getOrganizationPlanContext(user.id, orgId);
   const sharedTokenBalance = getMemberSharedTokenBalance(organizationContext);
   const memberTokenCap = getEffectiveMemberTokenCap(organizationContext);
   const memberCapStrategy = getMemberCapStrategy(organizationContext);

@@ -33,7 +33,7 @@ export async function generateMetadata() {
 export default async function UserActivityPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/activity', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
 
   const activeCurrency = await getActiveCurrencyAsync();
 
@@ -79,7 +79,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     }),
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
-    getOrganizationPlanContext(userId),
+    getOrganizationPlanContext(userId, orgId),
     getFreePlanSettings(),
   ]);
 

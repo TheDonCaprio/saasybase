@@ -28,9 +28,9 @@ async function tryImportClerk() {
   }
 }
 
-export async function getAuthSafe(): Promise<{ userId: string | null }> {
+export async function getAuthSafe(): Promise<{ userId: string | null; orgId?: string | null }> {
   const clerk = await tryImportClerk();
-  if (!clerk) return { userId: null };
+  if (!clerk) return { userId: null, orgId: null };
   const maybeClerk = clerk as Record<string, unknown>;
   const maybeAuthFn = maybeClerk.auth;
   if (typeof maybeAuthFn === 'function') {
@@ -38,16 +38,18 @@ export async function getAuthSafe(): Promise<{ userId: string | null }> {
       const result = await (maybeAuthFn as (...args: unknown[]) => unknown)();
       // try to pull a userId if present
       const rec = asRecord(result);
-      if (rec && typeof rec.userId === 'string') return { userId: rec.userId };
-      return { userId: null };
+      if (rec && typeof rec.userId === 'string') {
+          return { userId: rec.userId, orgId: typeof rec.orgId === 'string' ? rec.orgId : null };
+      }
+      return { userId: null, orgId: null };
     } catch (e: unknown) {
       // Lower severity: failures here are common during static render / no-request contexts
       // and should not spam WARN-level logs.
       Logger.debug('getAuthSafe clerk.auth failed', { error: toError(e) });
-      return { userId: null };
+      return { userId: null, orgId: null };
     }
   }
-  return { userId: null };
+  return { userId: null, orgId: null };
 }
 
 export async function getCurrentUserSafe(): Promise<{ id: string } | null> {

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
 import { getPaidTokensNaturalExpiryGraceHours } from '@/lib/settings';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthSafe } from '@/lib/auth';
 import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getRequestIp } from '@/lib/request-ip';
 
@@ -150,9 +150,9 @@ async function resolveSharedContext(params: {
 
 const rateLimited = withRateLimit(
   async (req) => {
-    const session = await auth();
-    return session.userId
-      ? `user-spend-tokens:${session.userId}`
+    const { userId } = await getAuthSafe();
+    return userId
+      ? `user-spend-tokens:${userId}`
       : `user-spend-tokens:anon:${getRequestIp(req) ?? 'unknown'}`;
   },
   {
@@ -171,11 +171,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
     }
 
-    const session = await auth();
-    if (!session.userId) {
+    const { userId, orgId } = await getAuthSafe();
+    if (!userId) {
       return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
-    const userId = session.userId;
 
     const amount = parsePositiveInt(parsed.amount);
     if (!amount) return NextResponse.json({ ok: false, error: 'amount_must_be_positive_integer' }, { status: 400 });
@@ -189,7 +188,7 @@ export async function POST(req: NextRequest) {
     const featureRaw = typeof parsed.feature === 'string' ? parsed.feature.trim() : '';
     const feature = featureRaw.length ? featureRaw.slice(0, 120) : 'generic';
 
-    const organizationId = typeof parsed.organizationId === 'string' ? parsed.organizationId.trim() : undefined;
+    const organizationId = typeof parsed.organizationId === 'string' ? parsed.organizationId.trim() : (orgId || undefined);
     const requestId = typeof parsed.requestId === 'string' ? parsed.requestId.trim().slice(0, 120) : undefined;
 
     try {

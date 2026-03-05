@@ -10,7 +10,10 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('../lib/auth', () => ({ requireUser: vi.fn(async () => 'user_1') }));
+vi.mock('../lib/auth', () => ({ 
+  requireUser: vi.fn(async () => 'user_1'),
+  getAuthSafe: vi.fn(async () => ({ userId: 'user_1', orgId: 'org_1' }))
+}));
 vi.mock('../lib/settings', () => ({
   getDefaultTokenLabel: vi.fn(async () => 'credits'),
   getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24),

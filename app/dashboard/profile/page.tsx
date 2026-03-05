@@ -31,7 +31,7 @@ export async function generateMetadata() {
 export default async function UserProfilePage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/profile', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
 
   // Ensure user exists in database
   const user = await ensureUserExists();
@@ -72,7 +72,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
         subscription: { select: { plan: { select: { name: true } } } }
       }
     }),
-    getOrganizationPlanContext(userId)
+    getOrganizationPlanContext(userId, orgId)
   ]);
 
   const totalSpentCents = paymentStats._sum.amountCents ?? 0;

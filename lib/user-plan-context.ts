@@ -60,8 +60,8 @@ export type OrganizationPlanContext = {
   membership: OrganizationMembershipWithCaps | null;
 };
 
-export async function getOrganizationPlanContext(userId: string): Promise<OrganizationPlanContext | null> {
-  const access = await getOrganizationAccessSummary(userId);
+export async function getOrganizationPlanContext(userId: string, activeClerkOrgId?: string | null): Promise<OrganizationPlanContext | null> {
+  const access = await getOrganizationAccessSummary(userId, activeClerkOrgId);
   if (!access.allowed) return null;
 
   const where = access.kind === 'OWNER' ? { ownerUserId: userId } : { id: access.membership.organizationId };

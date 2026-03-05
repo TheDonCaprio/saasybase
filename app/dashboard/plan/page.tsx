@@ -34,7 +34,7 @@ export async function generateMetadata() {
 export default async function PlanPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/plan', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
 
   // Get all subscriptions (active and pending) to show complete picture
   const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, activeCurrency] = await Promise.all([
@@ -68,7 +68,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
-    getOrganizationPlanContext(userId),
+    getOrganizationPlanContext(userId, orgId),
     getActiveCurrencyAsync(),
   ]);
 

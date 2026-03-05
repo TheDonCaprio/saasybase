@@ -109,17 +109,33 @@ export async function getActiveTeamSubscription(
   });
 }
 
-export async function getOrganizationAccessSummary(userId: string): Promise<TeamSubscriptionStatus> {
+export async function getOrganizationAccessSummary(userId: string, activeClerkOrgId?: string | null): Promise<TeamSubscriptionStatus> {
+  const targetedOrgCondition = activeClerkOrgId ? { clerkOrganizationId: activeClerkOrgId } : {};
+
+  // First, check if they are an OWNER directly, factoring in the targeted org context if requested.
   const subscription = await getActiveTeamSubscription(userId, { includeGrace: true });
   if (subscription && subscription.plan) {
-    return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
+    if (activeClerkOrgId) {
+      // Confirm the requested active organization is actually the one they own
+      const ownedOrg = await prisma.organization.findFirst({
+        where: { ownerUserId: userId, clerkOrganizationId: activeClerkOrgId }
+      });
+      if (ownedOrg) {
+        return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
+      }
+      // If they own a DIFFERENT org than the one selected, proceed to check if they are a member of the requested one.
+    } else {
+      return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
+    }
   }
 
+  // Next, check memberships. If a targeted org was provided, strictly filter to it.
   const membership = await prisma.organizationMembership.findFirst({
     where: {
       userId,
       status: 'ACTIVE',
       organization: {
+        ...targetedOrgCondition,
         plan: {
           supportsOrganizations: true,
         },

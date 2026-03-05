@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { useAuth } from '@clerk/nextjs';
 import {
   dashboardMutedPanelClass,
   dashboardPanelClass,
@@ -99,6 +100,7 @@ function getBucketTokenName(resolved: Exclude<Bucket, 'auto'>, profile: ProfileP
 }
 
 export default function SaaSyAppClient() {
+  const { orgId } = useAuth();
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -135,7 +137,7 @@ export default function SaaSyAppClient() {
     refreshProfile().catch((err: unknown) => {
       setProfileError(err instanceof Error ? err.message : 'Failed to fetch profile');
     });
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     if (!profile) return;

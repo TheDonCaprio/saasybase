@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +25,7 @@ type SidebarProfile = {
 export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], items?: NavItem[] }) {
   const pathname = usePathname();
   const { isSignedIn } = useUser();
+  const { orgId } = useAuth();
 
   const [profile, setProfile] = useState<SidebarProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,6 +59,11 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     },
     [pathname]
   );
+
+  // Invalidate cached profile when active organization changes
+  useEffect(() => {
+    setProfile(null);
+  }, [orgId]);
 
   useEffect(() => {
     if (isSignedIn && !profile && !loading) {

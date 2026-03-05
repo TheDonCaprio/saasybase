@@ -5,7 +5,7 @@ import { useUser, useAuth, SignInButton, SignUpButton, useClerk, OrganizationSwi
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface UserProfile {
   user: {
@@ -64,6 +64,7 @@ export default function AccountMenu() {
   const { orgId } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   // pointerPos stores the left (px) where the rotated square should be centered
@@ -75,12 +76,50 @@ export default function AccountMenu() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const menuRef = useRef<HTMLDivElement>(null);
+  const prevOrgIdRef = useRef(orgId);
 
   useEffect(() => {
-    // Reset profile fetch cache when organization changes so data refreshes correctly
+    // Skip the initial mount — only react to actual org switches
+    if (prevOrgIdRef.current === orgId) return;
+    prevOrgIdRef.current = orgId;
+
+    // Clear stale profile immediately so the dropdown shows a loading state
     setProfile(null);
     setHasAttemptedProfileFetch(false);
-  }, [orgId]);
+    setLoading(true);
+
+    // Clerk needs a moment to propagate the new session cookie after an org
+    // switch.  Give it 600ms then re-fetch profile and refresh RSC data.
+    const timer = setTimeout(() => {
+      router.refresh(); // re-render any server components on the page
+
+      fetch('/api/user/profile')
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`Profile fetch failed: ${res.status}`);
+          return res.json();
+        })
+        .then((data: unknown) => {
+          const candidate = data as Partial<UserProfile> | null;
+          const hasUser =
+            Boolean(candidate?.user) &&
+            typeof candidate?.user?.id === 'string' &&
+            typeof candidate?.user?.name === 'string' &&
+            typeof candidate?.user?.email === 'string' &&
+            typeof candidate?.user?.role === 'string';
+          setProfile(hasUser ? (candidate as UserProfile) : null);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch profile after org switch:', err);
+          setProfile(null);
+        })
+        .finally(() => {
+          setLoading(false);
+          setHasAttemptedProfileFetch(true);
+        });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [orgId, router]);
 
   useEffect(() => {
     if (isSignedIn && isOpen && !profile && !loading && !hasAttemptedProfileFetch) {
@@ -216,7 +255,7 @@ export default function AccountMenu() {
               className="fixed w-3 h-3 rotate-45 bg-white border-t border-l border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 z-[52]"
             />
           )}
-          <div style={{ top: '4.1rem' }} className="fixed right-4 w-72 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden z-[51]">
+          <div style={{ top: '4.1rem' }} className="fixed right-4 w-72 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-visible z-[51]">
           {loading ? (
             <div className="p-4 space-y-3">
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
@@ -242,15 +281,14 @@ export default function AccountMenu() {
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-500">Workspace</p>
                   <OrganizationSwitcher
-                    afterSelectOrganizationUrl={pathname || '/dashboard'}
-                    afterLeaveOrganizationUrl={pathname || '/dashboard'}
-                    afterSelectPersonalUrl={pathname || '/dashboard'}
+                    hidePersonal={false}
                     appearance={{
                       elements: {
+                        rootBox: 'w-full',
                         organizationSwitcherTrigger:
                           'w-full justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
                         organizationSwitcherPopoverCard:
-                          'border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900',
+                          'border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900',
                         organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
                         organizationPreviewSecondaryIdentifier: 'text-neutral-500 dark:text-neutral-400',
                       },

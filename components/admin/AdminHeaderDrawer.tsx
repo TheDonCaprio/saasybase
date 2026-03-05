@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUserShield, faChevronDown, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from '../dashboard/SidebarNav';
-import { SignOutButton, useUser, useClerk } from '@clerk/nextjs';
+import { SignOutButton, useUser, useClerk, useAuth } from '@clerk/nextjs';
 import { createPortal } from 'react-dom';
 
 interface MenuGroup {
@@ -75,6 +75,7 @@ export function AdminHeaderDrawer({
 }: AdminHeaderDrawerProps) {
   const pathname = usePathname();
   const { isSignedIn } = useUser();
+  const { orgId } = useAuth();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -165,6 +166,11 @@ export function AdminHeaderDrawer({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Invalidate cached profile when active organization changes
+  useEffect(() => {
+    setProfile(null);
+  }, [orgId]);
 
   useEffect(() => {
     if (isSignedIn && open && !profile && !loading) {

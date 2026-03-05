@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUser, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
-import { SignOutButton, useUser, useClerk } from '@clerk/nextjs';
+import { SignOutButton, useUser, useClerk, useAuth } from '@clerk/nextjs';
 import { createPortal } from 'react-dom';
 
 interface DashboardHeaderDrawerProps {
@@ -71,6 +71,7 @@ export function DashboardHeaderDrawer({
 }: DashboardHeaderDrawerProps) {
   const pathname = usePathname();
   const { isSignedIn } = useUser();
+  const { orgId } = useAuth();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -122,6 +123,11 @@ export function DashboardHeaderDrawer({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Invalidate cached profile when active organization changes
+  useEffect(() => {
+    setProfile(null);
+  }, [orgId]);
 
   useEffect(() => {
     if (isSignedIn && open && !profile && !loading) {

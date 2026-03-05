@@ -22,11 +22,11 @@ export async function generateMetadata() {
 export default async function TeamDashboardPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/team', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
 
   const viewerRecord = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true } });
   const [state, pendingInvites] = await Promise.all([
-    fetchTeamDashboardState(userId),
+    fetchTeamDashboardState(userId, { activeClerkOrgId: orgId ?? null }),
     // Fetch any pending invites sent to this user's email so they can accept on-site
     prisma.organizationInvite.findMany({
       where: { email: viewerRecord?.email ?? undefined, status: 'PENDING' },

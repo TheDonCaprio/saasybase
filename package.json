@@ -18,6 +18,9 @@
     "typecheck": "tsc --noEmit",
     "check:admin-api-parity": "tsx scripts/check-admin-api-parity.ts",
     "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:org-switcher": "playwright test tests/e2e/org-switcher-regression.spec.ts",
     "backfill:pending-subscription-payments": "tsx scripts/backfill-pending-subscription-payments.ts"
   },
   "dependencies": {
@@ -76,6 +79,7 @@
     "seed": "node prisma/seed.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/jsdom": "^20.0.0",
     "@types/node": "^20.12.12",
     "@types/nodemailer": "^6.4.14",

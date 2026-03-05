@@ -77,7 +77,10 @@ import {
     resolveAndApplySubscriptionUpdatedState as resolveAndApplySubscriptionUpdatedStateExternal,
 } from './subscription-state-mutations';
 import { consumeCouponRedemptionFromMetadata as consumeCouponRedemptionFromMetadataExternal } from './coupon-redemption-consumption';
-import { resolveOrganizationContext as resolveOrganizationContextExternal } from './organization-context';
+import {
+    resolveOrganizationContext as resolveOrganizationContextExternal,
+    resolveActiveClerkOrgIdFromMetadata,
+} from './organization-context';
 import {
     resolvePlanForOneTimeCheckout as resolvePlanForOneTimeCheckoutExternal,
     resolveOneTimeCheckoutDisposition as resolveOneTimeCheckoutDispositionExternal,
@@ -417,7 +420,8 @@ export class PaymentService {
         }
 
         // Resolve Organization Context
-        const organizationContext = await this.resolveOrganizationContext(userId);
+        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(session.metadata);
+        const organizationContext = await this.resolveOrganizationContext(userId, activeClerkOrgId);
 
         const {
             effectiveMode,
@@ -535,6 +539,8 @@ export class PaymentService {
             }
         }
 
+        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(session.metadata);
+
         const didHandleRenewalStyleCharge = await tryRecordPaystackRenewalStyleChargeExternal({
             session,
             userId,
@@ -542,7 +548,7 @@ export class PaymentService {
             providerKey: this.providerKey,
             finalPaymentIntent,
             amountCents,
-            ...this.getPendingSubscriptionRenewalDeps(),
+            ...this.getPendingSubscriptionRenewalDeps(activeClerkOrgId),
         });
         if (didHandleRenewalStyleCharge) {
             await syncOrganizationEligibilityForUser(userId);
@@ -556,14 +562,14 @@ export class PaymentService {
             providerKey: this.providerKey,
             finalPaymentIntent,
             amountCents,
-            ...this.getPendingSubscriptionFallbackDeps(),
+            ...this.getPendingSubscriptionFallbackDeps(activeClerkOrgId),
         });
     }
 
-    private getPendingSubscriptionRenewalDeps() {
+    private getPendingSubscriptionRenewalDeps(activeClerkOrgId?: string | null) {
         return {
             ...this.getMergeIdMapDeps(),
-            ...this.getOrganizationResolutionDeps(),
+            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
             refreshSubscriptionExpiryFromProvider: this.refreshSubscriptionExpiryFromProvider.bind(this),
             markSubscriptionActive: this.markSubscriptionActive.bind(this),
             findRecentNotificationByExactMessage: this.findRecentNotificationByExactMessage.bind(this),
@@ -571,12 +577,12 @@ export class PaymentService {
         };
     }
 
-    private getPendingSubscriptionFallbackDeps() {
+    private getPendingSubscriptionFallbackDeps(activeClerkOrgId?: string | null) {
         return {
             ...this.getMergeIdMapDeps(),
             consumeCouponRedemptionFromMetadata: this.consumeCouponRedemptionFromMetadata.bind(this),
             findRecentCancelledRecurringSubscription: this.findRecentCancelledRecurringSubscription.bind(this),
-            ...this.getOrganizationResolutionDeps(),
+            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
             syncOrganizationEligibilityForUser,
             ...this.getSubscriptionLookupDeps(),
             getPendingSubscriptionLookbackDate: this.getPendingSubscriptionLookbackDate.bind(this),
@@ -716,14 +722,15 @@ export class PaymentService {
         };
     }
 
-    private getOrganizationResolutionDeps() {
+    private getOrganizationResolutionDeps(activeClerkOrgId?: string | null) {
         return {
-            resolveOrganizationContext: this.resolveOrganizationContext.bind(this),
+            resolveOrganizationContext: (userId: string, explicitActiveClerkOrgId?: string | null) =>
+                this.resolveOrganizationContext(userId, explicitActiveClerkOrgId ?? activeClerkOrgId ?? null),
         };
     }
 
-    private async resolveOrganizationContext(userId: string) {
-        return resolveOrganizationContextExternal(userId);
+    private async resolveOrganizationContext(userId: string, activeClerkOrgId?: string | null) {
+        return resolveOrganizationContextExternal(userId, activeClerkOrgId ?? null);
     }
 
     private async findRecentNotificationByExactMessage(
@@ -1046,18 +1053,19 @@ export class PaymentService {
     }
 
     private async handleInvoicePaid(invoice: StandardizedInvoice) {
+        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(invoice.metadata);
         await processInvoicePaidEventExternal<SubscriptionWithPlan>({
             invoice,
-            ...this.getInvoicePaidEventDeps(),
+            ...this.getInvoicePaidEventDeps(activeClerkOrgId),
         });
     }
 
-    private getInvoicePaidEventDeps() {
+    private getInvoicePaidEventDeps(activeClerkOrgId?: string | null) {
         return {
             ...this.getProviderIdentityDeps(),
             ...this.getSubscriptionLookupDeps(),
             ensureProviderBackedSubscription: this.ensureProviderBackedSubscription.bind(this),
-            ...this.getOrganizationResolutionDeps(),
+            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
             shouldClearPaidTokensOnRenewal: shouldClearPaidTokensOnRenewalExternal,
             refreshSubscriptionExpiryFromProvider: this.refreshSubscriptionExpiryFromProvider.bind(this),
             findRecentNotificationByTitles: this.findRecentNotificationByTitles.bind(this),

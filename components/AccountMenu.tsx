@@ -173,6 +173,11 @@ export default function AccountMenu() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element | null;
+      if (target?.closest('[class*="cl-organizationSwitcher"]')) {
+        return;
+      }
+
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }

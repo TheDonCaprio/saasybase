@@ -9,12 +9,28 @@ import { Logger } from '../../../../lib/logger';
 import { shouldClearPaidTokensOnExpiry } from '../../../../lib/paidTokens';
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../../../../lib/paidTokenCleanup';
 import { syncOrganizationEligibilityForUser } from '../../../../lib/organization-access';
-import { resetOrganizationSharedTokens } from '../../../../lib/teams';
+import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
+}
+
+function resolveActiveClerkOrgId(metadata?: Record<string, unknown> | null): string | null {
+  if (!metadata) return null;
+  const candidates = [
+    metadata.activeClerkOrgId,
+    metadata.clerkOrgId,
+    metadata.orgId,
+    metadata.active_org_id,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
 }
 
 async function resolveRazorpaySessionId(paymentId: string): Promise<string | null> {
@@ -74,7 +90,7 @@ export async function GET(req: NextRequest) {
   // Determine provider hint early from payment_id prefix or session_id prefix
   const looksLikeRazorpay = (paymentId && paymentId.startsWith('pay_')) || (sessionId && (sessionId.startsWith('order_') || sessionId.startsWith('sub_') || sessionId.startsWith('plink_')));
 
-  const { userId: clerkUserId } = await auth();
+  const { userId: clerkUserId, orgId: authOrgId } = await auth();
   let actorUserId = clerkUserId ?? null;
 
   if (!actorUserId && process.env.NODE_ENV !== 'production') {
@@ -258,6 +274,14 @@ export async function GET(req: NextRequest) {
       // For non-stripe providers, fulfill via PaymentService so token crediting and
       // subscription handling stay consistent with webhook processing.
       if (!isStripeProvider) {
+        const activeClerkOrgId = resolveActiveClerkOrgId(session.metadata) ?? authOrgId ?? null;
+        const standardizedMetadata = { ...(session.metadata || {}) };
+        if (activeClerkOrgId) {
+          standardizedMetadata.activeClerkOrgId = activeClerkOrgId;
+          standardizedMetadata.clerkOrgId = activeClerkOrgId;
+          standardizedMetadata.orgId = activeClerkOrgId;
+        }
+
         const standardized: StandardizedCheckoutSession = {
           id: session.id,
           userId: sessionUserId || undefined,
@@ -268,7 +292,7 @@ export async function GET(req: NextRequest) {
           amountSubtotal: session.amountSubtotal,
           currency: session.currency,
           paymentStatus: 'paid',
-          metadata: session.metadata,
+          metadata: standardizedMetadata,
           lineItems: session.lineItems,
         };
 
@@ -479,6 +503,13 @@ export async function GET(req: NextRequest) {
     if (!plan) return jsonError('Plan not found for price', 404, 'PLAN_NOT_FOUND');
 
     const now = new Date();
+    const activeClerkOrgId = resolveActiveClerkOrgId(session?.metadata) ?? authOrgId ?? null;
+    const activeOwnedOrganization = activeClerkOrgId
+      ? await prisma.organization.findFirst({
+        where: { ownerUserId: userId, clerkOrganizationId: activeClerkOrgId },
+        select: { id: true, clerkOrganizationId: true },
+      })
+      : null;
 
     // Check for existing active subscriptions to handle stacking
     const existingActiveSubscriptions = await prisma.subscription.findMany({
@@ -592,10 +623,16 @@ export async function GET(req: NextRequest) {
               .map(s => s.organizationId)
               .filter((id): id is string => typeof id === 'string' && id.length > 0);
             if (orgIds.length > 0) {
-              const owned = await prisma.organization.findMany({
-                where: { id: { in: Array.from(new Set(orgIds)) }, ownerUserId: userId },
-                select: { id: true },
-              });
+              const uniqueOrgIds = Array.from(new Set(orgIds));
+              const scopedOrgIds = activeOwnedOrganization
+                ? uniqueOrgIds.filter((id) => id === activeOwnedOrganization.id)
+                : uniqueOrgIds;
+              const owned = scopedOrgIds.length > 0
+                ? await prisma.organization.findMany({
+                  where: { id: { in: scopedOrgIds }, ownerUserId: userId },
+                  select: { id: true },
+                })
+                : [];
               for (const org of owned) {
                 await resetOrganizationSharedTokens({ organizationId: org.id });
               }
@@ -656,8 +693,21 @@ export async function GET(req: NextRequest) {
       const planTokenAmount = plan.tokenLimit || 0;
       const isOneTimePlan = plan.autoRenew === false;
       if (subscriptionStatus === 'ACTIVE' && isOneTimePlan && planTokenAmount > 0) {
-        await prisma.user.update({ where: { id: userId }, data: { tokenBalance: { increment: planTokenAmount } } });
-        Logger.info('Added tokens from one-time purchase (checkout.confirm)', { userId, tokensAdded: planTokenAmount, planName: plan.name });
+        if (plan.supportsOrganizations === true && activeOwnedOrganization?.id) {
+          await creditOrganizationSharedTokens({
+            organizationId: activeOwnedOrganization.id,
+            amount: planTokenAmount,
+          });
+          Logger.info('Added tokens from one-time purchase to organization pool (checkout.confirm)', {
+            userId,
+            organizationId: activeOwnedOrganization.id,
+            tokensAdded: planTokenAmount,
+            planName: plan.name,
+          });
+        } else {
+          await prisma.user.update({ where: { id: userId }, data: { tokenBalance: { increment: planTokenAmount } } });
+          Logger.info('Added tokens from one-time purchase (checkout.confirm)', { userId, tokensAdded: planTokenAmount, planName: plan.name });
+        }
       }
     } catch (err) {
       Logger.warn('Failed to add tokens after checkout confirm (one-time purchase)', { error: toError(err).message });

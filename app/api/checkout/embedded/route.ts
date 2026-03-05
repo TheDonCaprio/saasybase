@@ -65,7 +65,7 @@ function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown }
 }
 
 async function handleEmbeddedCheckout(req: NextRequest) {
-    const { userId } = await auth();
+    const { userId, orgId: activeClerkOrgId } = await auth();
     if (!userId) {
         return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
     }
@@ -608,6 +608,11 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
         const base = getEnv().NEXT_PUBLIC_APP_URL;
         const metadata: Record<string, string> = { userId };
+        if (activeClerkOrgId) {
+            metadata.activeClerkOrgId = activeClerkOrgId;
+            metadata.clerkOrgId = activeClerkOrgId;
+            metadata.orgId = activeClerkOrgId;
+        }
         if (typeof planId === 'string') metadata.planId = planId;
         if (typeof priceId === 'string') metadata.priceId = priceId;
         metadata.checkoutMode = mode === 'subscription' ? 'subscription' : 'payment';

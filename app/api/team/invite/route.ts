@@ -19,7 +19,7 @@ function normalizeEmail(value: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -44,12 +44,24 @@ export async function POST(request: NextRequest) {
   }
 
   let organization = null;
-  try {
-    organization = await ensureTeamOrganization(userId);
-  } catch (err: unknown) {
-    const error = toError(err);
-    Logger.warn('team invite ensure organization failed', { userId, error: error.message });
-    return NextResponse.json({ ok: false, error: error.message || 'Provision a team workspace before inviting members.' }, { status: 400 });
+  if (orgId) {
+    organization = await prisma.organization.findFirst({
+      where: {
+        ownerUserId: userId,
+        clerkOrganizationId: orgId,
+      },
+    });
+    if (!organization) {
+      return NextResponse.json({ ok: false, error: 'Active workspace is not owned by you or not provisioned yet.' }, { status: 403 });
+    }
+  } else {
+    try {
+      organization = await ensureTeamOrganization(userId);
+    } catch (err: unknown) {
+      const error = toError(err);
+      Logger.warn('team invite ensure organization failed', { userId, error: error.message });
+      return NextResponse.json({ ok: false, error: error.message || 'Provision a team workspace before inviting members.' }, { status: 400 });
+    }
   }
 
   const inviter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
@@ -116,7 +128,10 @@ export async function POST(request: NextRequest) {
       Logger.warn('team invite: failed to create on-site notification', { email, error: toError(err).message });
     }
 
-    const state = await fetchTeamDashboardState(userId, { forceSync: true });
+    const state = await fetchTeamDashboardState(userId, {
+      forceSync: true,
+      activeClerkOrgId: orgId ?? null,
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {
     const error = toError(err);

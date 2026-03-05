@@ -26,7 +26,7 @@ function normalizeStrategy(value: unknown): CapStrategy | null {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -62,12 +62,16 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const access = await getOrganizationAccessSummary(userId);
+    const access = await getOrganizationAccessSummary(userId, orgId ?? null);
     if (!access.allowed || access.kind !== 'OWNER') {
       return NextResponse.json({ ok: false, error: 'Only workspace owners can update shared token caps.' }, { status: 403 });
     }
 
-    const organization = await prisma.organization.findFirst({ where: { ownerUserId: userId } });
+    const organization = await prisma.organization.findFirst({
+      where: orgId
+        ? { ownerUserId: userId, clerkOrganizationId: orgId }
+        : { ownerUserId: userId },
+    });
     if (!organization) {
       return NextResponse.json({ ok: false, error: 'Workspace not found. Provision a workspace before updating settings.' }, { status: 404 });
     }
@@ -88,7 +92,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     await prisma.organization.update({ where: { id: organization.id }, data });
-    const state = await fetchTeamDashboardState(userId, { forceSync: true });
+    const state = await fetchTeamDashboardState(userId, {
+      forceSync: true,
+      activeClerkOrgId: orgId ?? null,
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err) {
     const error = toError(err);

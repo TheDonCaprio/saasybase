@@ -8,7 +8,7 @@ import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
 import { Logger } from '../../../../../lib/logger';
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   let token: string | null = null;
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!invite) return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
 
   const organization = await prisma.organization.findUnique({ where: { id: invite.organizationId }, select: { id: true, ownerUserId: true, name: true, slug: true, clerkOrganizationId: true } });
-  if (!organization || organization.ownerUserId !== userId) {
+  if (!organization || organization.ownerUserId !== userId || (orgId && organization.clerkOrganizationId !== orgId)) {
     return NextResponse.json({ ok: false, error: 'Not authorized to resend this invite.' }, { status: 403 });
   }
 
@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: result.error || 'Failed to resend invite' }, { status: 500 });
     }
 
-    const state = await fetchTeamDashboardState(userId, { forceSync: true });
+    const state = await fetchTeamDashboardState(userId, {
+      forceSync: true,
+      activeClerkOrgId: orgId ?? null,
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {
     const e = toError(err);

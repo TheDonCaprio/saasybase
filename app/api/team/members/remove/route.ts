@@ -7,7 +7,7 @@ import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
   }
 
   const organization = await prisma.organization.findFirst({
-    where: { ownerUserId: userId },
+    where: orgId
+      ? { ownerUserId: userId, clerkOrganizationId: orgId }
+      : { ownerUserId: userId },
     select: { clerkOrganizationId: true },
   });
 
@@ -55,6 +57,9 @@ export async function POST(request: NextRequest) {
   }
 
   await removeOrganizationMembership({ userId: targetUserId, clerkOrganizationId: organization.clerkOrganizationId });
-  const state = await fetchTeamDashboardState(userId, { forceSync: true });
+  const state = await fetchTeamDashboardState(userId, {
+    forceSync: true,
+    activeClerkOrgId: orgId ?? null,
+  });
   return NextResponse.json({ ok: true, ...state });
 }

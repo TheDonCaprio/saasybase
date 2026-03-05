@@ -6,7 +6,7 @@ import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     await ensureTeamOrganization(userId, requestedName);
-    const state = await fetchTeamDashboardState(userId, { forceSync: true });
+    const state = await fetchTeamDashboardState(userId, {
+      forceSync: true,
+      activeClerkOrgId: orgId ?? null,
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {
     const error = toError(err);

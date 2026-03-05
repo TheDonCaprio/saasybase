@@ -185,18 +185,25 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
   };
 }
 
-export async function fetchTeamDashboardState(userId: string, options?: { forceSync?: boolean }): Promise<TeamDashboardState> {
+export async function fetchTeamDashboardState(
+  userId: string,
+  options?: { forceSync?: boolean; activeClerkOrgId?: string | null }
+): Promise<TeamDashboardState> {
   // NOTE: forceSync previously called syncOrganizationEligibilityForUser which can
   // DELETE organizations. A simple page-load refresh should never be destructive.
   // Org cleanup is handled by OrgValidityCheck (lazy check) and the cron job.
   // forceSync now just ensures we re-read the latest access summary (no-op beyond
   // a fresh DB query), keeping the team page read-only.
 
-  const access = await getOrganizationAccessSummary(userId);
+  const access = await getOrganizationAccessSummary(userId, options?.activeClerkOrgId ?? null);
 
   let organization: OrganizationWithRelations | null = null;
   if (access.allowed) {
-    const identifier = access.kind === 'OWNER' ? { ownerUserId: userId } : { id: access.membership.organizationId };
+    const identifier = access.kind === 'OWNER'
+      ? (options?.activeClerkOrgId
+        ? { ownerUserId: userId, clerkOrganizationId: options.activeClerkOrgId }
+        : { ownerUserId: userId })
+      : { id: access.membership.organizationId };
     organization = await prisma.organization.findFirst({
       where: identifier,
       include: {

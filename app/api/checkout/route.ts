@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     const clientIp = getClientIP(req);
     const userAgent = req.headers.get('user-agent');
-    const { userId: clerkUserId } = await auth();
+    const { userId: clerkUserId, orgId: activeClerkOrgId } = await auth();
     userId = clerkUserId as string | null;
 
     const limiterKey = userId ? `checkout:user:${userId}` : createRateLimitKey(req, 'checkout');
@@ -606,6 +606,11 @@ export async function POST(req: NextRequest) {
       }
       const base = getEnv().NEXT_PUBLIC_APP_URL;
       const metadata: Record<string, string> = { planId };
+      if (activeClerkOrgId) {
+        metadata.activeClerkOrgId = activeClerkOrgId;
+        metadata.clerkOrgId = activeClerkOrgId;
+        metadata.orgId = activeClerkOrgId;
+      }
       if (priceId) {
         metadata.priceId = priceId;
         metadata.planPriceId = priceId;

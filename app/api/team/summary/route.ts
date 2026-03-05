@@ -5,7 +5,7 @@ import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
   const forceSync = request.nextUrl.searchParams.get('sync') === '1';
 
   try {
-    const state = await fetchTeamDashboardState(userId, { forceSync });
+    const state = await fetchTeamDashboardState(userId, {
+      forceSync,
+      activeClerkOrgId: orgId ?? null,
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {
     const error = toError(err);

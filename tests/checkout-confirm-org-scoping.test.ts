@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const prismaMock = vi.hoisted(() => ({
+  organization: {
+    findFirst: vi.fn(),
+  },
   payment: {
     findFirst: vi.fn(),
   },
@@ -34,6 +37,7 @@ import { GET } from '../app/api/checkout/confirm/route';
 describe('GET /api/checkout/confirm org scoping', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.organization.findFirst.mockResolvedValue(null);
   });
 
   it('injects active org metadata from auth when provider session metadata omits org context', async () => {

@@ -15,6 +15,7 @@ import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
 import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -32,6 +33,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/billing', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
 
   const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan, activeCurrency] = await Promise.all([

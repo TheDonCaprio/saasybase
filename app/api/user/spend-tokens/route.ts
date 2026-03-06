@@ -47,7 +47,7 @@ async function resolveSharedContext(params: {
   | {
       ok: true;
       organizationId: string;
-      membershipId: string;
+      membershipId: string | null;
       poolBalance: number;
       effectiveMemberCap: number | null;
       memberCapStrategy: 'SOFT' | 'HARD' | 'DISABLED';
@@ -59,11 +59,24 @@ async function resolveSharedContext(params: {
 > {
   const { userId, organizationId, tx } = params;
 
+  if (!organizationId) {
+    return { ok: false, status: 400, error: 'no_shared_context' };
+  }
+
+  const targetOrgFilter = organizationId
+    ? {
+        OR: [
+          { organizationId },
+          { organization: { clerkOrganizationId: organizationId } },
+        ],
+      }
+    : {};
+
   const membership = await tx.organizationMembership.findFirst({
     where: {
       userId,
       status: 'ACTIVE',
-      ...(organizationId ? { organizationId } : {}),
+      ...targetOrgFilter,
       organization: {
         plan: {
           supportsOrganizations: true,
@@ -79,6 +92,7 @@ async function resolveSharedContext(params: {
       organization: {
         select: {
           id: true,
+          clerkOrganizationId: true,
           ownerUserId: true,
           tokenBalance: true,
           memberTokenCap: true,
@@ -90,7 +104,41 @@ async function resolveSharedContext(params: {
   });
 
   if (!membership?.organization?.id) {
-    return { ok: false, status: 404, error: 'no_shared_context' };
+    const ownedOrganization = await tx.organization.findFirst({
+      where: {
+        ownerUserId: userId,
+        plan: { supportsOrganizations: true },
+        ...(organizationId
+          ? {
+              OR: [
+                { id: organizationId },
+                { clerkOrganizationId: organizationId },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        ownerUserId: true,
+        tokenBalance: true,
+      },
+    });
+
+    if (!ownedOrganization?.id) {
+      return { ok: false, status: 400, error: 'no_shared_context' };
+    }
+
+    return {
+      ok: true,
+      organizationId: ownedOrganization.id,
+      membershipId: null,
+      poolBalance: Math.max(0, Number(ownedOrganization.tokenBalance ?? 0)),
+      effectiveMemberCap: null,
+      memberCapStrategy: 'DISABLED',
+      memberCapResetIntervalHours: null,
+      memberTokenUsage: 0,
+      memberTokenUsageWindowStart: null,
+    };
   }
 
   // Verify the organization owner still has a valid team subscription.
@@ -146,6 +194,33 @@ async function resolveSharedContext(params: {
     memberTokenUsage,
     memberTokenUsageWindowStart,
   };
+}
+
+function getAvailableSharedTokens(shared: {
+  poolBalance: number;
+  effectiveMemberCap: number | null;
+  memberCapStrategy: 'SOFT' | 'HARD' | 'DISABLED';
+  memberCapResetIntervalHours: number | null;
+  memberTokenUsage: number;
+  memberTokenUsageWindowStart: Date | null;
+}): number {
+  const poolBalance = Math.max(0, Number(shared.poolBalance ?? 0));
+  const cap = shared.effectiveMemberCap;
+  const resetHours = shared.memberCapResetIntervalHours;
+  const now = Date.now();
+  const windowStartMs = shared.memberTokenUsageWindowStart ? shared.memberTokenUsageWindowStart.getTime() : null;
+  const windowExpired =
+    resetHours != null &&
+    (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
+  const usage = windowExpired ? 0 : Math.max(0, Number(shared.memberTokenUsage ?? 0));
+  const remainingCap = cap == null ? null : Math.max(0, cap - usage);
+
+  const hardCapEnabled = shared.memberCapStrategy === 'HARD' && cap != null;
+  if (!hardCapEnabled) {
+    return poolBalance;
+  }
+
+  return Math.max(0, Math.min(poolBalance, remainingCap ?? 0));
 }
 
 const rateLimited = withRateLimit(
@@ -207,20 +282,41 @@ export async function POST(req: NextRequest) {
 
         const hasActiveSubscription = await resolveActiveSubscription(userId, tx);
 
+        // Pre-resolve shared context once (used by both auto-selection and shared deduction).
+        let sharedContext: Awaited<ReturnType<typeof resolveSharedContext>> | null = null;
+
         let effectiveBucket: Exclude<SpendBucket, 'auto'>;
         if (bucket === 'auto') {
-          // Prefer personal paid subscription when active; fall back to shared workspace pool; then free.
-          if (hasActiveSubscription) {
+          // Resolve shared once so we never duplicate the DB call.
+          sharedContext = await resolveSharedContext({ userId, organizationId, tx });
+          const sharedAvail = sharedContext.ok ? getAvailableSharedTokens(sharedContext) : 0;
+
+          // 1st pass – pick the first bucket that can fully cover the requested amount.
+          if (hasActiveSubscription && paidBalance >= amount) {
+            effectiveBucket = 'paid';
+          } else if (sharedAvail >= amount) {
+            effectiveBucket = 'shared';
+          } else if (freeBalance >= amount) {
+            effectiveBucket = 'free';
+          }
+          // 2nd pass – any bucket with a positive balance (will surface insufficient_tokens).
+          else if (hasActiveSubscription && paidBalance > 0) {
+            effectiveBucket = 'paid';
+          } else if (sharedAvail > 0) {
+            effectiveBucket = 'shared';
+          } else if (freeBalance > 0) {
+            effectiveBucket = 'free';
+          }
+          // 3rd pass – legacy fallback when every balance is 0.
+          else if (hasActiveSubscription) {
             effectiveBucket = 'paid';
           } else {
-            const shared = await resolveSharedContext({ userId, organizationId, tx });
-            effectiveBucket = shared.ok ? 'shared' : 'free';
+            effectiveBucket = 'free';
           }
         } else {
           effectiveBucket = bucket;
         }
 
-        let sharedContext: Awaited<ReturnType<typeof resolveSharedContext>> | null = null;
         let warnings:
           | Array<{ code: 'soft_cap_exceeded'; message: string; cap: number; usageBefore: number; usageAfter: number }>
           | undefined;
@@ -237,14 +333,16 @@ export async function POST(req: NextRequest) {
             }
           | undefined;
 
-        if (effectiveBucket === 'shared') {
+        // Ensure shared context is resolved when explicitly requesting shared bucket.
+        if (effectiveBucket === 'shared' && !sharedContext) {
           sharedContext = await resolveSharedContext({ userId, organizationId, tx });
-          if (!sharedContext.ok) {
-            return {
-              status: sharedContext.status,
-              body: { ok: false, error: sharedContext.error },
-            };
-          }
+        }
+        if (effectiveBucket === 'shared' && (!sharedContext || !sharedContext.ok)) {
+          const sc = sharedContext && !sharedContext.ok ? sharedContext : null;
+          return {
+            status: sc?.status ?? 400,
+            body: { ok: false, error: sc?.error ?? 'no_shared_context' },
+          };
         }
 
         if (effectiveBucket === 'paid') {
@@ -282,22 +380,25 @@ export async function POST(req: NextRequest) {
             };
           }
         } else {
-          const poolBalance = sharedContext!.poolBalance;
-          const cap = sharedContext!.effectiveMemberCap;
-          const resetHours = sharedContext!.memberCapResetIntervalHours;
+          // At this point sharedContext is guaranteed ok (guarded above).
+          const shared = sharedContext as Extract<NonNullable<typeof sharedContext>, { ok: true }>;
+
+          const poolBalance = shared.poolBalance;
+          const cap = shared.effectiveMemberCap;
+          const resetHours = shared.memberCapResetIntervalHours;
           const now = Date.now();
-          const windowStartMs = sharedContext!.memberTokenUsageWindowStart ? sharedContext!.memberTokenUsageWindowStart.getTime() : null;
+          const windowStartMs = shared.memberTokenUsageWindowStart ? shared.memberTokenUsageWindowStart.getTime() : null;
           const windowExpired =
             resetHours != null &&
             (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
-          const usage = windowExpired ? 0 : Math.max(0, sharedContext!.memberTokenUsage);
+          const usage = windowExpired ? 0 : Math.max(0, shared.memberTokenUsage);
           const remainingCap = cap == null ? null : Math.max(0, cap - usage);
 
           const usageAfter = usage + amount;
           const remainingAfter = cap == null ? null : Math.max(0, cap - usageAfter);
 
           sharedCap = {
-            strategy: sharedContext!.memberCapStrategy,
+            strategy: shared.memberCapStrategy,
             cap,
             usageBefore: usage,
             usageAfter,
@@ -305,13 +406,13 @@ export async function POST(req: NextRequest) {
             remainingAfter,
             windowStart: windowExpired
               ? null
-              : sharedContext!.memberTokenUsageWindowStart
-                ? sharedContext!.memberTokenUsageWindowStart.toISOString()
+              : shared.memberTokenUsageWindowStart
+                ? shared.memberTokenUsageWindowStart.toISOString()
                 : null,
             resetIntervalHours: resetHours,
           };
 
-          const softCapExceeded = sharedContext!.memberCapStrategy === 'SOFT' && cap != null && usageAfter > cap;
+          const softCapExceeded = shared.memberCapStrategy === 'SOFT' && cap != null && usageAfter > cap;
           if (softCapExceeded) {
             warnings = [
               {
@@ -324,7 +425,7 @@ export async function POST(req: NextRequest) {
             ];
           }
 
-          const hardCapEnabled = sharedContext!.memberCapStrategy === 'HARD' && cap != null;
+          const hardCapEnabled = shared.memberCapStrategy === 'HARD' && cap != null;
           const capAvailable = cap == null ? poolBalance : Math.min(poolBalance, remainingCap ?? 0);
           const spendAllowedByCap = hardCapEnabled ? amount <= capAvailable : amount <= poolBalance;
 
@@ -341,13 +442,13 @@ export async function POST(req: NextRequest) {
                 memberCap: cap,
                 memberUsage: usage,
                 memberRemainingCap: remainingCap,
-                capStrategy: sharedContext!.memberCapStrategy,
+                capStrategy: shared.memberCapStrategy,
               },
             };
           }
 
           const updated = await tx.organization.updateMany({
-            where: { id: sharedContext!.organizationId, tokenBalance: { gte: amount } },
+            where: { id: shared.organizationId, tokenBalance: { gte: amount } },
             data: { tokenBalance: { decrement: amount } },
           });
 
@@ -364,21 +465,23 @@ export async function POST(req: NextRequest) {
                 memberCap: cap,
                 memberUsage: usage,
                 memberRemainingCap: remainingCap,
-                capStrategy: sharedContext!.memberCapStrategy,
+                capStrategy: shared.memberCapStrategy,
               },
             };
           }
 
           // Update per-member usage window tracking.
-          const nextWindowStart = windowExpired || !sharedContext!.memberTokenUsageWindowStart ? new Date() : sharedContext!.memberTokenUsageWindowStart;
+          const nextWindowStart = windowExpired || !shared.memberTokenUsageWindowStart ? new Date() : shared.memberTokenUsageWindowStart;
           const usageUpdate = windowExpired
             ? { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: amount }
             : { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: { increment: amount } };
 
-          await tx.organizationMembership.updateMany({
-            where: { id: sharedContext!.membershipId, status: 'ACTIVE' },
-            data: usageUpdate,
-          });
+          if (shared.membershipId) {
+            await tx.organizationMembership.updateMany({
+              where: { id: shared.membershipId, status: 'ACTIVE' },
+              data: usageUpdate,
+            });
+          }
         }
 
         try {
@@ -397,10 +500,12 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        const sharedOrgId = sharedContext && sharedContext.ok ? sharedContext.organizationId : null;
+
         const [freshUser, freshOrg] = await Promise.all([
           tx.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
-          effectiveBucket === 'shared'
-            ? tx.organization.findUnique({ where: { id: sharedContext!.organizationId }, select: { tokenBalance: true } })
+          effectiveBucket === 'shared' && sharedOrgId
+            ? tx.organization.findUnique({ where: { id: sharedOrgId }, select: { tokenBalance: true } })
             : Promise.resolve(null),
         ]);
 
@@ -411,7 +516,7 @@ export async function POST(req: NextRequest) {
             userId,
             amount,
             bucket: effectiveBucket,
-            organizationId: effectiveBucket === 'shared' ? sharedContext!.organizationId : null,
+            organizationId: effectiveBucket === 'shared' ? sharedOrgId : null,
             warnings,
             sharedCap,
             balances: {

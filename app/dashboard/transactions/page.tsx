@@ -17,6 +17,7 @@ import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { formatCurrency } from '../../../lib/utils/currency';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -34,6 +35,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/transactions', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const page = 1;
   const limit = 50;

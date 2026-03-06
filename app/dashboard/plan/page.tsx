@@ -16,6 +16,7 @@ import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
 import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -35,6 +36,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/plan', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   // Get all subscriptions (active and pending) to show complete picture
   const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, activeCurrency] = await Promise.all([

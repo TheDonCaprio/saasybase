@@ -76,8 +76,16 @@ function safeInt(value: unknown) {
 
 function defaultBucketForProfile(profile: ProfilePayload | null): Bucket {
   if (!profile) return 'auto';
-  // Prefer shared when available, then paid, then free.
-  if (profile.sharedTokens) return 'shared';
+  const sharedRemaining = Math.max(0, Number(profile.sharedTokens?.remaining ?? 0));
+  const paidRemaining = Math.max(0, Number(profile.paidTokens?.remaining ?? 0));
+  const freeRemaining = Math.max(0, Number(profile.freeTokens?.remaining ?? 0));
+
+  // Prefer buckets with available balance.
+  if (sharedRemaining > 0) return 'shared';
+  if (paidRemaining > 0) return 'paid';
+  if (freeRemaining > 0) return 'free';
+
+  // No remaining balance in any bucket: preserve legacy PERSONAL fallback.
   if (profile.planSource === 'PERSONAL') return 'paid';
   return 'free';
 }
@@ -141,11 +149,20 @@ export default function SaaSyAppClient() {
 
   useEffect(() => {
     if (!profile) return;
-    setBucket((prev) => (prev === 'auto' ? defaultBucketForProfile(profile) : prev));
+    setBucket((prev) => {
+      if (prev === 'auto') return 'auto';
+      if (prev === 'shared' && !profile.sharedTokens) return defaultBucketForProfile(profile);
+      return prev;
+    });
   }, [profile]);
 
   async function spend(cost: number, label: string, spendBucket: Bucket, feature?: string) {
     setMessage(null);
+
+    if (spendBucket === 'shared' && !profile?.sharedTokens) {
+      setMessage('Shared workspace tokens are not available in your current account context.');
+      return;
+    }
 
     const normalizedCost = Math.max(0, Math.floor(cost));
     if (!Number.isFinite(normalizedCost) || normalizedCost <= 0) {
@@ -314,7 +331,7 @@ export default function SaaSyAppClient() {
                 <option value="auto">Auto</option>
                 <option value="paid">Paid</option>
                 <option value="free">Free</option>
-                <option value="shared">Shared</option>
+                <option value="shared" disabled={!profile?.sharedTokens}>Shared</option>
               </select>
 
               <button

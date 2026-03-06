@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { TeamDashboardOrganization, TeamDashboardState } from '../../lib/team-dashboard';
 import type { TeamSubscriptionStatus } from '../../lib/organization-access';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../dashboard/dashboardSurfaces';
@@ -43,6 +44,7 @@ type CapStrategy = 'SOFT' | 'HARD' | 'DISABLED';
 const defaultError = 'Something went wrong. Please try again.';
 
 export function TeamManagementClient({ initialState, viewer, pendingInvitesForViewer }: TeamManagementClientProps) {
+  const router = useRouter();
   const [state, setState] = useState<TeamDashboardState>(initialState);
   const [status, setStatus] = useState<StatusBanner | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -109,13 +111,17 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
       });
       const payload = (await response.json()) as ApiResponse;
       applyState(payload, 'Workspace provisioned.');
+      if (payload.ok && payload.access) {
+        router.refresh();
+        window.location.reload();
+      }
     } catch (err) {
       console.error(err);
       setStatus({ tone: 'error', message: defaultError });
     } finally {
       setBusyAction(null);
     }
-  }, [applyState, orgNameInput]);
+  }, [applyState, orgNameInput, router]);
 
   const handleInvite = useCallback(
     async (email: string, role: string) => {

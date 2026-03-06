@@ -115,6 +115,17 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = actorUserId;
+  const ownedOrganization = await prisma.organization.findFirst({
+    where: { ownerUserId: userId },
+    select: { id: true },
+  });
+  const hasOwnedOrganization = Boolean(ownedOrganization?.id);
+  const setupUrl = '/dashboard/team?fromCheckout=1&provision=1';
+  const setupFieldsForPlan = (supportsOrganizations?: boolean | null) =>
+    supportsOrganizations === true && !hasOwnedOrganization
+      ? { requiresOrganizationSetup: true, setupUrl }
+      : {};
+
   try {
     const devLog = (...a: unknown[]) => { if (process.env.NODE_ENV !== 'production') Logger.debug?.('[checkout/confirm]', ...a); };
     devLog('incoming', { sessionId, recent });
@@ -151,6 +162,7 @@ export async function GET(req: NextRequest) {
             paymentId: existing.id,
             createdAt: existing.createdAt,
             plan: existing.subscription?.plan?.name || existing.plan?.name || null,
+            ...setupFieldsForPlan(existing.subscription?.plan?.supportsOrganizations ?? existing.plan?.supportsOrganizations),
           });
         }
       }
@@ -182,6 +194,7 @@ export async function GET(req: NextRequest) {
               paymentId: recentPayment.id,
               createdAt: recentPayment.createdAt,
               plan: recentPayment.subscription?.plan?.name || recentPayment.plan?.name || null,
+              ...setupFieldsForPlan(recentPayment.subscription?.plan?.supportsOrganizations ?? recentPayment.plan?.supportsOrganizations),
             });
           }
         }
@@ -486,7 +499,14 @@ export async function GET(req: NextRequest) {
       : null;
     if (webhookCreatedSub) {
       devLog('webhook already created subscription for this session - returning existing');
-      return NextResponse.json({ ok: true, already: true, active: true, plan: webhookCreatedSub.plan.name, expiresAt: webhookCreatedSub.expiresAt });
+      return NextResponse.json({
+        ok: true,
+        already: true,
+        active: true,
+        plan: webhookCreatedSub.plan.name,
+        expiresAt: webhookCreatedSub.expiresAt,
+        ...setupFieldsForPlan(webhookCreatedSub.plan?.supportsOrganizations),
+      });
     }
 
     // Derive plan via price id
@@ -592,7 +612,8 @@ export async function GET(req: NextRequest) {
             plan: latestActive.plan.name,
             purchasedPlan: plan.name,
             tokensAdded: plan.tokenLimit || 0,
-            expiresAt: latestActive.expiresAt
+            expiresAt: latestActive.expiresAt,
+            ...setupFieldsForPlan(plan.supportsOrganizations),
           });
         }
 
@@ -602,7 +623,8 @@ export async function GET(req: NextRequest) {
           topup: true,
           pending: true,
           plan: latestActive.plan.name,
-          purchasedPlan: plan.name
+          purchasedPlan: plan.name,
+          ...setupFieldsForPlan(plan.supportsOrganizations),
         });
       } else {
         // Either there are no active one-time subs, or the latest active is recurring.
@@ -693,17 +715,25 @@ export async function GET(req: NextRequest) {
       const planTokenAmount = plan.tokenLimit || 0;
       const isOneTimePlan = plan.autoRenew === false;
       if (subscriptionStatus === 'ACTIVE' && isOneTimePlan && planTokenAmount > 0) {
-        if (plan.supportsOrganizations === true && activeOwnedOrganization?.id) {
-          await creditOrganizationSharedTokens({
-            organizationId: activeOwnedOrganization.id,
-            amount: planTokenAmount,
-          });
-          Logger.info('Added tokens from one-time purchase to organization pool (checkout.confirm)', {
-            userId,
-            organizationId: activeOwnedOrganization.id,
-            tokensAdded: planTokenAmount,
-            planName: plan.name,
-          });
+        if (plan.supportsOrganizations === true) {
+          if (activeOwnedOrganization?.id) {
+            await creditOrganizationSharedTokens({
+              organizationId: activeOwnedOrganization.id,
+              amount: planTokenAmount,
+            });
+            Logger.info('Added tokens from one-time purchase to organization pool (checkout.confirm)', {
+              userId,
+              organizationId: activeOwnedOrganization.id,
+              tokensAdded: planTokenAmount,
+              planName: plan.name,
+            });
+          } else {
+            Logger.info('Deferred team token allocation until workspace provisioning (checkout.confirm)', {
+              userId,
+              tokensDeferred: planTokenAmount,
+              planName: plan.name,
+            });
+          }
         } else {
           await prisma.user.update({ where: { id: userId }, data: { tokenBalance: { increment: planTokenAmount } } });
           Logger.info('Added tokens from one-time purchase (checkout.confirm)', { userId, tokensAdded: planTokenAmount, planName: plan.name });
@@ -773,7 +803,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, active: subscriptionStatus === 'ACTIVE', pending: subscriptionStatus === 'PENDING', plan: plan.name, expiresAt: newExpiresAt });
+    return NextResponse.json({
+      ok: true,
+      active: subscriptionStatus === 'ACTIVE',
+      pending: subscriptionStatus === 'PENDING',
+      plan: plan.name,
+      expiresAt: newExpiresAt,
+      ...setupFieldsForPlan(plan.supportsOrganizations),
+    });
   } catch (e: unknown) {
     const err = toError(e);
     Logger.error('Confirm error', { error: err.message, stack: err.stack });

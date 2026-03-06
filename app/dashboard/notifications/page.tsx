@@ -4,6 +4,7 @@ import { DashboardPageHeader } from '../../../components/dashboard/DashboardPage
 import { dashboardMutedPanelClass } from '../../../components/dashboard/dashboardSurfaces';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
@@ -22,6 +23,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/notifications', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const page = 1;
   const limit = 50;

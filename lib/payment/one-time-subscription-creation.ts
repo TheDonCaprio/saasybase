@@ -58,10 +58,17 @@ export async function processOneTimeSubscriptionCreation(params: {
             await tx.user.update({ where: { id: params.userId }, data: { paymentsCount: { increment: 1 } } as unknown as Prisma.UserUpdateInput });
 
             if (params.planToUse.tokenLimit) {
-                if (params.organizationContext && params.organizationContext.role === 'OWNER') {
+                const isTeamPlan = params.planToUse.supportsOrganizations === true;
+                if (isTeamPlan && params.organizationContext?.role === 'OWNER') {
                     await creditOrganizationSharedTokens({ organizationId: params.organizationContext.organization.id, amount: params.planToUse.tokenLimit, tx });
-                } else {
+                } else if (!isTeamPlan) {
                     await tx.user.update({ where: { id: params.userId }, data: { tokenBalance: { increment: params.planToUse.tokenLimit } } });
+                } else {
+                    Logger.info('Deferred team token allocation until workspace provisioning (one-time subscription creation)', {
+                        userId: params.userId,
+                        planId: params.planToUse.id,
+                        tokensDeferred: params.planToUse.tokenLimit,
+                    });
                 }
             }
         });

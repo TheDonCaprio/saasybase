@@ -12,6 +12,7 @@ import { getDefaultTokenLabel, getFreePlanSettings } from '../../../lib/settings
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -32,6 +33,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/profile', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   // Ensure user exists in database
   const user = await ensureUserExists();

@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -27,6 +28,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/onboarding', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   // Check user's progress
   const user = await prisma.user.findUnique({

@@ -68,9 +68,22 @@ export function CheckoutReturnClient() {
         if (!hasSession && !hasPaymentId) qp.set('recent', '1');
         const url = `/api/checkout/confirm?${qp.toString()}`;
         const res = await fetch(url);
-        const data = await res.json().catch(() => null) as { completed?: boolean; ok?: boolean; active?: boolean; paymentId?: string } | null;
+        const data = await res.json().catch(() => null) as {
+          completed?: boolean;
+          ok?: boolean;
+          active?: boolean;
+          paymentId?: string;
+          requiresOrganizationSetup?: boolean;
+          setupUrl?: string;
+        } | null;
         const completed = Boolean(data?.completed) || (Boolean(data?.ok) && Boolean(data?.active));
         if (res.ok && completed) {
+          if (data?.requiresOrganizationSetup) {
+            const setupDestination = data.setupUrl || '/dashboard/team?fromCheckout=1&provision=1';
+            window.location.href = setupDestination;
+            return;
+          }
+
           setConfirmStatus('confirmed');
           const nextParams = new URLSearchParams();
           nextParams.set('purchase', 'success');

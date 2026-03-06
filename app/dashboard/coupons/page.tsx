@@ -11,6 +11,7 @@ import { faTicket } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getActiveCurrencyAsync } from '@/lib/payment/registry';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -42,6 +43,7 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/coupons', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const pageParam = Number.parseInt(String(resolvedSearchParams?.page ?? '1'), 10);
   const limitParam = Number.parseInt(String(resolvedSearchParams?.limit ?? '20'), 10);

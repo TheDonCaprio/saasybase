@@ -61,6 +61,11 @@ export type OrganizationPlanContext = {
 };
 
 export async function getOrganizationPlanContext(userId: string, activeClerkOrgId?: string | null): Promise<OrganizationPlanContext | null> {
+  const hasActiveClerkOrg = typeof activeClerkOrgId === 'string' && activeClerkOrgId.trim().length > 0;
+  if (!hasActiveClerkOrg) {
+    return null;
+  }
+
   const access = await getOrganizationAccessSummary(userId, activeClerkOrgId);
   if (!access.allowed) return null;
 

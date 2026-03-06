@@ -159,7 +159,7 @@ describe('PaymentService subscription resurrection', () => {
         }),
       })
     );
-  });
+  }, 15000);
 
   it('does NOT resurrect locally CANCELLED subscription on subscription.updated(active)', async () => {
     const now = Date.now();

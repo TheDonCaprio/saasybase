@@ -5,6 +5,7 @@ import SaaSyAppClient from '@/components/dashboard/SaaSyAppClient';
 import { dashboardPanelClass } from '@/components/dashboard/dashboardSurfaces';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '@/lib/route-guards';
+import { enforceTeamWorkspaceProvisioningGuard } from '@/lib/dashboard-workspace-guard';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -20,7 +21,8 @@ export async function generateMetadata() {
 export default async function DashboardPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard', resolvedSearchParams);
-  await requireAuth(returnPath);
+  const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   return (
     <div className="space-y-6">

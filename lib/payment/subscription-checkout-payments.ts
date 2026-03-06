@@ -26,6 +26,7 @@ type RecordSubscriptionCheckoutPaymentParams = {
     checkoutCouponCode: string | null;
     subscriptionPaymentBase: SubscriptionPaymentBase;
     tokensToGrant: number;
+    planSupportsOrganizations: boolean;
     organizationContext: OrganizationPlanContext | null;
     shouldResetTokensOnRenewal: boolean;
     desiredStatus: 'ACTIVE' | 'PENDING';
@@ -83,6 +84,7 @@ async function applySubscriptionCheckoutTokens(
     tx: Prisma.TransactionClient,
     userId: string,
     tokensToGrant: number,
+    planSupportsOrganizations: boolean,
     organizationContext: OrganizationPlanContext | null,
     shouldResetOnRenewal: boolean,
     warnMessage: string
@@ -90,7 +92,7 @@ async function applySubscriptionCheckoutTokens(
     if (tokensToGrant <= 0) return;
 
     try {
-        if (organizationContext) {
+        if (planSupportsOrganizations && organizationContext?.role === 'OWNER') {
             if (shouldResetOnRenewal) {
                 await tx.organization.update({
                     where: { id: organizationContext.organization.id },
@@ -103,6 +105,11 @@ async function applySubscriptionCheckoutTokens(
                     tx,
                 });
             }
+        } else if (planSupportsOrganizations) {
+            Logger.info('Deferred team token allocation until workspace provisioning (subscription checkout)', {
+                userId,
+                tokensDeferred: tokensToGrant,
+            });
         } else if (shouldResetOnRenewal) {
             await tx.user.update({ where: { id: userId }, data: { tokenBalance: tokensToGrant } });
         } else {
@@ -133,6 +140,7 @@ async function recordSubscriptionInvoicePaymentIfNeeded(params: {
     couponCode: string | null;
     subscriptionPaymentBase: SubscriptionPaymentBase;
     tokensToGrant: number;
+    planSupportsOrganizations: boolean;
     organizationContext: OrganizationPlanContext | null;
     shouldResetTokensOnRenewal: boolean;
     providerKey: string;
@@ -170,6 +178,7 @@ async function recordSubscriptionInvoicePaymentIfNeeded(params: {
                     tx,
                     params.userId,
                     params.tokensToGrant,
+                    params.planSupportsOrganizations,
                     params.organizationContext,
                     params.shouldResetTokensOnRenewal,
                     'Failed to add tokens from subscription payment'
@@ -194,6 +203,7 @@ async function recordSubscriptionSessionFallbackPaymentIfNeeded(params: {
     checkoutCouponCode: string | null;
     subscriptionPaymentBase: SubscriptionPaymentBase;
     tokensToGrant: number;
+    planSupportsOrganizations: boolean;
     organizationContext: OrganizationPlanContext | null;
     shouldResetTokensOnRenewal: boolean;
     providerKey: string;
@@ -230,6 +240,7 @@ async function recordSubscriptionSessionFallbackPaymentIfNeeded(params: {
                     tx,
                     params.userId,
                     params.tokensToGrant,
+                    params.planSupportsOrganizations,
                     params.organizationContext,
                     params.shouldResetTokensOnRenewal,
                     'Failed to add tokens from subscription payment (fallback)'
@@ -252,6 +263,7 @@ async function recordRazorpaySubscriptionFallbackPaymentIfNeeded(params: {
     checkoutCouponCode: string | null;
     subscriptionPaymentBase: SubscriptionPaymentBase;
     tokensToGrant: number;
+    planSupportsOrganizations: boolean;
     organizationContext: OrganizationPlanContext | null;
     shouldResetTokensOnRenewal: boolean;
     providerKey: string;
@@ -288,6 +300,7 @@ async function recordRazorpaySubscriptionFallbackPaymentIfNeeded(params: {
                     tx,
                     params.userId,
                     params.tokensToGrant,
+                    params.planSupportsOrganizations,
                     params.organizationContext,
                     params.shouldResetTokensOnRenewal,
                     'Failed to add tokens from Razorpay subscription fallback payment'
@@ -314,6 +327,7 @@ export async function recordSubscriptionCheckoutPaymentIfNeeded(params: RecordSu
             couponCode,
             subscriptionPaymentBase: params.subscriptionPaymentBase,
             tokensToGrant: params.tokensToGrant,
+            planSupportsOrganizations: params.planSupportsOrganizations,
             organizationContext: params.organizationContext,
             shouldResetTokensOnRenewal: params.shouldResetTokensOnRenewal,
             providerKey: params.providerKey,
@@ -334,6 +348,7 @@ export async function recordSubscriptionCheckoutPaymentIfNeeded(params: RecordSu
             checkoutCouponCode: params.checkoutCouponCode,
             subscriptionPaymentBase: params.subscriptionPaymentBase,
             tokensToGrant: params.tokensToGrant,
+            planSupportsOrganizations: params.planSupportsOrganizations,
             organizationContext: params.organizationContext,
             shouldResetTokensOnRenewal: params.shouldResetTokensOnRenewal,
             providerKey: params.providerKey,
@@ -352,6 +367,7 @@ export async function recordSubscriptionCheckoutPaymentIfNeeded(params: RecordSu
             checkoutCouponCode: params.checkoutCouponCode,
             subscriptionPaymentBase: params.subscriptionPaymentBase,
             tokensToGrant: params.tokensToGrant,
+            planSupportsOrganizations: params.planSupportsOrganizations,
             organizationContext: params.organizationContext,
             shouldResetTokensOnRenewal: params.shouldResetTokensOnRenewal,
             providerKey: params.providerKey,

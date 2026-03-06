@@ -16,6 +16,7 @@ import {
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
@@ -34,6 +35,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/activity', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const activeCurrency = await getActiveCurrencyAsync();
 

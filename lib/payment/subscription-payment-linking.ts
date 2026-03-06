@@ -388,6 +388,12 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                             tx,
                         });
                     }
+                } else if (planSupportsOrganizations) {
+                    Logger.info('Deferred team token allocation until workspace provisioning (pending payment linking)', {
+                        userId,
+                        planId: plan.id,
+                        tokensDeferred: plan.tokenLimit,
+                    });
                 } else if (shouldResetTokensOnRenewal) {
                     await tx.user.update({ where: { id: userId }, data: { tokenBalance: plan.tokenLimit } });
                 } else {

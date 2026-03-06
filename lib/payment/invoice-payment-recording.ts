@@ -265,6 +265,12 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                     amount: tokensToGrant,
                     tx,
                 });
+            } else if (planSupportsOrganizations) {
+                Logger.info('Deferred team token allocation until workspace provisioning (invoice initial charge)', {
+                    subscriptionId: params.subscriptionId,
+                    userId: params.dbSub.userId,
+                    tokensDeferred: tokensToGrant,
+                });
             } else {
                 await tx.user.update({
                     where: { id: params.dbSub.userId },
@@ -292,6 +298,12 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                     where: { id: params.dbSub.userId },
                     data: { tokenBalance: 0 },
                 });
+            } else if (planSupportsOrganizations) {
+                Logger.info('Deferred team token reset until workspace provisioning (invoice renewal)', {
+                    subscriptionId: params.subscriptionId,
+                    userId: params.dbSub.userId,
+                    tokenLimit,
+                });
             } else {
                 await tx.user.update({
                     where: { id: params.dbSub.userId },
@@ -315,6 +327,12 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                     organizationId: params.resolvedOrganizationId,
                     amount: tokenLimit,
                     tx,
+                });
+            } else if (planSupportsOrganizations) {
+                Logger.info('Deferred team token increment until workspace provisioning (invoice renewal)', {
+                    subscriptionId: params.subscriptionId,
+                    userId: params.dbSub.userId,
+                    tokenLimit,
                 });
             } else {
                 await tx.user.update({

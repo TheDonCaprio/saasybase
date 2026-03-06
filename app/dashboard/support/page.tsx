@@ -8,6 +8,7 @@ import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeadset } from '@fortawesome/free-solid-svg-icons';
+import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -25,6 +26,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const returnPath = buildReturnPath('/dashboard/support', resolvedSearchParams);
   const { userId } = await requireAuth(returnPath);
+  await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const page = parseInt(resolvedSearchParams.page || '1');
   const status = resolvedSearchParams.status || 'ALL';

@@ -166,6 +166,7 @@ export async function processSubscriptionCheckout(params: {
         checkoutCouponCode: paymentContext.checkoutCouponCode,
         subscriptionPaymentBase: paymentContext.subscriptionPaymentBase,
         tokensToGrant: paymentContext.tokensToGrant,
+        planSupportsOrganizations: planToUse.supportsOrganizations === true,
         organizationContext: params.organizationContext,
         shouldResetTokensOnRenewal: paymentContext.shouldResetTokensOnRenewal,
         desiredStatus,

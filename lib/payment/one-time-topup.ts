@@ -64,10 +64,17 @@ export async function processOneTimeRecurringTopup(params: {
         }
 
         if (paymentCreated && tokensAdded > 0) {
+            const isTeamPlan = params.planToUse.supportsOrganizations === true;
             const userUpdate: Prisma.UserUpdateInput = { paymentsCount: { increment: 1 } };
-            if (!workspaceTopupContext) {
+            if (!workspaceTopupContext && !isTeamPlan) {
                 userUpdate.tokenBalance = { increment: tokensAdded };
                 topupDestination = 'user_balance';
+            } else if (!workspaceTopupContext && isTeamPlan) {
+                Logger.info('Deferred team token allocation until workspace provisioning (one-time top-up)', {
+                    userId: params.userId,
+                    planId: params.planToUse.id,
+                    tokensDeferred: tokensAdded,
+                });
             }
             await tx.user.update({ where: { id: params.userId }, data: userUpdate });
 

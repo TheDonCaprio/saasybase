@@ -64,12 +64,12 @@ export async function GET() {
   const memberTokenCap = getEffectiveMemberTokenCap(organizationContext);
   const memberCapStrategy = getMemberCapStrategy(organizationContext);
   const organizationTokenName = organizationContext?.organization.plan?.tokenName?.trim() || defaultTokenLabel;
-  const planSource = subscription ? 'PERSONAL' : organizationContext ? 'ORGANIZATION' : 'FREE';
+  const planSource = organizationContext ? 'ORGANIZATION' : subscription ? 'PERSONAL' : 'FREE';
 
     // For provisioned workspace members, surface the workspace plan expiry.
     // The workspace plan is billed on the owner's subscription, not the member.
     let organizationExpiresAt: string | null = null;
-    if (!subscription && organizationContext?.organization?.ownerUserId) {
+    if (organizationContext?.organization?.ownerUserId) {
       const now = new Date();
       const graceHours = await getPaidTokensNaturalExpiryGraceHours();
       const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);

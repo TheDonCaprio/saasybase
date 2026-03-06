@@ -59,6 +59,12 @@ interface SiteInfo {
   tokenLabel: string;
 }
 
+const PROFILE_FETCH_RETRY_DELAY_MS = 450;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function AccountMenu() {
   const { isSignedIn, isLoaded } = useUser();
   const { orgId } = useAuth();
@@ -78,6 +84,51 @@ export default function AccountMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const prevOrgIdRef = useRef(orgId);
 
+  const fetchProfile = async (retryOnUnauthorized = false) => {
+    const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
+
+    if (response.ok) {
+      const data = (await response.json()) as Partial<UserProfile> | null;
+      const hasUser =
+        Boolean(data?.user)
+        && typeof data?.user?.id === 'string'
+        && typeof data?.user?.name === 'string'
+        && typeof data?.user?.email === 'string'
+        && typeof data?.user?.role === 'string';
+
+      return hasUser ? (data as UserProfile) : null;
+    }
+
+    if (retryOnUnauthorized && response.status === 401) {
+      await delay(PROFILE_FETCH_RETRY_DELAY_MS);
+      const retriedResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
+
+      if (retriedResponse.ok) {
+        const data = (await retriedResponse.json()) as Partial<UserProfile> | null;
+        const hasUser =
+          Boolean(data?.user)
+          && typeof data?.user?.id === 'string'
+          && typeof data?.user?.name === 'string'
+          && typeof data?.user?.email === 'string'
+          && typeof data?.user?.role === 'string';
+
+        return hasUser ? (data as UserProfile) : null;
+      }
+
+      if (retriedResponse.status === 401) {
+        return null;
+      }
+
+      throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
+    }
+
+    if (response.status === 401) {
+      return null;
+    }
+
+    throw new Error(`Profile fetch failed: ${response.status}`);
+  };
+
   useEffect(() => {
     // Skip the initial mount — only react to actual org switches
     if (prevOrgIdRef.current === orgId) return;
@@ -93,20 +144,9 @@ export default function AccountMenu() {
     const timer = setTimeout(() => {
       router.refresh(); // re-render any server components on the page
 
-      fetch('/api/user/profile')
-        .then(async (res) => {
-          if (!res.ok) throw new Error(`Profile fetch failed: ${res.status}`);
-          return res.json();
-        })
-        .then((data: unknown) => {
-          const candidate = data as Partial<UserProfile> | null;
-          const hasUser =
-            Boolean(candidate?.user) &&
-            typeof candidate?.user?.id === 'string' &&
-            typeof candidate?.user?.name === 'string' &&
-            typeof candidate?.user?.email === 'string' &&
-            typeof candidate?.user?.role === 'string';
-          setProfile(hasUser ? (candidate as UserProfile) : null);
+      fetchProfile(true)
+        .then((nextProfile) => {
+          setProfile(nextProfile);
         })
         .catch((err) => {
           console.error('Failed to fetch profile after org switch:', err);
@@ -125,23 +165,9 @@ export default function AccountMenu() {
     if (isSignedIn && isOpen && !profile && !loading && !hasAttemptedProfileFetch) {
       setHasAttemptedProfileFetch(true);
       setLoading(true);
-      fetch('/api/user/profile')
-        .then(async (res) => {
-          if (!res.ok) {
-            throw new Error(`Failed to fetch profile: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then((data: unknown) => {
-          const candidate = data as Partial<UserProfile> | null;
-          const hasUser =
-            Boolean(candidate?.user)
-            && typeof candidate?.user?.id === 'string'
-            && typeof candidate?.user?.name === 'string'
-            && typeof candidate?.user?.email === 'string'
-            && typeof candidate?.user?.role === 'string';
-
-          setProfile(hasUser ? (candidate as UserProfile) : null);
+      fetchProfile(false)
+        .then((nextProfile) => {
+          setProfile(nextProfile);
         })
         .catch((err) => {
           console.error('Failed to fetch profile:', err);
@@ -232,10 +258,18 @@ export default function AccountMenu() {
 
   const personalTokenCount = profile?.subscription?.tokens.remaining ?? profile?.paidTokens?.remaining ?? null;
   const personalTokenName = profile?.subscription?.tokenName ?? profile?.paidTokens?.tokenName ?? null;
-  const hasPersonalTokens = (personalTokenCount ?? 0) > 0;
-  const shouldShowPersonalTokens = Boolean(hasPersonalTokens);
-  const shouldShowSharedTokens = Boolean(profile?.sharedTokens);
-  const expiresAt = profile?.subscription?.expiresAt ?? profile?.organization?.expiresAt ?? null;
+  const isOrganizationContext = profile?.planSource === 'ORGANIZATION';
+  const isPersonalContext = profile?.planSource === 'PERSONAL';
+  const activePlanName = isOrganizationContext
+    ? profile?.organization?.planName || 'Workspace Plan'
+    : isPersonalContext
+      ? profile?.subscription?.planName || 'Free Plan'
+      : 'Free Plan';
+  const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenCount != null && personalTokenName);
+  const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
+  const expiresAt = isOrganizationContext
+    ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
+    : profile?.subscription?.expiresAt ?? null;
 
   return (
     <div className="relative z-50" ref={menuRef}>
@@ -291,11 +325,32 @@ export default function AccountMenu() {
                       elements: {
                         rootBox: 'w-full',
                         organizationSwitcherTrigger:
-                          'w-full justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                          'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                        organizationSwitcherTriggerIcon:
+                          'text-neutral-400 transition-transform group-data-[open=true]:rotate-180 dark:text-neutral-500',
+                        organizationSwitcherPopoverRootBox:
+                          '!w-[16rem] !min-w-[16rem] !max-w-[16rem] pt-1.5',
                         organizationSwitcherPopoverCard:
-                          'border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900',
+                          '!w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
+                        organizationSwitcherPopoverMain: 'overflow-hidden bg-transparent',
+                        organizationSwitcherPopoverActions:
+                          'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
+                        organizationSwitcherPopoverActionButton:
+                          'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                        organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
+                        organizationSwitcherPopoverFooter:
+                          'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
+                        organizationSwitcherPreviewButton:
+                          'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                        organizationListPreviewItems: 'gap-0',
+                        organizationListPreviewItem:
+                          'border-b border-neutral-200/80 last:border-b-0 dark:border-neutral-700/80',
+                        organizationListPreviewButton:
+                          'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                        organizationListCreateOrganizationActionButton:
+                          'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
                         organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
-                        organizationPreviewSecondaryIdentifier: 'text-neutral-500 dark:text-neutral-400',
+                        organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
                       },
                     }}
                   />
@@ -305,7 +360,7 @@ export default function AccountMenu() {
                 <div className="flex items-center gap-2 text-sm">
                   <FontAwesomeIcon icon={faCrown} className="w-4 h-4 text-amber-500" />
                   <span className="text-neutral-700 dark:text-neutral-300">
-                    {profile.subscription?.planName || profile.organization?.planName || 'Free Plan'}
+                    {activePlanName}
                   </span>
                 </div>
 
@@ -314,7 +369,7 @@ export default function AccountMenu() {
                   <div className="flex items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-emerald-500" />
                     <span className="text-neutral-700 dark:text-neutral-300">
-                      {personalTokenCount.toLocaleString()} {personalTokenName} remaining
+                      {personalTokenCount.toLocaleString()} {personalTokenName} (Personal)
                     </span>
                   </div>
                 )}
@@ -325,7 +380,7 @@ export default function AccountMenu() {
                     <div>
                       <span className="text-neutral-700 dark:text-neutral-300">
                         {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
-                        {profile.organization ? ` (${profile.organization.name} workspace)` : ' (workspace)'}
+                        {profile.organization ? ` (${profile.organization.name})` : ''}
                       </span>
                       <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
                         {profile.sharedTokens.cap != null
@@ -343,7 +398,7 @@ export default function AccountMenu() {
                   <div className="flex items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-sky-500" />
                     <span className="text-neutral-700 dark:text-neutral-300">
-                      {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (free)
+                      {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
                     </span>
                   </div>
                 )}
@@ -356,7 +411,7 @@ export default function AccountMenu() {
                   </div>
                 )}
 
-                {!profile.subscription && !profile.sharedTokens && (
+                {profile.planSource === 'FREE' && (
                   <Link
                     href="/pricing"
                     className="block text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"

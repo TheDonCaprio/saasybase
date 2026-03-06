@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUser, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
-import { SignOutButton, useUser, useClerk, useAuth } from '@clerk/nextjs';
+import { SignOutButton, useUser, useClerk, useAuth, OrganizationSwitcher } from '@clerk/nextjs';
 import { createPortal } from 'react-dom';
 
 interface DashboardHeaderDrawerProps {
@@ -155,10 +155,18 @@ export function DashboardHeaderDrawer({
   const wrapperClass = className ? `${className}` : '';
   const personalTokenCount = profile?.subscription?.tokens.remaining ?? profile?.paidTokens?.remaining ?? null;
   const personalTokenName = profile?.subscription?.tokenName ?? profile?.paidTokens?.tokenName ?? null;
-  const hasPersonalTokens = (personalTokenCount ?? 0) > 0;
-  const shouldShowPersonalTokens = Boolean(hasPersonalTokens);
-  const shouldShowSharedTokens = Boolean(profile?.sharedTokens);
-  const expiresAt = profile?.subscription?.expiresAt ?? profile?.organization?.expiresAt ?? null;
+  const isOrganizationContext = profile?.planSource === 'ORGANIZATION';
+  const isPersonalContext = profile?.planSource === 'PERSONAL';
+  const activePlanName = isOrganizationContext
+    ? profile?.organization?.planName || 'Workspace Plan'
+    : isPersonalContext
+      ? profile?.subscription?.planName || 'Free Plan'
+      : 'Free Plan';
+  const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenCount != null && personalTokenName);
+  const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
+  const expiresAt = isOrganizationContext
+    ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
+    : profile?.subscription?.expiresAt ?? null;
 
   return (
     <>
@@ -201,7 +209,7 @@ export function DashboardHeaderDrawer({
               role="dialog"
               aria-modal="true"
               id="dashboard-header-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-visible border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
             >
               <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>
@@ -243,10 +251,49 @@ export function DashboardHeaderDrawer({
                       </div>
 
                       <div className="space-y-2">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
+                        <OrganizationSwitcher
+                          hidePersonal={false}
+                          appearance={{
+                            elements: {
+                              rootBox: 'w-full',
+                              organizationSwitcherTrigger:
+                                'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                              organizationSwitcherTriggerIcon:
+                                'text-neutral-400 transition-transform group-data-[open=true]:rotate-180 dark:text-neutral-500',
+                              organizationSwitcherPopoverRootBox:
+                                '!z-[70010] !w-[18rem] !min-w-[18rem] !max-w-[18rem] pt-1.5',
+                              organizationSwitcherPopoverCard:
+                                '!z-[70011] !w-[18rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
+                              organizationSwitcherPopoverMain: 'overflow-hidden bg-transparent',
+                              organizationSwitcherPopoverActions:
+                                'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
+                              organizationSwitcherPopoverActionButton:
+                                'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                              organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
+                              organizationSwitcherPopoverFooter:
+                                'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
+                              organizationSwitcherPreviewButton:
+                                'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                              organizationListPreviewItems: 'gap-0',
+                              organizationListPreviewItem:
+                                'border-b border-neutral-200/80 last:border-b-0 dark:border-neutral-700/80',
+                              organizationListPreviewButton:
+                                'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                              organizationListCreateOrganizationActionButton:
+                                'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                              organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
+                              organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
+                            },
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <FontAwesomeIcon icon={faCrown} className="w-4 h-4 text-amber-500" />
                           <span className="text-neutral-300">
-                            {profile.subscription?.planName || profile.organization?.planName || 'Free Plan'}
+                            {activePlanName}
                           </span>
                         </div>
 
@@ -254,7 +301,7 @@ export function DashboardHeaderDrawer({
                           <div className="flex items-center gap-2 text-sm">
                             <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-emerald-500" />
                             <span className="text-neutral-300">
-                              {personalTokenCount.toLocaleString()} {personalTokenName} remaining
+                              {personalTokenCount.toLocaleString()} {personalTokenName} (Personal)
                             </span>
                           </div>
                         )}
@@ -265,7 +312,7 @@ export function DashboardHeaderDrawer({
                             <div>
                               <span className="text-neutral-300">
                                 {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
-                                {profile.organization ? ` (${profile.organization.name} workspace)` : ' (workspace)'}
+                                {profile.organization ? ` (${profile.organization.name})` : ''}
                               </span>
                               <p className="text-[11px] text-neutral-400">
                                 {profile.sharedTokens.cap != null
@@ -282,7 +329,7 @@ export function DashboardHeaderDrawer({
                           <div className="flex items-center gap-2 text-sm">
                             <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-sky-500" />
                             <span className="text-neutral-300">
-                              {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (free)
+                              {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
                             </span>
                           </div>
                         )}
@@ -294,7 +341,7 @@ export function DashboardHeaderDrawer({
                           </div>
                         )}
 
-                        {!profile.subscription && !profile.sharedTokens && (
+                        {profile.planSource === 'FREE' && (
                           <Link
                             href="/pricing"
                             className="block text-sm text-[rgb(var(--accent-primary-rgb))] hover:text-[rgb(var(--accent-hover-rgb))]"

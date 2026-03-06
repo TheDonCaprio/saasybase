@@ -22,6 +22,7 @@ export async function processOneTimeRecurringTopup(params: {
     resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<OrganizationPlanContext | null>;
 }): Promise<void> {
     const tokensAdded = params.planToUse.tokenLimit || 0;
+    const isTeamPlan = params.planToUse.supportsOrganizations === true;
     const isPlanSwitchFallback = Boolean(params.session.metadata?.prorationFallbackReason);
     const activeClerkOrgId = params.session.metadata?.activeClerkOrgId
         || params.session.metadata?.clerkOrgId
@@ -30,7 +31,9 @@ export async function processOneTimeRecurringTopup(params: {
     const organizationContext = tokensAdded > 0
         ? await params.resolveOrganizationContext(params.userId, activeClerkOrgId)
         : null;
-    const workspaceTopupContext = organizationContext && organizationContext.role === 'OWNER' ? organizationContext : null;
+    const workspaceTopupContext = isTeamPlan && organizationContext && organizationContext.role === 'OWNER'
+        ? organizationContext
+        : null;
 
     let topupDestination: 'user_balance' | 'workspace_shared' | null = null;
     let topupWorkspaceId: string | null = null;
@@ -64,7 +67,6 @@ export async function processOneTimeRecurringTopup(params: {
         }
 
         if (paymentCreated && tokensAdded > 0) {
-            const isTeamPlan = params.planToUse.supportsOrganizations === true;
             const userUpdate: Prisma.UserUpdateInput = { paymentsCount: { increment: 1 } };
             if (!workspaceTopupContext && !isTeamPlan) {
                 userUpdate.tokenBalance = { increment: tokensAdded };

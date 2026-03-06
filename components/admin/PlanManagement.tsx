@@ -798,7 +798,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
         isOpen={deleteModalOpen}
         title="Delete plan"
         description="Deleting a plan will permanently remove it and all related subscriptions/payments."
-        confirmLabel={forceDelete ? 'Force delete (permanent)' : 'Delete'}
+        confirmLabel={forceDelete ? 'Force delete!' : 'Delete'}
         cancelLabel="Cancel"
         loading={loading}
         onClose={() => setDeleteModalOpen(false)}

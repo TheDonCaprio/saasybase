@@ -229,6 +229,32 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             // Determine mode
             mode = dbPlanRecord && dbPlanRecord['autoRenew'] === true ? 'subscription' : 'payment';
 
+            const selectedPlanIsOneTime = dbPlanRecord?.['autoRenew'] !== true;
+            const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
+            if (selectedPlanIsOneTime && !selectedPlanIsTeam) {
+                const activeTeamSubscription = await prisma.subscription.findFirst({
+                    where: {
+                        userId,
+                        status: 'ACTIVE',
+                        expiresAt: { gt: new Date() },
+                        plan: {
+                            autoRenew: true,
+                            supportsOrganizations: true,
+                        },
+                    },
+                    select: { id: true },
+                });
+
+                if (activeTeamSubscription?.id) {
+                    return jsonError(
+                        'Personal one-time top-ups are unavailable while your Team subscription is active. Buy a Team top-up from your workspace billing.',
+                        409,
+                        'PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION',
+                        { redirectTo: '/dashboard/team' },
+                    );
+                }
+            }
+
             // If using Paystack but we don't have a Paystack plan code, fall back to one-time payment
             // This avoids plan-code errors when a user with Stripe history tries to pay via Paystack.
             const providerName = paymentService.provider.name;

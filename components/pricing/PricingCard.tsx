@@ -850,7 +850,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       // Check if user has an active subscription
       if (res.ok && sub && sub.active === true) {
         const hasRecurring = sub.planAutoRenew === true;
+        const hasTeamRecurring = hasRecurring && sub.planSupportsOrganizations === true;
         const buyingRecurring = plan.autoRenew;
+
+        if (hasTeamRecurring && !buyingRecurring && !isTeamPlan) {
+          showToast('Personal one-time top-ups are blocked while your Team subscription is active. Buy a Team top-up from workspace billing.', 'info');
+          setIfMounted(setCheckingExisting)(false);
+          return;
+        }
 
         // Scenario 1: Active non-recurring + purchasing recurring
         // Show modal warning that recurring will replace existing access
@@ -1012,46 +1019,43 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12)),_transparent_65%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22)),_transparent_60%)]"
         aria-hidden="true"
       />
-      <div className="relative flex flex-col gap-6">
-        <div className="flex items-start justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${badge.className}`}>
+      <div className="relative flex flex-col gap-5">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-6">
+              <div className="flex flex-col gap-2">
+              <span className={`inline-flex w-full items-center gap-2 rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${badge.className}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {badge.text}
               </span>
 
               {isTeamPlan ? (
-                <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-100">
+                <span className="inline-flex w-full items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-100">
                   <FontAwesomeIcon icon={faUsers} className="h-2.5 w-2.5" />
                   Team
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                <span className="inline-flex w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
                   <FontAwesomeIcon icon={faUser} className="h-2.5 w-2.5" />
                   Individual
                 </span>
               )}
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-neutral-50">{plan.name}</h3>
 
-
-
+            <div className="min-w-[120px] text-right">
+              <div className="text-2xl font-semibold text-slate-900 dark:text-white">{formatPrice(plan.priceCents, currency)}</div>
+              <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-300/80">{priceFrequency}</div>
             </div>
           </div>
-          <div className="min-w-[120px] text-right">
-            <div className="text-3xl font-semibold text-slate-900 dark:text-white">{formatPrice(plan.priceCents, currency)}</div>
-            <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-300/80">{priceFrequency}</div>
-          </div>
-        </div>
 
-                      {plan.description ? (
-                <div
-                  className="text-sm leading-relaxed text-slate-600 dark:text-neutral-300"
-                  dangerouslySetInnerHTML={{ __html: plan.description }}
-                />
-              ) : null}
+          <h3 className="w-full text-xl font-semibold text-slate-900 dark:text-neutral-50">{plan.name}</h3>
+
+          {plan.description ? (
+            <div
+              className="pricing-card-description text-sm leading-relaxed text-slate-600 dark:text-neutral-300"
+              dangerouslySetInnerHTML={{ __html: plan.description }}
+            />
+          ) : null}
+        </div>
 
         <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 shadow-sm transition dark:border-white/5 dark:bg-white/[0.03]">
 

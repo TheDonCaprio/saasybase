@@ -650,7 +650,11 @@ export class PaymentService {
 
         await expirePriorActiveSubscriptionsForOneTimeCheckoutExternal(userId);
 
-        const { latestActive, mode } = await resolveOneTimeCheckoutDispositionExternal({ userId, now });
+        const { latestActive, mode } = await resolveOneTimeCheckoutDispositionExternal({
+            userId,
+            now,
+            planSupportsOrganizations: planToUse.supportsOrganizations === true,
+        });
 
         if (mode === 'extend_non_recurring' && latestActive) {
             await processOneTimeNonRecurringExtensionExternal({
@@ -681,6 +685,22 @@ export class PaymentService {
             });
         }
         else {
+            if (mode === 'replace_non_recurring' && latestActive) {
+                const cancellationTime = new Date();
+                await prisma.subscription.update({
+                    where: { id: latestActive.id },
+                    data: this.buildImmediateCancellationData(cancellationTime),
+                });
+
+                Logger.info('Replaced active one-time subscription due to plan-family mismatch', {
+                    userId,
+                    previousSubscriptionId: latestActive.id,
+                    previousSupportsOrganizations: latestActive.plan?.supportsOrganizations === true,
+                    nextPlanId: planToUse.id,
+                    nextSupportsOrganizations: planToUse.supportsOrganizations === true,
+                });
+            }
+
             await processOneTimeSubscriptionCreationExternal({
                 userId,
                 planToUse,

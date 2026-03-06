@@ -91,10 +91,10 @@ export function ToastContainer() {
         <div
           key={toast.id}
           className={`max-w-sm rounded border p-4 shadow-lg animate-in slide-in-from-right-full duration-300 ${toast.type === 'success'
-            ? 'bg-emerald-900/90 border-emerald-700 text-emerald-100'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-900/90 dark:border-emerald-700 dark:text-emerald-100'
             : toast.type === 'error'
-              ? 'bg-red-900/90 border-red-700 text-red-100'
-              : 'bg-blue-900/90 border-blue-700 text-blue-100'
+              ? 'bg-red-50 border-red-300 text-red-900 dark:bg-red-900/90 dark:border-red-700 dark:text-red-100'
+              : 'bg-blue-600 border-blue-700 text-white dark:bg-blue-900/90 dark:border-blue-700 dark:text-blue-100'
             }`}
         >
           <div className="flex justify-between items-start gap-3">

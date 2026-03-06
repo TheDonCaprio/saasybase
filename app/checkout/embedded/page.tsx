@@ -51,6 +51,7 @@ function EmbeddedCheckoutContent() {
     const [currency, setCurrency] = useState<string | null>(null);
     const [metadata, setMetadata] = useState<Record<string, string> | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorRedirectTo, setErrorRedirectTo] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [dedupeKey] = useState(() => createClientDedupeKey());
     // For external redirect flow (Paystack subscriptions)
@@ -162,7 +163,13 @@ function EmbeddedCheckoutContent() {
             .then((res) => res.json())
             .then((data) => {
                 if (data.error) {
-                    setError(data.error);
+                    if (data.code === 'PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION') {
+                        setError('Personal one-time top-ups are blocked while your Team subscription is active. Buy a Team top-up from workspace billing.');
+                        setErrorRedirectTo(typeof data.redirectTo === 'string' ? data.redirectTo : '/dashboard/team');
+                    } else {
+                        setError(data.error);
+                        setErrorRedirectTo(null);
+                    }
                 } else if (data.redirect && data.url) {
                     // For Paystack subscriptions, show confirmation modal before redirect
                     setRedirectData({
@@ -549,6 +556,16 @@ function EmbeddedCheckoutContent() {
                             </div>
                             <div className="px-6 py-4">
                                 <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{error}</p>
+                                {errorRedirectTo ? (
+                                    <div className="mt-4">
+                                        <a
+                                            href={errorRedirectTo}
+                                            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700"
+                                        >
+                                            Go to workspace billing
+                                        </a>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </div>

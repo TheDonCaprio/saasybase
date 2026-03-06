@@ -258,6 +258,49 @@ body {
   margin-bottom: 0.35rem;
 }
 
+.pricing-card-description > *:first-child {
+  margin-top: 0;
+}
+
+.pricing-card-description > *:last-child {
+  margin-bottom: 0;
+}
+
+.pricing-card-description p {
+  margin: 0;
+}
+
+.pricing-card-description ul,
+.pricing-card-description ol {
+  margin: 0.75rem 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.pricing-card-description li {
+  position: relative;
+  margin: 0.45rem 0;
+  padding-left: 1.75rem;
+}
+
+.pricing-card-description li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 9999px;
+  background: rgb(var(--accent-primary) / 0.14);
+  color: rgb(var(--accent-hover));
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .ProseMirror a {
   color: rgb(129, 140, 248);
   text-decoration: underline;

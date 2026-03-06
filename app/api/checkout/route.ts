@@ -272,6 +272,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const selectedPlanIsOneTime = dbPlanRecord?.['autoRenew'] !== true;
+    const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
+    if (selectedPlanIsOneTime && !selectedPlanIsTeam) {
+      const activeTeamSubscription = await prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+          plan: {
+            autoRenew: true,
+            supportsOrganizations: true,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (activeTeamSubscription?.id) {
+        return jsonError(
+          'Personal one-time top-ups are unavailable while your Team subscription is active. Buy a Team top-up from your workspace billing.',
+          409,
+          'PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION',
+          { redirectTo: '/dashboard/team' }
+        );
+      }
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId! } });
     if (!user || !user.email) {
       return jsonError('User email is required for checkout', 400, 'USER_EMAIL_REQUIRED');

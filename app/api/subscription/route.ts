@@ -85,6 +85,7 @@ export async function GET() {
         // Expose whether the current plan auto-renews so clients can decide
         // whether to treat it as a one-time purchase (autoRenew === false)
         response.planAutoRenew = !!sub.plan.autoRenew;
+        response.planSupportsOrganizations = sub.plan.supportsOrganizations === true;
         response.expiresAt = sub.expiresAt;
         response.status = sub.status;
       } else if (organizationPlan) {
@@ -109,6 +110,7 @@ export async function GET() {
         plan: pendingSub.plan?.name,
         // Expose whether pending plan auto-renews (useful for UI decisions)
         planAutoRenew: !!pendingSub.plan?.autoRenew,
+        planSupportsOrganizations: pendingSub.plan?.supportsOrganizations === true,
         // In the new manual-activation flow startedAt may be null
         startsAt: pendingSub.startedAt || null,
         expiresAt: pendingSub.expiresAt || null

@@ -7,6 +7,7 @@ type LatestActiveOneTimeDispositionSub = {
     expiresAt: Date;
     plan: {
         autoRenew: boolean;
+        supportsOrganizations: boolean;
     } | null;
 };
 
@@ -45,9 +46,10 @@ export async function resolvePlanForOneTimeCheckout(params: {
 export async function resolveOneTimeCheckoutDisposition(params: {
     userId: string;
     now: Date;
+    planSupportsOrganizations: boolean;
 }): Promise<{
     latestActive: LatestActiveOneTimeDispositionSub | null;
-    mode: 'extend_non_recurring' | 'topup_recurring' | 'create_new';
+    mode: 'extend_non_recurring' | 'replace_non_recurring' | 'topup_recurring' | 'create_new';
 }> {
     const latestActive = await prisma.subscription.findFirst({
         where: {
@@ -60,6 +62,13 @@ export async function resolveOneTimeCheckoutDisposition(params: {
     });
 
     if (latestActive && latestActive.plan && latestActive.plan.autoRenew === false) {
+        const latestSupportsOrganizations = latestActive.plan.supportsOrganizations === true;
+        const purchasedSupportsOrganizations = params.planSupportsOrganizations === true;
+
+        if (latestSupportsOrganizations !== purchasedSupportsOrganizations) {
+            return { latestActive, mode: 'replace_non_recurring' };
+        }
+
         return { latestActive, mode: 'extend_non_recurring' };
     }
     if (latestActive && latestActive.plan && latestActive.plan.autoRenew === true) {

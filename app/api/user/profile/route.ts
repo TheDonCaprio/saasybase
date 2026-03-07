@@ -50,10 +50,15 @@ export async function GET() {
           name: true,
           tokenLimit: true,
           tokenName: true,
-          durationHours: true
+          durationHours: true,
+          supportsOrganizations: true,
         }
       }
     }
+  });
+
+  const ownedOrganizationCount = await prisma.organization.count({
+    where: { ownerUserId: user.id },
   });
 
   // Get user token balances
@@ -65,6 +70,7 @@ export async function GET() {
   const memberCapStrategy = getMemberCapStrategy(organizationContext);
   const organizationTokenName = organizationContext?.organization.plan?.tokenName?.trim() || defaultTokenLabel;
   const planSource = organizationContext ? 'ORGANIZATION' : subscription ? 'PERSONAL' : 'FREE';
+  const canCreateOrganization = (subscription?.plan?.supportsOrganizations === true) && ownedOrganizationCount === 0;
 
     // For provisioned workspace members, surface the workspace plan expiry.
     // The workspace plan is billed on the owner's subscription, not the member.
@@ -152,6 +158,7 @@ export async function GET() {
       remaining: freeTokenBalance,
     },
     planSource,
+    canCreateOrganization,
   });
   } catch (error: unknown) {
     // If the error is an auth guard error (no session), return 401 so static export

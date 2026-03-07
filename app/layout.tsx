@@ -1,4 +1,5 @@
 import './globals.css';
+import './clerk-overrides.css';
 import React from 'react';
 import DevClerkProvider from '../components/DevClerkProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';

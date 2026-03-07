@@ -52,6 +52,7 @@ interface UserProfile {
     remaining: number;
   } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  canCreateOrganization?: boolean;
 }
 
 interface SiteInfo {
@@ -337,7 +338,11 @@ export default function AccountMenu() {
                           'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
                         organizationSwitcherPopoverActionButton:
                           'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                        organizationSwitcherPopoverActionButton__createOrganization:
+                          profile?.canCreateOrganization === false ? 'hidden' : '',
                         organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
+                        organizationListPreviewItemActionButton:
+                          'h-8 w-8 min-w-8 max-w-8 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
                         organizationSwitcherPopoverFooter:
                           'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
                         organizationSwitcherPreviewButton:
@@ -348,7 +353,9 @@ export default function AccountMenu() {
                         organizationListPreviewButton:
                           'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
                         organizationListCreateOrganizationActionButton:
-                          'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                          profile?.canCreateOrganization === false
+                            ? 'hidden'
+                            : 'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
                         organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
                         organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
                       },

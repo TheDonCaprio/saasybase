@@ -1,0 +1,124 @@
+/* Clerk Organization Switcher Overrides */
+
+/* 1. Simplify the Manage button */
+.cl-organizationSwitcherPopoverActionButton__manageOrganization {
+  font-size: 0 !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 0.375rem !important;
+}
+
+.cl-organizationSwitcherPopoverActionButton__manageOrganization svg {
+  font-size: 1rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  margin: 0 !important;
+}
+
+.cl-organizationSwitcherPopoverActionButtonIconBox__manageOrganization {
+  margin: 0 !important;
+}
+
+/* 2. Active item styling (remove margin/padding/shadow and use background color) */
+.cl-organizationSwitcherPopoverActions > div:has(.cl-organizationPreview__organizationSwitcherActiveOrganization) {
+  padding: 0.625rem 0.75rem !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: rgb(243 244 246) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+html.dark .cl-organizationSwitcherPopoverActions > div:has(.cl-organizationPreview__organizationSwitcherActiveOrganization) {
+  background-color: rgb(38 38 38) !important;
+}
+
+/* Ensure active organization container doesn't have internal padding fighting this */
+.cl-organizationPreview__organizationSwitcherActiveOrganization {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0.75rem !important;
+}
+
+/* Just in case Clerk uses native active classes for switcher */
+.cl-organizationSwitcherPreviewButton.cl-active,
+.cl-organizationSwitcherPreviewButton[aria-selected="true"],
+.cl-organizationSwitcherPreviewButton[data-active="true"] {
+  border-left-width: 0 !important;
+  background-color: rgb(243 244 246) !important;
+}
+.cl-organizationSwitcherPreviewButton.cl-active::before,
+.cl-organizationSwitcherPreviewButton[aria-selected="true"]::before,
+.cl-organizationSwitcherPreviewButton[data-active="true"]::before {
+  display: none !important;
+}
+
+html.dark .cl-organizationSwitcherPreviewButton.cl-active,
+html.dark .cl-organizationSwitcherPreviewButton[aria-selected="true"],
+html.dark .cl-organizationSwitcherPreviewButton[data-active="true"] {
+  background-color: rgb(38 38 38) !important;
+}
+
+/* 3. Personal account selector base color transparent */
+.cl-organizationSwitcherPreviewButton__personal {
+  background-color: transparent !important;
+}
+
+.cl-organizationSwitcherPreviewButton__personal:hover {
+  background-color: rgb(249 250 251) !important; /* bg-neutral-50 */
+}
+
+html.dark .cl-organizationSwitcherPreviewButton__personal:hover {
+  background-color: rgba(38, 38, 38, 0.8) !important; /* dark:hover:bg-neutral-800/80 */
+}
+
+/* 4. When the PERSONAL account is active, render a similar highlight */
+.cl-organizationSwitcherPopoverActions > .cl-userPreview__personalWorkspace,
+.cl-organizationSwitcherPopoverActions > span.cl-userPreview__personalWorkspace {
+  padding: 0.625rem 0.75rem !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: var(--theme-sidebar-bg-hover, rgb(243 244 246)) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+html.dark .cl-organizationSwitcherPopoverActions > .cl-userPreview__personalWorkspace,
+html.dark .cl-organizationSwitcherPopoverActions > span.cl-userPreview__personalWorkspace {
+  background-color: rgb(38 38 38) !important;
+}
+
+/* ensure inner personal preview doesn't add extra spacing */
+.cl-userPreview__personalWorkspace,
+.cl-userPreviewTextContainer__personalWorkspace {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure personal account text is not faded when an organization is active */
+.cl-userPreviewMainIdentifierText__personalWorkspace,
+.cl-userPreviewMainIdentifier__personalWorkspace .cl-userPreviewMainIdentifierText__personalWorkspace,
+.cl-userPreviewMainIdentifier__personalWorkspace,
+.cl-userPreviewMainIdentifierText__personalWorkspace[data-color="inherit"] {
+  color: rgb(17 24 39) !important; /* text-neutral-900 */
+  opacity: 1 !important;
+}
+html.dark .cl-userPreviewMainIdentifierText__personalWorkspace,
+html.dark .cl-userPreviewMainIdentifier__personalWorkspace .cl-userPreviewMainIdentifierText__personalWorkspace,
+html.dark .cl-userPreviewMainIdentifier__personalWorkspace,
+html.dark .cl-userPreviewMainIdentifierText__personalWorkspace[data-color="inherit"] {
+  color: rgb(243 244 246) !important; /* text-neutral-100 */
+  opacity: 1 !important;
+}

@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUserShield, faChevronDown, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from '../dashboard/SidebarNav';
 import { SignOutButton, useUser, useClerk, useAuth, OrganizationSwitcher } from '@clerk/nextjs';
 import { createPortal } from 'react-dom';
+
+const PROFILE_FETCH_RETRY_DELAY_MS = 450;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 interface MenuGroup {
   title: string;
@@ -67,6 +73,7 @@ interface UserProfile {
     remaining: number;
   } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  canCreateOrganization?: boolean;
   permissions?: Record<string, boolean> | undefined;
 }
 
@@ -78,12 +85,60 @@ export function AdminHeaderDrawer({
   signOutLabel = 'Sign out'
 }: AdminHeaderDrawerProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isSignedIn } = useUser();
   const { orgId } = useAuth();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasAttemptedProfileFetch, setHasAttemptedProfileFetch] = useState(false);
+  const prevOrgIdRef = useRef(orgId);
+
+  const fetchProfile = useCallback(async (retryOnUnauthorized = false) => {
+    const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
+
+    if (response.ok) {
+      const data = (await response.json()) as Partial<UserProfile> | null;
+      const hasUser =
+        Boolean(data?.user)
+        && typeof data?.user?.id === 'string'
+        && typeof data?.user?.name === 'string'
+        && typeof data?.user?.email === 'string'
+        && typeof data?.user?.role === 'string';
+
+      return hasUser ? (data as UserProfile) : null;
+    }
+
+    if (retryOnUnauthorized && response.status === 401) {
+      await delay(PROFILE_FETCH_RETRY_DELAY_MS);
+      const retriedResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
+
+      if (retriedResponse.ok) {
+        const data = (await retriedResponse.json()) as Partial<UserProfile> | null;
+        const hasUser =
+          Boolean(data?.user)
+          && typeof data?.user?.id === 'string'
+          && typeof data?.user?.name === 'string'
+          && typeof data?.user?.email === 'string'
+          && typeof data?.user?.role === 'string';
+
+        return hasUser ? (data as UserProfile) : null;
+      }
+
+      if (retriedResponse.status === 401) {
+        return null;
+      }
+
+      throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
+    }
+
+    if (response.status === 401) {
+      return null;
+    }
+
+    throw new Error(`Profile fetch failed: ${response.status}`);
+  }, []);
 
   const isActiveHref = useCallback(
     (href?: string) => {
@@ -171,32 +226,63 @@ export function AdminHeaderDrawer({
     setOpen(false);
   }, [pathname]);
 
-  // Invalidate cached profile when active organization changes
   useEffect(() => {
+    if (prevOrgIdRef.current === orgId) return;
+    prevOrgIdRef.current = orgId;
+
     setProfile(null);
-  }, [orgId]);
+    setHasAttemptedProfileFetch(false);
+    setLoading(true);
+
+    const timer = setTimeout(() => {
+      router.refresh();
+
+      fetchProfile(true)
+        .then((nextProfile) => {
+          setProfile(nextProfile);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch profile after org switch:', err);
+          setProfile(null);
+        })
+        .finally(() => {
+          setLoading(false);
+          setHasAttemptedProfileFetch(true);
+        });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [orgId, router, fetchProfile]);
 
   useEffect(() => {
-    if (isSignedIn && open && !profile && !loading) {
+    if (isSignedIn && open && !profile && !loading && !hasAttemptedProfileFetch) {
+      setHasAttemptedProfileFetch(true);
       setLoading(true);
-      fetch('/api/user/profile')
-        .then((res) => res.json())
-        .then((data) => {
-          setProfile(data);
+      fetchProfile(false)
+        .then((nextProfile) => {
+          setProfile(nextProfile);
         })
         .catch((err) => {
           console.error('Failed to fetch profile:', err);
+          setProfile(null);
         })
         .finally(() => {
           setLoading(false);
         });
     }
-  }, [isSignedIn, open, profile, loading]);
+  }, [isSignedIn, open, profile, loading, hasAttemptedProfileFetch, fetchProfile]);
+
+  useEffect(() => {
+    if (!open) {
+      setHasAttemptedProfileFetch(false);
+    }
+  }, [open]);
 
   const handleSignOut = async () => {
     await signOut();
     setOpen(false);
     setProfile(null);
+    setHasAttemptedProfileFetch(false);
   };
 
   const wrapperClass = className ? `${className}` : '';
@@ -312,7 +398,7 @@ export function AdminHeaderDrawer({
               role="dialog"
               aria-modal="true"
               id="admin-header-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-visible border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-visible border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
             >
               <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>
@@ -378,7 +464,11 @@ export function AdminHeaderDrawer({
                                 'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
                               organizationSwitcherPopoverActionButton:
                                 'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                              organizationSwitcherPopoverActionButton__createOrganization:
+                                profile?.canCreateOrganization === false ? 'hidden' : '',
                               organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
+                              organizationListPreviewItemActionButton:
+                                'h-8 w-8 min-w-8 max-w-8 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
                               organizationSwitcherPopoverFooter:
                                 'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
                               organizationSwitcherPreviewButton:
@@ -389,7 +479,9 @@ export function AdminHeaderDrawer({
                               organizationListPreviewButton:
                                 'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
                               organizationListCreateOrganizationActionButton:
-                                'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                                profile?.canCreateOrganization === false
+                                  ? 'hidden'
+                                  : 'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
                               organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
                               organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
                             },

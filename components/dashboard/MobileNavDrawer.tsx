@@ -126,7 +126,7 @@ export function MobileNavDrawer({
               role="dialog"
               aria-modal="true"
               id="mobile-nav-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:var(--theme-sidebar-bg)] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
             >
               <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>

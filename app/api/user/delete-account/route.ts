@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
+import { deactivateUserOrganizations } from '../../../../lib/organization-access';
+import { Logger } from '../../../../lib/logger';
 
 export async function DELETE(_request: NextRequest) {
   void _request;
@@ -9,6 +11,20 @@ export async function DELETE(_request: NextRequest) {
     const { userId } = await authService.getSession();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Tear down owned organizations first (removes memberships, invites, Clerk orgs)
+    try {
+      await deactivateUserOrganizations(userId);
+    } catch (err: unknown) {
+      Logger.warn('delete-account: org teardown failed, continuing', { userId, error: toError(err).message });
+    }
+
+    // Remove any remaining organization memberships (where user is a member, not owner)
+    try {
+      await prisma.organizationMembership.deleteMany({ where: { userId } });
+    } catch (err: unknown) {
+      Logger.warn('delete-account: membership cleanup failed', { userId, error: toError(err).message });
     }
 
     // Start a transaction to delete all user-related data
@@ -34,6 +50,10 @@ export async function DELETE(_request: NextRequest) {
       await tryDeleteMany('featureUsageLog');
       await tryDeleteMany('payment');
       await tryDeleteMany('subscription');
+      await tryDeleteMany('visitLog');
+      await tryDeleteMany('couponRedemption');
+      await tryDeleteMany('account');
+      await tryDeleteMany('session');
 
       // Finally, delete the user record if available
       const userTable = txRec['user'];

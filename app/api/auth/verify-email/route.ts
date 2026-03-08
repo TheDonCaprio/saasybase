@@ -36,10 +36,14 @@ export async function POST() {
     const rawToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const identifier = `email-verify:${user.email}`;
+
+    // Delete old tokens for this identifier before creating a new one
+    await prisma.verificationToken.deleteMany({ where: { identifier } });
 
     await prisma.verificationToken.create({
       data: {
-        identifier: `email-verify:${user.email}`,
+        identifier,
         token: hashedToken,
         expires,
       },

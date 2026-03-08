@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
+import { prisma } from '../../../../../lib/prisma';
 import { toError } from '../../../../../lib/runtime-guards';
 
 export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
@@ -12,6 +13,16 @@ export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessi
 	const { sessionId } = params;
 
 	try {
+		// Verify the session belongs to the requesting user before revoking
+		const session = await prisma.session.findUnique({
+			where: { id: sessionId },
+			select: { userId: true },
+		});
+
+		if (session && session.userId !== userId) {
+			return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+		}
+
 		await authService.revokeSession(sessionId);
 
 		return NextResponse.json({ revoked: true });

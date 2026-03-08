@@ -274,7 +274,8 @@ export async function upsertOrganizationInvite(snapshot: OrganizationInviteSnaps
 	}
 
 	const token = snapshot.token || undefined;
-	const expiresAt = coerceDate(snapshot.expiresAt);
+	const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+	const expiresAt = coerceDate(snapshot.expiresAt) ?? new Date(Date.now() + INVITE_TTL_MS);
 	const acceptedAt = coerceDate(snapshot.acceptedAt);
 	const status = snapshot.status || (acceptedAt ? 'ACCEPTED' : 'PENDING');
 	const role = snapshot.role || 'MEMBER';

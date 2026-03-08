@@ -492,7 +492,7 @@ export default function AccountMenu() {
           <div className="p-6 space-y-4">
             <div>
               <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-                Welcome to {siteInfo?.siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'}
+                Welcome to {siteInfo?.siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Sign in to access your account, view your plan, and manage {siteInfo?.tokenLabel || 'tokens'}.

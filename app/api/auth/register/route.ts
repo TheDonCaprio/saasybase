@@ -5,31 +5,55 @@
  * Only used when AUTH_PROVIDER=nextauth (Clerk handles its own registration).
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/nextauth.config';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';
+import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
+import { validatePasswordStrength } from '@/lib/password-policy';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, email, password } = body;
+    // Rate limit by IP
+    const ip = getClientIP(request);
+    const rl = await rateLimit(`auth:register:${ip}`, RATE_LIMITS.AUTH, {
+      ip,
+      route: '/api/auth/register',
+      method: 'POST',
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } }
+      );
+    }
 
-    if (!email || !password) {
+    const body = await request.json();
+    const { name, email: rawEmail, password } = body;
+
+    if (!rawEmail || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    if (typeof password === 'string' && password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    // Normalize email
+    const email = typeof rawEmail === 'string' ? rawEmail.toLowerCase().trim() : '';
+    if (!email) {
+      return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
     }
 
-    // Check if user already exists
+    // Validate password strength
+    const pwCheck = validatePasswordStrength(password);
+    if (!pwCheck.valid) {
+      return NextResponse.json({ error: pwCheck.message }, { status: 400 });
+    }
+
+    // Check if user already exists — use generic message to prevent email enumeration
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'Unable to create account. Please try a different email or sign in.' }, { status: 409 });
     }
 
-    // Create the user
+    // Create the user (emailVerified: null — require verification)
     const hashed = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
@@ -37,7 +61,7 @@ export async function POST(request: Request) {
         name: name || null,
         password: hashed,
         role: 'USER',
-        emailVerified: new Date(), // Auto-verify for credentials sign-up
+        emailVerified: null,
       },
     });
 

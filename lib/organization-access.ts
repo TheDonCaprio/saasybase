@@ -883,7 +883,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     await syncOrganizationMembership({
       userId,
       organizationId: createdOrganization.id,
-      role: 'org:admin',
+      role: 'ADMIN',
       status: 'ACTIVE',
     });
   } else {

@@ -395,7 +395,11 @@ export class NextAuthProvider implements AuthProvider {
       slug: (org.slug as string) ?? null,
       createdBy: (org.ownerUserId as string) ?? null,
       maxAllowedMemberships: typeof org.seatLimit === 'number' ? org.seatLimit : null,
-      publicMetadata: {},
+      publicMetadata: {
+        ...(typeof org.planId === 'string' ? { planId: org.planId } : {}),
+        ...(typeof org.tokenPoolStrategy === 'string' ? { tokenPoolStrategy: org.tokenPoolStrategy } : {}),
+        ...(typeof org.seatLimit === 'number' ? { seatLimit: org.seatLimit } : {}),
+      },
     };
   }
 }

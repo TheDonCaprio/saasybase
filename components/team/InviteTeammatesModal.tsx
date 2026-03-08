@@ -44,7 +44,7 @@ export function InviteTeammatesModal({
                     <div>
                         <h2 className="text-lg font-semibold text-white">Invite teammates</h2>
                         <p className="text-sm text-neutral-400">
-                            Send invites via email. Members join with their existing Clerk account.
+                            Send invites via email. Members join with their existing account.
                         </p>
                     </div>
                     <button

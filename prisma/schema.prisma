@@ -20,6 +20,8 @@ model User {
   role                   String   @default("USER")
   // Password hash for credentials-based auth (NextAuth). Null when using Clerk or OAuth-only.
   password               String?
+  // Incremented on password change/reset to invalidate existing JWT tokens.
+  tokenVersion           Int      @default(0)
   // Email verification timestamp (required by NextAuth Prisma adapter)
   emailVerified          DateTime?
   // Denormalized number of payments made by this user. Backfilled by a script.

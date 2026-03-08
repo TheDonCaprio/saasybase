@@ -6,6 +6,12 @@ import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 
 export async function POST(request: NextRequest) {
+  // Require authentication so only the invite recipient can decline
+  const { userId } = await authService.getSession();
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized. Please sign in to decline this invitation.' }, { status: 401 });
+  }
+
   let token: string | null = null;
   try {
     const body = await request.json().catch(() => ({}));

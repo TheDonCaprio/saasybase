@@ -134,19 +134,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       // On initial sign-in, `user` is the object returned by authorize() or the adapter.
       if (user) {
         token.id = user.id;
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id! },
-          select: { role: true, imageUrl: true },
+          select: { role: true, imageUrl: true, tokenVersion: true },
         });
         token.role = dbUser?.role ?? 'USER';
+        token.tokenVersion = dbUser?.tokenVersion ?? 0;
         if (dbUser?.imageUrl) {
           token.picture = dbUser.imageUrl;
         }
       }
+
+      // On every subsequent request, verify tokenVersion hasn't been bumped
+      // (password change/reset increments it to invalidate existing JWTs).
+      if (!user && token.id && trigger !== 'signIn') {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { tokenVersion: true },
+        });
+        if (dbUser && dbUser.tokenVersion !== (token.tokenVersion ?? 0)) {
+          // Token is stale — force re-authentication
+          return { ...token, id: undefined, role: undefined };
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

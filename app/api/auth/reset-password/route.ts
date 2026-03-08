@@ -5,21 +5,38 @@
  * Only used when AUTH_PROVIDER=nextauth.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/nextauth.config';
 import { createHash } from 'crypto';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
+import { validatePasswordStrength } from '@/lib/password-policy';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = getClientIP(request);
+    const rl = await rateLimit(`auth:reset-password:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000, message: 'Too many password reset attempts' }, {
+      ip,
+      route: '/api/auth/reset-password',
+      method: 'POST',
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } }
+      );
+    }
+
     const { token, email, password } = await request.json();
 
     if (!token || !email || !password) {
       return NextResponse.json({ error: 'Token, email, and password are required' }, { status: 400 });
     }
 
-    if (typeof password === 'string' && password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    const pwCheck = validatePasswordStrength(password);
+    if (!pwCheck.valid) {
+      return NextResponse.json({ error: pwCheck.message }, { status: 400 });
     }
 
     const hashedToken = createHash('sha256').update(token).digest('hex');
@@ -40,11 +57,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Reset link has expired. Please request a new one.' }, { status: 400 });
     }
 
-    // Update password
+    // Update password and bump tokenVersion to invalidate existing JWTs
     const hashed = await hashPassword(password);
     await prisma.user.update({
       where: { email: email.toLowerCase().trim() },
-      data: { password: hashed },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
     });
 
     // Delete the used token

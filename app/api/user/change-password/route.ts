@@ -5,18 +5,35 @@
  * Requires the current password for verification.
  */
 
-import { NextResponse } from 'next/server';
-import { getAuthSafe } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
+import { validatePasswordStrength } from '@/lib/password-policy';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { userId } = await getAuthSafe();
+    const { userId } = await authService.getSession();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limit by user ID
+    const ip = getClientIP(request);
+    const rl = await rateLimit(`auth:change-password:${userId}`, { limit: 5, windowMs: 15 * 60 * 1000, message: 'Too many password change attempts' }, {
+      actorId: userId,
+      ip,
+      route: '/api/user/change-password',
+      method: 'POST',
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } }
+      );
     }
 
     const body = await request.json();
@@ -32,11 +49,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (newPassword.length < 8) {
-      return NextResponse.json(
-        { error: 'New password must be at least 8 characters' },
-        { status: 400 }
-      );
+    const pwCheck = validatePasswordStrength(newPassword);
+    if (!pwCheck.valid) {
+      return NextResponse.json({ error: pwCheck.message }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -57,9 +72,10 @@ export async function POST(request: Request) {
     }
 
     const hashed = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+    // Bump tokenVersion to invalidate existing JWT sessions
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashed },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
     });
 
     return NextResponse.json({ message: 'Password changed successfully' });

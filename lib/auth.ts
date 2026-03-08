@@ -19,20 +19,6 @@ export { AuthGuardError, isAuthGuardError, toAuthGuardErrorResponse } from './au
 
 export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR';
 
-/**
- * @deprecated Prefer importing `authService` from `@/lib/auth-provider` directly.
- * Kept for backward-compatibility with existing call-sites during migration.
- */
-async function tryImportClerk() {
-  try {
-    const clerkModule: unknown = await import('@clerk/nextjs/server');
-    return clerkModule as unknown;
-  } catch (e: unknown) {
-    Logger.info('Clerk not available', { error: toError(e).message });
-    return null;
-  }
-}
-
 export async function getAuthSafe(): Promise<{ userId: string | null; orgId?: string | null }> {
   // Route through the auth provider abstraction layer.
   // This delegates to whichever provider is configured (Clerk by default).

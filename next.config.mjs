@@ -6,6 +6,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const nextConfig = {
+  // Expose AUTH_PROVIDER to client-side code under NEXT_PUBLIC_ prefix.
+  // This enables build-time conditional imports in the auth abstraction layer.
+  env: {
+    NEXT_PUBLIC_AUTH_PROVIDER: process.env.AUTH_PROVIDER || 'clerk',
+  },
+
   // Prevent output tracing from walking up to an unrelated workspace root
   // when multiple lockfiles exist on the machine.
   outputFileTracingRoot: __dirname,

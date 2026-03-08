@@ -1,7 +1,6 @@
 "use client";
 import React from 'react';
-import { ClerkProvider } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
+import { AuthProvider, authDarkTheme } from '@/lib/auth-provider/client';
 // Welcome email is now triggered server-side via Clerk webhooks.
 
 export default function DevClerkProvider({ children, publishableKey }: { children: React.ReactNode; publishableKey?: string | null }) {
@@ -36,14 +35,14 @@ export default function DevClerkProvider({ children, publishableKey }: { childre
 
   // When a publishableKey is provided, render ClerkProvider with custom sign-in/up URLs
   return (
-    <ClerkProvider 
+    <AuthProvider 
       publishableKey={publishableKey}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
       appearance={{
-        baseTheme: isDark ? dark : undefined,
+        baseTheme: isDark ? authDarkTheme : undefined,
         variables: {
           colorPrimary: '#7c3aed', // violet-600
           colorBackground: isDark ? '#0a0a0a' : '#ffffff',
@@ -68,6 +67,6 @@ export default function DevClerkProvider({ children, publishableKey }: { childre
       }}
     >
       {children}
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

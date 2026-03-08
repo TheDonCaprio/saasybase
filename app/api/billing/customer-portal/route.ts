@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { paymentService } from '../../../../lib/payment/service';
 import { prisma } from '../../../../lib/prisma';
 import { Logger } from '../../../../lib/logger';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   let userId: string | null = null;
 
   try {
-    const { userId: authUserId } = await auth();
+    const { userId: authUserId } = await authService.getSession();
     userId = authUserId;
     const clientIp = getClientIP(request);
     const limiterKey = userId ? `billing-portal:user:${userId}` : `billing-portal:ip:${clientIp}`;

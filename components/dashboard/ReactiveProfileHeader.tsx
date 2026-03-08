@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuthUser } from '@/lib/auth-provider/client';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 import ClerkProfileButtons from './ClerkProfileButtons';
@@ -24,7 +24,7 @@ interface ReactiveProfileHeaderProps {
 }
 
 export function ReactiveProfileHeader({ fallbackUser, subscription, preformattedCreatedAt }: ReactiveProfileHeaderProps) {
-  const { user: clerkUser, isLoaded } = useUser();
+  const { user: clerkUser, isLoaded } = useAuthUser();
   const settings = useFormatSettings();
 
   // No debug instrumentation here; server preformatted strings are consumed directly in the markup.

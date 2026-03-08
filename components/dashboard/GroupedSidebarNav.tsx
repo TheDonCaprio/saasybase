@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
@@ -24,8 +24,8 @@ type SidebarProfile = {
 
 export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], items?: NavItem[] }) {
   const pathname = usePathname();
-  const { isSignedIn } = useUser();
-  const { orgId } = useAuth();
+  const { isSignedIn } = useAuthUser();
+  const { orgId } = useAuthSession();
 
   const [profile, setProfile] = useState<SidebarProfile | null>(null);
   const [loading, setLoading] = useState(false);

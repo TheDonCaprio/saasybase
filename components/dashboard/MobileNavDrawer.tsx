@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faGrip } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
-import { SignOutButton } from '@clerk/nextjs';
+import { AuthSignOutButton } from '@/lib/auth-provider/client';
 
 interface MobileNavDrawerProps {
   items: NavItem[];
@@ -192,11 +192,11 @@ export function MobileNavDrawer({
               </nav>
 
               <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-4">
-                <SignOutButton>
+                <AuthSignOutButton>
                   <button className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300">
                     {signOutLabel}
                   </button>
-                </SignOutButton>
+                </AuthSignOutButton>
               </div>
             </div>
           </div>,

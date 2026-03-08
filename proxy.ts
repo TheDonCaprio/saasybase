@@ -1,7 +1,7 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher([
+const isProtectedRoute = createAuthRouteMatcher([
   // NOTE: Dashboard pages already enforce auth via server-side guards
   // (see `requireAuth()` usage under `app/dashboard/*`). Keeping dashboard
   // out of edge middleware avoids Clerk dev-browser handshake redirect loops
@@ -15,7 +15,7 @@ const isProtectedRoute = createRouteMatcher([
 // /admin and /api/admin routes. Production behavior is unchanged.
 const devBypass = process.env.NODE_ENV !== 'production' && !!process.env.DEV_ADMIN_ID;
 
-export default clerkMiddleware(async (auth: unknown, req: NextRequest) => {
+export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   if (!isProtectedRoute(req)) {
     return;
   }

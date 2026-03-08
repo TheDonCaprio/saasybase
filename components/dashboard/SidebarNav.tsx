@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
@@ -19,8 +19,8 @@ type SidebarProfile = {
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const { isSignedIn } = useUser();
-  const { orgId } = useAuth();
+  const { isSignedIn } = useAuthUser();
+  const { orgId } = useAuthSession();
   const [profile, setProfile] = useState<SidebarProfile | null>(null);
   const [loading, setLoading] = useState(false);
 

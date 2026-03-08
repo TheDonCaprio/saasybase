@@ -1,6 +1,6 @@
 'use client';
 
-import { UserProfile } from '@clerk/nextjs';
+import { AuthUserProfile } from '@/lib/auth-provider/client';
 
 interface ClerkProfileInlineProps {
   mode?: 'profile' | 'security' | 'account';
@@ -89,7 +89,7 @@ export function ClerkProfileInline({ mode = 'profile' }: ClerkProfileInlineProps
 
   return (
     <div className="w-full">
-      <UserProfile
+      <AuthUserProfile
         appearance={appearance}
         routing="virtual"
       />

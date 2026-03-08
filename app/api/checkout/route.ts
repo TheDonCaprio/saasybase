@@ -6,7 +6,7 @@ import {
   tryAcquireDiscountedSubscriptionPriceKey,
 } from '@/lib/payment/discountedSubscriptionPriceCache';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../lib/plans';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../lib/prisma';
@@ -21,6 +21,7 @@ import { isRecurringProrationEnabled } from '../../../lib/settings';
 import { getIdByProvider, getCurrentProviderKey } from '../../../lib/utils/provider-ids';
 import { getProviderCurrency, getProviderDefaultCurrency } from '../../../lib/payment/registry';
 import { formatCurrency } from '../../../lib/utils/currency';
+import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   try {
     const clientIp = getClientIP(req);
     const userAgent = req.headers.get('user-agent');
-    const { userId: clerkUserId, orgId: activeClerkOrgId } = await auth();
+    const { userId: clerkUserId, orgId: activeClerkOrgId } = await authService.getSession();
     userId = clerkUserId as string | null;
 
     const limiterKey = userId ? `checkout:user:${userId}` : createRateLimitKey(req, 'checkout');
@@ -302,6 +303,10 @@ export async function POST(req: NextRequest) {
     if (!user || !user.email) {
       return jsonError('User email is required for checkout', 400, 'USER_EMAIL_REQUIRED');
     }
+
+    const activeOrganizationContext = selectedPlanIsTeam
+      ? await getOrganizationPlanContext(userId!, activeClerkOrgId)
+      : null;
 
     // Get priceId either from environment (predefined plans) or directly from DB (custom plans)
     let priceId: string | undefined;
@@ -632,7 +637,12 @@ export async function POST(req: NextRequest) {
       }
       const base = getEnv().NEXT_PUBLIC_APP_URL;
       const metadata: Record<string, string> = { planId };
-      if (activeClerkOrgId) {
+      if (activeOrganizationContext?.organization.id) {
+        metadata.activeOrganizationId = activeOrganizationContext.organization.id;
+        metadata.organizationId = activeOrganizationContext.organization.id;
+      }
+      if (authService.providerName === 'clerk' && activeClerkOrgId) {
+        metadata.activeProviderOrganizationId = activeClerkOrgId;
         metadata.activeClerkOrgId = activeClerkOrgId;
         metadata.clerkOrgId = activeClerkOrgId;
         metadata.orgId = activeClerkOrgId;

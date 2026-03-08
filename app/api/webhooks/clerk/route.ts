@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { toError, asRecord, getNestedString, getNestedNumber } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { sendWelcomeIfNotSent } from '../../../../lib/welcome';
 import { prisma } from '../../../../lib/prisma';
 import {
@@ -200,11 +200,10 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
 
 async function fetchClerkUserById(userId: string) {
   try {
-    const client = await clerkClient();
-    return await client.users.getUser(userId);
+    return await authService.getUser(userId);
   } catch (err) {
     const error = toError(err);
-    Logger.warn('Clerk webhook: failed to fetch Clerk user', { userId, error: error.message });
+    Logger.warn('Clerk webhook: failed to fetch user from auth provider', { userId, error: error.message });
     return null;
   }
 }
@@ -360,28 +359,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(res, { status: res.ok ? 200 : 500 });
     }
 
-    // Fetch user from Clerk to get primary email and verification status
-    const clerkUserRecord = await fetchClerkUserById(userId as string);
+    // Fetch user from auth provider to get primary email and verification status
+    const authUserRecord = await fetchClerkUserById(userId as string);
 
-    const clerkRec = asRecord(clerkUserRecord) ?? (clerkUserRecord as Record<string, unknown> | null) ?? {};
-    const email = getNestedString(clerkRec, ['primaryEmailAddress', 'emailAddress']) || getNestedString(clerkRec, ['email']) || null;
-    const verificationStatus = getNestedString(clerkRec, ['primaryEmailAddress', 'verification', 'status']) ?? null;
-    const legacyVerified = Boolean(getNestedString(clerkRec, ['primaryEmailVerified']) || getNestedString(clerkRec, ['email_addresses', '0', 'verified']));
-    const verified = legacyVerified || verificationStatus === 'verified' || verificationStatus === 'passed';
+    const email = authUserRecord?.email ?? null;
+    const verified = authUserRecord?.emailVerified ?? false;
 
     if (!email || !verified) {
       Logger.info('Clerk webhook: user email missing or not verified, skipping welcome', { userId, email, verified });
       return NextResponse.json({ ok: true, skipped: true }, { status: 200 });
     }
 
-    const clerkName =
-      getNestedString(clerkRec, ['firstName']) ||
-      getNestedString(clerkRec, ['first_name']) ||
-      getNestedString(clerkRec, ['name']) ||
-      getNestedString(clerkRec, ['fullName']) ||
-      getNestedString(clerkRec, ['given_name']) ||
-      null;
-    const result = await sendWelcomeIfNotSent(userId as string, email as string, { firstName: clerkName ?? undefined });
+    const userName = authUserRecord?.firstName ?? authUserRecord?.fullName ?? null;
+    const result = await sendWelcomeIfNotSent(userId as string, email as string, { firstName: userName ?? undefined });
     const duration = Date.now() - start;
     Logger.info('Clerk webhook processed', { userId, duration, result });
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });

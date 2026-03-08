@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 
 async function handleMarkRead(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

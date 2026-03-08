@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { paymentService } from '../../../../lib/payment/service';
 import { prisma } from '../../../../lib/prisma';
 import { formatCurrency } from '../../../../lib/utils/currency';
@@ -235,7 +235,7 @@ function badRequest(message: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     let actorUserId = userId ?? null;
 
     if (!actorUserId && process.env.NODE_ENV !== 'production') {
@@ -463,7 +463,7 @@ export async function POST(req: NextRequest) {
   let planId: string | null = null;
 
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     actorUserId = userId ?? null;
 
     if (!actorUserId && process.env.NODE_ENV !== 'production') {

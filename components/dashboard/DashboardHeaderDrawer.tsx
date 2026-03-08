@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUser, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
-import { SignOutButton, useUser, useClerk, useAuth, OrganizationSwitcher } from '@clerk/nextjs';
+import { AuthSignOutButton, useAuthUser, useAuthInstance, useAuthSession, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { createPortal } from 'react-dom';
 
 const PROFILE_FETCH_RETRY_DELAY_MS = 450;
@@ -78,9 +78,9 @@ export function DashboardHeaderDrawer({
 }: DashboardHeaderDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isSignedIn } = useUser();
-  const { orgId } = useAuth();
-  const { signOut } = useClerk();
+  const { isSignedIn } = useAuthUser();
+  const { orgId } = useAuthSession();
+  const { signOut } = useAuthInstance();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -338,7 +338,7 @@ export function DashboardHeaderDrawer({
 
                       <div className="space-y-2">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
-                        <OrganizationSwitcher
+                        <AuthOrganizationSwitcher
                           hidePersonal={false}
                           appearance={{
                             elements: {
@@ -498,14 +498,14 @@ export function DashboardHeaderDrawer({
 
               {/* Sign Out Button */}
               <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-4">
-                <SignOutButton>
+                <AuthSignOutButton>
                   <button 
                     onClick={handleSignOut}
                     className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
                   >
                     {signOutLabel}
                   </button>
-                </SignOutButton>
+                </AuthSignOutButton>
               </div>
             </div>
           </div>,

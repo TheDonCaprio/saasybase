@@ -4,7 +4,7 @@ import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereF
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
 import type { Prisma } from '@prisma/client';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { buildSupportEmail } from '../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail } from '../../../../lib/email';
 import { isSupportEmailNotificationEnabled } from '../../../../lib/notifications';
@@ -12,7 +12,7 @@ import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -256,7 +256,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useUser } from '@clerk/nextjs';
+import { useAuthUser } from '@/lib/auth-provider/client';
 import { useEffect, useState } from 'react';
 import { asRecord } from '../../lib/runtime-guards';
 
 export function ActiveSessionsSummary() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthUser();
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {

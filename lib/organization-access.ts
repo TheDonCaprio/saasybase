@@ -1,4 +1,5 @@
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
+import type { AuthOrganization } from '@/lib/auth-provider';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
@@ -8,8 +9,6 @@ import { getPaidTokensNaturalExpiryGraceHours } from './settings';
 const TEAM_SUB_STATUSES = ['ACTIVE', 'PENDING', 'CANCELLED', 'PAST_DUE'] as const;
 const TEAM_SUB_STATUSES_STRICT = ['ACTIVE', 'PENDING', 'PAST_DUE'] as const;
 type ClerkMembershipRole = 'org:admin' | 'org:member';
-type ClerkApi = Awaited<ReturnType<typeof clerkClient>>;
-type ClerkOrganizationResource = Awaited<ReturnType<ClerkApi['organizations']['createOrganization']>>;
 type ClerkErrorEntry = { meta?: { paramName?: string }; message?: string };
 
 type AllowedOrgSubscription = Awaited<ReturnType<typeof getActiveTeamSubscription>>;
@@ -110,7 +109,14 @@ export async function getActiveTeamSubscription(
 }
 
 export async function getOrganizationAccessSummary(userId: string, activeClerkOrgId?: string | null): Promise<TeamSubscriptionStatus> {
-  const targetedOrgCondition = activeClerkOrgId ? { clerkOrganizationId: activeClerkOrgId } : {};
+  const targetedOrgCondition = activeClerkOrgId
+    ? {
+        OR: [
+          { id: activeClerkOrgId },
+          { clerkOrganizationId: activeClerkOrgId },
+        ],
+      }
+    : {};
 
   // First, check if they are an OWNER directly, factoring in the targeted org context if requested.
   const subscription = await getActiveTeamSubscription(userId, { includeGrace: true });
@@ -118,7 +124,13 @@ export async function getOrganizationAccessSummary(userId: string, activeClerkOr
     if (activeClerkOrgId) {
       // Confirm the requested active organization is actually the one they own
       const ownedOrg = await prisma.organization.findFirst({
-        where: { ownerUserId: userId, clerkOrganizationId: activeClerkOrgId }
+        where: {
+          ownerUserId: userId,
+          OR: [
+            { id: activeClerkOrgId },
+            { clerkOrganizationId: activeClerkOrgId },
+          ],
+        }
       });
       if (ownedOrg) {
         return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
@@ -197,6 +209,9 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
   const uniqueOrgIds = Array.from(new Set(orgIds.filter((id) => typeof id === 'string' && id.length > 0)));
   if (uniqueOrgIds.length === 0) return;
 
+  const providerName = authService.providerName;
+  const shouldDeleteProviderOrganizations = providerName === 'clerk';
+
   const orgs = await prisma.organization.findMany({
     where: { id: { in: uniqueOrgIds } },
     select: { id: true, clerkOrganizationId: true, ownerUserId: true },
@@ -205,11 +220,10 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
 
   await Promise.all(
     orgs.map(async (org) => {
-      if (!org.clerkOrganizationId) return;
+      if (!shouldDeleteProviderOrganizations || !org.clerkOrganizationId) return;
       try {
-        const client = await clerkClient();
-        await client.organizations.deleteOrganization(org.clerkOrganizationId);
-        Logger.info('Deleted Clerk organization after plan change', {
+        await authService.deleteOrganization(org.clerkOrganizationId);
+        Logger.info('Deleted auth provider organization after plan change', {
           userId: context?.userId ?? org.ownerUserId,
           clerkOrganizationId: org.clerkOrganizationId,
           reason: context?.reason,
@@ -218,7 +232,7 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
         const error = toError(err);
         const msg = error.message.toLowerCase();
         if (!msg.includes('not found') && !msg.includes('does not exist')) {
-          Logger.warn('Failed to delete Clerk organization during plan downgrade', {
+          Logger.warn('Failed to delete auth provider organization during plan downgrade', {
             clerkOrganizationId: org.clerkOrganizationId,
             error: error.message,
             reason: context?.reason,
@@ -255,6 +269,18 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
       userId: context?.userId,
       reason: context?.reason,
       error: toError(err).message,
+    });
+  }
+
+  try {
+    await prisma.organizationMembership.deleteMany({ where: { organizationId: { in: dbOrgIds } } });
+    await prisma.organizationInvite.deleteMany({ where: { organizationId: { in: dbOrgIds } } });
+  } catch (err: unknown) {
+    Logger.warn('Failed to remove memberships or invites before org teardown', {
+      userId: context?.userId,
+      reason: context?.reason,
+      error: toError(err).message,
+      providerName,
     });
   }
 
@@ -375,9 +401,11 @@ function mapRoleToClerk(role?: string | null): ClerkMembershipRole {
 async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
   let deleted = 0;
   try {
+    // This function is Clerk-specific: it probes various SDK method names to
+    // list and delete organizations for a user. Uses dynamic import so the
+    // module stays loadable without @clerk/nextjs.
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
-    // Try a few common SDK method names to list organizations. This is defensive
-    // because Clerk SDK surface can vary across versions.
     const orgs: Array<{ id?: string; created_by?: string; createdBy?: string }> = [];
 
     const tryList = async (fnName: string, args: Record<string, unknown>) => {
@@ -392,7 +420,6 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
       }
     };
 
-    // common variants
     const candidates = [
       await tryList('listOrganizations', { created_by: userId }),
       await tryList('list', { created_by: userId }),
@@ -402,7 +429,6 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
 
     for (const c of candidates) {
       if (!c) continue;
-      // If SDK returned a paginated object, try to pick items
       const items = Array.isArray(c) ? c : Array.isArray((c as { data: unknown }).data) ? (c as { data: unknown[] }).data : null;
       if (items && items.length > 0) {
         orgs.push(...(items as Array<{ id?: string; created_by?: string; createdBy?: string }>));
@@ -410,11 +436,9 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
       }
     }
 
-    // Fallback: try fetching the user and see if Clerk returns organization info
     if (orgs.length === 0) {
       try {
         const u = await client.users.getUser(userId);
-        // Some SDK versions may include memberships or organization list on the user
         const maybeOrgs = (u as unknown as Record<string, unknown>).organizations || (u as unknown as Record<string, unknown>).organization_memberships || (u as unknown as Record<string, unknown>).orgs;
         if (Array.isArray(maybeOrgs) && maybeOrgs.length > 0) {
           orgs.push(...maybeOrgs.map((o: { id?: string; organization_id?: string; organizationId?: string }) => ({ id: o.id || o.organization_id || o.organizationId })));
@@ -424,9 +448,8 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
       }
     }
 
-    // If still nothing, give up but log.
     if (orgs.length === 0) {
-      Logger.info('attemptCleanupClerkOrgs: no Clerk org list method available or no orgs found for user', { userId });
+      Logger.info('attemptCleanupClerkOrgs: no org list method available or no orgs found for user', { userId });
       return 0;
     }
 
@@ -434,12 +457,12 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
       if (!o?.id) continue;
       if (deleted >= maxToDelete) break;
       try {
-        await client.organizations.deleteOrganization(o.id);
+        await authService.deleteOrganization(o.id);
         deleted += 1;
-        Logger.info('attemptCleanupClerkOrgs: deleted Clerk org', { userId, clerkOrganizationId: o.id });
+        Logger.info('attemptCleanupClerkOrgs: deleted org', { userId, clerkOrganizationId: o.id });
       } catch (err: unknown) {
         const e = toError(err);
-        Logger.warn('attemptCleanupClerkOrgs: failed to delete Clerk org', { userId, clerkOrganizationId: o.id, error: e.message });
+        Logger.warn('attemptCleanupClerkOrgs: failed to delete org', { userId, clerkOrganizationId: o.id, error: e.message });
       }
     }
   } catch (err: unknown) {
@@ -450,14 +473,13 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
 
 async function organizationExistsInClerk(clerkOrganizationId: string): Promise<boolean> {
   try {
-    const client = await clerkClient();
-    await client.organizations.getOrganization({ organizationId: clerkOrganizationId });
-    return true;
+    const org = await authService.getOrganization(clerkOrganizationId);
+    return !!org;
   } catch (err: unknown) {
     if (isClerkNotFoundError(err)) {
       return false;
     }
-    Logger.warn('Failed to verify Clerk organization presence', {
+    Logger.warn('Failed to verify auth provider organization presence', {
       clerkOrganizationId,
       error: toError(err).message,
     });
@@ -476,8 +498,7 @@ async function repopulateClerkMembershipsFromLocal(clerkOrganizationId: string, 
       .filter((membership) => membership.userId && membership.userId !== ownerUserId)
       .map(async (membership) => {
         try {
-          const client = await clerkClient();
-          await client.organizations.createOrganizationMembership({
+          await authService.createOrganizationMembership({
             organizationId: clerkOrganizationId,
             userId: membership.userId!,
             role: mapRoleToClerk(membership.role),
@@ -487,22 +508,22 @@ async function repopulateClerkMembershipsFromLocal(clerkOrganizationId: string, 
           if (error.message.toLowerCase().includes('already')) {
             return;
           }
-          // If Clerk complains the role param is invalid for this org, retry without role
+          // If the auth provider complains the role param is invalid, retry without role
           try {
             const raw = JSON.parse(JSON.stringify(err)) as { errors?: ClerkErrorEntry[] } | null;
             const roleProblem = Array.isArray(raw?.errors) && raw.errors.some((entry) => entry?.meta?.paramName === 'role' || String(entry?.message ?? '').toLowerCase().includes('role'));
             if (roleProblem) {
-              // Clerk may reject a role parameter for some orgs; call with an any-typed params
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const params: any = { organizationId: clerkOrganizationId, userId: membership.userId! };
-              const client = await clerkClient();
-              await client.organizations.createOrganizationMembership(params);
+              await authService.createOrganizationMembership({
+                organizationId: clerkOrganizationId,
+                userId: membership.userId!,
+                role: 'org:member',
+              });
               return;
             }
           } catch {
             // fall through to logging below
           }
-          Logger.warn('Failed to restore Clerk membership during recreation', {
+          Logger.warn('Failed to restore membership during recreation', {
             clerkOrganizationId,
             userId: membership.userId,
             error: error.message,
@@ -520,16 +541,15 @@ async function recreateClerkOrganization(params: {
 }) {
   const desiredStrategy = 'SHARED_FOR_ORG';
   const slugSeed = params.existing.slug || slugify(`${params.existing.name}-${params.userId.slice(-5)}`);
-  let createdOrganization: ClerkOrganizationResource | null = null;
+  let createdOrganization: AuthOrganization | null = null;
   let attempt = 0;
   while (attempt < 5 && !createdOrganization) {
     const slug = attempt === 0 ? slugSeed : `${slugSeed}-${attempt}`;
     try {
-      const client = await clerkClient();
-      createdOrganization = await client.organizations.createOrganization({
+      createdOrganization = await authService.createOrganization({
         name: params.existing.name,
         slug,
-        createdBy: params.userId,
+        createdByUserId: params.userId,
         maxAllowedMemberships: params.desiredSeatLimit ?? undefined,
         publicMetadata: {
           planId: params.planId,
@@ -539,24 +559,18 @@ async function recreateClerkOrganization(params: {
       });
     } catch (err: unknown) {
       const error = toError(err);
-      // If Clerk explicitly reports a creation limit, fail fast with a clearer message
       const info = extractClerkErrorInfo(err);
       if (info?.code === 'org_creation_limit_exceeded') {
-        // Try best-effort cleanup of any existing Clerk organizations for this user,
-        // which can free their creation quota. If we delete something, allow
-        // the recreate loop to try again; otherwise fail immediately with a
-        // descriptive error.
         try {
           const removed = await attemptCleanupClerkOrgs(params.userId, 5);
           if (removed > 0) {
-            Logger.info('recreateClerkOrganization: removed existing Clerk orgs after limit error, retrying', { userId: params.userId, removed });
-            // continue loop and try again without throwing
+            Logger.info('recreateClerkOrganization: removed existing orgs after limit error, retrying', { userId: params.userId, removed });
             continue;
           }
         } catch (cleanupErr: unknown) {
           Logger.warn('recreateClerkOrganization: cleanup attempt failed', { userId: params.userId, error: toError(cleanupErr).message });
         }
-        throw new Error(`Clerk organization creation limit exceeded${info.traceId ? ` (trace: ${info.traceId})` : ''}`);
+        throw new Error(`Organization creation limit exceeded${info.traceId ? ` (trace: ${info.traceId})` : ''}`);
       }
 
       if (error.message.toLowerCase().includes('slug')) {
@@ -623,6 +637,8 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     throw new Error('Team plan required to provision an organization');
   }
 
+  const providerName = authService.providerName;
+  const isNextAuthProvider = providerName === 'nextauth';
   const plan = access.plan;
   const desiredSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
   const desiredStrategy = 'SHARED_FOR_ORG';
@@ -693,32 +709,33 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
 
   const existing = await prisma.organization.findFirst({ where: { ownerUserId: userId } });
   if (existing) {
-    // ... (existing logic for Clerk check) ...
-    const hasClerkOrg = existing.clerkOrganizationId ? await organizationExistsInClerk(existing.clerkOrganizationId) : false;
-    if (!hasClerkOrg) {
-      Logger.warn('Local organization missing Clerk backing record, recreating', {
-        organizationId: existing.id,
-        userId,
-      });
-      // If recreating, we should also migrate tokens if needed, but recreateClerkOrganization
-      // updates the existing record. We can handle token migration after this block or inside.
-      // Let's do it after to be safe and consistent.
-      await recreateClerkOrganization({
-        existing,
-        userId,
-        planId: plan.id,
-        desiredSeatLimit,
-      });
-      // Fall through to token migration below
-    } else {
-      // ... (existing metadata update logic) ...
-      const hasSharedStrategy = (existing.tokenPoolStrategy || '').toUpperCase() === 'SHARED_FOR_ORG';
-      const needsMetadataUpdate =
-        existing.planId !== plan.id ||
-        existing.seatLimit !== desiredSeatLimit ||
-        !hasSharedStrategy;
+    const hasSharedStrategy = (existing.tokenPoolStrategy || '').toUpperCase() === 'SHARED_FOR_ORG';
+    const needsMetadataUpdate =
+      existing.planId !== plan.id ||
+      existing.seatLimit !== desiredSeatLimit ||
+      !hasSharedStrategy;
 
+    if (isNextAuthProvider) {
       if (needsMetadataUpdate) {
+        await updateOrganizationMetadataIfNeeded(existing.id, {
+          planId: plan.id,
+          seatLimit: desiredSeatLimit,
+        });
+      }
+    } else {
+      const hasClerkOrg = existing.clerkOrganizationId ? await organizationExistsInClerk(existing.clerkOrganizationId) : false;
+      if (!hasClerkOrg) {
+        Logger.warn('Local organization missing Clerk backing record, recreating', {
+          organizationId: existing.id,
+          userId,
+        });
+        await recreateClerkOrganization({
+          existing,
+          userId,
+          planId: plan.id,
+          desiredSeatLimit,
+        });
+      } else if (needsMetadataUpdate) {
         await updateOrganizationMetadataIfNeeded(existing.id, {
           planId: plan.id,
           seatLimit: desiredSeatLimit,
@@ -726,8 +743,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
 
         if (existing.clerkOrganizationId) {
           try {
-            const client = await clerkClient();
-            await client.organizations.updateOrganization(existing.clerkOrganizationId, {
+            await authService.updateOrganization(existing.clerkOrganizationId, {
               maxAllowedMemberships: desiredSeatLimit ?? undefined,
               publicMetadata: {
                 planId: plan.id,
@@ -736,7 +752,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
               },
             });
           } catch (err: unknown) {
-            Logger.warn('Failed to update Clerk organization metadata during ensureTeamOrganization', {
+            Logger.warn('Failed to update auth provider organization metadata during ensureTeamOrganization', {
               userId,
               organizationId: existing.id,
               error: toError(err).message,
@@ -779,16 +795,15 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
   const baseName = cleanProvidedName ?? (owner?.name ? `${owner.name}'s Team` : 'Team Workspace');
   const slugBase = slugify(cleanProvidedName ?? owner?.name ?? owner?.email ?? `team-${userId.slice(-5)}`);
 
-  let createdOrganization: ClerkOrganizationResource | null = null;
+  let createdOrganization: AuthOrganization | null = null;
   let attempt = 0;
   while (attempt < 5 && !createdOrganization) {
     const slug = attempt === 0 ? slugBase : `${slugBase}-${attempt}`;
     try {
-      const client = await clerkClient();
-      createdOrganization = await client.organizations.createOrganization({
+      createdOrganization = await authService.createOrganization({
         name: baseName,
         slug,
-        createdBy: userId,
+        createdByUserId: userId,
         maxAllowedMemberships: desiredSeatLimit ?? undefined,
         publicMetadata: {
           planId: plan.id,
@@ -798,27 +813,24 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
       });
     } catch (err: unknown) {
       const error = toError(err);
-      // Log full error details to help diagnose permission/forbidden responses from Clerk
       try {
-        Logger.error('Clerk createOrganization error', { userId, attempt, error: error.message, raw: JSON.stringify(err) });
+        Logger.error('createOrganization error', { userId, attempt, error: error.message, raw: JSON.stringify(err) });
       } catch {
-        Logger.error('Clerk createOrganization error (failed to stringify)', { userId, attempt, error: error.message });
+        Logger.error('createOrganization error (failed to stringify)', { userId, attempt, error: error.message });
       }
-      // If Clerk explicitly reports a creation limit, fail fast with a clearer message
       const info = extractClerkErrorInfo(err);
       if (info?.code === 'org_creation_limit_exceeded') {
         try {
           const removed = await attemptCleanupClerkOrgs(userId, 5);
           if (removed > 0) {
-            Logger.info('ensureTeamOrganization: removed existing Clerk orgs after limit error, retrying', { userId, removed });
-            // reset attempt counter so we can try fresh slugs again
+            Logger.info('ensureTeamOrganization: removed existing orgs after limit error, retrying', { userId, removed });
             attempt = 0;
             continue;
           }
         } catch (cleanupErr: unknown) {
           Logger.warn('ensureTeamOrganization: cleanup attempt failed', { userId, error: toError(cleanupErr).message });
         }
-        throw new Error(`Clerk organization creation limit exceeded${info.traceId ? ` (trace: ${info.traceId})` : ''}`);
+        throw new Error(`Organization creation limit exceeded${info.traceId ? ` (trace: ${info.traceId})` : ''}`);
       }
       if (!error.message.toLowerCase().includes('slug')) {
         throw err;
@@ -831,16 +843,29 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     throw new Error('Failed to provision organization after multiple attempts');
   }
 
-  const saved = await upsertOrganization({
-    clerkOrganizationId: createdOrganization.id,
-    name: createdOrganization.name,
-    slug: createdOrganization.slug ?? slugBase,
-    ownerUserId: userId,
-    planId: plan.id,
-    seatLimit: desiredSeatLimit ?? undefined,
-    tokenPoolStrategy: desiredStrategy,
-    tokenBalance: userTokens, // Initialize with user tokens instead of plan limit
-  });
+  let saved = null;
+  if (isNextAuthProvider) {
+    saved = await prisma.organization.update({
+      where: { id: createdOrganization.id },
+      data: {
+        planId: plan.id,
+        seatLimit: desiredSeatLimit ?? null,
+        tokenPoolStrategy: desiredStrategy,
+        tokenBalance: userTokens,
+      },
+    });
+  } else {
+    saved = await upsertOrganization({
+      clerkOrganizationId: createdOrganization.id,
+      name: createdOrganization.name,
+      slug: createdOrganization.slug ?? slugBase,
+      ownerUserId: userId,
+      planId: plan.id,
+      seatLimit: desiredSeatLimit ?? undefined,
+      tokenPoolStrategy: desiredStrategy,
+      tokenBalance: userTokens,
+    });
+  }
 
   if (userTokens > 0) {
     try {
@@ -854,12 +879,21 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     }
   }
 
-  await syncOrganizationMembership({
-    userId,
-    clerkOrganizationId: createdOrganization.id,
-    role: 'ADMIN',
-    status: 'ACTIVE',
-  });
+  if (isNextAuthProvider) {
+    await syncOrganizationMembership({
+      userId,
+      organizationId: createdOrganization.id,
+      role: 'org:admin',
+      status: 'ACTIVE',
+    });
+  } else {
+    await syncOrganizationMembership({
+      userId,
+      clerkOrganizationId: createdOrganization.id,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+    });
+  }
 
   if (saved?.id) {
     await reconcileMissingTeamTokens({ organizationId: saved.id });

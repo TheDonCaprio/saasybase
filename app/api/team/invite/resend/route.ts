@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { sendEmail, getSiteName, getSupportEmail } from '../../../../../lib/email';
 import { getEnv } from '../../../../../lib/env';
@@ -8,7 +8,7 @@ import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
 import { Logger } from '../../../../../lib/logger';
 
 export async function POST(request: NextRequest) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   let token: string | null = null;

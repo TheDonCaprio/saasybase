@@ -9,6 +9,7 @@ import { shouldClearPaidTokensOnExpiry } from '../../../../../../lib/paidTokens'
 import { paymentService } from '../../../../../../lib/payment/service';
 import { resetOrganizationSharedTokens } from '../../../../../../lib/teams';
 import { syncOrganizationEligibilityForUser } from '../../../../../../lib/organization-access';
+import { sendBillingNotification } from '../../../../../../lib/notifications';
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   let actorId: string;
@@ -51,6 +52,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   try {
     const sub = await prisma.subscription.findUnique({ where: { id } });
     if (!sub) return NextResponse.json({ ok: false, error: 'Subscription not found' }, { status: 404 });
+    const plan = await prisma.plan.findUnique({
+      where: { id: sub.planId },
+      select: { name: true, supportsOrganizations: true },
+    });
     const subscriptionProviderName = sub.paymentProvider || paymentService.provider.name;
     // Use the subscription's originating provider for cancellation
     const provider = paymentService.getProviderForRecord(sub.paymentProvider);
@@ -95,7 +100,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         await prisma.user.update({ where: { id: sub.userId }, data: { tokenBalance: 0 } });
 
         if (sub.organizationId) {
-          const plan = await prisma.plan.findUnique({ where: { id: sub.planId }, select: { supportsOrganizations: true } });
           if (plan?.supportsOrganizations) {
             await resetOrganizationSharedTokens({ organizationId: sub.organizationId });
           }
@@ -105,6 +109,26 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       }
     } catch (err: unknown) {
       Logger.warn('Failed to reset token balance after force cancel', { error: toError(err).message, userId: sub.userId, subscriptionId: id });
+    }
+
+    try {
+      await sendBillingNotification({
+        userId: sub.userId,
+        title: 'Subscription Cancelled',
+        message: `Your ${plan?.name || 'subscription'} was cancelled by an administrator and access ended immediately.`,
+        templateKey: 'subscription_cancelled',
+        variables: {
+          planName: plan?.name || 'Subscription',
+          expiresAt: new Date().toLocaleDateString(),
+        },
+      });
+    } catch (err: unknown) {
+      Logger.warn('Failed to send user notification after admin force-cancel', {
+        actorId,
+        subscriptionId: id,
+        userId: sub.userId,
+        error: toError(err).message,
+      });
     }
 
     Logger.info('Admin force-cancelled subscription', { actorId, subscriptionId: id, providerCancelFailed });

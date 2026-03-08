@@ -1,5 +1,5 @@
 import { prisma } from '../../../lib/prisma';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { formatDateServer } from '../../../lib/formatDate.server';
 import { pluralize } from '../../../lib/pluralize';
 import { formatCurrency } from '../../../lib/utils/currency';
@@ -50,7 +50,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     organizationContext,
     freePlanSettings,
   ] = await Promise.all([
-    (await clerkClient()).users.getUser(userId).catch(() => null),
+    authService.getUser(userId).catch(() => null),
     prisma.payment.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -150,7 +150,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   }
 
   // Prepare server-formatted last sign-in string (uses DB-backed user/admin settings)
-  const formattedLastSignIn = clerkUser?.lastSignInAt ? await formatDateServer(new Date(clerkUser.lastSignInAt), userId) : null;
+  const formattedLastSignIn = null; // lastSignInAt not available on AuthUser; placeholder for activity page
 
   const totalSpendCents = Number(paymentStats._sum.amountCents ?? 0);
   const totalSpendFormatted = formatCurrency(totalSpendCents, activeCurrency);
@@ -266,13 +266,13 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">User</dt>
                   <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {[clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || clerkUser.username || 'Unknown user'}
+                    {[clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || clerkUser.fullName || 'Unknown user'}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Email</dt>
                   <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {clerkUser.primaryEmailAddress?.emailAddress ?? '—'}
+                    {clerkUser.email ?? '—'}
                   </dd>
                 </div>
                 <div>
@@ -281,7 +281,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Two-factor auth</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{clerkUser.twoFactorEnabled ? 'Enabled' : 'Not enabled'}</dd>
+                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{'Not available'}</dd>
                 </div>
               </dl>
             </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { fetchTeamDashboardState } from '../../../../lib/team-dashboard';
 import { getOrganizationAccessSummary } from '../../../../lib/organization-access';
@@ -26,7 +26,7 @@ function normalizeStrategy(value: unknown): CapStrategy | null {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

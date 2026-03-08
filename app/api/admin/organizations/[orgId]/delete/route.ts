@@ -5,7 +5,7 @@ import { adminRateLimit } from '../../../../../../lib/rateLimit';
 import { Logger } from '../../../../../../lib/logger';
 import { recordAdminAction } from '../../../../../../lib/admin-actions';
 import { toError } from '../../../../../../lib/runtime-guards';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 
 export async function DELETE(
     request: NextRequest,
@@ -55,8 +55,7 @@ export async function DELETE(
         if (organization.clerkOrganizationId) {
             clerkDeletion.attempted = true;
             try {
-                const client = await clerkClient();
-                await client.organizations.deleteOrganization(organization.clerkOrganizationId);
+                await authService.deleteOrganization(organization.clerkOrganizationId);
                 clerkDeletion.success = true;
             } catch (err: unknown) {
                 const e = toError(err);

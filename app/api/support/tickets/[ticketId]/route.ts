@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 import { rateLimit, getClientIP } from '../../../../../lib/rateLimit';
@@ -10,7 +10,7 @@ export async function PATCH(
   ctx: { params: Promise<{ ticketId: string }> }
 ) {
   const params = await ctx.params;
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -95,7 +95,7 @@ export async function GET(
   ctx: { params: Promise<{ ticketId: string }> }
 ) {
   const params = await ctx.params;
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

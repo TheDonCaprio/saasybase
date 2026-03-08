@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuthUser } from '@/lib/auth-provider/client';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Link from 'next/link';
@@ -119,18 +119,9 @@ export function UserSettingsTabs({
         description: 'Account verification, exports, and deletion.',
         content: (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Email verification</p>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400">Your email address is verified and synced with Clerk.</p>
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-                  <span className="text-base">✓</span>
-                  Verified
-                </span>
-              </div>
-            </div>
+            <EmailVerificationCard />
+
+            <PasswordChangeCard />
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -198,7 +189,7 @@ export function UserSettingsTabs({
 }
 
 function AccountDeletionPanel() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthUser();
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -328,6 +319,218 @@ function AccountDeletionPanel() {
             </button>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Email Verification Card (provider-agnostic)
+// ---------------------------------------------------------------------------
+
+const isNextAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth';
+
+function EmailVerificationCard() {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleResend = async () => {
+    setSending(true);
+    try {
+      const res = await fetch('/api/auth/verify-email', { method: 'POST' });
+      if (res.ok) {
+        setSent(true);
+        showToast('Verification email sent! Check your inbox.', 'success');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to send verification email.', 'error');
+      }
+    } catch {
+      showToast('Failed to send verification email.', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Email verification</p>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            {isNextAuth
+              ? 'Your email address is verified and linked to your account.'
+              : 'Your email address is verified and synced with your auth provider.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <span className="text-base">✓</span>
+            Verified
+          </span>
+          {isNextAuth && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={sending || sent}
+              className="text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 font-medium disabled:opacity-50"
+            >
+              {sent ? 'Sent' : sending ? 'Sending…' : 'Resend'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Password Change Card (NextAuth only — Clerk manages passwords internally)
+// ---------------------------------------------------------------------------
+
+function PasswordChangeCard() {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Only show for NextAuth users
+  if (!isNextAuth) return null;
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    const form = e.currentTarget;
+    const currentPassword = (form.elements.namedItem('currentPassword') as HTMLInputElement).value;
+    const newPassword = (form.elements.namedItem('newPassword') as HTMLInputElement).value;
+    const confirmPassword = (form.elements.namedItem('confirmPassword') as HTMLInputElement).value;
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        setSuccess('Password changed successfully.');
+        showToast('Password changed successfully.', 'success');
+        form.reset();
+        setTimeout(() => {
+          setOpen(false);
+          setSuccess('');
+        }, 2000);
+      } else {
+        setError(data.error || 'Failed to change password.');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Password</p>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">Change the password you use to sign in.</p>
+        </div>
+        {!open && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600"
+          >
+            Change password
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+              {success}
+            </div>
+          )}
+          <div>
+            <label htmlFor="currentPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
+              Current password
+            </label>
+            <input
+              id="currentPassword"
+              name="currentPassword"
+              type="password"
+              required
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </div>
+          <div>
+            <label htmlFor="newPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
+              New password
+            </label>
+            <input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              required
+              minLength={8}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+            <p className="mt-0.5 text-[11px] text-slate-400">Minimum 8 characters</p>
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
+              Confirm new password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className={cx(
+                'inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition',
+                loading ? 'cursor-not-allowed opacity-60' : 'hover:bg-violet-700'
+              )}
+            >
+              {loading ? 'Saving…' : 'Save password'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setError(''); setSuccess(''); }}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

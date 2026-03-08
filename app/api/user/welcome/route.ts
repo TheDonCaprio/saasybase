@@ -1,99 +1,35 @@
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
+import type { AuthUser } from '@/lib/auth-provider';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 import { sendWelcomeIfNotSent } from '../../../../lib/welcome';
 
 export const dynamic = 'force-dynamic';
 
-type ClerkUser = Awaited<ReturnType<Awaited<ReturnType<typeof clerkClient>>['users']['getUser']>>;
-
-type MaybeLegacyEmail = {
-  id?: string;
-  email?: string;
-  email_address?: string;
-  verification?: { status?: string } | null;
-  verified?: boolean;
-  primary?: boolean;
-};
-
-function pickPrimaryEmail(user: ClerkUser): { email?: string; verified: boolean } {
-  const legacySource = (user as unknown as { email_addresses?: MaybeLegacyEmail[] }).email_addresses;
-  const legacyAddresses = Array.isArray(legacySource) ? legacySource : [];
-  const modernAddresses = Array.isArray(user.emailAddresses) ? user.emailAddresses : [];
-  const combined: Array<MaybeLegacyEmail | ClerkUser['emailAddresses'][number]> = [
-    ...modernAddresses,
-    ...legacyAddresses
-  ];
-
-  const primaryId = user.primaryEmailAddressId ?? (user as unknown as { primary_email_address_id?: string }).primary_email_address_id;
-
-  const chosen = (() => {
-    if (user.primaryEmailAddress) return user.primaryEmailAddress;
-    if (primaryId) {
-      const match = combined.find((addr) => addr && (addr as { id?: string }).id === primaryId);
-      if (match) return match;
-    }
-    const flagged = combined.find((addr) => Boolean((addr as MaybeLegacyEmail).primary));
-    if (flagged) return flagged;
-    return combined.length ? combined[0] : null;
-  })();
-
-  const rawEmail = (() => {
-    if (!chosen) {
-      return (
-        user.primaryEmailAddress?.emailAddress ??
-        (user as unknown as { email?: string }).email ??
-        undefined
-      );
-    }
-
-    if (typeof (chosen as { emailAddress?: string }).emailAddress === 'string') {
-      return (chosen as { emailAddress?: string }).emailAddress;
-    }
-    if (typeof (chosen as MaybeLegacyEmail).email === 'string') {
-      return (chosen as MaybeLegacyEmail).email;
-    }
-    if (typeof (chosen as MaybeLegacyEmail).email_address === 'string') {
-      return (chosen as MaybeLegacyEmail).email_address;
-    }
-
-    return undefined;
-  })();
-
-  const status =
-    (chosen as { verification?: { status?: string } } | null | undefined)?.verification?.status ??
-    user.primaryEmailAddress?.verification?.status ??
-    undefined;
-
-  const legacyVerified = Boolean(
-    (chosen as MaybeLegacyEmail | null | undefined)?.verified ||
-    (user as unknown as { primary_email_verified?: boolean }).primary_email_verified
-  );
-
-  const verified = status === 'verified' || status === 'passed' || legacyVerified;
-
-  return { email: rawEmail, verified };
-}
-
 export async function POST() {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
 
     if (!userId) {
       return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
 
-    let user: ClerkUser;
+    let user: AuthUser | null;
     try {
-      const client = await clerkClient();
-      user = await client.users.getUser(userId);
+      user = await authService.getUser(userId);
     } catch (err: unknown) {
-      Logger.warn('Failed to fetch Clerk user in welcome endpoint', { error: toError(err).message });
+      Logger.warn('Failed to fetch user in welcome endpoint', { error: toError(err).message });
       return NextResponse.json({ ok: false, error: 'failed-to-fetch-user' }, { status: 500 });
     }
 
-    const { email, verified } = pickPrimaryEmail(user);
+    if (!user) {
+      Logger.warn('Welcome endpoint: user not found', { userId });
+      return NextResponse.json({ ok: false, error: 'failed-to-fetch-user' }, { status: 500 });
+    }
+
+    const email = user.email;
+    const verified = user.emailVerified ?? false;
 
     if (!email) {
       Logger.warn('Welcome endpoint: no email found on user', { userId });

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { useAuth } from '@clerk/nextjs';
+import { useAuthSession } from '@/lib/auth-provider/client';
 import {
   dashboardMutedPanelClass,
   dashboardPanelClass,
@@ -108,7 +108,7 @@ function getBucketTokenName(resolved: Exclude<Bucket, 'auto'>, profile: ProfileP
 }
 
 export default function SaaSyAppClient() {
-  const { orgId } = useAuth();
+  const { orgId } = useAuthSession();
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 

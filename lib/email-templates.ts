@@ -1544,6 +1544,162 @@ The {{siteName}} Team`,
         supportEmail: 'Support email address',
         siteLogo: 'URL of the site logo image displayed at the top of the email'
       })
+    },
+    {
+      key: 'password_reset',
+      name: 'Password Reset',
+      description: 'Sent when a user requests a password reset link',
+      subject: '{{siteName}}: Reset Your Password',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
+    .content { background: #ffffff; padding: 36px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .notice { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #9a3412; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="card">
+      <div class="header">
+        <h1>🔑 Password Reset</h1>
+        <p>We received a request to reset your password</p>
+      </div>
+      <div class="content">
+        <p>Hi {{firstName}},</p>
+        <p>Someone (hopefully you) requested a password reset for your <strong>{{siteName}}</strong> account associated with <strong>{{userEmail}}</strong>.</p>
+        <div class="cta-section">
+          <a href="{{actionUrl}}" class="button">Reset My Password</a>
+        </div>
+        <div class="notice">
+          <strong>⏱ This link expires in 1 hour.</strong> If you didn't request this, you can safely ignore this email — your password will remain unchanged.
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 13px; color: #667eea;">{{actionUrl}}</p>
+        <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{siteName}}. All rights reserved.</p>
+        <p>You received this email because a password reset was requested for your account.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Someone requested a password reset for your {{siteName}} account ({{userEmail}}).
+
+Reset your password: {{actionUrl}}
+
+This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        userEmail: 'User email address',
+        actionUrl: 'Password reset link',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'email_verification',
+      name: 'Email Verification',
+      description: 'Sent when a user needs to verify their email address',
+      subject: '{{siteName}}: Verify Your Email Address',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
+    .content { background: #ffffff; padding: 36px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .notice { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #065f46; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="card">
+      <div class="header">
+        <h1>✉️ Verify Your Email</h1>
+        <p>One quick step to secure your account</p>
+      </div>
+      <div class="content">
+        <p>Hi {{firstName}},</p>
+        <p>Please verify that <strong>{{userEmail}}</strong> is your email address by clicking the button below.</p>
+        <div class="cta-section">
+          <a href="{{actionUrl}}" class="button">Verify Email Address</a>
+        </div>
+        <div class="notice">
+          <strong>⏱ This link expires in 24 hours.</strong> If you didn't create an account on {{siteName}}, you can safely ignore this email.
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 13px; color: #10b981;">{{actionUrl}}</p>
+        <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{siteName}}. All rights reserved.</p>
+        <p>You received this email because an account verification was requested.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Please verify your email address ({{userEmail}}) by clicking the link below:
+
+{{actionUrl}}
+
+This link expires in 24 hours. If you didn't create an account on {{siteName}}, you can safely ignore this email.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        userEmail: 'User email address',
+        actionUrl: 'Email verification link',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
     }
   ];
 }

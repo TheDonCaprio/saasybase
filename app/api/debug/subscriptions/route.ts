@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { toError } from '../../../../lib/runtime-guards';
 
@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
   }
   try {
-    const { userId: clerkUserId } = await auth();
+    const { userId: clerkUserId } = await authService.getSession();
     let userId = clerkUserId as string | null;
     if (!userId) {
       userId = process.env.DEV_ADMIN_ID || (await prisma.user.findFirst({ where: { role: 'ADMIN' } }))?.id || null;

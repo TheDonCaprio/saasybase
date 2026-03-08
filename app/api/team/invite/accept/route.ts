@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { ensureUserExists } from '../../../../../lib/user-helpers';
 import { addOrConfirmClerkMembership } from '../../../../../lib/clerk-memberships';
@@ -14,7 +14,7 @@ function normalizeEmail(value: string | null | undefined) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Sign in to accept this invite.' }, { status: 401 });
   }
@@ -39,19 +39,12 @@ export async function POST(request: NextRequest) {
     let viewerEmail = normalizeEmail(viewer?.email ?? null);
     if (!viewerEmail) {
       try {
-        const client = await clerkClient();
-        const clerkUser = await client.users.getUser(userId);
-        const addresses = Array.isArray(clerkUser.emailAddresses) ? clerkUser.emailAddresses : [];
-        const primaryId = clerkUser.primaryEmailAddressId;
-        if (primaryId) {
-          const primary = addresses.find((entry) => entry?.id === primaryId);
-          viewerEmail = normalizeEmail(primary?.emailAddress ?? null);
-        }
-        if (!viewerEmail) {
-          viewerEmail = normalizeEmail(addresses[0]?.emailAddress ?? null);
+        const clerkUser = await authService.getUser(userId);
+        if (clerkUser?.email) {
+          viewerEmail = normalizeEmail(clerkUser.email);
         }
       } catch (err) {
-        Logger.warn('team invite accept: failed to fetch Clerk user email', { userId, error: toError(err).message });
+        Logger.warn('team invite accept: failed to fetch user email', { userId, error: toError(err).message });
       }
     }
 

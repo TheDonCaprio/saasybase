@@ -176,3 +176,52 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
   }
 }
+
+// ---------------------------------------------------------------------------
+// PATCH — update profile (name, email)
+// ---------------------------------------------------------------------------
+
+export async function PATCH(request: Request) {
+  try {
+    const { userId } = await getAuthSafe();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { name, email } = body as { name?: string; email?: string };
+
+    const data: Record<string, string> = {};
+
+    if (typeof name === 'string') {
+      data.name = name.trim();
+    }
+
+    if (typeof email === 'string') {
+      const trimmed = email.toLowerCase().trim();
+      // Check if another user already has this email
+      const existing = await prisma.user.findFirst({
+        where: { email: trimmed, NOT: { id: userId } },
+      });
+      if (existing) {
+        return NextResponse.json({ error: 'This email is already in use by another account.' }, { status: 409 });
+      }
+      data.email = trimmed;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, name: true, email: true },
+    });
+
+    return NextResponse.json({ user: updated });
+  } catch (error: unknown) {
+    console.error('Profile update error:', error);
+    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+  }
+}

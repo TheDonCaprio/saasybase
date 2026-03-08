@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { requireAdminSectionAccess } from '../../../lib/route-guards';
 import { prisma } from '../../../lib/prisma';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { PaginatedUserManagement } from '../../../components/admin/PaginatedUserManagement';
 import { DashboardPageHeader } from '../../../components/dashboard/DashboardPageHeader';
 import { AdminStatCard } from '../../../components/admin/AdminStatCard';
@@ -111,29 +111,20 @@ export default async function AdminUsersPage() {
   const enrichedUsers = await Promise.all(
     users.map(async (user) => {
       try {
-        const client = await clerkClient();
-        const clerkUser = await client.users.getUser(user.id);
+        const clerkUser = await authService.getUser(user.id);
         return {
           ...user,
-          clerkData: {
+          clerkData: clerkUser ? {
             firstName: clerkUser.firstName,
             lastName: clerkUser.lastName,
-            fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || null,
-            imageUrl: clerkUser.imageUrl,
-            emailAddresses: clerkUser.emailAddresses.map(email => ({
-              id: email.id,
-              emailAddress: email.emailAddress,
-              verification: { status: email.verification?.status || 'unknown' }
-            })),
-            phoneNumbers: clerkUser.phoneNumbers.map(phone => ({
-              id: phone.id,
-              phoneNumber: phone.phoneNumber,
-              verification: { status: phone.verification?.status || 'unknown' }
-            })),
-            lastSignInAt: clerkUser.lastSignInAt,
-            createdAt: clerkUser.createdAt,
-            updatedAt: clerkUser.updatedAt
-          }
+            fullName: clerkUser.fullName,
+            imageUrl: clerkUser.imageUrl ?? '',
+            emailAddresses: clerkUser.email ? [{ id: 'primary', emailAddress: clerkUser.email, verification: { status: clerkUser.emailVerified ? 'verified' : 'unknown' } }] : [],
+            phoneNumbers: [],
+            lastSignInAt: null,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          } : null
         };
       } catch (error) {
         console.warn(`Failed to fetch Clerk data for user ${user.id}:`, error);

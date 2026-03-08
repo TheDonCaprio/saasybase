@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useAuthUser, useAuthInstance } from '@/lib/auth-provider/client';
 import { showToast } from '../ui/Toast';
 import { ClerkProfileModal } from './ClerkProfileModal';
 
@@ -19,8 +19,8 @@ interface ProfileFormData {
 }
 
 export function ProfileManagement() {
-  const { user, isLoaded } = useUser();
-  const { openUserProfile } = useClerk();
+  const { user, isLoaded } = useAuthUser();
+  const { openUserProfile } = useAuthInstance();
   // keep reference to imported clerk helper to avoid unused-var lint in some builds
   void openUserProfile;
   const [formData, setFormData] = useState<ProfileFormData>({

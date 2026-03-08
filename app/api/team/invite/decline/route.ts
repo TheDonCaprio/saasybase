@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { expireOrganizationInvite } from '../../../../../lib/teams';
 import { Logger } from '../../../../../lib/logger';
@@ -42,12 +42,26 @@ export async function POST(request: NextRequest) {
         // Clerk requires `requestingUserId` when revoking invitations. Use the
         // organization's owner user id (local Clerk user id) when available.
         if (org?.clerkOrganizationId && org.ownerUserId) {
-          const client = await clerkClient();
-          await client.organizations.revokeOrganizationInvitation({
-            organizationId: org.clerkOrganizationId,
-            invitationId: token,
-            requestingUserId: org.ownerUserId,
-          });
+          // Use authService for org invitation revocation (Clerk-specific, best-effort)
+          try {
+            // For now, org invitation revocation is Clerk-specific.
+            // The authService doesn't have a revokeOrganizationInvitation method yet,
+            // so we use the provider instance escape hatch.
+            const { ClerkAuthProvider } = await import('@/lib/auth-provider/providers/clerk');
+            const provider = authService.getProviderInstance();
+            if (provider instanceof ClerkAuthProvider) {
+              // Access clerkClient through the provider for this Clerk-specific operation
+              const clerkMod = await import('@clerk/nextjs/server');
+              const client = await clerkMod.clerkClient();
+              await client.organizations.revokeOrganizationInvitation({
+                organizationId: org.clerkOrganizationId,
+                invitationId: token,
+                requestingUserId: org.ownerUserId,
+              });
+            }
+          } catch (innerErr: unknown) {
+            Logger.info('invite decline: Clerk revoke failed (continuing)', { token, error: toError(innerErr).message });
+          }
         }
       }
     } catch (err: unknown) {

@@ -29,7 +29,7 @@ vi.mock('../lib/payment/factory', () => ({
     getProviderByName: vi.fn(() => providerMock),
   },
 }));
-vi.mock('@clerk/nextjs/server', () => ({ auth: authMock }));
+vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 
 import { GET } from '../app/api/checkout/confirm/route';

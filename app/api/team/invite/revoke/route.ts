@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { expireOrganizationInvite } from '../../../../../lib/teams';
 import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
@@ -7,7 +7,7 @@ import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 
 export async function POST(request: NextRequest) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const client = await clerkClient();
+    // Organization invitation revocation is Clerk-specific.
+    // Use dynamic import until AuthProvider interface covers invitations.
+    const clerkMod = await import('@clerk/nextjs/server');
+    const client = await clerkMod.clerkClient();
     await client.organizations.revokeOrganizationInvitation({
       organizationId: organization.clerkOrganizationId,
       invitationId: token,

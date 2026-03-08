@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOrModerator, toAuthGuardErrorResponse, type UserRole } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
 import { Logger } from '../../../../../lib/logger';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
@@ -92,8 +92,7 @@ export async function PATCH(
       try {
         // Update user in Clerk (best-effort)
         try {
-          const client = await clerkClient();
-          await client.users.updateUser(params.userId, {
+          await authService.updateUser(params.userId, {
             firstName: firstName ?? undefined,
             lastName: lastName ?? undefined,
           });
@@ -588,8 +587,7 @@ export async function DELETE(
     });
 
     try {
-      const client = await clerkClient();
-      await client.users.deleteUser(params.userId);
+      await authService.deleteUser(params.userId);
     } catch (clerkError) {
       Logger.warn('Failed to delete Clerk user during admin delete', { error: toError(clerkError) });
     }

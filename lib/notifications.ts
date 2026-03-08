@@ -184,7 +184,14 @@ export async function sendBillingNotification(
     });
   }
 
-  // Send email if template specified
+  // Send email if template specified.
+  //
+  // Billing emails are treated as transactional/account emails rather than
+  // optional engagement emails, so they intentionally do not consult the
+  // general `EMAIL_NOTIFICATIONS` preference toggle.
+  //
+  // That keeps receipts, renewals, cancellations, payment failures, and other
+  // account-critical billing notices flowing for both Clerk and NextAuth users.
   if (templateKey && variables) {
     try {
       // Fetch user email

@@ -76,4 +76,47 @@ describe('getOrganizationPlanContext personal switching', () => {
     expect(context?.organization?.id).toBe('org_1');
     expect(context?.role).toBe('OWNER');
   });
+
+  it('resolves organization context when the active org reference is a local organization id', async () => {
+    accessSummaryMock.mockResolvedValue({
+      allowed: true,
+      kind: 'OWNER',
+      subscription: { id: 'sub_1' },
+      plan: { id: 'plan_team' },
+    });
+
+    prismaMock.organization.findFirst.mockResolvedValue({
+      id: 'org_1',
+      name: 'Leggo',
+      slug: 'leggo',
+      ownerUserId: 'user_1',
+      seatLimit: 5,
+      tokenBalance: 100,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+      memberTokenCap: null,
+      memberCapStrategy: null,
+      memberCapResetIntervalHours: null,
+      planId: 'plan_team',
+      plan: {
+        id: 'plan_team',
+        name: 'Team',
+        shortDescription: null,
+        description: null,
+        priceCents: 1000,
+        durationHours: 720,
+        autoRenew: true,
+        recurringInterval: 'month',
+        tokenLimit: 100,
+        tokenName: 'credits',
+        organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      },
+    });
+    prismaMock.organizationMembership.findFirst.mockResolvedValue(null);
+
+    const context = await getOrganizationPlanContext('user_1', 'org_1');
+
+    expect(accessSummaryMock).toHaveBeenCalledWith('user_1', 'org_1');
+    expect(context?.organization?.id).toBe('org_1');
+    expect(context?.role).toBe('OWNER');
+  });
 });

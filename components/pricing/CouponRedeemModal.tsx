@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '@clerk/nextjs';
+import { useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faTicketAlt } from '@fortawesome/free-solid-svg-icons';
 
@@ -12,7 +12,7 @@ interface CouponRedeemModalProps {
 }
 
 export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useAuthSession();
   const [couponCode, setCouponCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

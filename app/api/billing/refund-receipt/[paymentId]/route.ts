@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { createRefundPDF } from '../../../../../lib/refundReceipt';
 import { paymentService } from '../../../../../lib/payment/service';
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   const params = await ctx.params;
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (!userId) return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
 
     Logger.info('Generating refund receipt', { paymentId: params.paymentId, userId });

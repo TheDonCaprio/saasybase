@@ -336,7 +336,10 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
         return false;
     }
 
-    const activeClerkOrgId = session.metadata?.activeClerkOrgId
+    const activeClerkOrgId = session.metadata?.activeOrganizationId
+        || session.metadata?.organizationId
+        || session.metadata?.activeProviderOrganizationId
+        || session.metadata?.activeClerkOrgId
         || session.metadata?.clerkOrgId
         || session.metadata?.orgId
         || null;
@@ -579,7 +582,10 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
         const suppressNotifications = isSwitchNowFallbackFlow && Boolean(recentCancelledRecurring);
 
         if (plan.tokenLimit && plan.tokenLimit > 0) {
-            const activeClerkOrgId = session.metadata?.activeClerkOrgId
+            const activeClerkOrgId = session.metadata?.activeOrganizationId
+                || session.metadata?.organizationId
+                || session.metadata?.activeProviderOrganizationId
+                || session.metadata?.activeClerkOrgId
                 || session.metadata?.clerkOrgId
                 || session.metadata?.orgId
                 || null;

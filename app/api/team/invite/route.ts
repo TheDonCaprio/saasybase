@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { upsertOrganizationInvite } from '../../../../lib/teams';
 import { fetchTeamDashboardState } from '../../../../lib/team-dashboard';
@@ -19,12 +19,10 @@ function normalizeEmail(value: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
-
-  const clerk = await clerkClient();
 
   let email: string | null = null;
   let role: string | null = null;
@@ -77,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Instead, send the same site-hosted invitation so they can accept or
     // decline from our UI. This avoids surprising automatic membership
     // assignments and gives members explicit control.
-    const existingClerkUserId = await findClerkUserId(clerk, email);
+    const existingClerkUserId = await findAuthUserId(email);
     if (existingClerkUserId) {
       Logger.info('team invite: recipient has Clerk account; sending site-hosted invite instead of auto-adding', { email, clerkUserId: existingClerkUserId });
     }
@@ -146,12 +144,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function findClerkUserId(client: Awaited<ReturnType<typeof clerkClient>>, email: string): Promise<string | null> {
+async function findAuthUserId(email: string): Promise<string | null> {
   try {
-    const result = await client.users.getUserList({ emailAddress: [email], limit: 1 });
-    return result?.data?.[0]?.id ?? null;
+    const users = await authService.listUsers({ emailAddress: [email], limit: 1 });
+    return users?.[0]?.id ?? null;
   } catch (err: unknown) {
-    Logger.warn('team invite: failed to look up Clerk user by email', { email, error: toError(err).message });
+    Logger.warn('team invite: failed to look up user by email', { email, error: toError(err).message });
     return null;
   }
 }

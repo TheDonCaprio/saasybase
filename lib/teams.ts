@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import type { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
@@ -83,24 +83,26 @@ async function getOrganizationId(identifiers: Identifiers): Promise<string | nul
 
 async function ensureOrganizationFromClerk(clerkOrganizationId: string): Promise<string | null> {
 	try {
-		const client = await clerkClient();
-		const clerkOrg = await client.organizations.getOrganization({ organizationId: clerkOrganizationId });
-		const anyOrg = clerkOrg as unknown as Record<string, unknown>;
-		const ownerUserId = (anyOrg.createdBy as string | undefined) ?? (anyOrg.created_by as string | undefined);
+		const authOrg = await authService.getOrganization(clerkOrganizationId);
+		if (!authOrg) {
+			Logger.warn('ensureOrganizationFromClerk: org not found via auth provider', { clerkOrganizationId });
+			return null;
+		}
+		const ownerUserId = authOrg.createdBy;
 		if (!ownerUserId) {
 			Logger.warn('ensureOrganizationFromClerk: missing owner', { clerkOrganizationId });
 			return null;
 		}
-		const publicMetadata = (clerkOrg.publicMetadata || {}) as Record<string, unknown>;
+		const publicMetadata = (authOrg.publicMetadata || {}) as Record<string, unknown>;
 		const planId = typeof publicMetadata.planId === 'string' ? publicMetadata.planId : undefined;
 		const tokenPoolStrategy = typeof publicMetadata.tokenPoolStrategy === 'string' ? publicMetadata.tokenPoolStrategy : undefined;
 		const seatLimitMeta = publicMetadata.seatLimit;
-		const seatLimit = typeof seatLimitMeta === 'number' ? seatLimitMeta : typeof clerkOrg.maxAllowedMemberships === 'number' ? clerkOrg.maxAllowedMemberships : undefined;
+		const seatLimit = typeof seatLimitMeta === 'number' ? seatLimitMeta : typeof authOrg.maxAllowedMemberships === 'number' ? authOrg.maxAllowedMemberships : undefined;
 		const fallbackSlug = `team-${clerkOrganizationId.slice(-6)}`;
 		const saved = await upsertOrganization({
 			clerkOrganizationId,
-			name: clerkOrg.name ?? 'Team Workspace',
-			slug: clerkOrg.slug ?? fallbackSlug,
+			name: authOrg.name ?? 'Team Workspace',
+			slug: authOrg.slug ?? fallbackSlug,
 			ownerUserId,
 			planId,
 			seatLimit: seatLimit ?? null,
@@ -438,9 +440,8 @@ export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
 
 		clerkAttempted = true;
 		try {
-			const client = await clerkClient();
-			await client.organizations.deleteOrganization(clerkOrganizationId);
-			Logger.info('deleteOrganizationByClerkId: deleted Clerk organization', { clerkOrganizationId });
+			await authService.deleteOrganization(clerkOrganizationId);
+			Logger.info('deleteOrganizationByClerkId: deleted auth provider organization', { clerkOrganizationId });
 		} catch (err: unknown) {
 			const e = toError(err);
 			if (e.message && e.message.toLowerCase().includes('not found')) {

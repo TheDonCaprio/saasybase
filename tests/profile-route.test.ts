@@ -7,6 +7,9 @@ const prismaMock = vi.hoisted(() => ({
   subscription: {
     findFirst: vi.fn(),
   },
+  organization: {
+    count: vi.fn().mockResolvedValue(0),
+  },
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));

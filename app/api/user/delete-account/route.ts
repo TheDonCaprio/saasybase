@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
 
 export async function DELETE(_request: NextRequest) {
   void _request;
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

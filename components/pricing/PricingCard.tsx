@@ -8,7 +8,7 @@ import { showToast } from '../ui/Toast';
 import { formatPrice } from '../../lib/plans-shared';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 import { asRecord } from '../../lib/runtime-guards';
-import { SignIn, SignUp, useUser } from '@clerk/nextjs';
+import { AuthSignIn, AuthSignUp, useAuthUser } from '@/lib/auth-provider/client';
 import { useRouter } from 'next/navigation';
 
 const clerkModalAppearance = {
@@ -200,7 +200,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const [prorationError, setProrationError] = useState<string | null>(null);
   const [prorationPreview, setProrationPreview] = useState<ProrationPreview | null>(null);
   const checkoutOverridesRef = useRef<CheckoutOverrides | null>(null);
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuthUser();
   const wasSignedInRef = useRef(isSignedIn);
   const authFlowActiveRef = useRef(false);
   const mountedRef = useRef(false);
@@ -1721,14 +1721,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
 
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
                   {authView === 'sign-in' ? (
-                    <SignIn
+                    <AuthSignIn
                       appearance={clerkModalAppearance}
                       routing="hash"
                       forceRedirectUrl={authReturnPath}
                       signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(authReturnPath)}`}
                     />
                   ) : (
-                    <SignUp
+                    <AuthSignUp
                       appearance={clerkModalAppearance}
                       routing="hash"
                       forceRedirectUrl={authReturnPath}

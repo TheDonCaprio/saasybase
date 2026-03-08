@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { paymentService } from '../../../../../lib/payment/service';
 import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
@@ -13,7 +13,7 @@ function jsonError(message: string, status: number, code: string) {
 
 const rateLimited = withRateLimit(
     async (req) => {
-        const session = await auth();
+        const session = await authService.getSession();
         return session.userId
             ? `checkout-embedded-confirm:user:${session.userId}`
             : `checkout-embedded-confirm:ip:${getRequestIp(req) ?? 'unknown'}`;
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
             return jsonError('Payment failed', 400, 'PAYMENT_FAILED');
         }
 
-        const { userId } = await auth();
+        const { userId } = await authService.getSession();
         if (!userId) {
             return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
         }

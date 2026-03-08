@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
@@ -24,7 +24,7 @@ const couponInclude = {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return new NextResponse('Unauthorized', { status: 401 });
   }

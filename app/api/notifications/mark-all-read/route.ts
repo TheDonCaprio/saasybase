@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 
 export async function POST() {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

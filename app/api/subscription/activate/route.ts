@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { toError } from '../../../../lib/runtime-guards';
 import { syncOrganizationEligibilityForUser } from '../../../../lib/organization-access';
@@ -11,7 +11,7 @@ function jsonError(message: string, status: number, code: string) {
 
 export async function POST(request: Request) {
   try {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
     if (!userId) return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
 
   const bodyRaw: unknown = await request.json().catch(() => ({}));

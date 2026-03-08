@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

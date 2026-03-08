@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
@@ -10,7 +10,7 @@ function jsonError(message: string, status: number, code: string) {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
 
   const subscription = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } } });

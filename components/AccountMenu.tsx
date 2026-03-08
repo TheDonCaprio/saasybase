@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { useUser, useAuth, SignInButton, SignUpButton, useClerk, OrganizationSwitcher } from '@clerk/nextjs';
+import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import Link from 'next/link';
@@ -67,9 +67,9 @@ function delay(ms: number) {
 }
 
 export default function AccountMenu() {
-  const { isSignedIn, isLoaded } = useUser();
-  const { orgId } = useAuth();
-  const { signOut } = useClerk();
+  const { isSignedIn, isLoaded } = useAuthUser();
+  const { orgId } = useAuthSession();
+  const { signOut } = useAuthInstance();
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -320,7 +320,7 @@ export default function AccountMenu() {
               <div className="p-4 space-y-3">
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-500">Workspace</p>
-                  <OrganizationSwitcher
+                  <AuthOrganizationSwitcher
                     hidePersonal={false}
                     appearance={{
                       elements: {
@@ -499,11 +499,11 @@ export default function AccountMenu() {
               </p>
             </div>
 
-            <SignInButton mode="modal">
+            <AuthSignInButton mode="modal">
               <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium text-sm">
                 Sign In
               </button>
-            </SignInButton>
+            </AuthSignInButton>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -516,11 +516,11 @@ export default function AccountMenu() {
               </div>
             </div>
 
-            <SignUpButton mode="modal">
+            <AuthSignUpButton mode="modal">
               <button className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors font-medium text-sm">
                 Create Account
               </button>
-            </SignUpButton>
+            </AuthSignUpButton>
           </div>
 
           <div className="border-t border-neutral-200 dark:border-neutral-800 px-6 py-4">
@@ -559,11 +559,11 @@ export default function AccountMenu() {
               <div className="space-y-4">
                 {authMode === 'signin' ? (
                   <>
-                    <SignInButton mode="modal">
+                    <AuthSignInButton mode="modal">
                       <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium">
                         Sign In
                       </button>
-                    </SignInButton>
+                    </AuthSignInButton>
                     <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
                       Don&apos;t have an account?{' '}
                       <button
@@ -576,11 +576,11 @@ export default function AccountMenu() {
                   </>
                 ) : (
                   <>
-                    <SignUpButton mode="modal">
+                    <AuthSignUpButton mode="modal">
                       <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium">
                         Sign Up
                       </button>
-                    </SignUpButton>
+                    </AuthSignUpButton>
                     <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
                       Already have an account?{' '}
                       <button

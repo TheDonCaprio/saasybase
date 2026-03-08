@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 export const dynamic = 'force-dynamic';
 import { prisma } from '../../../../lib/prisma';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
@@ -15,7 +15,7 @@ function jsonError(message: string, status: number, code: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     
     if (!userId) {
       return jsonError('Unauthorized', 401, 'UNAUTHORIZED');

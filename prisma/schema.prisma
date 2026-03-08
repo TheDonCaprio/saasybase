@@ -18,6 +18,10 @@ model User {
   name                   String?
   imageUrl               String?
   role                   String   @default("USER")
+  // Password hash for credentials-based auth (NextAuth). Null when using Clerk or OAuth-only.
+  password               String?
+  // Email verification timestamp (required by NextAuth Prisma adapter)
+  emailVerified          DateTime?
   // Denormalized number of payments made by this user. Backfilled by a script.
   paymentsCount          Int      @default(0)
   stripeCustomerId       String?  @unique
@@ -54,6 +58,10 @@ model User {
   ownedOrganizations Organization[]    @relation("OrganizationOwner")
   organizationMemberships OrganizationMembership[]
   organizationInvitesSent OrganizationInvite[] @relation("OrganizationInvitesSent")
+
+  // NextAuth relations (only populated when AUTH_PROVIDER=nextauth)
+  accounts          Account[]
+  sessions          Session[]
 
   
   @@index([createdAt, id], name: "users_createdAt_id_idx")
@@ -606,4 +614,49 @@ model RateLimitBucket {
   @@unique([key, windowStart], name: "rate_limit_key_window_unique")
   @@index([actorId, windowStart], name: "rate_limit_actor_window_idx")
   @@index([route])
+}
+
+// =========================================================================
+// NextAuth (Auth.js) Models
+// =========================================================================
+// These models are required by @auth/prisma-adapter when AUTH_PROVIDER=nextauth.
+// They are harmless no-ops when using Clerk — the tables simply stay empty.
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

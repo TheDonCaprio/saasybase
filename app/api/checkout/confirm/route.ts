@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { CheckoutSessionDetails } from '../../../../lib/payment/types';
 import { StandardizedCheckoutSession } from '../../../../lib/payment/types';
 import { prisma } from '../../../../lib/prisma';
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
   // Determine provider hint early from payment_id prefix or session_id prefix
   const looksLikeRazorpay = (paymentId && paymentId.startsWith('pay_')) || (sessionId && (sessionId.startsWith('order_') || sessionId.startsWith('sub_') || sessionId.startsWith('plink_')));
 
-  const { userId: clerkUserId, orgId: authOrgId } = await auth();
+  const { userId: clerkUserId, orgId: authOrgId } = await authService.getSession();
   let actorUserId = clerkUserId ?? null;
 
   if (!actorUserId && process.env.NODE_ENV !== 'production') {

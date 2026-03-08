@@ -1,13 +1,13 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuthSession } from '@/lib/auth-provider/client';
 import { toError } from '../../lib/runtime-guards';
 
 export default function PurchaseConfirm() {
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
   const [mounted, setMounted] = useState(false);
-  const { isLoaded: authLoaded, userId } = useAuth();
+  const { isLoaded: authLoaded, userId } = useAuthSession();
 
   const devLog = (...args: unknown[]) => {
     if (process.env.NODE_ENV !== 'production') console.log('[PurchaseConfirm]', ...args);

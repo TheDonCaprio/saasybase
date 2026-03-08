@@ -3,7 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
 import type { Prisma } from '@prisma/client';
-import { clerkClient } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
 import { adminRateLimit } from '../../../../lib/rateLimit';
@@ -268,8 +268,7 @@ export async function GET(request: NextRequest) {
         const uRec = asRecord(user) || {};
         const uid = typeof uRec.id === 'string' ? uRec.id : String(uRec.id ?? '');
         try {
-          const client = await clerkClient();
-          const clerkUser = await client.users.getUser(uid);
+          const clerkUser = await authService.getUser(uid);
           return {
             id: uid,
             email: typeof uRec.email === 'string' ? uRec.email : null,
@@ -298,15 +297,15 @@ export async function GET(request: NextRequest) {
             paymentsCount: typeof uRec.paymentsCount === 'number' ? uRec.paymentsCount : (typeof (uRec._count && (uRec._count as Record<string, unknown>).payments) === 'number' ? ((uRec._count as Record<string, unknown>).payments as number) : undefined),
             _count: { payments: typeof (uRec._count && (uRec._count as Record<string, unknown>).payments) === 'number' ? ((uRec._count as Record<string, unknown>).payments as number) : 0 },
             clerkData: {
-              firstName: clerkUser.firstName ?? null,
-              lastName: clerkUser.lastName ?? null,
-              fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || null,
-              imageUrl: clerkUser.imageUrl ?? null,
-              emailAddresses: clerkUser.emailAddresses ?? [],
-              phoneNumbers: clerkUser.phoneNumbers ?? [],
-              lastSignInAt: clerkUser.lastSignInAt ?? null,
-              createdAt: clerkUser.createdAt ?? null,
-              updatedAt: clerkUser.updatedAt ?? null
+              firstName: clerkUser?.firstName ?? null,
+              lastName: clerkUser?.lastName ?? null,
+              fullName: clerkUser?.fullName ?? null,
+              imageUrl: clerkUser?.imageUrl ?? null,
+              emailAddresses: clerkUser?.email ? [{ emailAddress: clerkUser.email }] : [],
+              phoneNumbers: [],
+              lastSignInAt: null,
+              createdAt: null,
+              updatedAt: null
             }
           };
         } catch (error: unknown) {

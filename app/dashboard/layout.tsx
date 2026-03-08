@@ -2,8 +2,8 @@ import React from 'react';
 import { SidebarNav } from '../../components/dashboard/SidebarNav';
 import { faPlay, faUser, faUserShield, faFileInvoiceDollar, faHistory, faBell, faLifeRing, faBars, faTicketAlt, faSackDollar, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../lib/prisma';
-import { auth } from '@clerk/nextjs/server';
-import { SignOutButton } from '@clerk/nextjs';
+import { authService } from '@/lib/auth-provider';
+import { AuthSignOutButton } from '@/lib/auth-provider/client';
 import { AnnouncementBanner } from '../../components/ui/AnnouncementBanner';
 import { GracePeriodNotice } from '../../components/dashboard/GracePeriodNotice';
 import { PurchaseNotice } from '../../components/dashboard/PurchaseNotice';
@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let supportBadge: string | undefined = undefined;
   let couponBadge: string | undefined = undefined;
   try {
-    const { userId } = await auth();
+    const { userId } = await authService.getSession();
     if (userId) {
       // Find if any ticket for this user has at least one admin reply created after the ticket
       const hasNew = await prisma.supportTicket.findFirst({
@@ -76,11 +76,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
           <SidebarNav items={nav} />
           <div className="pt-4 border-t border-neutral-700">
-            <SignOutButton>
+            <AuthSignOutButton>
               <button className="text-sm text-neutral-400 hover:text-white">
                 Sign Out
               </button>
-            </SignOutButton>
+            </AuthSignOutButton>
           </div>
         </div>
       </aside>

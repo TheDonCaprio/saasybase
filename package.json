@@ -24,6 +24,7 @@
     "backfill:pending-subscription-payments": "tsx scripts/backfill-pending-subscription-payments.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/nextjs": "^6.37.3",
     "@clerk/themes": "^2.4.30",
@@ -51,6 +52,7 @@
     "@tiptap/react": "^3.7.2",
     "@tiptap/starter-kit": "^3.7.2",
     "@types/react-resizable": "^3.0.8",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "express": "^5.1.0",
@@ -58,6 +60,7 @@
     "glob": "^11.0.3",
     "google-auth-library": "^10.4.0",
     "next": "^16.1.6",
+    "next-auth": "^5.0.0-beta.30",
     "nodemailer": "^6.9.13",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.19.0",
@@ -80,6 +83,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jsdom": "^20.0.0",
     "@types/node": "^20.12.12",
     "@types/nodemailer": "^6.4.14",

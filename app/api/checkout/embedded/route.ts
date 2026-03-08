@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../../lib/prisma';
 import { paymentService } from '../../../../lib/payment/service';
@@ -65,7 +65,7 @@ function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown }
 }
 
 async function handleEmbeddedCheckout(req: NextRequest) {
-    const { userId, orgId: activeClerkOrgId } = await auth();
+    const { userId, orgId: activeClerkOrgId } = await authService.getSession();
     if (!userId) {
         return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
     }

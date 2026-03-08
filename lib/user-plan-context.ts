@@ -69,7 +69,15 @@ export async function getOrganizationPlanContext(userId: string, activeClerkOrgI
   const access = await getOrganizationAccessSummary(userId, activeClerkOrgId);
   if (!access.allowed) return null;
 
-  const where = access.kind === 'OWNER' ? { ownerUserId: userId } : { id: access.membership.organizationId };
+  const where = access.kind === 'OWNER'
+    ? {
+        ownerUserId: userId,
+        OR: [
+          { id: activeClerkOrgId },
+          { clerkOrganizationId: activeClerkOrgId },
+        ],
+      }
+    : { id: access.membership.organizationId };
   const organization = await prisma.organization.findFirst({
     where,
     select: ORGANIZATION_WITH_PLAN_SELECT,

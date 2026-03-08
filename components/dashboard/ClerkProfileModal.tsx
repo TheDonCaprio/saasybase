@@ -1,6 +1,6 @@
 'use client';
 
-import { useClerk } from '@clerk/nextjs';
+import { useAuthInstance } from '@/lib/auth-provider/client';
 
 interface ClerkProfileModalProps {
   trigger: React.ReactNode;
@@ -8,7 +8,7 @@ interface ClerkProfileModalProps {
 }
 
 export function ClerkProfileModal({ trigger, mode = 'profile' }: ClerkProfileModalProps) {
-  const { openUserProfile } = useClerk();
+  const { openUserProfile } = useAuthInstance();
 
   const handleOpenProfile = () => {
     // If document root has .light we want Clerk to render a light card background

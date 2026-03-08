@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
 import { useEffect, useState } from 'react';
 import { formatDate } from '../../lib/formatDate';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -371,8 +371,8 @@ function getDeviceInfo(deviceType?: string, isMobile?: boolean) {
 }
 
 export function ActiveSessionsList() {
-  const { user, isLoaded } = useUser();
-  const { sessionId: currentSessionId } = useAuth();
+  const { user, isLoaded } = useAuthUser();
+  const { sessionId: currentSessionId } = useAuthSession();
   const [sessions, setSessions] = useState<SessionWithActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);

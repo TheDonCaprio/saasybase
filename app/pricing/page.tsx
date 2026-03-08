@@ -1,6 +1,6 @@
 import PricingList from '../../components/pricing/PricingList';
 import { prisma } from '../../lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { formatDateServer } from '../../lib/formatDate.server';
 import { pluralize } from '../../lib/pluralize';
 import { getDefaultTokenLabel, getPricingSettings, generatePricingGridClasses, getFreePlanSettings } from '../../lib/settings';
@@ -11,7 +11,7 @@ import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { formatCurrency } from '../../lib/utils/currency';
 
 export default async function PricingPage() {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   const numberFormatter = new Intl.NumberFormat('en-US');
   const activeCurrency = await getActiveCurrencyAsync();
 

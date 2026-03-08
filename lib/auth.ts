@@ -13,11 +13,16 @@ import {
   type ModeratorSection
 } from './moderator';
 import { raiseAuthGuardError } from './auth-guard-error';
+import { authService } from './auth-provider';
 
 export { AuthGuardError, isAuthGuardError, toAuthGuardErrorResponse } from './auth-guard-error';
 
 export type UserRole = 'USER' | 'ADMIN' | 'MODERATOR';
 
+/**
+ * @deprecated Prefer importing `authService` from `@/lib/auth-provider` directly.
+ * Kept for backward-compatibility with existing call-sites during migration.
+ */
 async function tryImportClerk() {
   try {
     const clerkModule: unknown = await import('@clerk/nextjs/server');
@@ -29,48 +34,16 @@ async function tryImportClerk() {
 }
 
 export async function getAuthSafe(): Promise<{ userId: string | null; orgId?: string | null }> {
-  const clerk = await tryImportClerk();
-  if (!clerk) return { userId: null, orgId: null };
-  const maybeClerk = clerk as Record<string, unknown>;
-  const maybeAuthFn = maybeClerk.auth;
-  if (typeof maybeAuthFn === 'function') {
-    try {
-      const result = await (maybeAuthFn as (...args: unknown[]) => unknown)();
-      // try to pull a userId if present
-      const rec = asRecord(result);
-      if (rec && typeof rec.userId === 'string') {
-          return { userId: rec.userId, orgId: typeof rec.orgId === 'string' ? rec.orgId : null };
-      }
-      return { userId: null, orgId: null };
-    } catch (e: unknown) {
-      // Lower severity: failures here are common during static render / no-request contexts
-      // and should not spam WARN-level logs.
-      Logger.debug('getAuthSafe clerk.auth failed', { error: toError(e) });
-      return { userId: null, orgId: null };
-    }
-  }
-  return { userId: null, orgId: null };
+  // Route through the auth provider abstraction layer.
+  // This delegates to whichever provider is configured (Clerk by default).
+  return authService.getSession();
 }
 
 export async function getCurrentUserSafe(): Promise<{ id: string } | null> {
-  const clerk = await tryImportClerk();
-  if (!clerk) return null;
-  const maybeClerk2 = clerk as Record<string, unknown>;
-  const maybeCurrentUser = maybeClerk2.currentUser;
-  if (typeof maybeCurrentUser === 'function') {
-    try {
-      const u = await (maybeCurrentUser as (...args: unknown[]) => Promise<unknown>)();
-      const rec = asRecord(u);
-      if (rec && typeof rec.id === 'string') return { id: rec.id };
-      return null;
-    } catch (e: unknown) {
-      // Lower severity: failures here are common during static render / no-request contexts
-      // and should not spam WARN-level logs. Downgrade to debug.
-      Logger.debug('getCurrentUserSafe failed', { error: toError(e) });
-      return null;
-    }
-  }
-  return null;
+  // Route through the auth provider abstraction layer.
+  const user = await authService.getCurrentUser();
+  if (!user) return null;
+  return { id: user.id };
 }
 
 export async function requireUser() {

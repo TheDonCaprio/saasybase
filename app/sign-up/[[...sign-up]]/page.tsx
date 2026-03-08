@@ -1,5 +1,5 @@
-import { SignUp } from '@clerk/nextjs';
-import { auth } from '@clerk/nextjs/server';
+import { AuthSignUp } from '@/lib/auth-provider/client';
+import { authService } from '@/lib/auth-provider';
 import { redirect } from 'next/navigation';
 
 type SearchParams = Record<string, string | string[] | undefined> | undefined;
@@ -36,7 +36,7 @@ interface SignUpPageProps {
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const resolvedSearchParams = await searchParams;
   const redirectPath = normalizeRedirect(resolvedSearchParams);
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
 
   if (userId) {
     redirect(redirectPath);
@@ -56,7 +56,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
           </p>
         </div>
         <div className="flex justify-center">
-          <SignUp 
+          <AuthSignUp 
             routing="path"
             path="/sign-up"
             appearance={{

@@ -36,7 +36,7 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@clerk/nextjs/server', () => ({ auth: authMock }));
+vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/rateLimit', () => ({
   rateLimit: rateLimitMock,

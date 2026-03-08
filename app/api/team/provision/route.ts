@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { ensureTeamOrganization } from '../../../../lib/organization-access';
 import { fetchTeamDashboardState } from '../../../../lib/team-dashboard';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 
 export async function POST(request: NextRequest) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

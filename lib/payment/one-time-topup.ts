@@ -24,7 +24,10 @@ export async function processOneTimeRecurringTopup(params: {
     const tokensAdded = params.planToUse.tokenLimit || 0;
     const isTeamPlan = params.planToUse.supportsOrganizations === true;
     const isPlanSwitchFallback = Boolean(params.session.metadata?.prorationFallbackReason);
-    const activeClerkOrgId = params.session.metadata?.activeClerkOrgId
+    const activeClerkOrgId = params.session.metadata?.activeOrganizationId
+        || params.session.metadata?.organizationId
+        || params.session.metadata?.activeProviderOrganizationId
+        || params.session.metadata?.activeClerkOrgId
         || params.session.metadata?.clerkOrgId
         || params.session.metadata?.orgId
         || null;

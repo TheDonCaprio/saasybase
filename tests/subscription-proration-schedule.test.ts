@@ -24,7 +24,7 @@ const paymentServiceMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('@clerk/nextjs/server', () => ({ auth: () => ({ userId: 'user_1' }) }));
+vi.mock('../lib/auth-provider', () => ({ authService: { getSession: vi.fn(async () => ({ userId: 'user_1', orgId: null })) } }));
 vi.mock('../lib/payment/service', () => ({ paymentService: paymentServiceMock }));
 vi.mock('../lib/settings', () => ({
 	isRecurringProrationEnabled: vi.fn(async () => true),

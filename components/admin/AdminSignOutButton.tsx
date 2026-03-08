@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { SignOutButton } from '@clerk/nextjs';
+import { AuthSignOutButton } from '@/lib/auth-provider/client';
 
 export function AdminSignOutButton() {
   const [mounted, setMounted] = useState(false);
@@ -13,8 +13,8 @@ export function AdminSignOutButton() {
   if (!mounted) return null;
 
   return (
-    <SignOutButton>
+    <AuthSignOutButton>
       <button className="text-sm text-neutral-400 hover:text-white">Sign Out</button>
-    </SignOutButton>
+    </AuthSignOutButton>
   );
 }

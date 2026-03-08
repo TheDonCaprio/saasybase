@@ -184,7 +184,10 @@ export async function resolveInvoicePaidProcessingContext<TSub extends InvoicePa
         }
     }
 
-    const activeClerkOrgId = params.invoice.metadata?.activeClerkOrgId
+    const activeClerkOrgId = params.invoice.metadata?.activeOrganizationId
+        || params.invoice.metadata?.organizationId
+        || params.invoice.metadata?.activeProviderOrganizationId
+        || params.invoice.metadata?.activeClerkOrgId
         || params.invoice.metadata?.clerkOrgId
         || params.invoice.metadata?.orgId
         || null;

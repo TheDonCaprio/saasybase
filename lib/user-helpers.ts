@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
-import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
+import { authService } from './auth-provider';
+import type { AuthUser } from './auth-provider';
 import { initializeNewUserTokens, resetUserTokensIfNeeded } from './settings';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
@@ -19,7 +20,11 @@ type LocalUser = {
   freeTokensLastResetAt?: Date | null;
 };
 
-type ClerkCurrentUser = Awaited<ReturnType<typeof currentUser>>;
+/**
+ * Internal user shape — now mapped from AuthUser instead of raw Clerk type.
+ * Kept as a distinct alias so downstream code continues to work unchanged.
+ */
+type ClerkCurrentUser = AuthUser | null;
 
 function getErrorStatusCode(error: unknown): number | null {
   if (!error || typeof error !== 'object') return null;
@@ -44,7 +49,7 @@ function isClerkRateLimitError(error: unknown): boolean {
 
 async function safeCurrentUserForEnsure(userId: string): Promise<{ user: ClerkCurrentUser; rateLimited: boolean }> {
   try {
-    const user = await currentUser();
+    const user = await authService.getCurrentUser();
     return { user, rateLimited: false };
   } catch (err: unknown) {
     const error = toError(err);
@@ -61,7 +66,7 @@ async function safeCurrentUserForEnsure(userId: string): Promise<{ user: ClerkCu
 
 async function safeCurrentUserForSync(userId: string): Promise<ClerkCurrentUser> {
   try {
-    return await currentUser();
+    return await authService.getCurrentUser();
   } catch (err: unknown) {
     const error = toError(err);
     Logger.warn('syncUserFromClerk: currentUser failed', {
@@ -82,14 +87,8 @@ function normalizeEmail(email?: string | null): string | null {
 
 function pickClerkEmail(user: ClerkCurrentUser): string | null {
   if (!user) return null;
-  const addresses = Array.isArray(user.emailAddresses) ? user.emailAddresses : [];
-  const primaryId = user.primaryEmailAddressId ?? (user as unknown as { primary_email_address_id?: string }).primary_email_address_id;
-  if (primaryId) {
-    const byPrimary = addresses.find((addr) => addr?.id === primaryId);
-    if (byPrimary?.emailAddress) return normalizeEmail(byPrimary.emailAddress);
-  }
-  const first = addresses[0]?.emailAddress || (user as unknown as { emailAddress?: string }).emailAddress;
-  return normalizeEmail(first ?? null);
+  // AuthUser already resolves the primary email in the provider adapter.
+  return normalizeEmail(user.email);
 }
 
 const isMissingFreeTokenColumns = (msg: string) =>
@@ -99,21 +98,21 @@ const isUniqueEmailConstraintError = (msg: string) =>
   msg.includes('Unique constraint failed') && msg.includes('email');
 
 export async function ensureUserExists(opts?: { userId?: string; emailOverride?: string }) {
-  const session = await auth();
+  const session = await authService.getSession();
   let userId = session.userId;
   if (opts?.userId) userId = opts.userId;
   if (!userId) return null;
 
-  // Get the current user data from Clerk; fall back to direct fetch when userId differs from auth context
+  // Get the current user data via the auth provider abstraction;
+  // fall back to direct fetch when userId differs from auth context
   const currentUserResult = await safeCurrentUserForEnsure(userId);
   let clerkUser = currentUserResult.user;
   if ((!clerkUser || clerkUser.id !== userId) && !currentUserResult.rateLimited) {
     try {
-      const client = await clerkClient();
-      clerkUser = await client.users.getUser(userId);
+      clerkUser = await authService.getUser(userId);
     } catch (err: unknown) {
       const error = toError(err);
-      Logger.warn('ensureUserExists: failed to load Clerk user directly', {
+      Logger.warn('ensureUserExists: failed to load user directly', {
         userId,
         rateLimited: isClerkRateLimitError(err),
         status: getErrorStatusCode(err) ?? 'unknown',
@@ -273,7 +272,7 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
 }
 
 export async function syncUserFromClerk() {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) return null;
 
   const clerkUser = await safeCurrentUserForSync(userId);
@@ -419,7 +418,7 @@ async function expireStaleActiveSubscriptionsForUser(userId: string) {
 }
 
 export async function getCurrentUserWithFallback() {
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   if (!userId) return null;
 
   const user = await ensureUserExists();

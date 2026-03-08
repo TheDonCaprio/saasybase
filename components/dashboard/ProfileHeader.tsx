@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useAuthUser } from '@/lib/auth-provider/client';
 import { ClerkProfileModal } from './ClerkProfileModal';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
@@ -21,7 +21,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user: dbUser, subscription }: ProfileHeaderProps) {
-  const { user: clerkUser, isLoaded } = useUser();
+  const { user: clerkUser, isLoaded } = useAuthUser();
   const settings = useFormatSettings();
 
   if (!isLoaded) {

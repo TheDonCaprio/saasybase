@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
+import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../lib/prisma';
 import { dashboardPanelClass } from '../../../components/dashboard/dashboardSurfaces';
 import { InviteAcceptanceClient } from '../../../components/team/InviteAcceptanceClient';
@@ -42,7 +42,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
     notFound();
   }
 
-  const { userId } = await auth();
+  const { userId } = await authService.getSession();
   const viewer = userId
     ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } })
     : null;

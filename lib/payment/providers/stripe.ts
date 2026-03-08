@@ -540,7 +540,14 @@ export class StripePaymentProvider implements PaymentProvider {
                         subscriptionId: typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id,
                         customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id,
                         userEmail: invoice.customer_email || undefined,
-                        metadata: invoice.metadata || undefined
+                        metadata: invoice.metadata || undefined,
+                        lineItems: invoice.lines.data.map(line => ({
+                            priceId: line.price?.id,
+                            amount: line.amount,
+                            description: line.description || undefined
+                        })),
+                        billingReason: invoice.billing_reason || undefined,
+                        nextPaymentAttempt: invoice.next_payment_attempt ? new Date(invoice.next_payment_attempt * 1000) : null
                     },
                     originalEvent: event,
                 };

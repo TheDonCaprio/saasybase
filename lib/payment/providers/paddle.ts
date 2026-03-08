@@ -49,6 +49,9 @@ type PaddleTransaction = {
 	status: string;
 	customer_id: string | null;
 	subscription_id: string | null;
+	origin?: string | null;
+	invoice_id?: string | null;
+	invoice_number?: string | null;
 	currency_code: string;
 	custom_data?: Record<string, unknown> | null;
 	items?: Array<{ price_id?: string; quantity?: number }>; // simplified
@@ -154,6 +157,33 @@ function pickFirstString(...candidates: Array<unknown>): string | undefined {
 		if (typeof c === 'string' && c.trim()) return c;
 	}
 	return undefined;
+}
+
+function isPaddleRecurringRenewalTransaction(txn: PaddleTransaction): boolean {
+	return txn.origin === 'subscription_recurring' && typeof txn.subscription_id === 'string' && txn.subscription_id.length > 0;
+}
+
+function buildInvoiceLineItems(txn: PaddleTransaction): Array<{
+	priceId?: string;
+	priceIdsByProvider?: { paddle: string };
+	amount: number;
+}> | undefined {
+	const lineItems = txn.details?.line_items;
+	if (!Array.isArray(lineItems) || lineItems.length === 0) return undefined;
+
+	const normalized = lineItems
+		.map((item) => {
+			const priceId = typeof item?.price?.id === 'string' ? item.price.id : undefined;
+			const amount = parseAmount(item?.totals?.total) ?? 0;
+			return {
+				priceId,
+				priceIdsByProvider: priceId ? { paddle: priceId } : undefined,
+				amount,
+			};
+		})
+		.filter((item) => item.amount > 0 || item.priceId);
+
+	return normalized.length > 0 ? normalized : undefined;
 }
 
 export class PaddlePaymentProvider implements PaymentProvider {
@@ -632,6 +662,33 @@ export class PaddlePaymentProvider implements PaymentProvider {
 				const userId = pickFirstString(custom.userId);
 				const amountTotal = parseAmount(txn.details?.totals?.total);
 				const amountSubtotal = parseAmount(txn.details?.totals?.subtotal);
+				const amountDiscount = parseAmount(txn.details?.totals?.discount) ?? 0;
+
+				if (isPaddleRecurringRenewalTransaction(txn)) {
+					const invoiceId = txn.invoice_id || txn.id;
+					return {
+						type: 'invoice.payment_succeeded',
+						payload: {
+							id: invoiceId,
+							providerId: invoiceId,
+							invoiceIdsByProvider: { paddle: invoiceId },
+							amountPaid: amountTotal ?? 0,
+							amountDue: 0,
+							amountDiscount,
+							subtotal: amountSubtotal ?? amountTotal ?? 0,
+							total: amountTotal ?? 0,
+							currency: txn.currency_code,
+							status: 'paid',
+							paymentIntentId: txn.id,
+							subscriptionId: txn.subscription_id || undefined,
+							customerId: txn.customer_id || undefined,
+							metadata: toStringRecord(custom),
+							lineItems: buildInvoiceLineItems(txn),
+							billingReason: txn.origin || undefined,
+						},
+						originalEvent: event,
+					};
+				}
 
 				const payload: StandardizedCheckoutSession = {
 					id: txn.id,
@@ -696,10 +753,40 @@ export class PaddlePaymentProvider implements PaymentProvider {
 			case 'transaction.payment_failed': {
 				const txn = event.data as PaddleTransaction;
 				const custom = (txn.custom_data || {}) as Record<string, unknown>;
+				const amountTotal = parseAmount(txn.details?.totals?.total) ?? 0;
+				const amountSubtotal = parseAmount(txn.details?.totals?.subtotal) ?? amountTotal;
+				const amountDiscount = parseAmount(txn.details?.totals?.discount) ?? 0;
+
+				if (isPaddleRecurringRenewalTransaction(txn)) {
+					const invoiceId = txn.invoice_id || txn.id;
+					return {
+						type: 'invoice.payment_failed',
+						payload: {
+							id: invoiceId,
+							providerId: invoiceId,
+							invoiceIdsByProvider: { paddle: invoiceId },
+							amountPaid: 0,
+							amountDue: amountTotal,
+							amountDiscount,
+							subtotal: amountSubtotal,
+							total: amountTotal,
+							currency: txn.currency_code,
+							status: 'unpaid',
+							paymentIntentId: txn.id,
+							subscriptionId: txn.subscription_id || undefined,
+							customerId: txn.customer_id || undefined,
+							metadata: toStringRecord(custom),
+							lineItems: buildInvoiceLineItems(txn),
+							billingReason: txn.origin || undefined,
+						},
+						originalEvent: event,
+					};
+				}
+
 				const payload: StandardizedPaymentFailed = {
 					id: txn.id,
 					status: 'failed',
-					amount: parseAmount(txn.details?.totals?.total) ?? undefined,
+					amount: amountTotal || undefined,
 					currency: txn.currency_code,
 					errorMessage: 'Paddle transaction payment failed',
 					customerId: txn.customer_id || undefined,

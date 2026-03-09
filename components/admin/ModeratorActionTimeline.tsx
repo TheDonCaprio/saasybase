@@ -697,8 +697,8 @@ function deriveActionBadges(entry: ModeratorActionEntry): ActionBadge[] {
     const cancelSubscription = details['cancelSubscription'] === true;
     const providerModeRaw = typeof details['cancelMode'] === 'string' ? String(details['cancelMode']) : undefined;
     const localModeRaw = typeof details['localCancelMode'] === 'string' ? String(details['localCancelMode']) : undefined;
-    const providerAttempted = details['stripeCancellationAttempted'] === true;
-    const hasProviderSubscription = details['hasStripeSubscription'] === true;
+    const providerAttempted = details['providerCancellationAttempted'] === true || details['stripeCancellationAttempted'] === true;
+    const hasProviderSubscription = details['hasProviderSubscription'] === true || details['hasStripeSubscription'] === true;
 
     if (cancelSubscription && providerAttempted) {
       if (providerModeRaw === 'period_end') {

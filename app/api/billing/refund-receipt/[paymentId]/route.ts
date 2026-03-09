@@ -86,7 +86,7 @@ export async function GET(
         subtotalCents: payment.subtotalCents ?? undefined,
         discountCents: payment.discountCents ?? undefined,
         couponCode: payment.couponCode ?? undefined,
-        stripePaymentIntentId: payment.externalPaymentId ?? undefined,
+        externalPaymentId: payment.externalPaymentId ?? undefined,
       },
       refund: refundRecord ? {
         id: refundRecord.id,
@@ -100,7 +100,7 @@ export async function GET(
           id: payment.subscription.id,
           startedAt: payment.subscription.startedAt,
           expiresAt: payment.subscription.expiresAt,
-          stripeSubscriptionId: payment.subscription.externalSubscriptionId ?? undefined,
+          externalSubscriptionId: payment.subscription.externalSubscriptionId ?? undefined,
         }
         : null,
       plan: payment.subscription?.plan

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     organization = await prisma.organization.findFirst({
       where: {
         ownerUserId: userId,
-        clerkOrganizationId: orgId,
+        OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
       },
     });
     if (!organization) {
@@ -64,9 +64,11 @@ export async function POST(request: NextRequest) {
 
   const inviter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
-  if (!organization || !organization.clerkOrganizationId) {
+  if (!organization) {
     return NextResponse.json({ ok: false, error: 'Provision a team workspace before inviting members.' }, { status: 400 });
   }
+
+  const providerOrganizationId = organization.clerkOrganizationId ?? organization.id;
 
   try {
     const resolvedRole: ClerkMembershipRole = role && role.toLowerCase().includes('admin') ? 'org:admin' : 'org:member';
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
     const savedInvite = await upsertOrganizationInvite({
       email,
       organizationId: organization.id,
-      clerkOrganizationId: organization.clerkOrganizationId,
+      clerkOrganizationId: organization.clerkOrganizationId ?? null,
       role: String(resolvedRole).toLowerCase().includes('admin') ? 'ADMIN' : 'MEMBER',
       status: 'PENDING',
       invitedByUserId: userId,
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     const state = await fetchTeamDashboardState(userId, {
       forceSync: true,
-      activeClerkOrgId: orgId ?? null,
+      activeOrganizationId: orgId ?? null,
     });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {

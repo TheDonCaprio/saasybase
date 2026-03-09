@@ -226,11 +226,8 @@ export default async function AdminSubscriptionsPage() {
       canceledAt: s.canceledAt ? s.canceledAt.toISOString() : null,
       createdAt: s.createdAt.toISOString(),
       externalSubscriptionId: s.externalSubscriptionId ?? null,
-      stripeSubscriptionId: s.stripeSubscriptionId ?? null,
       dashboardUrl: s.externalSubscriptionId
         ? resolveDashboardUrl(providerName, 'subscription', s.externalSubscriptionId)
-        : s.stripeSubscriptionId
-          ? resolveDashboardUrl(providerName, 'subscription', s.stripeSubscriptionId)
           : null,
       latestPayment: latestPayment
         ? {
@@ -267,9 +264,12 @@ export default async function AdminSubscriptionsPage() {
           externalRefundId: latestPayment.externalRefundId ?? null,
           paymentProvider: latestPayment.paymentProvider ?? providerName,
           dashboardUrl: latestPayment.externalPaymentId
-            ? resolveDashboardUrl(latestPayment.paymentProvider ?? providerName, 'payment', latestPayment.externalPaymentId, latestPayment.externalSessionId)
-            : latestPayment.stripePaymentIntentId
-              ? resolveDashboardUrl(latestPayment.paymentProvider ?? providerName, 'payment', latestPayment.stripePaymentIntentId, latestPayment.externalSessionId)
+            ? resolveDashboardUrl(
+              latestPayment.paymentProvider ?? providerName,
+              'payment',
+              latestPayment.externalPaymentId,
+              latestPayment.externalSessionId
+            )
               : null
         }
         : null

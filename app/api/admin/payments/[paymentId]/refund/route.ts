@@ -283,7 +283,6 @@ export async function POST(
           status: 'REFUNDED',
           externalRefundId: String(refund.id),
           externalRefundIds: mergedRefundIds ?? payment.externalRefundIds,
-          ...(provider.name === 'stripe' ? { stripeRefundId: String(refund.id) } : null),
         }
       });
     } catch (err: unknown) {
@@ -470,6 +469,7 @@ export async function POST(
       details: {
         paymentId: payment.id,
         subscriptionId: payment.subscriptionId ?? null,
+        paymentProvider: provider.name,
         amountCents: payment.amountCents,
         refundedAmountCents: refund.amount,
         currency: payment.currency,
@@ -478,8 +478,8 @@ export async function POST(
         cancelMode: cancelSubscription ? cancelMode : 'none',
         localCancelMode: payment.subscription ? localModeForLog : 'none',
         clearPaidTokens,
-        stripeCancellationAttempted: cancelSubscription && !!payment.subscription?.externalSubscriptionId,
-        hasStripeSubscription: !!payment.subscription?.externalSubscriptionId,
+        providerCancellationAttempted: cancelSubscription && !!payment.subscription?.externalSubscriptionId,
+        hasProviderSubscription: !!payment.subscription?.externalSubscriptionId,
         notes: notes ?? null,
         refundId: refund.id
       }

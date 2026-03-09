@@ -26,7 +26,6 @@ model User {
   emailVerified          DateTime?
   // Denormalized number of payments made by this user. Backfilled by a script.
   paymentsCount          Int      @default(0)
-  stripeCustomerId       String?  @unique
   // Map of provider -> customer ID (multi-provider support). Stored as JSON string for SQLite compatibility.
   externalCustomerIds    String?
   // Paid token balance (from purchases/top-ups)
@@ -76,7 +75,6 @@ model Plan {
   name              String   @unique
   shortDescription  String? // Plain text for Stripe checkout and billing summaries
   description       String? // Full HTML description for detailed plan information
-  stripePriceId     String?  @unique
   
   // Generic Payment Provider Fields (legacy single-provider columns)
   externalPriceId   String?  @unique
@@ -216,7 +214,6 @@ model Subscription {
   // and efficient keyset pagination by amount without expensive joins.
   lastPaymentAmountCents Int?
   canceledAt           DateTime?
-  stripeSubscriptionId String?   @unique
   
   // Generic Payment Provider Fields (legacy single-provider columns)
   paymentProvider        String?  
@@ -262,9 +259,6 @@ model Payment {
   discountCents           Int?
   couponCode              String?
   currency                String   @default("usd")
-  stripePaymentIntentId   String?  @unique
-  stripeCheckoutSessionId String?  @unique
-  stripeRefundId          String?  @unique
   
   // Generic Payment Provider Fields (legacy single-provider columns)
   paymentProvider         String?  

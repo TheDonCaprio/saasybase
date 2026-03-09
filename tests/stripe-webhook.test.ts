@@ -6,6 +6,14 @@ import { StripePaymentProvider } from '../lib/payment/providers/stripe';
 describe('stripe-webhook', () => {
 	const stripeSecretKey = 'sk_test_123';
 	const webhookSecret = 'whsec_test_123';
+	const mockPrice = { id: 'price_123' } as unknown as Stripe.Price;
+	const mockLineItem = (id: string) => ({
+		id,
+		object: 'line_item',
+		amount: 2500,
+		description: 'Pro renewal',
+		price: mockPrice,
+	}) as unknown as Stripe.InvoiceLineItem;
 
 	function sign(body: string) {
 		return Stripe.webhooks.generateTestHeaderString({ payload: body, secret: webhookSecret });
@@ -36,13 +44,13 @@ describe('stripe-webhook', () => {
 					billing_reason: 'subscription_cycle',
 					lines: {
 						object: 'list',
-						data: [{ id: 'il_1', object: 'line_item', amount: 2500, description: 'Pro renewal', price: { id: 'price_123' } }],
+						data: [mockLineItem('il_1')],
 						has_more: false,
 						url: '/v1/invoices/in_123/lines',
 					},
 				},
 			},
-		} satisfies Stripe.Event;
+		} as unknown as Stripe.Event;
 
 		const body = JSON.stringify(evt);
 		const normalized = await provider.constructWebhookEvent(Buffer.from(body), sign(body), webhookSecret);
@@ -81,13 +89,13 @@ describe('stripe-webhook', () => {
 					billing_reason: 'subscription_cycle',
 					lines: {
 						object: 'list',
-						data: [{ id: 'il_2', object: 'line_item', amount: 2500, description: 'Pro renewal', price: { id: 'price_123' } }],
+						data: [mockLineItem('il_2')],
 						has_more: false,
 						url: '/v1/invoices/in_124/lines',
 					},
 				},
 			},
-		} satisfies Stripe.Event;
+		} as unknown as Stripe.Event;
 
 		const body = JSON.stringify(evt);
 		const normalized = await provider.constructWebhookEvent(Buffer.from(body), sign(body), webhookSecret);

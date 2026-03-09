@@ -47,7 +47,6 @@ type SubRow = {
   canceledAt?: string | null;
   planAutoRenew?: boolean | null;
   createdAt: string;
-  stripeSubscriptionId?: string | null;
   externalSubscriptionId?: string | null;
   dashboardUrl?: string | null;
   /** Payment provider for this subscription */
@@ -63,13 +62,10 @@ type SubRow = {
     couponCode?: string | null;
     currency?: string | null;
     createdAt?: string | null;
-    stripePaymentIntentId?: string | null;
-    stripeCheckoutSessionId?: string | null;
     externalPaymentId?: string | null;
     externalSessionId?: string | null;
     externalRefundId?: string | null;
     status?: string | null;
-    stripeRefundId?: string | null;
     dashboardUrl?: string | null;
     /** Payment provider for the payment */
     paymentProvider?: string | null;
@@ -501,8 +497,6 @@ export function PaginatedSubscriptionsManagement({
       : null;
 
     const status = typeof payment.status === 'string' ? payment.status : null;
-    const stripeRefundId = typeof payment.stripeRefundId === 'string' ? payment.stripeRefundId : null;
-
     return {
       id: payment.id,
       amount: payment.amountCents,
@@ -514,10 +508,10 @@ export function PaginatedSubscriptionsManagement({
       discountFormatted,
       currency: payment.currency,
       couponCode: payment.couponCode,
-      stripePaymentIntentId: payment.stripePaymentIntentId,
-      stripeCheckoutSessionId: payment.stripeCheckoutSessionId,
+      externalPaymentId: payment.externalPaymentId,
+      externalSessionId: payment.externalSessionId,
       status,
-      stripeRefundId
+      externalRefundId: payment.externalRefundId
     };
   };
 
@@ -721,9 +715,7 @@ export function PaginatedSubscriptionsManagement({
                   || sub.latestPayment?.paymentProvider
                   || inferProviderFromIds([
                     sub.latestPayment?.externalPaymentId,
-                    sub.latestPayment?.stripePaymentIntentId,
-                    sub.externalSubscriptionId,
-                    sub.stripeSubscriptionId
+                    sub.externalSubscriptionId
                   ]);
 
                 return (
@@ -799,7 +791,7 @@ export function PaginatedSubscriptionsManagement({
                           target="_blank"
                           rel="noreferrer"
                         >
-                          {sub.stripeSubscriptionId || sub.externalSubscriptionId || sub.id}
+                          {sub.externalSubscriptionId || sub.id}
                         </a>
                       ) : null}
                     </div>
@@ -866,7 +858,7 @@ export function PaginatedSubscriptionsManagement({
                   <div>Payment Status</div>
                   <div>Valid Period</div>
                   <div>Provider</div>
-                  <div>Stripe / Txn</div>
+                  <div>Provider / Txn</div>
                   <div className="text-right">Actions</div>
                 </div>
               </div>
@@ -880,9 +872,7 @@ export function PaginatedSubscriptionsManagement({
                     || sub.latestPayment?.paymentProvider
                     || inferProviderFromIds([
                       sub.latestPayment?.externalPaymentId,
-                      sub.latestPayment?.stripePaymentIntentId,
-                      sub.externalSubscriptionId,
-                      sub.stripeSubscriptionId
+                      sub.externalSubscriptionId
                     ]);
 
                   return (
@@ -994,7 +984,7 @@ export function PaginatedSubscriptionsManagement({
                             target="_blank"
                             rel="noreferrer"
                           >
-                            {sub.stripeSubscriptionId || sub.externalSubscriptionId || sub.id}
+                            {sub.externalSubscriptionId || sub.id}
                           </a>
                         ) : (
                           paymentInfo?.id ? null : <span className="text-slate-400 dark:text-neutral-500">—</span>
@@ -1129,8 +1119,8 @@ export function PaginatedSubscriptionsManagement({
           onConfirm={executeRefund}
           amount={refundTarget.payment.amountCents}
           paymentId={
-            refundTarget.payment.stripePaymentIntentId ||
-            refundTarget.payment.stripeCheckoutSessionId ||
+            refundTarget.payment.externalPaymentId ||
+            refundTarget.payment.externalSessionId ||
             refundTarget.payment.id
           }
           loading={refundLoading}
@@ -1138,7 +1128,7 @@ export function PaginatedSubscriptionsManagement({
           hasActiveSubscription={!!refundTarget.sub}
           subscriptionPlanAutoRenew={refundTarget.sub.planAutoRenew ?? null}
           subscriptionExpiresAt={refundTarget.sub.expiresAt ?? null}
-          hasStripeSubscription={Boolean(refundTarget.sub.externalSubscriptionId || refundTarget.sub.stripeSubscriptionId)}
+          hasProviderSubscription={Boolean(refundTarget.sub.externalSubscriptionId)}
         />
       )}
     </div>

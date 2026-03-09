@@ -157,6 +157,7 @@ export function DashboardPageHeader({
 
 	return (
 		<div
+			data-dashboard-page-header="true"
 			className={cx(
 				'relative overflow-hidden rounded-3xl border p-6 transition-shadow',
 				palette.wrapper,

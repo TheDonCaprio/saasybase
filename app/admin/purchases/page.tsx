@@ -219,7 +219,6 @@ export default async function AdminPurchasesPage() {
         id: p.subscription.id,
         status: p.subscription.status,
         externalSubscriptionId: p.subscription.externalSubscriptionId ?? null,
-        stripeSubscriptionId: p.subscription.stripeSubscriptionId ?? null,
         expiresAt: p.subscription.expiresAt?.toISOString() || null,
       } : null
     };
@@ -325,13 +324,10 @@ function formatNumber(value: number) {
 function getPaymentDashboardUrl(payment: {
   paymentProvider?: string | null;
   externalPaymentId?: string | null;
-  stripePaymentIntentId?: string | null;
 }): string | null {
-  const providerId = (payment.paymentProvider || (payment.stripePaymentIntentId ? 'stripe' : null) || process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase();
+  const providerId = (payment.paymentProvider || (payment.externalPaymentId ? 'stripe' : null) || process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase();
 
-  const paymentId = providerId === 'stripe'
-    ? (payment.stripePaymentIntentId || payment.externalPaymentId)
-    : (payment.externalPaymentId || payment.stripePaymentIntentId);
+  const paymentId = payment.externalPaymentId;
 
   if (!paymentId) return null;
 

@@ -7,7 +7,7 @@
  * adapters so consumer components work identically with either provider.
  */
 
-import { useMemo, useCallback, useSyncExternalStore } from 'react';
+import { useMemo, useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
 import type {
@@ -19,24 +19,20 @@ import type {
 } from '../../types';
 
 // ---------------------------------------------------------------------------
-// Cookie helpers — read the active org cookie from document.cookie
+// API-backed active org store — keeps the client synced with the server-side cookie
 // ---------------------------------------------------------------------------
 
-const ACTIVE_ORG_COOKIE = 'saasybase-active-org';
+type ActiveOrgState = {
+  activeOrgId: string | null;
+  initialized: boolean;
+  loading: boolean;
+};
 
-function getActiveOrgFromCookie(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(
-    new RegExp('(?:^|;\\s*)' + ACTIVE_ORG_COOKIE + '=([^;]*)')
-  );
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
-}
-
-/**
- * A tiny external store for the active-org cookie so React can
- * subscribe to changes (triggered after the API call + page reload).
- */
-let _cachedOrgId: string | null = null;
+let _activeOrgState: ActiveOrgState = {
+  activeOrgId: null,
+  initialized: false,
+  loading: false,
+};
 const _listeners = new Set<() => void>();
 
 function subscribeActiveOrg(cb: () => void) {
@@ -44,29 +40,68 @@ function subscribeActiveOrg(cb: () => void) {
   return () => { _listeners.delete(cb); };
 }
 
-function getActiveOrgSnapshot(): string | null {
-  const v = getActiveOrgFromCookie();
-  if (v !== _cachedOrgId) {
-    _cachedOrgId = v;
-  }
-  return _cachedOrgId;
-}
-
-function getServerActiveOrgSnapshot(): string | null {
-  return null; // SSR — cookie not available
-}
-
-/** Call this after switching the active org to notify subscribers. */
-export function notifyActiveOrgChanged() {
-  _cachedOrgId = getActiveOrgFromCookie();
+function emitActiveOrgChange() {
   _listeners.forEach((cb) => cb());
 }
 
+function getActiveOrgSnapshot(): string | null {
+  return _activeOrgState.activeOrgId;
+}
+
+function getServerActiveOrgSnapshot(): string | null {
+  return null;
+}
+
+async function refreshActiveOrgFromServer(): Promise<void> {
+  if (_activeOrgState.loading) return;
+
+  _activeOrgState = { ..._activeOrgState, loading: true };
+
+  try {
+    const res = await fetch('/api/user/active-org', { cache: 'no-store' });
+    if (!res.ok) {
+      _activeOrgState = { activeOrgId: null, initialized: true, loading: false };
+      emitActiveOrgChange();
+      return;
+    }
+
+    const data = await res.json() as { activeOrgId?: string | null };
+    _activeOrgState = {
+      activeOrgId: typeof data.activeOrgId === 'string' ? data.activeOrgId : null,
+      initialized: true,
+      loading: false,
+    };
+    emitActiveOrgChange();
+  } catch {
+    _activeOrgState = { ..._activeOrgState, initialized: true, loading: false };
+    emitActiveOrgChange();
+  }
+}
+
+export function notifyActiveOrgChanged(activeOrgId?: string | null) {
+  if (typeof activeOrgId !== 'undefined') {
+    _activeOrgState = {
+      activeOrgId,
+      initialized: true,
+      loading: false,
+    };
+    emitActiveOrgChange();
+    return;
+  }
+
+  void refreshActiveOrgFromServer();
+}
+
 /**
- * Hook that returns the current active org ID from the cookie.
- * Uses useSyncExternalStore so it reacts to changes.
+ * Hook that returns the current active org ID from the server-backed store.
  */
 export function useActiveOrgId(): string | null {
+  useEffect(() => {
+    if (!_activeOrgState.initialized && !_activeOrgState.loading) {
+      void refreshActiveOrgFromServer();
+    }
+  }, []);
+
   return useSyncExternalStore(subscribeActiveOrg, getActiveOrgSnapshot, getServerActiveOrgSnapshot);
 }
 
@@ -140,6 +175,18 @@ export function useAuthUser(): UseAuthUserReturn {
 export function useAuthSession(): UseAuthSessionReturn {
   const { data: session, status } = useSession();
   const activeOrgId = useActiveOrgId();
+
+  useEffect(() => {
+    if (status === 'authenticated' && !_activeOrgState.initialized && !_activeOrgState.loading) {
+      void refreshActiveOrgFromServer();
+      return;
+    }
+
+    if (status === 'unauthenticated' && (_activeOrgState.activeOrgId !== null || _activeOrgState.initialized)) {
+      _activeOrgState = { activeOrgId: null, initialized: true, loading: false };
+      emitActiveOrgChange();
+    }
+  }, [status]);
 
   return useMemo(() => ({
     orgId: activeOrgId,

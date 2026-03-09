@@ -175,9 +175,8 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
                 if (!matchingSeed) {
                     const externalPriceId = dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string' ? dbPlanRecord['externalPriceId'] : null;
-                    const stripePriceId = dbPlanRecord && typeof dbPlanRecord['stripePriceId'] === 'string' ? dbPlanRecord['stripePriceId'] : null;
 
-                    if (!externalPriceId && !stripePriceId) {
+                    if (!externalPriceId) {
                         return jsonError('Plan not configured for checkout', 400, 'PLAN_PRICE_MISSING');
                     }
                     plan = {
@@ -209,10 +208,8 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                 const priceIdsMap = dbPlanRecord?.['externalPriceIds'];
                 const legacyPriceId = dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string' 
                     ? String(dbPlanRecord['externalPriceId']) : undefined;
-                const stripeLegacy = dbPlanRecord && typeof dbPlanRecord['stripePriceId'] === 'string' 
-                    ? String(dbPlanRecord['stripePriceId']) : undefined;
                 
-                priceId = getIdByProvider(priceIdsMap, providerKey, legacyPriceId || stripeLegacy);
+                priceId = getIdByProvider(priceIdsMap, providerKey, legacyPriceId);
 
                 if (!priceId) {
                     Logger.error('Embedded checkout: plan missing price for provider', { userId, provider: providerKey, planId });

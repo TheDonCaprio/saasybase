@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const subscriptionProviderName = sub.paymentProvider || paymentService.provider.name;
     // Use the subscription's originating provider for undo operation
     const provider = paymentService.getProviderForRecord(sub.paymentProvider);
-    const providerSubscriptionId = sub.externalSubscriptionId || sub.stripeSubscriptionId;
+    const providerSubscriptionId = sub.externalSubscriptionId;
 
     if (providerSubscriptionId) {
       try {
@@ -143,7 +143,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         subscriptionId: sub.id,
         providerSubscriptionId,
         providerName: subscriptionProviderName,
-        stripeSubscriptionId: providerSubscriptionId && subscriptionProviderName === 'stripe' ? providerSubscriptionId : sub.stripeSubscriptionId ?? null,
         restoredStatus: updateData.status ?? sub.status
       }
     });

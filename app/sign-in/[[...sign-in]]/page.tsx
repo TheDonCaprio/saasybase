@@ -1,4 +1,4 @@
-import { AuthSignIn } from '@/lib/auth-provider/client';
+import { AuthSignIn } from '@/lib/auth-provider/client/components';
 import { authService } from '@/lib/auth-provider';
 import { redirect } from 'next/navigation';
 

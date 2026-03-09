@@ -4,6 +4,9 @@ import { authService } from '@/lib/auth-provider';
 export async function POST(request: NextRequest) {
 	const { userId } = await authService.getSession();
 	if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	if (!authService.supportsFeature('session_management')) {
+		return NextResponse.json({ error: 'Session revocation is not supported by the active auth provider' }, { status: 501 });
+	}
 
 	const body: unknown = await request.json().catch(() => ({} as unknown));
 	const bodyRec = (body && typeof body === 'object') ? (body as Record<string, unknown>) : {} as Record<string, unknown>;

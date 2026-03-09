@@ -71,7 +71,7 @@ export async function POST(
     }
 
     // Issue refund via payment provider (fallback to manual record if we lack references)
-    const paymentReference = payment.externalPaymentId || payment.stripePaymentIntentId || null;
+    const paymentReference = payment.externalPaymentId;
     const providerReason = 'requested_by_customer';
     let refundId: string;
 
@@ -94,14 +94,10 @@ export async function POST(
       Logger.warn('Refund recorded without external payment reference', { paymentId: id });
     }
 
-    const isStripePayment = (payment.paymentProvider || providerForRecord.name) === 'stripe';
     const updateData: Prisma.PaymentUpdateInput = {
       status: 'REFUNDED',
       externalRefundId: refundId
     };
-    if (isStripePayment) {
-      updateData.stripeRefundId = refundId;
-    }
 
     try {
       await prisma.payment.update({ where: { id }, data: updateData });
@@ -147,11 +143,11 @@ export async function POST(
       details: {
         paymentId: payment.id,
         amountCents: payment.amountCents,
-        stripePaymentIntentId: payment.stripePaymentIntentId,
-        stripeCheckoutSessionId: payment.stripeCheckoutSessionId
-        , clearPaidTokens,
-          externalPaymentId: payment.externalPaymentId,
-          refundId
+        paymentProvider: payment.paymentProvider || providerForRecord.name,
+        clearPaidTokens,
+        externalPaymentId: payment.externalPaymentId,
+        externalSessionId: payment.externalSessionId,
+        externalRefundId: refundId
       }
     });
 

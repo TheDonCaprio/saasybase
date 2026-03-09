@@ -17,9 +17,7 @@ export interface AdminPayment {
   paymentProvider?: string | null;
   externalPaymentId?: string | null;
   externalSessionId?: string | null;
-  stripePaymentIntentId?: string | null;
-  stripeCheckoutSessionId?: string | null;
-  stripeInvoiceId?: string | null;
+  externalRefundId?: string | null;
   dashboardUrl?: string | null;
   subscription?: {
     id: string;
@@ -28,7 +26,6 @@ export interface AdminPayment {
     expiresAt: Date;
     canceledAt?: Date | null;
     externalSubscriptionId?: string | null;
-    stripeSubscriptionId?: string | null;
     /** Payment provider for the subscription */
     paymentProvider?: string | null;
     plan: {
@@ -36,7 +33,7 @@ export interface AdminPayment {
       name: string;
       description: string | null;
       autoRenew: boolean;
-      stripePriceId: string | null;
+      externalPriceId?: string | null;
       active: boolean;
       durationHours: number;
       priceCents: number;
@@ -74,7 +71,6 @@ export interface PaymentActionsPayment {
     status?: string;
     expiresAt?: Date | string | null;
     externalSubscriptionId?: string | null;
-    stripeSubscriptionId?: string | null;
     plan: {
       name: string;
       autoRenew?: boolean | null;

@@ -117,7 +117,6 @@ export async function POST(request: NextRequest) {
           recurringIntervalCount: true,
           externalPriceIds: true,
           externalProductIds: true,
-          stripePriceId: true,
           externalPriceId: true,
         },
       });
@@ -127,7 +126,6 @@ export async function POST(request: NextRequest) {
       for (const plan of plans) {
         let nextExternalPriceIds: string | null = plan.externalPriceIds;
         let nextExternalProductIds: string | null = plan.externalProductIds;
-        let stripePriceIdToSet: string | null | undefined;
         let externalPriceIdToSet: string | null | undefined;
         let touched = false;
 
@@ -241,8 +239,7 @@ export async function POST(request: NextRequest) {
             touched = true;
             result.plans.createdPrices += 1;
 
-            if (providerName === 'stripe' && !plan.stripePriceId) {
-              stripePriceIdToSet = price.id;
+            if (providerName === 'stripe' && !plan.externalPriceId) {
               externalPriceIdToSet = price.id;
             }
           } catch (e: unknown) {
@@ -278,7 +275,6 @@ export async function POST(request: NextRequest) {
             data: {
               externalPriceIds: nextExternalPriceIds,
               externalProductIds: nextExternalProductIds,
-              ...(stripePriceIdToSet ? { stripePriceId: stripePriceIdToSet } : {}),
               ...(externalPriceIdToSet ? { externalPriceId: externalPriceIdToSet } : {}),
             },
           });

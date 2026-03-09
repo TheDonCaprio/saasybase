@@ -67,10 +67,11 @@ export async function GET(
         status: typeof rec.status === 'string' ? rec.status : String(rec.status ?? ''),
         createdAt: rec.createdAt instanceof Date ? rec.createdAt.toISOString() : (typeof rec.createdAt === 'string' ? new Date(rec.createdAt).toISOString() : null),
         planName: typeof planRec.name === 'string' ? planRec.name as string : null,
-        stripePaymentIntentId: typeof rec.stripePaymentIntentId === 'string' ? rec.stripePaymentIntentId : null,
-        stripeInvoiceId: null,
-        stripeCheckoutSessionId: typeof rec.stripeCheckoutSessionId === 'string' ? rec.stripeCheckoutSessionId : null,
-        dashboardUrl: typeof rec.stripePaymentIntentId === 'string' ? paymentService.getDashboardUrl('payment', rec.stripePaymentIntentId) : null
+        paymentProvider: typeof rec.paymentProvider === 'string' ? rec.paymentProvider : null,
+        externalPaymentId: typeof rec.externalPaymentId === 'string' ? rec.externalPaymentId : null,
+        externalSessionId: typeof rec.externalSessionId === 'string' ? rec.externalSessionId : null,
+        externalRefundId: typeof rec.externalRefundId === 'string' ? rec.externalRefundId : null,
+        dashboardUrl: typeof rec.externalPaymentId === 'string' ? paymentService.getDashboardUrl('payment', rec.externalPaymentId) : null
       };
     });
 

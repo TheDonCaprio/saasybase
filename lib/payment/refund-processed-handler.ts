@@ -24,10 +24,7 @@ export async function handleRefundProcessedEvent(refund: StandardizedRefund): Pr
     try {
         const payment = await prisma.payment.findFirst({
             where: {
-                OR: [
-                    { externalPaymentId: paymentIdToSearch },
-                    { stripePaymentIntentId: paymentIdToSearch }
-                ]
+                externalPaymentId: paymentIdToSearch,
             },
             include: { user: { select: { id: true, email: true } } }
         });

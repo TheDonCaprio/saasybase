@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await ensureTeamOrganization(userId, requestedName);
     const state = await fetchTeamDashboardState(userId, {
       forceSync: true,
-      activeClerkOrgId: orgId ?? null,
+      activeOrganizationId: orgId ?? null,
     });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {

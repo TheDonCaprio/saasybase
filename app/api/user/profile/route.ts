@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { requireUser, getAuthSafe } from '../../../../lib/auth';
 import { fetchModeratorPermissions, buildAdminLikePermissions } from '../../../../lib/moderator';
 import { prisma } from '../../../../lib/prisma';
+import { authService } from '../../../../lib/auth-provider';
+import { validateAndFormatPersonName } from '../../../../lib/name-validation';
+import { sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
 import { getDefaultTokenLabel, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 import { formatDateServer } from '../../../../lib/formatDate.server';
 import {
@@ -189,16 +192,45 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { name, email } = body as { name?: string; email?: string };
+    const { name, firstName, lastName, email } = body as {
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    };
+    const providerName = authService.providerName;
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, password: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     const data: Record<string, string> = {};
+    let verificationRequired = false;
+    let emailChangePending = false;
+    let pendingEmail: string | null = null;
 
-    if (typeof name === 'string') {
-      data.name = name.trim();
+    if (typeof name === 'string' || typeof firstName === 'string' || typeof lastName === 'string') {
+      const validatedName = validateAndFormatPersonName({
+        fullName: typeof name === 'string' ? name : undefined,
+        firstName: typeof firstName === 'string' ? firstName : undefined,
+        lastName: typeof lastName === 'string' ? lastName : undefined,
+      });
+
+      if (!validatedName.ok) {
+        return NextResponse.json({ error: validatedName.error || 'Invalid name' }, { status: 400 });
+      }
+
+      data.name = validatedName.fullName ?? '';
     }
 
     if (typeof email === 'string') {
       const trimmed = email.toLowerCase().trim();
+      const emailChanged = trimmed.length > 0 && trimmed !== (currentUser.email ?? '').toLowerCase();
       // Check if another user already has this email
       const existing = await prisma.user.findFirst({
         where: { email: trimmed, NOT: { id: userId } },
@@ -206,20 +238,58 @@ export async function PATCH(request: Request) {
       if (existing) {
         return NextResponse.json({ error: 'This email is already in use by another account.' }, { status: 409 });
       }
-      data.email = trimmed;
+
+      if (emailChanged && providerName === 'nextauth' && !currentUser.password) {
+        return NextResponse.json(
+          { error: 'Email changes are only supported for password-based accounts right now.' },
+          { status: 400 }
+        );
+      }
+
+      if (emailChanged && providerName === 'nextauth') {
+        verificationRequired = true;
+        emailChangePending = true;
+        pendingEmail = trimmed;
+      } else {
+        data.email = trimmed;
+      }
     }
 
-    if (Object.keys(data).length === 0) {
+    if (Object.keys(data).length === 0 && !emailChangePending) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data,
-      select: { id: true, name: true, email: true },
-    });
+    const updated = Object.keys(data).length > 0
+      ? await prisma.user.update({
+          where: { id: userId },
+          data: {
+            ...(Object.prototype.hasOwnProperty.call(data, 'name') ? { name: data.name || null } : {}),
+            ...(Object.prototype.hasOwnProperty.call(data, 'email') ? { email: data.email } : {}),
+          },
+          select: { id: true, name: true, email: true },
+        })
+      : {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+        };
 
-    return NextResponse.json({ user: updated });
+    if (emailChangePending && pendingEmail && currentUser.email) {
+      sendNextAuthEmailChangeVerification({
+        userId: updated.id,
+        currentEmail: currentUser.email,
+        newEmail: pendingEmail,
+        name: updated.name,
+      }).catch(() => {});
+    } else if (verificationRequired && updated.email) {
+      sendNextAuthVerificationEmail({
+        userId: updated.id,
+        email: updated.email,
+        name: updated.name,
+      }).catch(() => {});
+    }
+
+    return NextResponse.json({ user: updated, verificationRequired, emailChangePending, pendingEmail });
   } catch (error: unknown) {
     console.error('Profile update error:', error);
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });

@@ -67,9 +67,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
     }
 
-    if (!invite.organization.clerkOrganizationId) {
-      return NextResponse.json({ ok: false, error: 'Workspace is not provisioned yet. Ask the owner to retry.' }, { status: 400 });
-    }
+    const providerOrganizationId = invite.organization.clerkOrganizationId ?? invite.organizationId;
 
     const inviteEmail = normalizeEmail(invite.email);
     if (inviteEmail) {
@@ -109,7 +107,7 @@ export async function POST(request: NextRequest) {
     if (!existingMembership) {
       const resolvedRole = invite.role?.toUpperCase() === 'ADMIN' ? 'org:admin' : 'org:member';
       await addOrConfirmClerkMembership({
-        organizationId: invite.organization.clerkOrganizationId,
+        organizationId: providerOrganizationId,
         userId,
         role: resolvedRole,
       });
@@ -117,6 +115,7 @@ export async function POST(request: NextRequest) {
 
     await syncOrganizationMembership({
       userId,
+      organizationId: invite.organizationId,
       clerkOrganizationId: invite.organization.clerkOrganizationId,
       role: invite.role ?? 'MEMBER',
       status: 'ACTIVE',

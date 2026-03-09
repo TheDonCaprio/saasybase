@@ -38,7 +38,7 @@ export async function processInvoicePaidEvent<TSub extends InvoicePaidOrchestrat
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
     findSubscriptionByProviderId: (subscriptionId: string) => Promise<TSub | null>;
     ensureProviderBackedSubscription: (subscriptionId: string, context: { invoice: StandardizedInvoice }) => Promise<TSub | null>;
-    resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<{
+    resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{
         role: 'OWNER' | 'MEMBER';
         organization: { id: string };
     } | null>;
@@ -141,7 +141,7 @@ export async function resolveInvoicePaidProcessingContext<TSub extends InvoicePa
     invoice: StandardizedInvoice;
     findSubscriptionByProviderId: (subscriptionId: string) => Promise<TSub | null>;
     ensureProviderBackedSubscription: (subscriptionId: string, context: { invoice: StandardizedInvoice }) => Promise<TSub | null>;
-    resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<{
+    resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{
         role: 'OWNER' | 'MEMBER';
         organization: { id: string };
     } | null>;
@@ -184,14 +184,14 @@ export async function resolveInvoicePaidProcessingContext<TSub extends InvoicePa
         }
     }
 
-    const activeClerkOrgId = params.invoice.metadata?.activeOrganizationId
+    const activeOrganizationId = params.invoice.metadata?.activeOrganizationId
         || params.invoice.metadata?.organizationId
         || params.invoice.metadata?.activeProviderOrganizationId
         || params.invoice.metadata?.activeClerkOrgId
         || params.invoice.metadata?.clerkOrgId
         || params.invoice.metadata?.orgId
         || null;
-    const organizationContext = await params.resolveOrganizationContext(dbSub.userId, activeClerkOrgId);
+    const organizationContext = await params.resolveOrganizationContext(dbSub.userId, activeOrganizationId);
     const resolvedOrganizationId = organizationContext?.role === 'OWNER'
         ? organizationContext.organization.id
         : (dbSub.organizationId ?? null);

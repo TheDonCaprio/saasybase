@@ -16,7 +16,7 @@ interface InvoiceData {
     subtotalCents?: number | null;
     discountCents?: number | null;
     couponCode?: string | null;
-    stripePaymentIntentId?: string | null;
+    externalPaymentId?: string | null;
   };
   user: {
     email: string | null;
@@ -26,7 +26,7 @@ interface InvoiceData {
     id: string;
     startedAt: Date;
     expiresAt: Date;
-    stripeSubscriptionId?: string | null;
+    externalSubscriptionId?: string | null;
   } | null;
   plan?: {
     name: string;
@@ -160,14 +160,14 @@ export async function createInvoicePDF(data: InvoiceData): Promise<Buffer> {
   drawTextLine(ctx, 'Status', { size: 9, color: { r: 0.443, g: 0.51, b: 0.588 }, spacingAfter: 12 });
   drawTextLine(ctx, toPdfText(data.payment.status, 'N/A'));
 
-  if (data.payment.stripePaymentIntentId) {
-    drawTextLine(ctx, 'Stripe Payment Intent ID', { size: 9, color: { r: 0.443, g: 0.51, b: 0.588 }, spacingAfter: 12 });
-    drawTextLine(ctx, toPdfText(data.payment.stripePaymentIntentId));
+  if (data.payment.externalPaymentId) {
+    drawTextLine(ctx, 'Payment Provider Reference', { size: 9, color: { r: 0.443, g: 0.51, b: 0.588 }, spacingAfter: 12 });
+    drawTextLine(ctx, toPdfText(data.payment.externalPaymentId));
   }
 
-  if (data.subscription?.stripeSubscriptionId) {
-    drawTextLine(ctx, 'Stripe Subscription ID', { size: 9, color: { r: 0.443, g: 0.51, b: 0.588 }, spacingAfter: 12 });
-    drawTextLine(ctx, toPdfText(data.subscription.stripeSubscriptionId));
+  if (data.subscription?.externalSubscriptionId) {
+    drawTextLine(ctx, 'Subscription Provider Reference', { size: 9, color: { r: 0.443, g: 0.51, b: 0.588 }, spacingAfter: 12 });
+    drawTextLine(ctx, toPdfText(data.subscription.externalSubscriptionId));
   }
 
   drawDivider(ctx);

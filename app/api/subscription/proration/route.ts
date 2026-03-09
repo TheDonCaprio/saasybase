@@ -52,7 +52,6 @@ type PlanRecord = {
   recurringInterval: string | null;
   recurringIntervalCount: number;
   externalPriceId: string | null;
-  stripePriceId: string | null;
   externalPriceIds: string | null;
 };
 
@@ -115,7 +114,6 @@ async function fetchPlan(planId: string): Promise<PlanRecord | null> {
       recurringInterval: true,
       recurringIntervalCount: true,
       externalPriceId: true,
-      stripePriceId: true,
       externalPriceIds: true,
     },
   }) as unknown as Promise<PlanRecord | null>;
@@ -125,9 +123,6 @@ async function resolveExternalPriceId(plan: PlanRecord, providerKey: string): Pr
   // First try provider-aware lookup from the externalPriceIds map
   const priceFromMap = getIdByProvider(plan.externalPriceIds, providerKey);
   if (priceFromMap) return priceFromMap;
-
-  // Fall back to legacy single fields when they clearly correspond to the provider.
-  if (providerKey === 'stripe' && plan.stripePriceId) return plan.stripePriceId;
 
   // `externalPriceId` is legacy single-provider; only trust it when it matches the active provider.
   const activeProviderKey = getCurrentProviderKey();

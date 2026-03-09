@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     // Use the subscription's originating provider for cancellation
     const provider = paymentService.getProviderForRecord(sub.paymentProvider);
 
-    const providerSubscriptionId = sub.externalSubscriptionId || sub.stripeSubscriptionId;
+    const providerSubscriptionId = sub.externalSubscriptionId;
     let providerCancelFailed = false;
     if (providerSubscriptionId) {
       try {
@@ -143,7 +143,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         subscriptionId: sub.id,
         providerSubscriptionId,
         providerName: subscriptionProviderName,
-        stripeSubscriptionId: providerSubscriptionId && subscriptionProviderName === 'stripe' ? providerSubscriptionId : sub.stripeSubscriptionId ?? null,
         clearPaidTokens,
         providerCancelFailed
       }

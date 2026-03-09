@@ -13,7 +13,7 @@ interface RefundData {
     subtotalCents?: number | null;
     discountCents?: number | null;
     couponCode?: string | null;
-    stripePaymentIntentId?: string | null;
+    externalPaymentId?: string | null;
   };
   refund: {
     id: string;
@@ -29,7 +29,7 @@ interface RefundData {
     id: string;
     startedAt: Date;
     expiresAt: Date;
-    stripeSubscriptionId?: string | null;
+    externalSubscriptionId?: string | null;
   } | null;
   plan?: {
     name: string;

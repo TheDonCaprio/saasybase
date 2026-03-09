@@ -16,8 +16,7 @@ export async function POST(req: Request) {
   const subscription = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } } });
   if (!subscription) return jsonError('No active subscription', 400, 'SUBSCRIPTION_NOT_ACTIVE');
 
-  // Use externalSubscriptionId (preferred) or fallback to stripeSubscriptionId
-  const subId = subscription.externalSubscriptionId || subscription.stripeSubscriptionId;
+  const subId = subscription.externalSubscriptionId;
 
   // If no subscription id then nothing to undo
   if (!subId) {

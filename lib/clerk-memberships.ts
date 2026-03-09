@@ -1,6 +1,6 @@
-import { authService } from '@/lib/auth-provider';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
+import { workspaceService } from './workspace-service';
 
 export type ClerkMembershipRole = 'org:admin' | 'org:member';
 
@@ -13,7 +13,7 @@ export async function addOrConfirmClerkMembership(params: {
   clerk?: unknown;
 }) {
   try {
-    await authService.createOrganizationMembership({
+    await workspaceService.createProviderMembership({
       organizationId: params.organizationId,
       userId: params.userId,
       role: params.role,
@@ -37,7 +37,7 @@ export async function addOrConfirmClerkMembership(params: {
           userId: params.userId,
           attemptedRole: params.role,
         });
-        await authService.createOrganizationMembership({
+        await workspaceService.createProviderMembership({
           organizationId: params.organizationId,
           userId: params.userId,
           role: 'org:member',

@@ -27,7 +27,6 @@ export function PaymentManagement({ payments: initialPayments, displayCurrency }
     createdAt: payment.createdAt,
     subscription: payment.subscription ? {
       externalSubscriptionId: payment.subscription.externalSubscriptionId ?? null,
-      stripeSubscriptionId: payment.subscription.stripeSubscriptionId ?? null,
       plan: {
         name: payment.subscription.plan.name
       }

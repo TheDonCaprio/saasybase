@@ -9,8 +9,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authService } from '@/lib/auth-provider';
-import { sendEmail } from '@/lib/email';
-import { randomBytes, createHash } from 'crypto';
+import { createHash } from 'crypto';
+import {
+  parseVerificationIdentifier,
+  sendNextAuthEmailChangeVerification,
+  sendNextAuthVerificationEmail,
+} from '@/lib/nextauth-email-verification';
+import { sendWelcomeIfNotSent } from '@/lib/welcome';
 
 export async function POST() {
   try {
@@ -32,35 +37,10 @@ export async function POST() {
       return NextResponse.json({ message: 'Email is already verified' });
     }
 
-    // Generate token
-    const rawToken = randomBytes(32).toString('hex');
-    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    const identifier = `email-verify:${user.email}`;
-
-    // Delete old tokens for this identifier before creating a new one
-    await prisma.verificationToken.deleteMany({ where: { identifier } });
-
-    await prisma.verificationToken.create({
-      data: {
-        identifier,
-        token: hashedToken,
-        expires,
-      },
-    });
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
-
-    await sendEmail({
-      to: user.email,
+    await sendNextAuthVerificationEmail({
       userId: user.id,
-      templateKey: 'email_verification',
-      variables: {
-        firstName: user.name?.split(' ')[0] || 'there',
-        userEmail: user.email,
-        actionUrl: verifyUrl,
-      },
+      email: user.email,
+      name: user.name,
     });
 
     return NextResponse.json({ message: 'Verification email sent' });
@@ -81,29 +61,84 @@ export async function GET(request: NextRequest) {
     }
 
     const hashedToken = createHash('sha256').update(token).digest('hex');
-    const identifier = `email-verify:${email}`;
-
-    const record = await prisma.verificationToken.findFirst({
-      where: { identifier, token: hashedToken },
-    });
+    const record = await prisma.verificationToken.findUnique({ where: { token: hashedToken } });
 
     if (!record || record.expires < new Date()) {
       if (record) {
-        await prisma.verificationToken.deleteMany({ where: { identifier, token: hashedToken } });
+        await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
       }
       return NextResponse.redirect(new URL('/sign-in?error=expired-verification-link', request.url));
     }
 
-    // Mark email as verified
-    await prisma.user.updateMany({
-      where: { email: email.toLowerCase().trim() },
-      data: { emailVerified: new Date() },
+    const parsedIdentifier = parseVerificationIdentifier(record.identifier);
+    if (!parsedIdentifier) {
+      await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
+      return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+    }
+
+    if (parsedIdentifier.kind === 'email-verify') {
+      const normalizedEmail = email.toLowerCase().trim();
+      if (parsedIdentifier.email !== normalizedEmail) {
+        await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
+        return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+      }
+
+      await prisma.user.updateMany({
+        where: { email: normalizedEmail },
+        data: { emailVerified: new Date() },
+      });
+
+      await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
+
+      const verifiedUser = await prisma.user.findFirst({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+      if (verifiedUser?.id) {
+        await sendWelcomeIfNotSent(verifiedUser.id, normalizedEmail).catch(() => {});
+      }
+
+      return NextResponse.redirect(new URL('/sign-in?verification=success', request.url));
+    }
+
+    const normalizedNewEmail = email.toLowerCase().trim();
+    if (parsedIdentifier.newEmail !== normalizedNewEmail) {
+      await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
+      return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: parsedIdentifier.userId },
+      select: { id: true, name: true, email: true },
+    });
+    if (!user?.id || !user.email) {
+      await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
+      return NextResponse.redirect(new URL('/sign-in?error=verification-failed', request.url));
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        email: normalizedNewEmail,
+        NOT: { id: user.id },
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
+      return NextResponse.redirect(new URL('/dashboard/profile?emailChange=already-used', request.url));
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: normalizedNewEmail,
+        emailVerified: new Date(),
+      },
     });
 
-    // Delete the token
-    await prisma.verificationToken.deleteMany({ where: { identifier } });
+    await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
 
-    return NextResponse.redirect(new URL('/dashboard?verified=true', request.url));
+    return NextResponse.redirect(new URL('/dashboard/profile?emailChange=success', request.url));
   } catch (err) {
     console.error('Verify email error:', err);
     return NextResponse.redirect(new URL('/sign-in?error=verification-failed', request.url));

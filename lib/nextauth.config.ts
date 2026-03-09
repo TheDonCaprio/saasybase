@@ -13,8 +13,10 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
+import NodemailerProvider from 'next-auth/providers/nodemailer';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { sendNextAuthMagicLinkEmail } from '@/lib/nextauth-email-verification';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,6 +39,7 @@ async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
 
 function buildProviders(): NextAuthConfig['providers'] {
   const providers: NextAuthConfig['providers'] = [];
+  const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
 
   // Credentials (email + password) — always available
   providers.push(
@@ -55,6 +58,7 @@ function buildProviders(): NextAuthConfig['providers'] {
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.password) return null;
+        if (!user.emailVerified) return null;
 
         const valid = await verifyPassword(password, user.password);
         if (!valid) return null;
@@ -65,6 +69,48 @@ function buildProviders(): NextAuthConfig['providers'] {
           name: user.name,
           image: user.imageUrl,
         };
+      },
+    })
+  );
+
+  providers.push(
+    NodemailerProvider({
+      server: {
+        host: process.env.SMTP_HOST || '::1',
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth:
+          process.env.SMTP_USER && process.env.SMTP_PASS
+            ? {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+              }
+            : undefined,
+      },
+      from: process.env.EMAIL_FROM || `no-reply@${process.env.NEXT_PUBLIC_APP_DOMAIN || 'example.com'}`,
+      maxAge: 15 * 60,
+      async sendVerificationRequest({ identifier, url, expires }) {
+        const email = identifier.toLowerCase().trim();
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            name: true,
+            emailVerified: true,
+          },
+        });
+
+        if (!existingUser?.emailVerified) {
+          return;
+        }
+
+        await sendNextAuthMagicLinkEmail({
+          userId: existingUser.id,
+          email,
+          name: existingUser.name,
+          url,
+          expires,
+        });
       },
     })
   );
@@ -134,29 +180,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
+    async signIn({ user, account, email }) {
+      if (account?.provider === 'nodemailer' && !email?.verificationRequest) {
+        const emailAddress = (user.email || '').toLowerCase().trim();
+        if (!emailAddress) {
+          return false;
+        }
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email: emailAddress },
+          select: {
+            emailVerified: true,
+          },
+        });
+
+        return Boolean(existingUser?.emailVerified);
+      }
+
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       // On initial sign-in, `user` is the object returned by authorize() or the adapter.
       if (user) {
         token.id = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id! },
-          select: { role: true, imageUrl: true, tokenVersion: true },
-        });
-        token.role = dbUser?.role ?? 'USER';
-        token.tokenVersion = dbUser?.tokenVersion ?? 0;
-        if (dbUser?.imageUrl) {
-          token.picture = dbUser.imageUrl;
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id! } });
+        const dbUserRecord = dbUser as (typeof dbUser & { tokenVersion?: number }) | null;
+        token.role = dbUserRecord?.role ?? 'USER';
+        token.tokenVersion = dbUserRecord?.tokenVersion ?? 0;
+        if (dbUserRecord?.imageUrl) {
+          token.picture = dbUserRecord.imageUrl;
         }
       }
 
       // On every subsequent request, verify tokenVersion hasn't been bumped
       // (password change/reset increments it to invalidate existing JWTs).
       if (!user && token.id && trigger !== 'signIn') {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { tokenVersion: true },
-        });
-        if (dbUser && dbUser.tokenVersion !== (token.tokenVersion ?? 0)) {
+        const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
+        const dbUserRecord = dbUser as (typeof dbUser & { tokenVersion?: number }) | null;
+        if (dbUserRecord && dbUserRecord.tokenVersion !== (token.tokenVersion ?? 0)) {
           // Token is stale — force re-authentication
           return { ...token, id: undefined, role: undefined };
         }

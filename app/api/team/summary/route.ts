@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const state = await fetchTeamDashboardState(userId, {
       forceSync,
-      activeClerkOrgId: orgId ?? null,
+      activeOrganizationId: orgId ?? null,
     });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {

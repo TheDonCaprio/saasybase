@@ -31,6 +31,7 @@ export type TeamDashboardInvite = {
 
 export type TeamDashboardOrganization = {
   id: string;
+  providerOrganizationId: string | null;
   clerkOrganizationId: string | null;
   name: string;
   slug: string;
@@ -162,6 +163,7 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
 
   return {
     id: record.id,
+    providerOrganizationId: record.clerkOrganizationId ?? null,
     clerkOrganizationId: record.clerkOrganizationId ?? null,
     name: record.name,
     slug: record.slug,
@@ -187,7 +189,12 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
 
 export async function fetchTeamDashboardState(
   userId: string,
-  options?: { forceSync?: boolean; activeClerkOrgId?: string | null }
+  options?: {
+    forceSync?: boolean;
+    activeOrganizationId?: string | null;
+    activeProviderOrganizationId?: string | null;
+    activeClerkOrgId?: string | null;
+  }
 ): Promise<TeamDashboardState> {
   // NOTE: forceSync previously called syncOrganizationEligibilityForUser which can
   // DELETE organizations. A simple page-load refresh should never be destructive.
@@ -195,13 +202,21 @@ export async function fetchTeamDashboardState(
   // forceSync now just ensures we re-read the latest access summary (no-op beyond
   // a fresh DB query), keeping the team page read-only.
 
-  const access = await getOrganizationAccessSummary(userId, options?.activeClerkOrgId ?? null);
+  const activeOrganizationId = options?.activeOrganizationId ?? options?.activeProviderOrganizationId ?? options?.activeClerkOrgId ?? null;
+
+  const access = await getOrganizationAccessSummary(userId, activeOrganizationId);
 
   let organization: OrganizationWithRelations | null = null;
   if (access.allowed) {
     const identifier = access.kind === 'OWNER'
-      ? (options?.activeClerkOrgId
-        ? { ownerUserId: userId, clerkOrganizationId: options.activeClerkOrgId }
+      ? (activeOrganizationId
+        ? {
+            ownerUserId: userId,
+            OR: [
+              { id: activeOrganizationId },
+              { clerkOrganizationId: activeOrganizationId },
+            ],
+          }
         : { ownerUserId: userId })
       : { id: access.membership.organizationId };
     organization = await prisma.organization.findFirst({

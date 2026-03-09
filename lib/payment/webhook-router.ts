@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from './service';
+import { PaymentProviderFactory } from './factory';
+import { getProviderConfig } from './provider-config';
 import { Logger } from '../logger';
 import { rateLimit, RATE_LIMITS, getClientIP } from '../rateLimit';
 import { createErrorResponse } from '../secure-errors';
@@ -14,6 +16,52 @@ export type WebhookProviderRouteConfig = {
 	getSecrets: () => string[];
 	createProvider: () => PaymentProvider;
 };
+
+const DEFAULT_WEBHOOK_SIGNATURE_HEADERS: Record<string, string> = {
+	stripe: 'stripe-signature',
+	paystack: 'x-paystack-signature',
+	paddle: 'paddle-signature',
+	razorpay: 'x-razorpay-signature',
+};
+
+export function createWebhookProviderConfig(providerKey: string): WebhookProviderRouteConfig {
+	const providerMetadata = getProviderConfig(providerKey);
+	if (!providerMetadata) {
+		throw new Error(`Unsupported webhook provider: ${providerKey}`);
+	}
+
+	const resolvedSignatureHeader =
+		PaymentProviderFactory.getProviderByName(providerKey)?.getWebhookSignatureHeader()
+		|| DEFAULT_WEBHOOK_SIGNATURE_HEADERS[providerKey]
+		|| 'x-webhook-signature';
+
+	return {
+		providerKey,
+		signatureHeader: resolvedSignatureHeader,
+		getSecrets: () => {
+			const primarySecret = process.env[providerMetadata.webhookSecretEnvVar] || '';
+			const fallbackSecret = providerMetadata.webhookUsesApiSecret
+				? process.env[`${providerKey.toUpperCase()}_SECRET_KEY`] || ''
+				: '';
+
+			return [primarySecret, fallbackSecret]
+				.flatMap((value) => value.split(','))
+				.map((value) => value.trim())
+				.filter(Boolean);
+		},
+		createProvider: () => {
+			const provider = PaymentProviderFactory.getProviderByName(providerKey);
+			if (!provider) {
+				throw new Error(`Provider ${providerKey} is not configured`);
+			}
+			return provider;
+		},
+	};
+}
+
+export function createWebhookProviderConfigs(providerKeys: string[]): WebhookProviderRouteConfig[] {
+	return providerKeys.map((providerKey) => createWebhookProviderConfig(providerKey));
+}
 
 export async function handleWebhookWithRouting(opts: {
 	req: NextRequest;

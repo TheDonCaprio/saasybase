@@ -64,7 +64,6 @@ export async function GET(req: Request) {
     whereClause.OR = [
       { id: filter },
       { externalSubscriptionId: filter },
-      { stripeSubscriptionId: filter },
       { userId: filter },
       { user: { email: filter } },
       { user: { name: filter } },
@@ -74,9 +73,6 @@ export async function GET(req: Request) {
       { payments: { some: { externalPaymentId: filter } } },
       { payments: { some: { externalSessionId: filter } } },
       { payments: { some: { externalRefundId: filter } } },
-      { payments: { some: { stripePaymentIntentId: filter } } },
-      { payments: { some: { stripeCheckoutSessionId: filter } } },
-      { payments: { some: { stripeRefundId: filter } } }
     ];
   }
 
@@ -317,18 +313,13 @@ export async function GET(req: Request) {
           couponCode: typeof latestPaymentRec.couponCode === 'string' ? latestPaymentRec.couponCode : null,
           currency: typeof latestPaymentRec.currency === 'string' ? latestPaymentRec.currency : 'usd',
           createdAt: makeDateIso(latestPaymentRec.createdAt),
-          stripePaymentIntentId: typeof latestPaymentRec.stripePaymentIntentId === 'string' ? latestPaymentRec.stripePaymentIntentId : null,
-          stripeCheckoutSessionId: typeof latestPaymentRec.stripeCheckoutSessionId === 'string' ? latestPaymentRec.stripeCheckoutSessionId : null,
           externalPaymentId: typeof latestPaymentRec.externalPaymentId === 'string' ? latestPaymentRec.externalPaymentId : null,
           externalSessionId: typeof latestPaymentRec.externalSessionId === 'string' ? latestPaymentRec.externalSessionId : null,
           externalRefundId: typeof latestPaymentRec.externalRefundId === 'string' ? latestPaymentRec.externalRefundId : null,
           status: typeof latestPaymentRec.status === 'string' ? latestPaymentRec.status : null,
-          stripeRefundId: typeof latestPaymentRec.stripeRefundId === 'string' ? latestPaymentRec.stripeRefundId : null,
           dashboardUrl: typeof latestPaymentRec.externalPaymentId === 'string'
             ? paymentService.getDashboardUrl('payment', latestPaymentRec.externalPaymentId)
-            : (typeof latestPaymentRec.stripePaymentIntentId === 'string'
-              ? paymentService.getDashboardUrl('payment', latestPaymentRec.stripePaymentIntentId)
-              : null),
+            : null,
           paymentProvider: typeof latestPaymentRec.paymentProvider === 'string' ? latestPaymentRec.paymentProvider : null
         };
       })() : null;
@@ -345,12 +336,9 @@ export async function GET(req: Request) {
         canceledAt: makeDateIso(rec?.canceledAt),
         createdAt: createdAtIso || new Date().toISOString(),
         externalSubscriptionId: typeof rec?.externalSubscriptionId === 'string' ? rec!.externalSubscriptionId as string : null,
-        stripeSubscriptionId: typeof rec?.stripeSubscriptionId === 'string' ? rec!.stripeSubscriptionId as string : null,
         dashboardUrl: typeof rec?.externalSubscriptionId === 'string'
           ? paymentService.getDashboardUrl('subscription', rec!.externalSubscriptionId as string)
-          : (typeof rec?.stripeSubscriptionId === 'string'
-            ? paymentService.getDashboardUrl('subscription', rec!.stripeSubscriptionId as string)
-            : null),
+          : null,
         paymentProvider: typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null,
         latestPayment
       };

@@ -18,9 +18,10 @@ interface Payment {
   status: string;
   createdAt: string;
   planName?: string;
-  stripePaymentIntentId?: string | null;
-  stripeInvoiceId?: string | null;
-  stripeCheckoutSessionId?: string | null;
+  paymentProvider?: string | null;
+  externalPaymentId?: string | null;
+  externalSessionId?: string | null;
+  externalRefundId?: string | null;
   dashboardUrl?: string | null;
 }
 
@@ -129,15 +130,17 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
                     <div className="text-xs text-neutral-500 mt-1">
                       {formatDate(payment.createdAt, { mode: settings.mode, timezone: settings.timezone })}
 
-                      {/* IDs shown under the date: payment id and first-available Stripe id */}
+                      {/* IDs shown under the date: payment id and first-available provider id */}
                       <div className="mt-2 text-[11px] text-neutral-400 font-mono truncate">
                         {payment.id}
                       </div>
                       {(() => {
-                        const stripeId = payment.stripePaymentIntentId ?? payment.stripeInvoiceId ?? payment.stripeCheckoutSessionId;
-                        if (!stripeId) return null;
+                        const providerId = payment.externalPaymentId
+                          ?? payment.externalSessionId
+                          ?? payment.externalRefundId;
+                        if (!providerId) return null;
                         return (
-                          <div className="mt-1 text-[11px] text-neutral-400 font-mono truncate">Provider ID: {stripeId}</div>
+                          <div className="mt-1 text-[11px] text-neutral-400 font-mono truncate">Provider ID: {providerId}</div>
                         );
                       })()}
                     </div>
@@ -145,7 +148,7 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
 
                   {/* Actions: full width on mobile, right aligned on desktop */}
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    {(payment.dashboardUrl || payment.stripePaymentIntentId || payment.stripeInvoiceId || payment.stripeCheckoutSessionId) && (
+                    {(payment.dashboardUrl || payment.externalPaymentId || payment.externalSessionId || payment.externalRefundId) && (
                       <a
                         href={payment.dashboardUrl || '#'}
                         target="_blank"

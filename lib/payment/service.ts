@@ -79,7 +79,7 @@ import {
 import { consumeCouponRedemptionFromMetadata as consumeCouponRedemptionFromMetadataExternal } from './coupon-redemption-consumption';
 import {
     resolveOrganizationContext as resolveOrganizationContextExternal,
-    resolveActiveClerkOrgIdFromMetadata,
+    resolveActiveProviderOrganizationIdFromMetadata,
 } from './organization-context';
 import {
     resolvePlanForOneTimeCheckout as resolvePlanForOneTimeCheckoutExternal,
@@ -170,7 +170,7 @@ export class PaymentService {
     }
 
     private async findPlanByPriceIdentifier(priceId: string, metadataPlanId?: string | null): Promise<Plan | null> {
-        const legacy = await prisma.plan.findFirst({ where: { OR: [{ externalPriceId: priceId }, { stripePriceId: priceId }] } });
+        const legacy = await prisma.plan.findFirst({ where: { externalPriceId: priceId } });
         if (legacy) return legacy;
 
         const plans = await prisma.plan.findMany({
@@ -221,11 +221,6 @@ export class PaymentService {
             // Restrict to the currently-active provider to avoid misattribution.
             { externalCustomerId: customerId, paymentProvider: this.providerKey },
         ];
-
-        // `stripeCustomerId` is Stripe-specific; avoid matching it for other providers.
-        if (this.providerKey === 'stripe') {
-            legacyOr.push({ stripeCustomerId: customerId });
-        }
 
         const legacy = await prisma.user.findFirst({
             where: {
@@ -420,8 +415,8 @@ export class PaymentService {
         }
 
         // Resolve Organization Context
-        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(session.metadata);
-        const organizationContext = await this.resolveOrganizationContext(userId, activeClerkOrgId);
+        const activeOrganizationId = resolveActiveProviderOrganizationIdFromMetadata(session.metadata);
+        const organizationContext = await this.resolveOrganizationContext(userId, activeOrganizationId);
 
         const {
             effectiveMode,
@@ -539,7 +534,7 @@ export class PaymentService {
             }
         }
 
-        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(session.metadata);
+        const activeOrganizationId = resolveActiveProviderOrganizationIdFromMetadata(session.metadata);
 
         const didHandleRenewalStyleCharge = await tryRecordPaystackRenewalStyleChargeExternal({
             session,
@@ -548,7 +543,7 @@ export class PaymentService {
             providerKey: this.providerKey,
             finalPaymentIntent,
             amountCents,
-            ...this.getPendingSubscriptionRenewalDeps(activeClerkOrgId),
+            ...this.getPendingSubscriptionRenewalDeps(activeOrganizationId),
         });
         if (didHandleRenewalStyleCharge) {
             await syncOrganizationEligibilityForUser(userId);
@@ -562,14 +557,14 @@ export class PaymentService {
             providerKey: this.providerKey,
             finalPaymentIntent,
             amountCents,
-            ...this.getPendingSubscriptionFallbackDeps(activeClerkOrgId),
+            ...this.getPendingSubscriptionFallbackDeps(activeOrganizationId),
         });
     }
 
-    private getPendingSubscriptionRenewalDeps(activeClerkOrgId?: string | null) {
+    private getPendingSubscriptionRenewalDeps(activeOrganizationId?: string | null) {
         return {
             ...this.getMergeIdMapDeps(),
-            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
+            ...this.getOrganizationResolutionDeps(activeOrganizationId),
             refreshSubscriptionExpiryFromProvider: this.refreshSubscriptionExpiryFromProvider.bind(this),
             markSubscriptionActive: this.markSubscriptionActive.bind(this),
             findRecentNotificationByExactMessage: this.findRecentNotificationByExactMessage.bind(this),
@@ -577,12 +572,12 @@ export class PaymentService {
         };
     }
 
-    private getPendingSubscriptionFallbackDeps(activeClerkOrgId?: string | null) {
+    private getPendingSubscriptionFallbackDeps(activeOrganizationId?: string | null) {
         return {
             ...this.getMergeIdMapDeps(),
             consumeCouponRedemptionFromMetadata: this.consumeCouponRedemptionFromMetadata.bind(this),
             findRecentCancelledRecurringSubscription: this.findRecentCancelledRecurringSubscription.bind(this),
-            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
+            ...this.getOrganizationResolutionDeps(activeOrganizationId),
             syncOrganizationEligibilityForUser,
             ...this.getSubscriptionLookupDeps(),
             getPendingSubscriptionLookbackDate: this.getPendingSubscriptionLookbackDate.bind(this),
@@ -742,15 +737,15 @@ export class PaymentService {
         };
     }
 
-    private getOrganizationResolutionDeps(activeClerkOrgId?: string | null) {
+    private getOrganizationResolutionDeps(activeOrganizationId?: string | null) {
         return {
-            resolveOrganizationContext: (userId: string, explicitActiveClerkOrgId?: string | null) =>
-                this.resolveOrganizationContext(userId, explicitActiveClerkOrgId ?? activeClerkOrgId ?? null),
+            resolveOrganizationContext: (userId: string, explicitActiveOrganizationId?: string | null) =>
+                this.resolveOrganizationContext(userId, explicitActiveOrganizationId ?? activeOrganizationId ?? null),
         };
     }
 
-    private async resolveOrganizationContext(userId: string, activeClerkOrgId?: string | null) {
-        return resolveOrganizationContextExternal(userId, activeClerkOrgId ?? null);
+    private async resolveOrganizationContext(userId: string, activeOrganizationId?: string | null) {
+        return resolveOrganizationContextExternal(userId, activeOrganizationId ?? null);
     }
 
     private async findRecentNotificationByExactMessage(
@@ -1073,19 +1068,19 @@ export class PaymentService {
     }
 
     private async handleInvoicePaid(invoice: StandardizedInvoice) {
-        const activeClerkOrgId = resolveActiveClerkOrgIdFromMetadata(invoice.metadata);
+        const activeOrganizationId = resolveActiveProviderOrganizationIdFromMetadata(invoice.metadata);
         await processInvoicePaidEventExternal<SubscriptionWithPlan>({
             invoice,
-            ...this.getInvoicePaidEventDeps(activeClerkOrgId),
+            ...this.getInvoicePaidEventDeps(activeOrganizationId),
         });
     }
 
-    private getInvoicePaidEventDeps(activeClerkOrgId?: string | null) {
+    private getInvoicePaidEventDeps(activeOrganizationId?: string | null) {
         return {
             ...this.getProviderIdentityDeps(),
             ...this.getSubscriptionLookupDeps(),
             ensureProviderBackedSubscription: this.ensureProviderBackedSubscription.bind(this),
-            ...this.getOrganizationResolutionDeps(activeClerkOrgId),
+            ...this.getOrganizationResolutionDeps(activeOrganizationId),
             shouldClearPaidTokensOnRenewal: shouldClearPaidTokensOnRenewalExternal,
             refreshSubscriptionExpiryFromProvider: this.refreshSubscriptionExpiryFromProvider.bind(this),
             findRecentNotificationByTitles: this.findRecentNotificationByTitles.bind(this),

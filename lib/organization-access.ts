@@ -1,10 +1,10 @@
-import { authService } from '@/lib/auth-provider';
 import type { AuthOrganization } from '@/lib/auth-provider';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { upsertOrganization, syncOrganizationMembership } from './teams';
 import { getPaidTokensNaturalExpiryGraceHours } from './settings';
+import { workspaceService } from './workspace-service';
 
 const TEAM_SUB_STATUSES = ['ACTIVE', 'PENDING', 'CANCELLED', 'PAST_DUE'] as const;
 const TEAM_SUB_STATUSES_STRICT = ['ACTIVE', 'PENDING', 'PAST_DUE'] as const;
@@ -108,12 +108,12 @@ export async function getActiveTeamSubscription(
   });
 }
 
-export async function getOrganizationAccessSummary(userId: string, activeClerkOrgId?: string | null): Promise<TeamSubscriptionStatus> {
-  const targetedOrgCondition = activeClerkOrgId
+export async function getOrganizationAccessSummary(userId: string, activeOrganizationId?: string | null): Promise<TeamSubscriptionStatus> {
+  const targetedOrgCondition = activeOrganizationId
     ? {
         OR: [
-          { id: activeClerkOrgId },
-          { clerkOrganizationId: activeClerkOrgId },
+          { id: activeOrganizationId },
+          { clerkOrganizationId: activeOrganizationId },
         ],
       }
     : {};
@@ -121,14 +121,14 @@ export async function getOrganizationAccessSummary(userId: string, activeClerkOr
   // First, check if they are an OWNER directly, factoring in the targeted org context if requested.
   const subscription = await getActiveTeamSubscription(userId, { includeGrace: true });
   if (subscription && subscription.plan) {
-    if (activeClerkOrgId) {
+    if (activeOrganizationId) {
       // Confirm the requested active organization is actually the one they own
       const ownedOrg = await prisma.organization.findFirst({
         where: {
           ownerUserId: userId,
           OR: [
-            { id: activeClerkOrgId },
-            { clerkOrganizationId: activeClerkOrgId },
+            { id: activeOrganizationId },
+            { clerkOrganizationId: activeOrganizationId },
           ],
         }
       });
@@ -209,8 +209,8 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
   const uniqueOrgIds = Array.from(new Set(orgIds.filter((id) => typeof id === 'string' && id.length > 0)));
   if (uniqueOrgIds.length === 0) return;
 
-  const providerName = authService.providerName;
-  const shouldDeleteProviderOrganizations = providerName === 'clerk';
+  const providerName = workspaceService.providerName;
+  const shouldDeleteProviderOrganizations = workspaceService.usesExternalProviderOrganizations;
 
   const orgs = await prisma.organization.findMany({
     where: { id: { in: uniqueOrgIds } },
@@ -222,7 +222,7 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
     orgs.map(async (org) => {
       if (!shouldDeleteProviderOrganizations || !org.clerkOrganizationId) return;
       try {
-        await authService.deleteOrganization(org.clerkOrganizationId);
+        await workspaceService.deleteProviderOrganization(org.clerkOrganizationId);
         Logger.info('Deleted auth provider organization after plan change', {
           userId: context?.userId ?? org.ownerUserId,
           clerkOrganizationId: org.clerkOrganizationId,
@@ -457,7 +457,7 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
       if (!o?.id) continue;
       if (deleted >= maxToDelete) break;
       try {
-        await authService.deleteOrganization(o.id);
+        await workspaceService.deleteProviderOrganization(o.id);
         deleted += 1;
         Logger.info('attemptCleanupClerkOrgs: deleted org', { userId, clerkOrganizationId: o.id });
       } catch (err: unknown) {
@@ -473,7 +473,7 @@ async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
 
 async function organizationExistsInClerk(clerkOrganizationId: string): Promise<boolean> {
   try {
-    const org = await authService.getOrganization(clerkOrganizationId);
+    const org = await workspaceService.getProviderOrganization(clerkOrganizationId);
     return !!org;
   } catch (err: unknown) {
     if (isClerkNotFoundError(err)) {
@@ -498,7 +498,7 @@ async function repopulateClerkMembershipsFromLocal(clerkOrganizationId: string, 
       .filter((membership) => membership.userId && membership.userId !== ownerUserId)
       .map(async (membership) => {
         try {
-          await authService.createOrganizationMembership({
+          await workspaceService.createProviderMembership({
             organizationId: clerkOrganizationId,
             userId: membership.userId!,
             role: mapRoleToClerk(membership.role),
@@ -513,7 +513,7 @@ async function repopulateClerkMembershipsFromLocal(clerkOrganizationId: string, 
             const raw = JSON.parse(JSON.stringify(err)) as { errors?: ClerkErrorEntry[] } | null;
             const roleProblem = Array.isArray(raw?.errors) && raw.errors.some((entry) => entry?.meta?.paramName === 'role' || String(entry?.message ?? '').toLowerCase().includes('role'));
             if (roleProblem) {
-              await authService.createOrganizationMembership({
+              await workspaceService.createProviderMembership({
                 organizationId: clerkOrganizationId,
                 userId: membership.userId!,
                 role: 'org:member',
@@ -546,7 +546,7 @@ async function recreateClerkOrganization(params: {
   while (attempt < 5 && !createdOrganization) {
     const slug = attempt === 0 ? slugSeed : `${slugSeed}-${attempt}`;
     try {
-      createdOrganization = await authService.createOrganization({
+      createdOrganization = await workspaceService.createProviderOrganization({
         name: params.existing.name,
         slug,
         createdByUserId: params.userId,
@@ -637,7 +637,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     throw new Error('Team plan required to provision an organization');
   }
 
-  const providerName = authService.providerName;
+  const providerName = workspaceService.providerName;
   const isNextAuthProvider = providerName === 'nextauth';
   const plan = access.plan;
   const desiredSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
@@ -743,7 +743,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
 
         if (existing.clerkOrganizationId) {
           try {
-            await authService.updateOrganization(existing.clerkOrganizationId, {
+            await workspaceService.updateProviderOrganization(existing.clerkOrganizationId, {
               maxAllowedMemberships: desiredSeatLimit ?? undefined,
               publicMetadata: {
                 planId: plan.id,
@@ -800,7 +800,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
   while (attempt < 5 && !createdOrganization) {
     const slug = attempt === 0 ? slugBase : `${slugBase}-${attempt}`;
     try {
-      createdOrganization = await authService.createOrganization({
+      createdOrganization = await workspaceService.createProviderOrganization({
         name: baseName,
         slug,
         createdByUserId: userId,

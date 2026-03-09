@@ -91,7 +91,7 @@ export function ToastContainer() {
         <div
           key={toast.id}
           className={`max-w-sm rounded border p-4 shadow-lg animate-in slide-in-from-right-full duration-300 ${toast.type === 'success'
-            ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-900/90 dark:border-emerald-700 dark:text-emerald-100'
+            ? 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-600 dark:border-emerald-500 dark:text-white'
             : toast.type === 'error'
               ? 'bg-red-50 border-red-300 text-red-900 dark:bg-red-900/90 dark:border-red-700 dark:text-red-100'
               : 'bg-blue-600 border-blue-700 text-white dark:bg-blue-900/90 dark:border-blue-700 dark:text-blue-100'

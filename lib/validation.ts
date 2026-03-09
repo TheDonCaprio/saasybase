@@ -45,7 +45,7 @@ export const commonSchemas = {
   ]),
 };
 
-const stripePriceIdCreateSchema = z
+const externalPriceIdCreateSchema = z
   .union([z.string().trim().min(3).max(200), z.literal('')])
   .optional()
   .transform(value => {
@@ -55,7 +55,7 @@ const stripePriceIdCreateSchema = z
     return trimmed.length > 0 ? trimmed : undefined;
   });
 
-const stripePriceIdUpdateSchema = z
+const externalPriceIdUpdateSchema = z
   .union([z.string().trim().min(3).max(200), z.literal(''), z.null()])
   .optional()
   .transform(value => {
@@ -131,7 +131,8 @@ export const apiSchemas = {
     priceCents: z.number().int().min(0).max(500000),
     active: z.boolean().default(true),
     sortOrder: z.number().int().min(-1000).max(10000).default(0),
-    stripePriceId: stripePriceIdCreateSchema,
+    externalPriceId: externalPriceIdCreateSchema,
+    stripePriceId: externalPriceIdCreateSchema,
     autoRenew: z.boolean().default(false),
     recurringInterval: commonSchemas.planRecurringInterval.default('month'),
     recurringIntervalCount: z.number().int().min(1).max(365).default(1),
@@ -149,7 +150,8 @@ export const apiSchemas = {
     priceCents: z.number().int().min(0).max(500000).optional(),
     active: z.boolean().optional(),
     sortOrder: z.number().int().min(-1000).max(10000).optional(),
-    stripePriceId: stripePriceIdUpdateSchema,
+    externalPriceId: externalPriceIdUpdateSchema,
+    stripePriceId: externalPriceIdUpdateSchema,
     autoRenew: z.boolean().optional(),
     recurringInterval: commonSchemas.planRecurringInterval.optional(),
     recurringIntervalCount: z.number().int().min(1).max(365).optional(),

@@ -19,12 +19,12 @@ export async function processOneTimeRecurringTopup(params: {
     finalPaymentIntent?: string;
     providerKey: string;
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
-    resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<OrganizationPlanContext | null>;
+    resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<OrganizationPlanContext | null>;
 }): Promise<void> {
     const tokensAdded = params.planToUse.tokenLimit || 0;
     const isTeamPlan = params.planToUse.supportsOrganizations === true;
     const isPlanSwitchFallback = Boolean(params.session.metadata?.prorationFallbackReason);
-    const activeClerkOrgId = params.session.metadata?.activeOrganizationId
+    const activeOrganizationId = params.session.metadata?.activeOrganizationId
         || params.session.metadata?.organizationId
         || params.session.metadata?.activeProviderOrganizationId
         || params.session.metadata?.activeClerkOrgId
@@ -32,7 +32,7 @@ export async function processOneTimeRecurringTopup(params: {
         || params.session.metadata?.orgId
         || null;
     const organizationContext = tokensAdded > 0
-        ? await params.resolveOrganizationContext(params.userId, activeClerkOrgId)
+        ? await params.resolveOrganizationContext(params.userId, activeOrganizationId)
         : null;
     const workspaceTopupContext = isTeamPlan && organizationContext && organizationContext.role === 'OWNER'
         ? organizationContext

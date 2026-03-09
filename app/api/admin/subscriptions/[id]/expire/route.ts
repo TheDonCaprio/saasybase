@@ -42,6 +42,9 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
 			return NextResponse.json({ ok: true, alreadyExpired: true });
 		}
 
+		const subscriptionProviderName = subscription.paymentProvider ?? null;
+		const providerSubscriptionId = subscription.externalSubscriptionId ?? null;
+
 		const now = new Date();
 		const resolvedExpiresAt = subscription.expiresAt && subscription.expiresAt <= now ? subscription.expiresAt : new Date(now.getTime());
 		const resolvedCanceledAt = subscription.canceledAt ?? new Date(now.getTime());
@@ -110,10 +113,11 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
 			targetType: 'subscription',
 					details: {
 									subscriptionId: subscription.id,
+									providerSubscriptionId,
+									providerName: subscriptionProviderName,
 									previousStatus: subscription.status,
 									previousExpiresAt: subscription.expiresAt ? subscription.expiresAt.toISOString() : null,
 									previousCanceledAt: subscription.canceledAt ? subscription.canceledAt.toISOString() : null,
-									stripeSubscriptionId: subscription.stripeSubscriptionId ?? null,
 									planId: subscription.planId,
 									clearPaidTokens: clearPaidTokens
 								}

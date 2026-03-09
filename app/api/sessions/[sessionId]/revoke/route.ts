@@ -9,6 +9,9 @@ export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessi
 	if (!userId) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
+	if (!authService.supportsFeature('session_management')) {
+		return NextResponse.json({ error: 'Session revocation is not supported by the active auth provider' }, { status: 501 });
+	}
 
 	const { sessionId } = params;
 

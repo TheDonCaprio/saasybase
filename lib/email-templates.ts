@@ -1700,6 +1700,351 @@ The {{siteName}} Team`,
         supportEmail: 'Support email address',
         siteLogo: 'URL of the site logo image displayed at the top of the email'
       })
+    },
+    {
+      key: 'email_change_confirmation',
+      name: 'Email Change Confirmation',
+      description: 'Sent when a signed-in user requests to change their email address',
+      subject: '{{siteName}}: Confirm Your New Email Address',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
+    .content { background: #ffffff; padding: 36px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .button { display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #1d4ed8; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="card">
+      <div class="header">
+        <h1>📬 Confirm Your New Email</h1>
+        <p>Finish updating the email address on your account</p>
+      </div>
+      <div class="content">
+        <p>Hi {{firstName}},</p>
+        <p>We received a request to change your {{siteName}} email from <strong>{{currentEmail}}</strong> to <strong>{{userEmail}}</strong>.</p>
+        <div class="cta-section">
+          <a href="{{actionUrl}}" class="button">Confirm New Email</a>
+        </div>
+        <div class="notice">
+          <strong>⏱ This link expires in 24 hours.</strong> Your current email stays active until you confirm this change.
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 13px; color: #2563eb;">{{actionUrl}}</p>
+        <p style="margin-bottom: 0;">If you didn’t request this change, you can ignore this message and keep using your current email.</p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{siteName}}. All rights reserved.</p>
+        <p>You received this email because an email change was requested for your account.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+We received a request to change your {{siteName}} email from {{currentEmail}} to {{userEmail}}.
+
+Confirm your new email address here:
+{{actionUrl}}
+
+This link expires in 24 hours. Your current email stays active until you confirm.
+
+If you didn't request this change, you can ignore this email.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        currentEmail: 'Current email address on file',
+        userEmail: 'New email address',
+        actionUrl: 'Email confirmation link',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'magic_link',
+      name: 'Magic Link Sign-In',
+      description: 'Sent when a user requests a passwordless sign-in link',
+      subject: '{{siteName}}: Your Secure Sign-In Link',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
+    .content { background: #ffffff; padding: 36px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .button { display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .notice { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #5b21b6; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="card">
+      <div class="header">
+        <h1>✨ Sign In Securely</h1>
+        <p>Your passwordless sign-in link is ready</p>
+      </div>
+      <div class="content">
+        <p>Hi {{firstName}},</p>
+        <p>Use the secure button below to sign in to <strong>{{siteName}}</strong> with <strong>{{userEmail}}</strong>.</p>
+        <div class="cta-section">
+          <a href="{{actionUrl}}" class="button">Sign In to {{siteName}}</a>
+        </div>
+        <div class="notice">
+          <strong>⏱ This link expires soon.</strong> If you didn't request this sign-in email, you can safely ignore it.
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 13px; color: #7c3aed;">{{actionUrl}}</p>
+        <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{siteName}}. All rights reserved.</p>
+        <p>You received this email because a passwordless sign-in link was requested for your account.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Use this secure sign-in link to access your {{siteName}} account ({{userEmail}}):
+
+{{actionUrl}}
+
+This link expires soon. If you didn't request this sign-in email, you can safely ignore it.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        userEmail: 'User email address',
+        actionUrl: 'Magic-link sign-in URL',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'payment_failed',
+      name: 'Payment Failed',
+      description: 'Sent when a one-time payment or invoice payment fails',
+      subject: '{{siteName}}: Payment Failed',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); color: white; padding: 40px 36px; text-align: center; }
+    .content { background: #ffffff; padding: 36px; }
+    .button { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .notice { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #9a3412; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>⚠️ Payment Failed</h1><p>Action may be required to keep your account active</p></div><div class="content"><p>Hi {{firstName}},</p><p>We couldn't process your recent payment for <strong>{{siteName}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{errorMessage}}</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Update Billing</a></div><p>Please update your payment method to avoid service interruption.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+We couldn't process your recent payment for {{siteName}}.
+
+Reason: {{errorMessage}}
+
+Update billing: {{billingUrl}}
+
+Please update your payment method to avoid service interruption.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        errorMessage: 'Why the payment failed',
+        billingUrl: 'Billing page URL',
+        siteName: 'Site name',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'invoice_payment_failed',
+      name: 'Invoice Payment Failed',
+      description: 'Sent when a subscription invoice payment fails',
+      subject: '{{siteName}}: Subscription Payment Failed',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: white; padding: 40px 36px; text-align: center; }
+    .content { background: #ffffff; padding: 36px; }
+    .button { display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .notice { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #991b1b; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>💳 Subscription Payment Failed</h1><p>Your subscription is waiting for payment</p></div><div class="content"><p>Hi {{firstName}},</p><p>We were unable to process your latest subscription payment for <strong>{{siteName}}</strong>.</p><div class="notice">Update your payment method to restore smooth renewal and avoid losing access.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Manage Billing</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+We were unable to process your latest subscription payment for {{siteName}}.
+
+Manage billing: {{billingUrl}}
+
+Please update your payment method to avoid service interruption.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        billingUrl: 'Billing page URL',
+        siteName: 'Site name',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'refund_processed',
+      name: 'Refund Processed',
+      description: 'Sent when a refund has been completed',
+      subject: '{{siteName}}: Refund Processed',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; padding: 40px 36px; text-align: center; }
+    .content { background: #ffffff; padding: 36px; }
+    .notice { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #065f46; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>💸 Refund Processed</h1><p>Your refund has been completed</p></div><div class="content"><p>Hi {{firstName}},</p><p>We've processed your refund of <strong>{{amount}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{reason}}</div><p>The funds may take a few business days to appear depending on your bank or payment provider.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+We've processed your refund of {{amount}}.
+
+Reason: {{reason}}
+
+Funds may take a few business days to appear depending on your bank or payment provider.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        amount: 'Refund amount',
+        reason: 'Refund reason',
+        siteName: 'Site name',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'subscription_ended',
+      name: 'Subscription Ended',
+      description: 'Sent when a scheduled subscription reaches its end date',
+      subject: '{{siteName}}: Subscription Ended',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #64748b 0%, #334155 100%); color: white; padding: 40px 36px; text-align: center; }
+    .content { background: #ffffff; padding: 36px; }
+    .button { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .cta-section { margin: 28px 0; text-align: center; }
+    .notice { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #334155; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>📅 Subscription Ended</h1><p>Your plan has ended as scheduled</p></div><div class="content"><p>Hi {{firstName}},</p><p>Your <strong>{{planName}}</strong> subscription has ended as scheduled.</p><div class="notice">You can renew or choose a new plan whenever you're ready.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">View Plans</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Your {{planName}} subscription has ended as scheduled.
+
+View plans: {{billingUrl}}
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User first name',
+        planName: 'Subscription plan name',
+        billingUrl: 'Billing or pricing page URL',
+        siteName: 'Site name',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
     }
   ];
 }

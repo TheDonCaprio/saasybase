@@ -75,6 +75,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 	const from = process.env.EMAIL_FROM || `no-reply@${(process.env.NEXT_PUBLIC_APP_DOMAIN || 'example.com')}`;
 	let status: 'SENT' | 'FAILED' = 'SENT';
 	let errMsg: string | null = null;
+	const fallbackSubject = opts.subject || opts.templateKey || opts.template || 'Notification';
 
 	// Try to use template if templateKey is provided
 	let subject = opts.subject;
@@ -168,7 +169,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 		if (errMsg && errMsg.includes('Greeting never received') && (process.env.SMTP_HOST === '127.0.0.1' || process.env.SMTP_HOST === 'localhost')) {
 			try {
 				const alt = nodemailer.createTransport({ host: '::1', port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 1025, secure: false });
-				await alt.sendMail({ from, to: opts.to, subject: opts.subject, text: opts.text, html: opts.html });
+				await alt.sendMail({ from, to: opts.to, subject: subject ?? fallbackSubject, text, html });
 				status = 'SENT';
 				errMsg = null;
 			} catch (e2: unknown) {
@@ -198,7 +199,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 		const data: Record<string, unknown> = {
 				userId: persistedUserId,
 				to: opts.to,
-				subject,
+				subject: subject ?? fallbackSubject,
 				template: opts.templateKey || opts.template,
 				status,
 				error: errMsg

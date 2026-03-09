@@ -94,9 +94,7 @@ export function PaymentActions({
   const isRefundDisabled = loading || !canRefund;
   const shouldShowReceipt = showReceiptButton && payment.status === 'REFUNDED';
   const iconOnly = refundButtonVariant === 'icon';
-  const hasProviderSubscription = Boolean(
-    payment.subscription?.stripeSubscriptionId || payment.subscription?.externalSubscriptionId
-  );
+  const hasProviderSubscription = Boolean(payment.subscription?.externalSubscriptionId);
 
   const handleDownloadRefundReceipt = async (paymentId: string) => {
     setDownloadingReceipt(paymentId);
@@ -176,7 +174,7 @@ export function PaymentActions({
         hasActiveSubscription={!!payment.subscription}
         subscriptionPlanAutoRenew={payment.subscription?.plan?.autoRenew ?? null}
         subscriptionExpiresAt={payment.subscription?.expiresAt ?? null}
-        hasStripeSubscription={hasProviderSubscription}
+        hasProviderSubscription={hasProviderSubscription}
       />
     </>
   );

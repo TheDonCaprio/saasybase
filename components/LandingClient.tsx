@@ -1360,7 +1360,16 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
 
           <h1 className="lp-hero-h1">
             Don't re-invent the wheel,<br />
-            <span style={{ background: 'linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span
+              style={{
+                backgroundImage: 'linear-gradient(92deg, rgb(161 29 179) 0%, rgb(251, 113, 133) 18%, rgb(2 167 250) 38%, rgb(16 155 195) 52%, rgb(167 8 230) 68%, rgb(180 153 14) 82%, rgb(139, 92, 246) 100%)',
+                backgroundSize: '140% 140%',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 10px 30px rgba(139,92,246,0.12)',
+              }}
+            >
               launch your SaaS this weekend.
             </span>
           </h1>

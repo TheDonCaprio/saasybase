@@ -12,7 +12,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { SessionProvider, signIn, signOut } from 'next-auth/react';
+import { validateAndFormatPersonName } from '@/lib/name-validation';
 
 // ---------------------------------------------------------------------------
 // Shared UI helpers
@@ -34,11 +36,179 @@ function SuccessAlert({ message }: { message: string }) {
   );
 }
 
+function InfoAlert({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
+      {message}
+    </div>
+  );
+}
+
+function ButtonIconWrap({ children }: { children: React.ReactNode }) {
+  return <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center">{children}</span>;
+}
+
+function MagicLinkIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M3.333 6.667 10 11.667l6.667-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3.333" y="5" width="13.334" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.25-.96 2.3-2.04 3.01l3.3 2.56c1.92-1.77 3.04-4.37 3.04-7.46 0-.71-.06-1.39-.19-2.06H12Z" />
+      <path fill="#34A853" d="M12 22c2.75 0 5.05-.91 6.73-2.47l-3.3-2.56c-.91.61-2.08.98-3.43.98-2.64 0-4.88-1.78-5.68-4.18l-3.41 2.63A10 10 0 0 0 12 22Z" />
+      <path fill="#4A90E2" d="M6.32 13.77A6 6 0 0 1 6 12c0-.61.11-1.2.32-1.77L2.91 7.6A10 10 0 0 0 2 12c0 1.61.39 3.13 1.09 4.4l3.23-2.63Z" />
+      <path fill="#FBBC05" d="M12 6.05c1.5 0 2.85.52 3.91 1.54l2.93-2.93C17.04 2.98 14.75 2 12 2a10 10 0 0 0-8.91 5.6l3.41 2.63C7.12 7.83 9.36 6.05 12 6.05Z" />
+    </svg>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.41-4.04-1.41-.55-1.38-1.33-1.75-1.33-1.75-1.09-.75.08-.73.08-.73 1.2.09 1.83 1.22 1.83 1.22 1.07 1.83 2.81 1.3 3.49.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.32-5.47-5.87 0-1.3.47-2.37 1.22-3.2-.12-.3-.53-1.52.12-3.16 0 0 1-.32 3.3 1.22a11.5 11.5 0 0 1 6 0c2.3-1.54 3.3-1.22 3.3-1.22.65 1.64.24 2.86.12 3.16.76.83 1.22 1.9 1.22 3.2 0 4.56-2.81 5.56-5.49 5.86.43.37.82 1.1.82 2.23v3.3c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z" />
+    </svg>
+  );
+}
+
 const inputCx =
   'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 
 const primaryBtnCx =
   'w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+
+type AuthModalMode = 'signin' | 'signup';
+
+function AuthModalShell({
+  open,
+  mode,
+  onClose,
+  onSwitch,
+}: {
+  open: boolean;
+  mode: AuthModalMode;
+  onClose: () => void;
+  onSwitch: (mode: AuthModalMode) => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [footerNotice, setFooterNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setFooterNotice(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setFooterNotice(null);
+  }, [mode]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open || !mounted) return null;
+
+  const isSignIn = mode === 'signin';
+
+  return createPortal(
+    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]" onClick={onClose}>
+      <div
+        data-auth-modal-root="true"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        onClick={(event) => event.stopPropagation()}
+        className="relative max-h-[86vh] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/20 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/50"
+      >
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-200 bg-white/95 px-6 pb-4 pt-5 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+          <div className="space-y-1">
+            <h2 id="auth-modal-title" className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+              {isSignIn ? 'Sign in to your account' : 'Create your account'}
+            </h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {isSignIn ? 'Access your workspace, billing, and account settings.' : 'Create an account without leaving this page.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close auth dialog"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          {isSignIn ? (
+            <AuthSignIn fallbackRedirectUrl="/dashboard" forceRedirectUrl="/dashboard" onMagicLinkSentChange={setFooterNotice} />
+          ) : (
+            <AuthSignUp fallbackRedirectUrl="/dashboard/onboarding" forceRedirectUrl="/dashboard/onboarding" />
+          )}
+        </div>
+
+        <div className="border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-center text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-neutral-400">
+          {footerNotice && (
+            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-left text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+              {footerNotice}
+            </div>
+          )}
+          {isSignIn ? (
+            <>
+              Don&apos;t have an account?{' '}
+              <button
+                type="button"
+                onClick={() => onSwitch('signup')}
+                className="font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+              >
+                Create one
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => onSwitch('signin')}
+                className="font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+              >
+                Sign in
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 // ---------------------------------------------------------------------------
 // AuthProvider — wraps SessionProvider
@@ -58,7 +228,7 @@ export function AuthProvider({
 // AuthSignIn — with forgot-password & reset-password modes
 // ---------------------------------------------------------------------------
 
-type SignInMode = 'sign-in' | 'forgot-password' | 'reset-password';
+type SignInMode = 'sign-in' | 'forgot-password' | 'reset-password' | 'magic-link';
 
 export function AuthSignIn(props: {
   routing?: string;
@@ -67,6 +237,7 @@ export function AuthSignIn(props: {
   fallbackRedirectUrl?: string;
   forceRedirectUrl?: string;
   signUpUrl?: string;
+  onMagicLinkSentChange?: (message: string | null) => void;
   [key: string]: unknown;
 }) {
   const redirectUrl = props.forceRedirectUrl || props.fallbackRedirectUrl || '/dashboard';
@@ -90,6 +261,10 @@ export function AuthSignIn(props: {
     return <ForgotPasswordForm onBack={() => setMode('sign-in')} />;
   }
 
+  if (mode === 'magic-link') {
+    return <MagicLinkForm redirectUrl={redirectUrl} onBack={() => setMode('sign-in')} onSentChange={props.onMagicLinkSentChange} />;
+  }
+
   if (mode === 'reset-password') {
     return (
       <ResetPasswordForm
@@ -101,7 +276,15 @@ export function AuthSignIn(props: {
     );
   }
 
-  return <SignInForm redirectUrl={redirectUrl} signUpUrl={props.signUpUrl} onForgotPassword={() => setMode('forgot-password')} />;
+  return (
+    <SignInForm
+      redirectUrl={redirectUrl}
+      signUpUrl={props.signUpUrl}
+      onForgotPassword={() => setMode('forgot-password')}
+      onUseMagicLink={() => setMode('magic-link')}
+      onMagicLinkSentChange={props.onMagicLinkSentChange}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -112,28 +295,94 @@ function SignInForm({
   redirectUrl,
   signUpUrl,
   onForgotPassword,
+  onUseMagicLink,
+  onMagicLinkSentChange,
 }: {
   redirectUrl: string;
   signUpUrl?: string;
   onForgotPassword: () => void;
+  onUseMagicLink: () => void;
+  onMagicLinkSentChange?: (message: string | null) => void;
 }) {
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState<{ tone: 'info' | 'success'; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  useEffect(() => {
+    onMagicLinkSentChange?.(null);
+
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const verification = params.get('verification');
+    const errorParam = params.get('error');
+
+    if (verification === 'success') {
+      setNotice({ tone: 'success', message: 'Your email has been verified. Please sign in to continue.' });
+      return;
+    }
+
+    if (verification === 'check-email') {
+      setNotice({
+        tone: 'info',
+        message: 'Check your inbox for a verification link, then come back here to sign in.',
+      });
+      return;
+    }
+
+    if (errorParam === 'expired-verification-link') {
+      setNotice({
+        tone: 'info',
+        message: 'That verification link has expired. Sign in to resend a fresh verification email.',
+      });
+      return;
+    }
+
+    if (errorParam === 'invalid-verification-link') {
+      setError('That verification link is invalid. Please request a new verification email.');
+      return;
+    }
+
+    if (errorParam === 'verification-failed') {
+      setError('We could not verify your email. Please try again or request a new verification email.');
+    }
+  }, [onMagicLinkSentChange]);
 
   return (
     <div className="w-full max-w-sm mx-auto space-y-4">
+      {notice && (notice.tone === 'success' ? <SuccessAlert message={notice.message} /> : <InfoAlert message={notice.message} />)}
       {error && <ErrorAlert message={error} />}
 
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           setError('');
+          setPendingVerificationEmail('');
           setLoading(true);
           const form = e.currentTarget;
           const email = (form.elements.namedItem('email') as HTMLInputElement).value;
           const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
           try {
+            const preflight = await fetch('/api/auth/login-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            });
+
+            const preflightData = await preflight.json().catch(() => null);
+
+            if (!preflight.ok) {
+              if (preflightData?.code === 'EMAIL_NOT_VERIFIED') {
+                setPendingVerificationEmail(email);
+              }
+              setError(preflightData?.error || 'Invalid email or password. Please try again.');
+              setLoading(false);
+              return;
+            }
+
             const result = await signIn('credentials', {
               email,
               password,
@@ -180,7 +429,58 @@ function SignInForm({
         <button type="submit" disabled={loading} className={primaryBtnCx}>
           {loading ? 'Signing in…' : 'Sign In'}
         </button>
+        <button
+          type="button"
+          onClick={onUseMagicLink}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
+        >
+          <ButtonIconWrap>
+            <MagicLinkIcon />
+          </ButtonIconWrap>
+          Email me a magic link
+        </button>
       </form>
+
+      {pendingVerificationEmail && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>Need a new verification link for {pendingVerificationEmail}?</span>
+            <button
+              type="button"
+              disabled={resendLoading}
+              onClick={async () => {
+                setResendLoading(true);
+                setError('');
+                try {
+                  const response = await fetch('/api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: pendingVerificationEmail }),
+                  });
+                  const data = await response.json().catch(() => ({}));
+
+                  if (!response.ok) {
+                    setError(data.error || 'Could not resend the verification email.');
+                    return;
+                  }
+
+                  setNotice({
+                    tone: 'success',
+                    message: data.message || 'A new verification email has been sent.',
+                  });
+                } catch {
+                  setError('Could not resend the verification email.');
+                } finally {
+                  setResendLoading(false);
+                }
+              }}
+              className="text-left font-semibold text-blue-700 underline underline-offset-4 transition hover:text-blue-800 disabled:opacity-50 dark:text-blue-200 dark:hover:text-blue-100"
+            >
+              {resendLoading ? 'Sending…' : 'Resend verification email'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <OAuthButton provider="github" label="Continue with GitHub" />
@@ -195,6 +495,97 @@ function SignInForm({
           </a>
         </p>
       )}
+    </div>
+  );
+}
+
+function MagicLinkForm({
+  redirectUrl,
+  onBack,
+  onSentChange,
+}: {
+  redirectUrl: string;
+  onBack: () => void;
+  onSentChange?: (message: string | null) => void;
+}) {
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    onSentChange?.(null);
+  }, [onSentChange]);
+
+  return (
+    <div className="w-full max-w-sm mx-auto space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Sign in with a magic link</h2>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+          Enter your email and we&apos;ll send you a secure sign-in link.
+        </p>
+      </div>
+
+      {error && <ErrorAlert message={error} />}
+      {success && <SuccessAlert message={success} />}
+
+      {!success && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError('');
+            setLoading(true);
+            const email = (e.currentTarget.elements.namedItem('email') as HTMLInputElement).value;
+
+            try {
+              const result = await signIn('nodemailer', {
+                email,
+                redirect: false,
+                callbackUrl: redirectUrl,
+              });
+
+              if (result?.error) {
+                setError('We could not send a sign-in link right now. Please try again.');
+                return;
+              }
+
+              const message = 'Check your inbox for a secure sign-in link. It usually arrives within a minute.';
+              setSuccess('If that email is eligible, we just sent a secure sign-in link.');
+              onSentChange?.(message);
+            } catch {
+              setError('We could not send a sign-in link right now. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label htmlFor="magic-link-email" className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              Email
+            </label>
+            <input id="magic-link-email" name="email" type="email" required className={inputCx} />
+          </div>
+          <button type="submit" disabled={loading} className={primaryBtnCx}>
+            <span className="inline-flex items-center justify-center gap-2">
+              <ButtonIconWrap>
+                <MagicLinkIcon />
+              </ButtonIconWrap>
+              {loading ? 'Sending…' : 'Send Magic Link'}
+            </span>
+          </button>
+        </form>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          onSentChange?.(null);
+          onBack();
+        }}
+        className="w-full text-center text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
+      >
+        &larr; Back to sign in with password
+      </button>
     </div>
   );
 }
@@ -414,24 +805,37 @@ export function AuthSignUp(props: {
           setError('');
           setLoading(true);
           const form = e.currentTarget;
-          const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+          const firstName = (form.elements.namedItem('firstName') as HTMLInputElement).value;
+          const lastName = (form.elements.namedItem('lastName') as HTMLInputElement).value;
           const email = (form.elements.namedItem('email') as HTMLInputElement).value;
           const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+
+          const validatedName = validateAndFormatPersonName({ firstName, lastName });
+          if (!validatedName.ok) {
+            setError(validatedName.error || 'Please enter a valid name.');
+            setLoading(false);
+            return;
+          }
 
           try {
             const res = await fetch('/api/auth/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, email, password }),
+              body: JSON.stringify({ firstName, lastName, email, password }),
             });
 
             if (res.ok) {
-              const result = await signIn('credentials', { email, password, redirect: false });
-              if (result?.ok) {
-                window.location.href = redirectUrl;
+              const data = await res.json().catch(() => ({}));
+              if (data?.requiresVerification) {
+                window.location.href = `/sign-in?verification=check-email`;
               } else {
-                // Registration succeeded but auto-login failed — redirect to sign-in
-                window.location.href = '/sign-in';
+                const result = await signIn('credentials', { email, password, redirect: false });
+                if (result?.ok) {
+                  window.location.href = redirectUrl;
+                } else {
+                  // Registration succeeded but auto-login failed — redirect to sign-in
+                  window.location.href = '/sign-in';
+                }
               }
             } else {
               const data = await res.json().catch(() => ({}));
@@ -445,11 +849,19 @@ export function AuthSignUp(props: {
         }}
         className="space-y-4"
       >
-        <div>
-          <label htmlFor="signup-name" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Full Name
-          </label>
-          <input id="signup-name" name="name" type="text" required className={inputCx} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="signup-first-name" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              First name
+            </label>
+            <input id="signup-first-name" name="firstName" type="text" required className={inputCx} />
+          </div>
+          <div>
+            <label htmlFor="signup-last-name" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Last name
+            </label>
+            <input id="signup-last-name" name="lastName" type="text" className={inputCx} />
+          </div>
         </div>
         <div>
           <label htmlFor="signup-email" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
@@ -462,7 +874,7 @@ export function AuthSignUp(props: {
             Password
           </label>
           <input id="signup-password" name="password" type="password" required minLength={8} className={inputCx} />
-          <p className="mt-1 text-xs text-neutral-400">Minimum 8 characters</p>
+          <p className="mt-1 text-xs text-neutral-400">Minimum 8 characters. Password must contain at least an uppercase letter, a lowercase letter, and a number.</p>
         </div>
         <button type="submit" disabled={loading} className={primaryBtnCx}>
           {loading ? 'Creating account…' : 'Create Account'}
@@ -499,23 +911,37 @@ export function AuthSignInButton({
   mode?: string;
   [key: string]: unknown;
 }) {
+  const [open, setOpen] = useState(false);
+  const [currentMode, setCurrentMode] = useState<AuthModalMode>('signin');
+
   const handleClick = () => {
-    // For 'modal' mode in Clerk, we redirect to sign-in page since NextAuth has no modal
+    if (mode === 'modal') {
+      setCurrentMode('signin');
+      setOpen(true);
+      return;
+    }
+
     signIn(undefined, { callbackUrl: '/dashboard' });
   };
 
   if (children) {
     return (
-      <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleClick()} {...rest}>
-        {children}
-      </span>
+      <>
+        <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleClick()} {...rest}>
+          {children}
+        </span>
+        <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+      </>
     );
   }
 
   return (
-    <button onClick={handleClick} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors" {...rest}>
-      Sign In
-    </button>
+    <>
+      <button onClick={handleClick} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors" {...rest}>
+        Sign In
+      </button>
+      <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+    </>
   );
 }
 
@@ -528,22 +954,37 @@ export function AuthSignUpButton({
   mode?: string;
   [key: string]: unknown;
 }) {
+  const [open, setOpen] = useState(false);
+  const [currentMode, setCurrentMode] = useState<AuthModalMode>('signup');
+
   const handleClick = () => {
+    if (mode === 'modal') {
+      setCurrentMode('signup');
+      setOpen(true);
+      return;
+    }
+
     window.location.href = '/sign-up';
   };
 
   if (children) {
     return (
-      <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleClick()} {...rest}>
-        {children}
-      </span>
+      <>
+        <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleClick()} {...rest}>
+          {children}
+        </span>
+        <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+      </>
     );
   }
 
   return (
-    <button onClick={handleClick} className="px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" {...rest}>
-      Sign Up
-    </button>
+    <>
+      <button onClick={handleClick} className="px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors" {...rest}>
+        Sign Up
+      </button>
+      <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+    </>
   );
 }
 
@@ -655,11 +1096,13 @@ export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
         body: JSON.stringify({ orgId }),
       });
       if (res.ok) {
-        setActiveOrgId(orgId);
+        const data = await res.json() as { activeOrgId?: string | null };
+        const nextActiveOrgId = typeof data.activeOrgId === 'string' ? data.activeOrgId : null;
+        setActiveOrgId(nextActiveOrgId);
         // Notify the hooks store and reload to pick up changes everywhere
         try {
           const { notifyActiveOrgChanged } = await import('./hooks');
-          notifyActiveOrgChanged();
+          notifyActiveOrgChanged(nextActiveOrgId);
         } catch { /* ignore */ }
         window.location.reload();
       }
@@ -685,15 +1128,17 @@ export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
   // If no organizations exist at all, show a simple link to team page
   if (orgs.length === 0) {
     return (
-      <a
-        href="/dashboard/team"
-        className="block w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-      >
-        <span className="flex items-center justify-between">
-          <span>Personal workspace</span>
-          <span className="text-neutral-400">&rarr;</span>
+      <div className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 cursor-default">
+        <span className="flex items-center gap-2 truncate">
+          <span
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-xs font-semibold text-white"
+            style={{ background: '#8b5cf6' }}
+          >
+            P
+          </span>
+          <span className="truncate">Personal workspace</span>
         </span>
-      </a>
+      </div>
     );
   }
 
@@ -843,12 +1288,15 @@ export const authDarkTheme = undefined;
 // ---------------------------------------------------------------------------
 
 function OAuthButton({ provider, label }: { provider: string; label: string }) {
+  const icon = provider === 'google' ? <GoogleIcon /> : provider === 'github' ? <GitHubIcon /> : null;
+
   return (
     <button
       type="button"
       onClick={() => signIn(provider)}
-      className="w-full py-2.5 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-sm font-medium"
+      className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-300 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
     >
+      {icon && <ButtonIconWrap>{icon}</ButtonIconWrap>}
       {label}
     </button>
   );

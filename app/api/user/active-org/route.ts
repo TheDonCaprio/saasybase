@@ -2,7 +2,7 @@
  * Active Organization API Route (NextAuth)
  * ============================================
  * GET  — Returns the user's organizations + active org
- * POST — Sets the active organization (stores in cookie)
+ * POST — Sets the active organization (stores in an httpOnly cookie)
  *
  * Only meaningful for the NextAuth provider. Clerk manages active org
  * internally via its own session cookie.
@@ -12,9 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { authService } from '@/lib/auth-provider';
 import { prisma } from '@/lib/prisma';
-
-/** Cookie name used to track the active org for NextAuth users */
-const ACTIVE_ORG_COOKIE = 'saasybase-active-org';
+import { ACTIVE_ORG_COOKIE, getActiveOrgCookieOptions } from '@/lib/active-organization';
 
 export async function GET() {
   try {
@@ -57,6 +55,12 @@ export async function GET() {
       ? activeOrgId
       : null;
 
+    if (activeOrgId && !validActiveOrg) {
+      const response = NextResponse.json({ activeOrgId: null, organizations });
+      response.cookies.set(ACTIVE_ORG_COOKIE, '', getActiveOrgCookieOptions({ maxAge: 0 }));
+      return response;
+    }
+
     return NextResponse.json({ activeOrgId: validActiveOrg, organizations });
   } catch (err) {
     console.error('Active org fetch error:', err);
@@ -75,15 +79,9 @@ export async function POST(request: NextRequest) {
 
     // Switching to personal workspace
     if (!orgId) {
-      const jar = await cookies();
-      jar.set(ACTIVE_ORG_COOKIE, '', {
-        path: '/',
-        maxAge: 0,
-        httpOnly: false, // Client JS needs to read this
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
-      return NextResponse.json({ activeOrgId: null });
+      const response = NextResponse.json({ activeOrgId: null });
+      response.cookies.set(ACTIVE_ORG_COOKIE, '', getActiveOrgCookieOptions({ maxAge: 0 }));
+      return response;
     }
 
     // Verify the user is actually a member of this org
@@ -99,16 +97,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You are not a member of this organization' }, { status: 403 });
     }
 
-    const jar = await cookies();
-    jar.set(ACTIVE_ORG_COOKIE, orgId, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-      httpOnly: false, // Client JS needs to read this
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    });
-
-    return NextResponse.json({ activeOrgId: orgId });
+    const response = NextResponse.json({ activeOrgId: orgId });
+    response.cookies.set(ACTIVE_ORG_COOKIE, orgId, getActiveOrgCookieOptions({ maxAge: 60 * 60 * 24 * 365 }));
+    return response;
   } catch (err) {
     console.error('Set active org error:', err);
     return NextResponse.json({ error: 'Failed to set active organization' }, { status: 500 });

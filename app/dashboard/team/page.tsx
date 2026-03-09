@@ -26,7 +26,7 @@ export default async function TeamDashboardPage({ searchParams }: PageProps) {
 
   const viewerRecord = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true } });
   const [state, pendingInvites] = await Promise.all([
-    fetchTeamDashboardState(userId, { activeClerkOrgId: orgId ?? null }),
+    fetchTeamDashboardState(userId, { activeOrganizationId: orgId ?? null }),
     // Fetch any pending invites sent to this user's email so they can accept on-site
     prisma.organizationInvite.findMany({
       where: { email: viewerRecord?.email ?? undefined, status: 'PENDING' },

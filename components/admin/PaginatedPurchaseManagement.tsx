@@ -37,8 +37,6 @@ type PurchaseRow = {
   currency?: string | null;
   status: string;
   createdAt: string;
-  stripePaymentIntentId?: string | null;
-  stripeCheckoutSessionId?: string | null;
   externalPaymentId?: string | null;
   externalSessionId?: string | null;
   dashboardUrl?: string | null;
@@ -48,7 +46,6 @@ type PurchaseRow = {
     status: string;
     expiresAt?: string | null;
     externalSubscriptionId?: string | null;
-    stripeSubscriptionId?: string | null;
   } | null;
 };
 
@@ -277,7 +274,6 @@ export function PaginatedPurchaseManagement({
         status: purchase.subscription.status,
         expiresAt: purchase.subscription.expiresAt ?? null,
         externalSubscriptionId: purchase.subscription.externalSubscriptionId ?? null,
-        stripeSubscriptionId: purchase.subscription.stripeSubscriptionId ?? null,
         plan: {
           name: purchase.planName || 'Unknown plan',
           autoRenew: null
@@ -430,9 +426,7 @@ export function PaginatedPurchaseManagement({
                 const actionsPayment = convertToActionsPayment(purchase);
                 const derivedProvider = purchase.paymentProvider || inferProviderFromIds([
                   purchase.externalPaymentId,
-                  purchase.externalSessionId,
-                  purchase.stripePaymentIntentId,
-                  purchase.stripeCheckoutSessionId
+                  purchase.externalSessionId
                 ]);
                 const hasSubscription = Boolean(purchase.subscription);
                 const isActiveSubscription = hasSubscription && purchase.subscription?.status === 'ACTIVE';
@@ -579,9 +573,7 @@ export function PaginatedPurchaseManagement({
                   const actionsPayment = convertToActionsPayment(purchase);
                   const derivedProvider = purchase.paymentProvider || inferProviderFromIds([
                     purchase.externalPaymentId,
-                    purchase.externalSessionId,
-                    purchase.stripePaymentIntentId,
-                    purchase.stripeCheckoutSessionId
+                    purchase.externalSessionId
                   ]);
                   const hasSubscription = Boolean(purchase.subscription);
                   const isActiveSubscription = hasSubscription && purchase.subscription?.status === 'ACTIVE';

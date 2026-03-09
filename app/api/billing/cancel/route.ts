@@ -25,8 +25,7 @@ export async function POST(req: Request) {
   const planRec = (subscription.plan && typeof subscription.plan === 'object') ? subscription.plan as Record<string, unknown> : null;
   const planAutoRenew = planRec?.autoRenew === true;
 
-  // Use externalSubscriptionId (preferred) or fallback to stripeSubscriptionId
-  const subId = subscription.externalSubscriptionId || subscription.stripeSubscriptionId;
+  const subId = subscription.externalSubscriptionId;
 
   if (!subId || !planAutoRenew) {
     return NextResponse.json({ ok: true, message: 'non_recurring', expiresAt: subscription.expiresAt });

@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const prismaMock = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
   },
   subscription: {
     findFirst: vi.fn(),
@@ -37,8 +39,15 @@ const userPlanContextMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/user-plan-context', () => userPlanContextMock);
+const sendNextAuthVerificationEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
+const sendNextAuthEmailChangeVerificationMock = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('../lib/nextauth-email-verification', () => ({
+  sendNextAuthVerificationEmail: sendNextAuthVerificationEmailMock,
+  sendNextAuthEmailChangeVerification: sendNextAuthEmailChangeVerificationMock,
+}));
+vi.mock('../lib/auth-provider', () => ({ authService: { providerName: 'nextauth' } }));
 
-import { GET } from '../app/api/user/profile/route';
+import { GET, PATCH } from '../app/api/user/profile/route';
 
 describe('GET /api/user/profile', () => {
   beforeEach(() => {
@@ -145,5 +154,44 @@ describe('GET /api/user/profile', () => {
     expect(body.subscription).toBe(null);
     expect(body.organization?.expiresAt).toBe('2031-02-03T04:05:06.000Z');
     expect(body.planSource).toBe('ORGANIZATION');
+  });
+
+  it('keeps the existing email active until a new email is verified', async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'current@example.com',
+      password: 'hashed',
+    });
+    prismaMock.user.findFirst.mockResolvedValueOnce(null);
+    prismaMock.user.update.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'current@example.com',
+    });
+
+    const req = new Request('http://localhost/api/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ firstName: 'Caprio', lastName: 'Files', email: 'next@example.com' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await PATCH(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: { name: 'Caprio Files' },
+      select: { id: true, name: true, email: true },
+    });
+    expect(sendNextAuthEmailChangeVerificationMock).toHaveBeenCalledWith({
+      userId: 'user_1',
+      currentEmail: 'current@example.com',
+      newEmail: 'next@example.com',
+      name: 'Caprio Files',
+    });
+    expect(body.emailChangePending).toBe(true);
+    expect(body.user.email).toBe('current@example.com');
   });
 });

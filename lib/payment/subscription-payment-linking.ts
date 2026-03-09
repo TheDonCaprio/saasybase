@@ -254,7 +254,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
     finalPaymentIntent: string | undefined;
     amountCents: number;
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
-    resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
+    resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
     refreshSubscriptionExpiryFromProvider: (opts: {
         dbSubscriptionId: string;
         providerSubscriptionId: string;
@@ -336,14 +336,14 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
         return false;
     }
 
-    const activeClerkOrgId = session.metadata?.activeOrganizationId
+    const activeOrganizationId = session.metadata?.activeOrganizationId
         || session.metadata?.organizationId
         || session.metadata?.activeProviderOrganizationId
         || session.metadata?.activeClerkOrgId
         || session.metadata?.clerkOrgId
         || session.metadata?.orgId
         || null;
-    const organizationContext = await params.resolveOrganizationContext(userId, activeClerkOrgId);
+    const organizationContext = await params.resolveOrganizationContext(userId, activeOrganizationId);
     const resolvedOrganizationId = organizationContext?.role === 'OWNER'
         ? organizationContext.organization.id
         : (candidateSub.organizationId ?? null);
@@ -534,7 +534,7 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
         userId: string,
         lookbackMs: number,
     ) => Promise<{ id: string } | null>;
-    resolveOrganizationContext: (userId: string, activeClerkOrgId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
+    resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
     syncOrganizationEligibilityForUser: (userId: string) => Promise<unknown>;
     findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string; userId: string; planId: string } | null>;
     getPendingSubscriptionLookbackDate: () => Date;
@@ -582,14 +582,14 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
         const suppressNotifications = isSwitchNowFallbackFlow && Boolean(recentCancelledRecurring);
 
         if (plan.tokenLimit && plan.tokenLimit > 0) {
-            const activeClerkOrgId = session.metadata?.activeOrganizationId
+            const activeOrganizationId = session.metadata?.activeOrganizationId
                 || session.metadata?.organizationId
                 || session.metadata?.activeProviderOrganizationId
                 || session.metadata?.activeClerkOrgId
                 || session.metadata?.clerkOrgId
                 || session.metadata?.orgId
                 || null;
-            const organizationContext = await params.resolveOrganizationContext(userId, activeClerkOrgId);
+            const organizationContext = await params.resolveOrganizationContext(userId, activeOrganizationId);
             if (organizationContext?.role === 'OWNER' && plan.supportsOrganizations) {
                 await creditOrganizationSharedTokens({
                     organizationId: organizationContext.organization.id,

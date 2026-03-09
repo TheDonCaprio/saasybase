@@ -145,7 +145,10 @@ describe('checkout metadata for NextAuth team purchases', () => {
     expect(body.url).toBe('https://checkout.example.com/session_1');
     expect(createCheckoutSessionMock).toHaveBeenCalledTimes(1);
 
-    const call = createCheckoutSessionMock.mock.calls[0]![0] as {
+    const firstCall = createCheckoutSessionMock.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+
+    const call = firstCall?.at(0) as unknown as {
       metadata: Record<string, string | undefined>;
       subscriptionMetadata?: Record<string, string | undefined>;
     };

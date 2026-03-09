@@ -20,7 +20,7 @@ export function resolveActiveOrganizationIdFromMetadata(
     return null;
 }
 
-export function resolveActiveClerkOrgIdFromMetadata(
+export function resolveActiveProviderOrganizationIdFromMetadata(
     metadata?: Record<string, unknown> | null
 ): string | null {
     const localOrganizationId = resolveActiveOrganizationIdFromMetadata(metadata);
@@ -43,13 +43,19 @@ export function resolveActiveClerkOrgIdFromMetadata(
     return null;
 }
 
-export async function resolveOrganizationContext(userId: string, activeClerkOrgId?: string | null) {
+export function resolveActiveClerkOrgIdFromMetadata(
+    metadata?: Record<string, unknown> | null
+): string | null {
+    return resolveActiveProviderOrganizationIdFromMetadata(metadata);
+}
+
+export async function resolveOrganizationContext(userId: string, activeOrganizationId?: string | null) {
     try {
-        return await getOrganizationPlanContext(userId, activeClerkOrgId ?? undefined);
+        return await getOrganizationPlanContext(userId, activeOrganizationId ?? undefined);
     } catch (err) {
         Logger.warn('Failed to resolve organization context', {
             userId,
-            activeClerkOrgId: activeClerkOrgId ?? null,
+            activeOrganizationId: activeOrganizationId ?? null,
             error: toError(err).message,
         });
         return null;

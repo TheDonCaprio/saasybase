@@ -107,7 +107,6 @@ export function PaginatedPaymentManagement({
       status: payment.subscription.status,
       expiresAt: payment.subscription.expiresAt,
       externalSubscriptionId: payment.subscription.externalSubscriptionId ?? null,
-      stripeSubscriptionId: payment.subscription.stripeSubscriptionId ?? null,
       plan: {
         name: payment.subscription.plan.name,
         autoRenew: payment.subscription.plan.autoRenew
@@ -413,7 +412,7 @@ export function PaginatedPaymentManagement({
                       {payment.id}
                     </div>
 
-                    {(payment.externalPaymentId || payment.externalSessionId || payment.stripeInvoiceId || payment.dashboardUrl) && (
+                    {(payment.externalPaymentId || payment.externalSessionId || payment.dashboardUrl) && (
                       <div className="text-xs font-mono">
                         <a
                           className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-300"
@@ -421,7 +420,7 @@ export function PaginatedPaymentManagement({
                           target="_blank"
                           rel="noreferrer"
                         >
-                          {payment.externalPaymentId || payment.stripeInvoiceId || payment.externalSessionId || 'View'}
+                          {payment.externalPaymentId || payment.externalSessionId || 'View'}
                         </a>
                       </div>
                     )}
@@ -470,7 +469,7 @@ export function PaginatedPaymentManagement({
 
                       <div className="col-span-2 min-w-0">
                         <div className="text-xs font-mono text-slate-500 dark:text-neutral-500 truncate">{payment.id}</div>
-                        {(payment.externalPaymentId || payment.stripeInvoiceId || payment.externalSessionId || payment.dashboardUrl) ? (
+                        {(payment.externalPaymentId || payment.externalSessionId || payment.dashboardUrl) ? (
                           <div className="text-xs font-mono mt-1 truncate">
                             <a
                               className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-300"
@@ -478,7 +477,7 @@ export function PaginatedPaymentManagement({
                               target="_blank"
                               rel="noreferrer"
                             >
-                              {payment.externalPaymentId || payment.stripeInvoiceId || payment.externalSessionId || 'View'}
+                              {payment.externalPaymentId || payment.externalSessionId || 'View'}
                             </a>
                           </div>
                         ) : (

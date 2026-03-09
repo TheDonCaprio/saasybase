@@ -145,7 +145,6 @@ export default async function AdminPlansPage() {
     durationHours: plan.durationHours,
     active: plan.active,
     sortOrder: plan.sortOrder,
-    stripePriceId: plan.stripePriceId,
     externalPriceId: plan.externalPriceId,
     externalPriceIds: plan.externalPriceIds,
     externalProductIds: plan.externalProductIds,

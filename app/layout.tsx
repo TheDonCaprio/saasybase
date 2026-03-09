@@ -1,7 +1,7 @@
 import './globals.css';
 import './clerk-overrides.css';
 import React from 'react';
-import DevClerkProvider from '../components/DevClerkProvider';
+import AppAuthProvider from '../components/AppAuthProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';
 import { ToastContainer } from '../components/ui/Toast';
 import PaymentProviderScripts from '../components/PaymentProviderScripts';
@@ -228,7 +228,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="min-h-screen flex flex-col text-[rgb(var(--text-primary))] transition-colors duration-150"
           suppressHydrationWarning={true}
         >
-          <DevClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
+          <AppAuthProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
             {/* Indicate to client code whether Clerk is enabled so client-only
               helpers can avoid calling auth APIs for anonymous visitors. */}
             <script dangerouslySetInnerHTML={{ __html: `window.__CLERK_ENABLED=${!!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}` }} />
@@ -311,7 +311,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
             />
           ) : null}
             </FormatSettingsProvider>
-          </DevClerkProvider>
+          </AppAuthProvider>
         </body>
       </html>
   );

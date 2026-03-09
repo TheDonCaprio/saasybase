@@ -3,11 +3,13 @@ import { SidebarNav } from '../../components/dashboard/SidebarNav';
 import { faPlay, faUser, faUserShield, faFileInvoiceDollar, faHistory, faBell, faLifeRing, faBars, faTicketAlt, faSackDollar, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
-import { AuthSignOutButton } from '@/lib/auth-provider/client';
+import { AuthSignOutButton } from '@/lib/auth-provider/client/components';
 import { AnnouncementBanner } from '../../components/ui/AnnouncementBanner';
 import { GracePeriodNotice } from '../../components/dashboard/GracePeriodNotice';
 import { PurchaseNotice } from '../../components/dashboard/PurchaseNotice';
 import { getAnnouncementMessage } from '../../lib/settings';
+import { getPendingEmailChangeForUser } from '../../lib/nextauth-email-verification';
+import { PendingEmailChangeNotice } from '../../components/dashboard/PendingEmailChangeNotice';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Middleware handles authentication protection
@@ -20,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Determine whether the current user has any NEW admin replies
   let supportBadge: string | undefined = undefined;
   let couponBadge: string | undefined = undefined;
+  let pendingEmailChange: { newEmail: string; expires: string } | null = null;
   try {
     const { userId } = await authService.getSession();
     if (userId) {
@@ -46,6 +49,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
       const pendingCoupons = await prisma.couponRedemption.count({ where: { userId, consumedAt: null } });
       if (pendingCoupons > 0) {
         couponBadge = String(pendingCoupons);
+      }
+
+      if (authService.providerName === 'nextauth') {
+        const pending = await getPendingEmailChangeForUser(userId);
+        if (pending) {
+          pendingEmailChange = {
+            newEmail: pending.newEmail,
+            expires: pending.expires.toLocaleString(),
+          };
+        }
       }
     }
   } catch (err) {
@@ -89,6 +102,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <GracePeriodNotice />
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />
+        {pendingEmailChange && (
+          <PendingEmailChangeNotice pendingEmail={pendingEmailChange.newEmail} expiresAt={pendingEmailChange.expires} />
+        )}
         <div className="space-y-6 w-full">
           {children}
         </div>

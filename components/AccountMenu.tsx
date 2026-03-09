@@ -80,10 +80,10 @@ export default function AccountMenu() {
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasAttemptedProfileFetch, setHasAttemptedProfileFetch] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const menuRef = useRef<HTMLDivElement>(null);
   const prevOrgIdRef = useRef(orgId);
+  const dropdownTop = '4.45rem';
+  const pointerTop = 'calc(4.45rem - 6px)';
 
   const fetchProfile = async (retryOnUnauthorized = false) => {
     const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
@@ -205,6 +205,10 @@ export default function AccountMenu() {
         return;
       }
 
+      if (target?.closest('[data-auth-modal-root="true"]')) {
+        return;
+      }
+
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
@@ -291,11 +295,11 @@ export default function AccountMenu() {
           {pointerPos !== null && (
             <div
               aria-hidden
-              style={{ left: pointerPos, top: 'calc(4.1rem - 6px)' }}
+              style={{ left: pointerPos, top: pointerTop }}
               className="fixed w-3 h-3 rotate-45 bg-white border-t border-l border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 z-[52]"
             />
           )}
-          <div style={{ top: '4.1rem' }} className="fixed right-4 w-72 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-visible z-[51]">
+          <div style={{ top: dropdownTop }} className="fixed right-4 w-72 overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10 z-[51]">
           {loading ? (
             <div className="p-4 space-y-3">
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
@@ -484,49 +488,55 @@ export default function AccountMenu() {
           {pointerPos !== null && (
             <div
               aria-hidden
-              style={{ left: pointerPos, top: 'calc(4.1rem - 6px)' }}
+              style={{ left: pointerPos, top: pointerTop }}
               className="fixed w-3 h-3 rotate-45 bg-white border-t border-l border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 z-[52]"
             />
           )}
-          <div style={{ top: '4.1rem' }} className="fixed right-4 w-72 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden z-[51]">
-          <div className="p-6 space-y-4">
-            <div>
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-                Welcome to {siteInfo?.siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}
-              </h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                Sign in to access your account, view your plan, and manage {siteInfo?.tokenLabel || 'tokens'}.
-              </p>
+          <div style={{ top: dropdownTop }} className="fixed right-4 z-[51] w-80 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10">
+            <div className="px-6 pb-6 pt-7">
+              <div className="space-y-5">
+                <div className="space-y-2.5 pr-2">
+                  <h3 className="text-[1.15rem] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
+                    Welcome to {siteInfo?.siteName || process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}
+                  </h3>
+                  <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+                    Sign in to access your account, view your plan, and manage {siteInfo?.tokenLabel || 'tokens'}.
+                  </p>
+                </div>
+
+                <div className="mt-2 text-center text-sm">
+                  <AuthSignInButton mode="modal">
+                    <button className="w-full rounded-xl bg-violet-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500/40">
+                      Sign In
+                    </button>
+                  </AuthSignInButton>
+                </div>
+
+                <div className="relative py-0.5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-3 text-[11px] font-medium tracking-[0.2em] text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+                      or
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm">
+                  <AuthSignUpButton mode="modal">
+                    <button className="w-full rounded-xl border border-neutral-200 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800">
+                      Create Account
+                    </button>
+                  </AuthSignUpButton>
+                </div>
+              </div>
             </div>
 
-            <AuthSignInButton mode="modal">
-              <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium text-sm">
-                Sign In
-              </button>
-            </AuthSignInButton>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="px-2 bg-white text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
-                  or
-                </span>
-              </div>
-            </div>
-
-            <AuthSignUpButton mode="modal">
-              <button className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors font-medium text-sm">
-                Create Account
-              </button>
-            </AuthSignUpButton>
-          </div>
-
-          <div className="border-t border-neutral-200 dark:border-neutral-800 px-6 py-4">
+          <div className="border-t border-neutral-200 bg-neutral-50/60 px-6 py-4 dark:border-neutral-800 dark:bg-neutral-950/20">
             <Link
               href="/pricing"
-              className="block text-center text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 font-medium"
+              className="block text-center text-sm font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
               onClick={() => setIsOpen(false)}
             >
               View Pricing →
@@ -536,67 +546,6 @@ export default function AccountMenu() {
         </>
       )}
 
-      {/* Legacy Auth Modal - kept for backwards compatibility but hidden */}
-      {false && !isSignedIn && showAuthModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto relative z-[99999]">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
-                  {authMode === 'signin' ? 'Sign In' : 'Sign Up'}
-                </h2>
-                <button
-                  onClick={() => setShowAuthModal(false)}
-                  className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  aria-label="Close"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {authMode === 'signin' ? (
-                  <>
-                    <AuthSignInButton mode="modal">
-                      <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium">
-                        Sign In
-                      </button>
-                    </AuthSignInButton>
-                    <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
-                      Don&apos;t have an account?{' '}
-                      <button
-                        onClick={() => setAuthMode('signup')}
-                        className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 font-medium"
-                      >
-                        Sign up
-                      </button>
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <AuthSignUpButton mode="modal">
-                      <button className="w-full px-4 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium">
-                        Sign Up
-                      </button>
-                    </AuthSignUpButton>
-                    <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
-                      Already have an account?{' '}
-                      <button
-                        onClick={() => setAuthMode('signin')}
-                        className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 font-medium"
-                      >
-                        Sign in
-                      </button>
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

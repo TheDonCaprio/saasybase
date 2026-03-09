@@ -69,7 +69,10 @@ export async function PATCH(request: NextRequest) {
 
     const organization = await prisma.organization.findFirst({
       where: orgId
-        ? { ownerUserId: userId, clerkOrganizationId: orgId }
+        ? {
+            ownerUserId: userId,
+            OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
+          }
         : { ownerUserId: userId },
     });
     if (!organization) {
@@ -94,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     await prisma.organization.update({ where: { id: organization.id }, data });
     const state = await fetchTeamDashboardState(userId, {
       forceSync: true,
-      activeClerkOrgId: orgId ?? null,
+      activeOrganizationId: orgId ?? null,
     });
     return NextResponse.json({ ok: true, ...state });
   } catch (err) {

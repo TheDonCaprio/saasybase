@@ -55,7 +55,6 @@ describe('admin force-cancel notifications', () => {
       organizationId: 'org_1',
       paymentProvider: 'stripe',
       externalSubscriptionId: 'sub_ext_1',
-      stripeSubscriptionId: 'sub_ext_1',
     });
     prismaMock.plan.findUnique.mockResolvedValue({
       name: 'Team Plan',

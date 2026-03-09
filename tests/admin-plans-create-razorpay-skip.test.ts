@@ -172,7 +172,6 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
       priceCents: 1200,
       active: true,
       sortOrder: 1,
-      stripePriceId: 'price_stripe_1',
       externalPriceId: 'price_stripe_1',
       externalPriceIds: JSON.stringify({ stripe: 'price_stripe_1' }),
       externalProductIds: JSON.stringify({ stripe: 'prod_stripe_1' }),

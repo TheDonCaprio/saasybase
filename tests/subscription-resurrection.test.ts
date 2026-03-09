@@ -414,7 +414,6 @@ describe('PaymentService subscription resurrection', () => {
       tokenName: 'credits',
       externalPriceIds: null,
       externalPriceId: null,
-      stripePriceId: null,
     } as any);
     prismaMock.subscription.findMany.mockResolvedValueOnce([] as any);
     prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 } as any);
@@ -487,7 +486,6 @@ describe('PaymentService subscription resurrection', () => {
       priceCents: 5000,
       tokenLimit: 0,
       externalPriceId: 'PLN_RECUR',
-      stripePriceId: null,
       externalPriceIds: null,
       recurringInterval: 'month',
       recurringIntervalCount: 1,
@@ -621,7 +619,6 @@ describe('PaymentService subscription resurrection', () => {
       priceCents: 5000,
       tokenLimit: 0,
       externalPriceId: 'PLN_RECUR',
-      stripePriceId: null,
       externalPriceIds: null,
       recurringInterval: 'month',
       recurringIntervalCount: 1,

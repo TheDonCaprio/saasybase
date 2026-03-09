@@ -28,10 +28,7 @@ export async function handleDisputeEvent(
     try {
         const payment = await prisma.payment.findFirst({
             where: {
-                OR: [
-                    { externalPaymentId: paymentIdToSearch },
-                    { stripePaymentIntentId: paymentIdToSearch }
-                ]
+                externalPaymentId: paymentIdToSearch,
             },
             include: { user: { select: { id: true, email: true } } }
         });

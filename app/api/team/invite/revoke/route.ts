@@ -29,14 +29,19 @@ export async function POST(request: NextRequest) {
 
   const organization = await prisma.organization.findFirst({
     where: orgId
-      ? { ownerUserId: userId, clerkOrganizationId: orgId }
+      ? {
+          ownerUserId: userId,
+          OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
+        }
       : { ownerUserId: userId },
-    select: { clerkOrganizationId: true },
+    select: { id: true, clerkOrganizationId: true },
   });
 
-  if (!organization || !organization.clerkOrganizationId) {
+  if (!organization) {
     return NextResponse.json({ ok: false, error: 'No organization found.' }, { status: 400 });
   }
+
+  const providerOrganizationId = organization.clerkOrganizationId ?? organization.id;
 
   // Attempt provider-specific invitation revocation (Clerk only).
   // For NextAuth, skip the Clerk API call and just expire locally.
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
       const clerkMod = await import('@clerk/nextjs/server');
       const client = await clerkMod.clerkClient();
       await client.organizations.revokeOrganizationInvitation({
-        organizationId: organization.clerkOrganizationId,
+        organizationId: providerOrganizationId,
         invitationId: token,
         requestingUserId: userId,
       });
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
   await expireOrganizationInvite(token);
   const state = await fetchTeamDashboardState(userId, {
     forceSync: true,
-    activeClerkOrgId: orgId ?? null,
+    activeOrganizationId: orgId ?? null,
   });
   return NextResponse.json({ ok: true, ...state });
 }

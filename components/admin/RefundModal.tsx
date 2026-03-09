@@ -24,7 +24,7 @@ interface RefundModalProps {
   hasActiveSubscription?: boolean;
   subscriptionPlanAutoRenew?: boolean | null;
   subscriptionExpiresAt?: Date | string | null;
-  hasStripeSubscription?: boolean;
+  hasProviderSubscription?: boolean;
 }
 
 const REFUND_REASONS = [
@@ -45,11 +45,11 @@ export function RefundModal({
   hasActiveSubscription = false,
   subscriptionPlanAutoRenew = null,
   subscriptionExpiresAt = null,
-  hasStripeSubscription = false
+  hasProviderSubscription = false
 }: RefundModalProps) {
   const [selectedReason, setSelectedReason] = useState('requested_by_customer');
   const [customReason, setCustomReason] = useState('');
-  const [cancelSubscription, setCancelSubscription] = useState(() => hasStripeSubscription);
+  const [cancelSubscription, setCancelSubscription] = useState(() => hasProviderSubscription);
   const [cancelMode, setCancelMode] = useState<'immediate' | 'period_end'>('immediate');
   const [localCancelMode, setLocalCancelMode] = useState<'immediate' | 'period_end'>('immediate');
   const [clearPaidTokens, setClearPaidTokens] = useState<boolean>(false);
@@ -65,11 +65,11 @@ export function RefundModal({
     if (isOpen) {
       setSelectedReason('requested_by_customer');
       setCustomReason('');
-      setCancelSubscription(hasStripeSubscription);
+      setCancelSubscription(hasProviderSubscription);
       setCancelMode('immediate');
       setLocalCancelMode('immediate');
     }
-  }, [isOpen, hasStripeSubscription]);
+  }, [isOpen, hasProviderSubscription]);
 
   // Initialize clearPaidTokens default from global admin settings when modal opens
   useEffect(() => {
@@ -203,7 +203,7 @@ export function RefundModal({
           {hasActiveSubscription && (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-3">
-                {hasStripeSubscription ? (
+                {hasProviderSubscription ? (
                   <>
                     <label className="flex items-start gap-2 cursor-pointer">
                       <input
@@ -313,7 +313,7 @@ export function RefundModal({
                     </div>
                   </label>
                 </div>
-                {!hasStripeSubscription && subscriptionPlanAutoRenew === false ? (
+                {!hasProviderSubscription && subscriptionPlanAutoRenew === false ? (
                   <p className="text-[11px] text-neutral-500">
                     One-time plans don&apos;t renew automatically. Choosing &ldquo;Keep access until it expires&rdquo; honors the original end date while still recording the refund.
                   </p>
@@ -358,7 +358,7 @@ export function RefundModal({
                   <div className="text-amber-700 dark:text-amber-400 mt-1 space-y-1">
                     <div>
                       <strong>Provider handling:</strong>{' '}
-                      {hasStripeSubscription
+                      {hasProviderSubscription
                         ? cancelSubscription
                           ? cancelMode === 'period_end'
                             ? 'Scheduled to end at period close.'

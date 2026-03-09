@@ -8,9 +8,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/nextauth.config';
-import { sendWelcomeIfNotSent } from '@/lib/welcome';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
+import { sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
+import { validateAndFormatPersonName } from '@/lib/name-validation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email: rawEmail, password } = body;
+    const { name, firstName, lastName, email: rawEmail, password } = body;
 
     if (!rawEmail || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -47,6 +48,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: pwCheck.message }, { status: 400 });
     }
 
+    const validatedName = validateAndFormatPersonName({
+      fullName: typeof name === 'string' ? name : undefined,
+      firstName: typeof firstName === 'string' ? firstName : undefined,
+      lastName: typeof lastName === 'string' ? lastName : undefined,
+    });
+    if (!validatedName.ok) {
+      return NextResponse.json({ error: validatedName.error || 'Invalid name' }, { status: 400 });
+    }
+
     // Check if user already exists — use generic message to prevent email enumeration
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -58,17 +68,21 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         email,
-        name: name || null,
+        name: validatedName.fullName,
         password: hashed,
         role: 'USER',
         emailVerified: null,
       },
     });
 
-    // Fire welcome email (async, non-blocking)
-    sendWelcomeIfNotSent(user.id, email, { firstName: name?.split(' ')[0] }).catch(() => {});
+    // Send verification email (async, non-blocking)
+    sendNextAuthVerificationEmail({
+      userId: user.id,
+      email,
+      name: validatedName.fullName,
+    }).catch(() => {});
 
-    return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
+    return NextResponse.json({ id: user.id, email: user.email, requiresVerification: true }, { status: 201 });
   } catch (err) {
     console.error('Registration failed:', err);
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });

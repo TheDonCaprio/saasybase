@@ -272,13 +272,10 @@ function formatNumber(value: number) {
 function getPaymentDashboardUrl(payment: {
   paymentProvider?: string | null;
   externalPaymentId?: string | null;
-  stripePaymentIntentId?: string | null;
 }): string | null {
-  const providerId = (payment.paymentProvider || (payment.stripePaymentIntentId ? 'stripe' : null) || process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase();
+  const providerId = (payment.paymentProvider || (payment.externalPaymentId ? 'stripe' : null) || process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase();
 
-  const paymentId = providerId === 'stripe'
-    ? (payment.stripePaymentIntentId || payment.externalPaymentId)
-    : (payment.externalPaymentId || payment.stripePaymentIntentId);
+  const paymentId = payment.externalPaymentId;
 
   if (!paymentId) return null;
 

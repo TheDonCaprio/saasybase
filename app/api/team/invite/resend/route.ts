@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
   if (!invite) return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
 
   const organization = await prisma.organization.findUnique({ where: { id: invite.organizationId }, select: { id: true, ownerUserId: true, name: true, slug: true, clerkOrganizationId: true } });
-  if (!organization || organization.ownerUserId !== userId || (orgId && organization.clerkOrganizationId !== orgId)) {
+  if (
+    !organization ||
+    organization.ownerUserId !== userId ||
+    (orgId && organization.id !== orgId && organization.clerkOrganizationId !== orgId)
+  ) {
     return NextResponse.json({ ok: false, error: 'Not authorized to resend this invite.' }, { status: 403 });
   }
 
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     const state = await fetchTeamDashboardState(userId, {
       forceSync: true,
-      activeClerkOrgId: orgId ?? null,
+      activeOrganizationId: orgId ?? null,
     });
     return NextResponse.json({ ok: true, ...state });
   } catch (err: unknown) {

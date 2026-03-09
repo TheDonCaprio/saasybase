@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        stripeCustomerId: true,
         externalCustomerId: true,
         externalCustomerIds: true,
         paymentProvider: true,
@@ -100,10 +99,6 @@ export async function POST(request: NextRequest) {
     const idMap = parseProviderIdMap(user?.externalCustomerIds);
     let customerId: string | null = idMap[providerForUser.name] || null;
 
-    // Legacy fallbacks
-    if (!customerId && providerForUser.name === 'stripe' && user?.stripeCustomerId) {
-      customerId = user.stripeCustomerId;
-    }
     if (!customerId && user?.externalCustomerId && user?.paymentProvider === providerForUser.name) {
       customerId = user.externalCustomerId;
     }
@@ -120,8 +115,6 @@ export async function POST(request: NextRequest) {
           where: { id: userId },
           data: {
             externalCustomerIds: merged ?? user?.externalCustomerIds,
-            // Keep legacy Stripe column in sync for backwards compatibility.
-            ...(providerForUser.name === 'stripe' ? { stripeCustomerId: customerId } : null),
             paymentProvider: providerForUser.name,
           }
         });
@@ -165,10 +158,10 @@ export async function POST(request: NextRequest) {
             status: { in: ['ACTIVE', 'PAST_DUE', 'PENDING'] },
           },
           orderBy: { expiresAt: 'desc' },
-          select: { externalSubscriptionId: true, stripeSubscriptionId: true },
+          select: { externalSubscriptionId: true },
         });
 
-        const subCode = paystackSub?.externalSubscriptionId || paystackSub?.stripeSubscriptionId || null;
+        const subCode = paystackSub?.externalSubscriptionId || null;
         if (!subCode) {
           return NextResponse.json({
             url: returnUrl,
@@ -191,10 +184,10 @@ export async function POST(request: NextRequest) {
           status: { in: ['ACTIVE', 'PAST_DUE', 'PENDING'] },
         },
         orderBy: { expiresAt: 'desc' },
-        select: { externalSubscriptionId: true, stripeSubscriptionId: true },
+        select: { externalSubscriptionId: true },
       });
 
-      const subId = razorpaySub?.externalSubscriptionId || razorpaySub?.stripeSubscriptionId || null;
+      const subId = razorpaySub?.externalSubscriptionId || null;
       if (!subId) {
         return NextResponse.json({
           url: returnUrl,

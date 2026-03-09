@@ -142,7 +142,6 @@ export async function GET(req: NextRequest) {
       OR: [
         { externalPriceIds: { contains: 'pri_' } },
         { externalPriceId: { startsWith: 'pri_' } },
-        { stripePriceId: { startsWith: 'pri_' } },
       ],
     };
 
@@ -153,14 +152,12 @@ export async function GET(req: NextRequest) {
         name: true,
         externalPriceIds: true,
         externalPriceId: true,
-        stripePriceId: true,
       },
     });
 
     const priceId =
       (plan ? getIdByProvider(plan.externalPriceIds, 'paddle', null) : null)
-      || (plan?.externalPriceId && plan.externalPriceId.startsWith('pri_') ? plan.externalPriceId : null)
-      || (plan?.stripePriceId && plan.stripePriceId.startsWith('pri_') ? plan.stripePriceId : null);
+      || (plan?.externalPriceId && plan.externalPriceId.startsWith('pri_') ? plan.externalPriceId : null);
 
     if (!priceId) {
       result.issues.push({

@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { authService } from '@/lib/auth-provider';
 import type { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
+import { workspaceService } from './workspace-service';
 
 export type OrganizationSnapshot = {
-	clerkOrganizationId: string;
+	providerOrganizationId?: string | null;
+	clerkOrganizationId?: string | null;
 	name?: string | null;
 	slug?: string | null;
 	ownerUserId?: string | null;
@@ -20,6 +21,7 @@ export type OrganizationSnapshot = {
 export type OrganizationMembershipSnapshot = {
 	userId: string;
 	organizationId?: string | null;
+	providerOrganizationId?: string | null;
 	clerkOrganizationId?: string | null;
 	organizationSlug?: string | null;
 	role?: string | null;
@@ -30,6 +32,7 @@ export type OrganizationInviteSnapshot = {
 	email: string;
 	token?: string | null;
 	organizationId?: string | null;
+	providerOrganizationId?: string | null;
 	clerkOrganizationId?: string | null;
 	organizationSlug?: string | null;
 	role?: string | null;
@@ -41,6 +44,7 @@ export type OrganizationInviteSnapshot = {
 
 type Identifiers = {
 	organizationId?: string | null;
+	providerOrganizationId?: string | null;
 	clerkOrganizationId?: string | null;
 	organizationSlug?: string | null;
 };
@@ -57,22 +61,23 @@ function coerceDate(value?: Date | string | number | null): Date | null {
 }
 
 async function getOrganizationId(identifiers: Identifiers): Promise<string | null> {
-	const { organizationId, clerkOrganizationId, organizationSlug } = identifiers;
+	const { organizationId, providerOrganizationId, clerkOrganizationId, organizationSlug } = identifiers;
+	const normalizedProviderOrganizationId = providerOrganizationId ?? clerkOrganizationId;
 	try {
 		if (organizationId) {
 			const existing = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true } });
 			if (existing) return existing.id;
 		}
-		if (clerkOrganizationId) {
-			const existing = await prisma.organization.findUnique({ where: { clerkOrganizationId }, select: { id: true } });
+		if (normalizedProviderOrganizationId) {
+			const existing = await prisma.organization.findUnique({ where: { clerkOrganizationId: normalizedProviderOrganizationId }, select: { id: true } });
 			if (existing) return existing.id;
 		}
 		if (organizationSlug) {
 			const existing = await prisma.organization.findUnique({ where: { slug: organizationSlug }, select: { id: true } });
 			if (existing) return existing.id;
 		}
-		if (clerkOrganizationId) {
-			const ensuredId = await ensureOrganizationFromClerk(clerkOrganizationId);
+		if (normalizedProviderOrganizationId) {
+			const ensuredId = await ensureOrganizationFromProvider(normalizedProviderOrganizationId);
 			if (ensuredId) return ensuredId;
 		}
 	} catch (err: unknown) {
@@ -81,16 +86,16 @@ async function getOrganizationId(identifiers: Identifiers): Promise<string | nul
 	return null;
 }
 
-async function ensureOrganizationFromClerk(clerkOrganizationId: string): Promise<string | null> {
+async function ensureOrganizationFromProvider(providerOrganizationId: string): Promise<string | null> {
 	try {
-		const authOrg = await authService.getOrganization(clerkOrganizationId);
+		const authOrg = await workspaceService.getProviderOrganization(providerOrganizationId);
 		if (!authOrg) {
-			Logger.warn('ensureOrganizationFromClerk: org not found via auth provider', { clerkOrganizationId });
+			Logger.warn('ensureOrganizationFromProvider: org not found via auth provider', { providerOrganizationId });
 			return null;
 		}
 		const ownerUserId = authOrg.createdBy;
 		if (!ownerUserId) {
-			Logger.warn('ensureOrganizationFromClerk: missing owner', { clerkOrganizationId });
+			Logger.warn('ensureOrganizationFromProvider: missing owner', { providerOrganizationId });
 			return null;
 		}
 		const publicMetadata = (authOrg.publicMetadata || {}) as Record<string, unknown>;
@@ -98,9 +103,9 @@ async function ensureOrganizationFromClerk(clerkOrganizationId: string): Promise
 		const tokenPoolStrategy = typeof publicMetadata.tokenPoolStrategy === 'string' ? publicMetadata.tokenPoolStrategy : undefined;
 		const seatLimitMeta = publicMetadata.seatLimit;
 		const seatLimit = typeof seatLimitMeta === 'number' ? seatLimitMeta : typeof authOrg.maxAllowedMemberships === 'number' ? authOrg.maxAllowedMemberships : undefined;
-		const fallbackSlug = `team-${clerkOrganizationId.slice(-6)}`;
+		const fallbackSlug = `team-${providerOrganizationId.slice(-6)}`;
 		const saved = await upsertOrganization({
-			clerkOrganizationId,
+			providerOrganizationId,
 			name: authOrg.name ?? 'Team Workspace',
 			slug: authOrg.slug ?? fallbackSlug,
 			ownerUserId,
@@ -110,21 +115,21 @@ async function ensureOrganizationFromClerk(clerkOrganizationId: string): Promise
 		});
 		return saved?.id ?? null;
 	} catch (err: unknown) {
-		Logger.warn('ensureOrganizationFromClerk failed', { clerkOrganizationId, error: toError(err).message });
+		Logger.warn('ensureOrganizationFromProvider failed', { providerOrganizationId, error: toError(err).message });
 		return null;
 	}
 }
 
 export async function upsertOrganization(snapshot: OrganizationSnapshot) {
-	const { clerkOrganizationId } = snapshot;
-	if (!clerkOrganizationId) {
-		Logger.warn('upsertOrganization called without clerkOrganizationId');
+	const providerOrganizationId = snapshot.providerOrganizationId ?? snapshot.clerkOrganizationId;
+	if (!providerOrganizationId) {
+		Logger.warn('upsertOrganization called without providerOrganizationId');
 		return null;
 	}
 
 	const createRequires = snapshot.name && snapshot.slug && snapshot.ownerUserId;
 	try {
-		const existing = await prisma.organization.findUnique({ where: { clerkOrganizationId } });
+		const existing = await prisma.organization.findUnique({ where: { clerkOrganizationId: providerOrganizationId } });
 		if (existing) {
 			const updateData: Record<string, unknown> = {};
 			if (snapshot.name) updateData.name = snapshot.name;
@@ -148,13 +153,13 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 		}
 
 		if (!createRequires) {
-			Logger.warn('Cannot create organization without name, slug, and owner', { clerkOrganizationId });
+			Logger.warn('Cannot create organization without name, slug, and owner', { providerOrganizationId });
 			return null;
 		}
 
 		return await prisma.organization.create({
 			data: {
-				clerkOrganizationId,
+				clerkOrganizationId: providerOrganizationId,
 				name: snapshot.name!,
 				slug: snapshot.slug!,
 				ownerUserId: snapshot.ownerUserId!,
@@ -167,7 +172,7 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 			},
 		});
 	} catch (err: unknown) {
-		Logger.error('upsertOrganization failed', { error: toError(err).message, clerkOrganizationId });
+		Logger.error('upsertOrganization failed', { error: toError(err).message, providerOrganizationId });
 		return null;
 	}
 }
@@ -175,6 +180,7 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 export async function syncOrganizationMembership(snapshot: OrganizationMembershipSnapshot) {
 	const organizationId = await getOrganizationId({
 		organizationId: snapshot.organizationId,
+		providerOrganizationId: snapshot.providerOrganizationId,
 		clerkOrganizationId: snapshot.clerkOrganizationId,
 		organizationSlug: snapshot.organizationSlug,
 	});
@@ -183,6 +189,7 @@ export async function syncOrganizationMembership(snapshot: OrganizationMembershi
 		Logger.warn('syncOrganizationMembership: organization missing', {
 			identifiers: {
 				organizationId: snapshot.organizationId,
+				providerOrganizationId: snapshot.providerOrganizationId,
 				clerkOrganizationId: snapshot.clerkOrganizationId,
 				organizationSlug: snapshot.organizationSlug,
 			},
@@ -226,6 +233,7 @@ export async function syncOrganizationMembership(snapshot: OrganizationMembershi
 export async function removeOrganizationMembership(args: {
 	userId: string;
 	organizationId?: string | null;
+	providerOrganizationId?: string | null;
 	clerkOrganizationId?: string | null;
 	organizationSlug?: string | null;
 }) {
@@ -253,6 +261,7 @@ export async function removeOrganizationMembership(args: {
 export async function upsertOrganizationInvite(snapshot: OrganizationInviteSnapshot) {
 	const organizationId = await getOrganizationId({
 		organizationId: snapshot.organizationId,
+		providerOrganizationId: snapshot.providerOrganizationId,
 		clerkOrganizationId: snapshot.clerkOrganizationId,
 		organizationSlug: snapshot.organizationSlug,
 	});
@@ -261,6 +270,7 @@ export async function upsertOrganizationInvite(snapshot: OrganizationInviteSnaps
 		Logger.warn('upsertOrganizationInvite: organization missing', {
 			identifiers: {
 				organizationId: snapshot.organizationId,
+				providerOrganizationId: snapshot.providerOrganizationId,
 				clerkOrganizationId: snapshot.clerkOrganizationId,
 				organizationSlug: snapshot.organizationSlug,
 			},
@@ -403,14 +413,14 @@ export async function resetOrganizationSharedTokens(opts: { organizationId: stri
 	}
 }
 
-export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
-	if (!clerkOrganizationId) return false;
+export async function deleteOrganizationByProviderId(providerOrganizationId: string) {
+	if (!providerOrganizationId) return false;
 	let clerkAttempted = false;
 	try {
 		// Detach any historical references before deletion; otherwise FK constraints can
 		// prevent local deletion (payments/subscriptions may outlive the org).
 		const existing = await prisma.organization.findUnique({
-			where: { clerkOrganizationId },
+			where: { clerkOrganizationId: providerOrganizationId },
 			select: { id: true },
 		});
 		if (existing?.id) {
@@ -420,8 +430,8 @@ export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
 					data: { organizationId: null },
 				});
 			} catch (err: unknown) {
-				Logger.warn('deleteOrganizationByClerkId: failed to detach subscriptions', {
-					clerkOrganizationId,
+				Logger.warn('deleteOrganizationByProviderId: failed to detach subscriptions', {
+					providerOrganizationId,
 					error: toError(err).message,
 				});
 			}
@@ -432,8 +442,8 @@ export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
 					data: { organizationId: null },
 				});
 			} catch (err: unknown) {
-				Logger.warn('deleteOrganizationByClerkId: failed to detach payments', {
-					clerkOrganizationId,
+				Logger.warn('deleteOrganizationByProviderId: failed to detach payments', {
+					providerOrganizationId,
 					error: toError(err).message,
 				});
 			}
@@ -441,23 +451,25 @@ export async function deleteOrganizationByClerkId(clerkOrganizationId: string) {
 
 		clerkAttempted = true;
 		try {
-			await authService.deleteOrganization(clerkOrganizationId);
-			Logger.info('deleteOrganizationByClerkId: deleted auth provider organization', { clerkOrganizationId });
+			await workspaceService.deleteProviderOrganization(providerOrganizationId);
+			Logger.info('deleteOrganizationByProviderId: deleted auth provider organization', { providerOrganizationId });
 		} catch (err: unknown) {
 			const e = toError(err);
 			if (e.message && e.message.toLowerCase().includes('not found')) {
-				Logger.info('deleteOrganizationByClerkId: Clerk organization not found, continuing', { clerkOrganizationId });
+				Logger.info('deleteOrganizationByProviderId: provider organization not found, continuing', { providerOrganizationId });
 			} else {
-				Logger.warn('deleteOrganizationByClerkId: failed to delete Clerk organization, continuing with local delete', { clerkOrganizationId, error: e.message });
+				Logger.warn('deleteOrganizationByProviderId: failed to delete provider organization, continuing with local delete', { providerOrganizationId, error: e.message });
 			}
 		}
 
-		await prisma.organization.delete({ where: { clerkOrganizationId } });
+		await prisma.organization.delete({ where: { clerkOrganizationId: providerOrganizationId } });
 		return true;
 	} catch (err: unknown) {
 		const error = toError(err);
 		if (error.message.includes('Record to delete does not exist')) return false;
-		Logger.error('deleteOrganizationByClerkId failed', { error: error.message, clerkOrganizationId, clerkAttempted });
+		Logger.error('deleteOrganizationByProviderId failed', { error: error.message, providerOrganizationId, clerkAttempted });
 		return false;
 	}
 }
+
+export const deleteOrganizationByClerkId = deleteOrganizationByProviderId;

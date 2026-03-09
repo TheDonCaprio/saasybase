@@ -246,12 +246,13 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
       {
         method: 'POST',
         path: '/api/admin/payments/backfill-invoices',
-        summary: 'Backfill Stripe payment intent IDs',
-        description: 'Scans recent payments missing stripePaymentIntentId and attempts to backfill via Stripe Checkout Session or related subscription invoice.',
+        summary: 'Backfill Stripe external payment IDs',
+        description: 'Scans recent Stripe payments missing externalPaymentId and attempts to backfill via Stripe Checkout Session or related subscription invoice.',
         access: 'admin',
         notes: [
           'Auth: requires ADMIN via requireAdmin().',
           'No request body is used.',
+          'Legacy Stripe columns may still be read as migration inputs, but the route now writes provider-neutral external fields.',
           'Processes up to 100 payments per call.'
         ],
         rateLimitTier: 'admin'
@@ -286,7 +287,8 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           priceCents: 'number — int 0..500000',
           active: 'boolean? — default true',
           sortOrder: 'number? — int -1000..10000 (default 0)',
-          stripePriceId: 'string? — optional; empty string treated as undefined',
+          externalPriceId: 'string? — preferred provider-neutral price ID; empty string treated as undefined',
+          stripePriceId: 'string? — legacy alias for externalPriceId',
           autoRenew: 'boolean? — default false',
           recurringInterval: "'day' | 'week' | 'month' | 'year'? (default 'month')",
           recurringIntervalCount: 'number? — int 1..365 (default 1)',
@@ -330,7 +332,8 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           priceCents: 'number? — int 0..500000',
           active: 'boolean?',
           sortOrder: 'number? — int -1000..10000',
-          stripePriceId: 'string | null? — empty string -> null; undefined means no change',
+          externalPriceId: 'string | null? — preferred provider-neutral price ID; empty string -> null; undefined means no change',
+          stripePriceId: 'string | null? — legacy alias for externalPriceId',
           tokenLimit: 'number | null?',
           tokenName: 'string | null?',
           supportsOrganizations: 'boolean?',

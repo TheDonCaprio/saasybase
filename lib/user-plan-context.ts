@@ -60,21 +60,21 @@ export type OrganizationPlanContext = {
   membership: OrganizationMembershipWithCaps | null;
 };
 
-export async function getOrganizationPlanContext(userId: string, activeClerkOrgId?: string | null): Promise<OrganizationPlanContext | null> {
-  const hasActiveClerkOrg = typeof activeClerkOrgId === 'string' && activeClerkOrgId.trim().length > 0;
-  if (!hasActiveClerkOrg) {
+export async function getOrganizationPlanContext(userId: string, activeOrganizationId?: string | null): Promise<OrganizationPlanContext | null> {
+  const hasActiveOrganizationId = typeof activeOrganizationId === 'string' && activeOrganizationId.trim().length > 0;
+  if (!hasActiveOrganizationId) {
     return null;
   }
 
-  const access = await getOrganizationAccessSummary(userId, activeClerkOrgId);
+  const access = await getOrganizationAccessSummary(userId, activeOrganizationId);
   if (!access.allowed) return null;
 
   const where = access.kind === 'OWNER'
     ? {
         ownerUserId: userId,
         OR: [
-          { id: activeClerkOrgId },
-          { clerkOrganizationId: activeClerkOrgId },
+          { id: activeOrganizationId },
+          { clerkOrganizationId: activeOrganizationId },
         ],
       }
     : { id: access.membership.organizationId };

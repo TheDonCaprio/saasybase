@@ -81,7 +81,6 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			priceCents: 2000,
 			autoRenew: true,
 			externalPriceId: null,
-			stripePriceId: null,
 			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_target' }),
 		});
 	});
@@ -381,7 +380,6 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			priceCents: 2000,
 			autoRenew: true,
 			externalPriceId: null,
-			stripePriceId: null,
 			externalPriceIds: JSON.stringify({ paystack: 'plan_pstk_target' }),
 		});
 
@@ -438,7 +436,6 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			priceCents: 2000,
 			autoRenew: true,
 			externalPriceId: null,
-			stripePriceId: null,
 			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_pro' }),
 		});
 
@@ -491,7 +488,6 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			priceCents: 1000,
 			autoRenew: true,
 			externalPriceId: null,
-			stripePriceId: null,
 			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_basic' }),
 		});
 

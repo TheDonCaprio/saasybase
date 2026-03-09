@@ -105,7 +105,7 @@ export async function GET(
       subtotalCents: computedSubtotal,
       discountCents: inferredDiscount,
       couponCode,
-      stripePaymentIntentId: payment.externalPaymentId, // Keeping the field name in invoice object compatible for now, or update createInvoicePDF type
+      externalPaymentId: payment.externalPaymentId,
     };
 
     const invoiceSubscription = payment.subscription
@@ -113,7 +113,7 @@ export async function GET(
         id: payment.subscription.id,
         startedAt: payment.subscription.startedAt,
         expiresAt: payment.subscription.expiresAt,
-        stripeSubscriptionId: payment.subscription.externalSubscriptionId,
+        externalSubscriptionId: payment.subscription.externalSubscriptionId,
       }
       : null;
 

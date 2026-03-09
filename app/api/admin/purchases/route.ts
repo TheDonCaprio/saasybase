@@ -117,8 +117,6 @@ export async function GET(req: NextRequest) {
         { user: { name: buildStringContainsFilter(search, dbUrl) } },
         { userId: buildStringContainsFilter(search, dbUrl) },
         { user: { externalCustomerId: buildStringContainsFilter(search, dbUrl) } },
-        { stripePaymentIntentId: buildStringContainsFilter(search, dbUrl) },
-        { stripeCheckoutSessionId: buildStringContainsFilter(search, dbUrl) },
         { externalPaymentId: buildStringContainsFilter(search, dbUrl) },
         { externalSessionId: buildStringContainsFilter(search, dbUrl) },
         { externalRefundId: buildStringContainsFilter(search, dbUrl) },
@@ -356,17 +354,16 @@ export async function GET(req: NextRequest) {
         currency: rawCurrency,
         status: typeof rec?.status === 'string' ? rec!.status as string : String(rec?.status ?? ''),
         createdAt: makeDateIso(rec?.createdAt) || new Date().toISOString(),
-        stripePaymentIntentId: typeof rec?.stripePaymentIntentId === 'string' ? rec!.stripePaymentIntentId as string : null,
-        stripeCheckoutSessionId: typeof rec?.stripeCheckoutSessionId === 'string' ? rec!.stripeCheckoutSessionId as string : null,
         externalPaymentId: typeof rec?.externalPaymentId === 'string' ? rec!.externalPaymentId as string : null,
         externalSessionId: typeof rec?.externalSessionId === 'string' ? rec!.externalSessionId as string : null,
         dashboardUrl: typeof rec?.externalPaymentId === 'string'
           ? paymentService.getDashboardUrl('payment', rec!.externalPaymentId as string)
-          : (typeof rec?.stripePaymentIntentId === 'string' ? paymentService.getDashboardUrl('payment', rec!.stripePaymentIntentId as string) : null),
+          : null,
         paymentProvider: typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null,
         subscription: subRec ? {
           id: typeof subRec?.id === 'string' ? subRec!.id as string : String(subRec?.id ?? ''),
           status: typeof subRec?.status === 'string' ? subRec!.status as string : String(subRec?.status ?? ''),
+          externalSubscriptionId: typeof subRec?.externalSubscriptionId === 'string' ? subRec!.externalSubscriptionId as string : null,
           expiresAt: makeDateIso(subRec?.expiresAt)
         } : null
       };

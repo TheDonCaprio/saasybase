@@ -47,7 +47,6 @@ type Plan = {
   durationHours: number;
   active: boolean;
   sortOrder: number;
-  stripePriceId?: string | null;
   externalPriceId?: string | null;
   externalPriceIds?: string | null;
   externalProductIds?: string | null;
@@ -72,7 +71,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'createdAt' | 'priceCents' | 'tokenLimit'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; active: boolean; sortOrder: number; stripePriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' };
+  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; active: boolean; sortOrder: number; externalPriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' };
   const [form, setForm] = useState<Form>({
     name: '',
     shortDescription: '',
@@ -81,7 +80,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     durationHours: 24,
     active: true,
     sortOrder: 0,
-    stripePriceId: '',
+    externalPriceId: '',
     autoRenew: false,
     recurringInterval: 'month',
     recurringIntervalCount: 1,
@@ -157,7 +156,6 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     if (entries.length > 0) {
       return entries.map(([provider, value]) => `${provider}: ${value}`).join(' · ');
     }
-    if (plan.stripePriceId) return `stripe: ${plan.stripePriceId}`;
     if (plan.externalPriceId) return plan.externalPriceId;
     return null;
   }, []);
@@ -168,7 +166,6 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     if (entries.length > 0) {
       return entries.map(([provider, value]) => ({ provider, priceId: value }));
     }
-    if (plan.stripePriceId) return [{ provider: 'stripe', priceId: plan.stripePriceId }];
     if (plan.externalPriceId) return [{ provider: 'unknown', priceId: plan.externalPriceId }];
     return [];
   }, []);
@@ -179,7 +176,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     let result = plans.filter((plan) => {
       const externalLabel = externalPriceLabelForPlan(plan) ?? '';
       const matchesSearch = trimmedSearch
-        ? [plan.name, plan.shortDescription ?? '', plan.description ?? '', plan.stripePriceId ?? '', plan.externalPriceId ?? '', plan.externalPriceIds ?? '', externalLabel]
+        ? [plan.name, plan.shortDescription ?? '', plan.description ?? '', plan.externalPriceId ?? '', plan.externalPriceIds ?? '', externalLabel]
           .some((field) => field.toLowerCase().includes(trimmedSearch))
         : true;
 
@@ -338,7 +335,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       durationHours: plan.durationHours,
       active: plan.active,
       sortOrder: (plan.sortOrder ?? plans.length) + 1,
-      stripePriceId: '',
+      externalPriceId: '',
       autoRenew: plan.autoRenew || false,
       recurringInterval: (plan.recurringInterval as 'day' | 'week' | 'month' | 'year') || 'month',
       recurringIntervalCount: typeof plan.recurringIntervalCount === 'number' && Number.isFinite(plan.recurringIntervalCount) ? plan.recurringIntervalCount : 1,
@@ -363,7 +360,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       durationHours: 24,
       active: true,
       sortOrder: plans.length,
-      stripePriceId: '',
+      externalPriceId: '',
       autoRenew: false,
       recurringInterval: 'month',
       recurringIntervalCount: 1,
@@ -390,7 +387,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       durationHours: plan.durationHours,
       active: plan.active,
       sortOrder: plan.sortOrder,
-      stripePriceId: plan.stripePriceId || '',
+      externalPriceId: plan.externalPriceId || '',
       autoRenew: plan.autoRenew || false,
       recurringInterval: (plan.recurringInterval as 'day' | 'week' | 'month' | 'year') || 'month',
       recurringIntervalCount: typeof plan.recurringIntervalCount === 'number' && Number.isFinite(plan.recurringIntervalCount) ? plan.recurringIntervalCount : 1,
@@ -1035,13 +1032,13 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                     <div className="flex gap-3">
                       <div className="flex-1">
                         <label className="block text-sm text-neutral-300 mb-1">External price ID (active provider, optional)</label>
-                        <input className="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-100 placeholder-neutral-500 focus:ring-2 focus:ring-blue-500" placeholder="Price ID" value={form.stripePriceId} onChange={e => setForm({ ...form, stripePriceId: e.target.value })} />
+                        <input className="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-100 placeholder-neutral-500 focus:ring-2 focus:ring-blue-500" placeholder="Price ID" value={form.externalPriceId} onChange={e => setForm({ ...form, externalPriceId: e.target.value })} />
                       </div>
                       <div className="flex items-end">
                         <button type="button" onClick={async () => {
-                          if (!form.stripePriceId) return showToast('Enter a price ID first', 'error');
+                          if (!form.externalPriceId) return showToast('Enter a price ID first', 'error');
                           try {
-                            const res = await fetch('/api/admin/plans/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priceId: form.stripePriceId }) });
+                            const res = await fetch('/api/admin/plans/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priceId: form.externalPriceId }) });
                             const json = await res.json();
                             if (!res.ok) return showToast(json?.error || 'Verify failed', 'error');
                             const recurring = json.recurring ? JSON.stringify(json.recurring) : 'one_time';

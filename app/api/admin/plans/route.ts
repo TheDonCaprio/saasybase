@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       priceCents: p.priceCents,
       durationHours: p.durationHours,
       active: p.active,
-      stripePriceId: p.stripePriceId,
+      stripePriceId: p.externalPriceId,
       externalPriceId: p.externalPriceId,
       externalPriceIds: p.externalPriceIds,
       externalProductIds: p.externalProductIds,
@@ -155,7 +155,8 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
       priceCents,
       active,
       sortOrder,
-      stripePriceId,
+      externalPriceId,
+      stripePriceId: legacyStripePriceId,
       autoRenew,
       recurringInterval,
       recurringIntervalCount,
@@ -172,13 +173,17 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
       ? await sanitizeRichText(rawDescriptionValue)
       : null;
     const autoCreate = process.env.STRIPE_AUTO_CREATE === '1';
-    let stripePriceIdToSave = typeof stripePriceId === 'string' ? stripePriceId : undefined;
+    let primaryPriceIdToSave = typeof externalPriceId === 'string'
+      ? externalPriceId
+      : typeof legacyStripePriceId === 'string'
+        ? legacyStripePriceId
+        : undefined;
     let externalPriceIdsToSave: string | null = null;
     let externalProductIdsToSave: string | null = null;
     const creationWarnings: string[] = [];
 
     // Sync plan to ALL configured payment providers (not just the active one)
-    if (!stripePriceIdToSave && autoCreate) {
+    if (!primaryPriceIdToSave && autoCreate) {
       const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
       
       for (const { name: providerName, provider } of configuredProviders) {
@@ -294,9 +299,8 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
             externalProductIdsToSave = setIdByProvider(externalProductIdsToSave, providerName, productIdToSave);
           }
 
-          // Use first created price as the legacy stripePriceId (for backward compatibility)
-          if (!stripePriceIdToSave) {
-            stripePriceIdToSave = price.id;
+          if (!primaryPriceIdToSave) {
+            primaryPriceIdToSave = price.id;
           }
 
           Logger.info('Created price on provider', {
@@ -322,14 +326,14 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
       }
 
       // Persist env value for matching plan seed (use first/primary price ID)
-      if (stripePriceIdToSave) {
+      if (primaryPriceIdToSave) {
         const seed = findPlanSeedByName(name);
         if (seed) {
-          await persistEnvValue(seed.externalPriceEnv, stripePriceIdToSave);
+          await persistEnvValue(seed.externalPriceEnv, primaryPriceIdToSave);
         } else {
           Logger.info('Auto-created prices without matching plan seed; env sync skipped', {
             planName: name,
-            stripePriceId: stripePriceIdToSave,
+            externalPriceId: primaryPriceIdToSave,
           });
         }
       }
@@ -344,8 +348,7 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
         priceCents,
         active,
         sortOrder,
-        stripePriceId: stripePriceIdToSave ?? null,
-        externalPriceId: stripePriceIdToSave ?? null,
+        externalPriceId: primaryPriceIdToSave ?? null,
         externalPriceIds: externalPriceIdsToSave,
         externalProductIds: externalProductIdsToSave,
         autoRenew,

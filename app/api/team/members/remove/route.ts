@@ -33,18 +33,23 @@ export async function POST(request: NextRequest) {
 
   const organization = await prisma.organization.findFirst({
     where: orgId
-      ? { ownerUserId: userId, clerkOrganizationId: orgId }
+      ? {
+          ownerUserId: userId,
+          OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
+        }
       : { ownerUserId: userId },
-    select: { clerkOrganizationId: true },
+    select: { id: true, clerkOrganizationId: true },
   });
 
-  if (!organization || !organization.clerkOrganizationId) {
+  if (!organization) {
     return NextResponse.json({ ok: false, error: 'No organization found.' }, { status: 400 });
   }
 
+  const providerOrganizationId = organization.clerkOrganizationId ?? organization.id;
+
   try {
     await authService.deleteOrganizationMembership({
-      organizationId: organization.clerkOrganizationId,
+      organizationId: providerOrganizationId,
       userId: targetUserId,
     });
   } catch (err: unknown) {
@@ -55,10 +60,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  await removeOrganizationMembership({ userId: targetUserId, clerkOrganizationId: organization.clerkOrganizationId });
+  await removeOrganizationMembership({ userId: targetUserId, organizationId: organization.id });
   const state = await fetchTeamDashboardState(userId, {
     forceSync: true,
-    activeClerkOrgId: orgId ?? null,
+    activeOrganizationId: orgId ?? null,
   });
   return NextResponse.json({ ok: true, ...state });
 }

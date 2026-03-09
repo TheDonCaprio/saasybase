@@ -16,13 +16,14 @@ import type {
   AuthProviderFeature,
   AuthSession,
   AuthUser,
-  AuthSessionInfo,
   AuthOrganization,
   AuthOrganizationMembership,
   AuthWebhookEvent,
 } from '../types';
 import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
+import { ACTIVE_ORG_COOKIE } from '../../active-organization';
+import { validateAndFormatPersonName } from '../../name-validation';
 
 // ---------------------------------------------------------------------------
 // Lazy imports — keep the module loadable even if next-auth isn't installed
@@ -105,7 +106,7 @@ export class NextAuthProvider implements AuthProvider {
       try {
         const { cookies } = await import('next/headers');
         const jar = await cookies();
-        const activeOrg = jar.get('saasybase-active-org')?.value;
+        const activeOrg = jar.get(ACTIVE_ORG_COOKIE)?.value;
         if (activeOrg) {
           // Validate the user still has membership in this org
           const prisma = await getPrisma();
@@ -205,7 +206,11 @@ export class NextAuthProvider implements AuthProvider {
     const currentParts = currentName.split(' ');
     const firstName = data.firstName ?? currentParts[0] ?? '';
     const lastName = data.lastName ?? currentParts.slice(1).join(' ') ?? '';
-    const name = [firstName, lastName].filter(Boolean).join(' ') || null;
+    const validatedName = validateAndFormatPersonName({ firstName, lastName });
+    if (!validatedName.ok) {
+      throw new Error(validatedName.error || 'Invalid name');
+    }
+    const name = validatedName.fullName;
 
     const updated = await prisma.user.update({
       where: { id: userId },
@@ -334,37 +339,6 @@ export class NextAuthProvider implements AuthProvider {
         organizationId: rec.organizationId as string,
         role: (rec.role as string) ?? 'org:member',
       };
-    });
-  }
-
-  // ── Session Management ─────────────────────────────────────────────
-
-  async getUserSessions(userId: string): Promise<AuthSessionInfo[]> {
-    try {
-      const prisma = await getPrisma();
-      const sessions = await prisma.session.findMany({
-        where: { userId, expires: { gt: new Date() } },
-        orderBy: { expires: 'desc' },
-      });
-      return sessions.map((s: unknown) => {
-        const rec = s as Record<string, unknown>;
-        return {
-          id: rec.id as string,
-          status: 'active',
-          lastActiveAt: rec.expires ? new Date(rec.expires as string) : null,
-          activity: null, // NextAuth DB sessions don't track device info
-        };
-      });
-    } catch (err) {
-      Logger.warn('NextAuthProvider.getUserSessions failed', { userId, error: toError(err).message });
-      return [];
-    }
-  }
-
-  async revokeSession(sessionId: string): Promise<void> {
-    const prisma = await getPrisma();
-    await prisma.session.delete({ where: { id: sessionId } }).catch(() => {
-      // Session may already be expired/deleted
     });
   }
 

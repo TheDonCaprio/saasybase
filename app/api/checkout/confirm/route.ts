@@ -17,9 +17,12 @@ function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
 }
 
-function resolveActiveClerkOrgId(metadata?: Record<string, unknown> | null): string | null {
+function resolveActiveOrganizationId(metadata?: Record<string, unknown> | null): string | null {
   if (!metadata) return null;
   const candidates = [
+    metadata.activeOrganizationId,
+    metadata.organizationId,
+    metadata.activeProviderOrganizationId,
     metadata.activeClerkOrgId,
     metadata.clerkOrgId,
     metadata.orgId,
@@ -143,7 +146,6 @@ export async function GET(req: NextRequest) {
       if (paymentId) dbOr.push({ externalPaymentId: paymentId });
       if (sessionId) {
         dbOr.push({ externalSessionId: sessionId });
-        dbOr.push({ stripeCheckoutSessionId: sessionId });
       }
 
       if (dbOr.length > 0) {
@@ -287,12 +289,15 @@ export async function GET(req: NextRequest) {
       // For non-stripe providers, fulfill via PaymentService so token crediting and
       // subscription handling stay consistent with webhook processing.
       if (!isStripeProvider) {
-        const activeClerkOrgId = resolveActiveClerkOrgId(session.metadata) ?? authOrgId ?? null;
+        const activeOrganizationId = resolveActiveOrganizationId(session.metadata) ?? authOrgId ?? null;
         const standardizedMetadata = { ...(session.metadata || {}) };
-        if (activeClerkOrgId) {
-          standardizedMetadata.activeClerkOrgId = activeClerkOrgId;
-          standardizedMetadata.clerkOrgId = activeClerkOrgId;
-          standardizedMetadata.orgId = activeClerkOrgId;
+        if (activeOrganizationId) {
+          standardizedMetadata.activeOrganizationId = activeOrganizationId;
+          standardizedMetadata.organizationId = activeOrganizationId;
+          standardizedMetadata.activeProviderOrganizationId = activeOrganizationId;
+          standardizedMetadata.activeClerkOrgId = activeOrganizationId;
+          standardizedMetadata.clerkOrgId = activeOrganizationId;
+          standardizedMetadata.orgId = activeOrganizationId;
         }
 
         const standardized: StandardizedCheckoutSession = {
@@ -426,8 +431,7 @@ export async function GET(req: NextRequest) {
         where: {
           userId,
           OR: [
-            { externalSessionId: sessionLookupId },
-            { stripeCheckoutSessionId: sessionLookupId }
+            { externalSessionId: sessionLookupId }
           ]
         },
         include: {
@@ -488,8 +492,7 @@ export async function GET(req: NextRequest) {
           payments: {
             some: {
               OR: [
-                { externalSessionId: sessionLookupId },
-                { stripeCheckoutSessionId: sessionLookupId }
+                { externalSessionId: sessionLookupId }
               ]
             }
           }
@@ -516,17 +519,23 @@ export async function GET(req: NextRequest) {
       where: {
         OR: [
           { externalPriceId: priceId },
-          { stripePriceId: priceId }
+          { externalPriceIds: { contains: priceId } }
         ]
       }
     });
     if (!plan) return jsonError('Plan not found for price', 404, 'PLAN_NOT_FOUND');
 
     const now = new Date();
-    const activeClerkOrgId = resolveActiveClerkOrgId(session?.metadata) ?? authOrgId ?? null;
-    const activeOwnedOrganization = activeClerkOrgId
+    const activeOrganizationId = resolveActiveOrganizationId(session?.metadata) ?? authOrgId ?? null;
+    const activeOwnedOrganization = activeOrganizationId
       ? await prisma.organization.findFirst({
-        where: { ownerUserId: userId, clerkOrganizationId: activeClerkOrgId },
+        where: {
+          ownerUserId: userId,
+          OR: [
+            { id: activeOrganizationId },
+            { clerkOrganizationId: activeOrganizationId },
+          ],
+        },
         select: { id: true, clerkOrganizationId: true },
       })
       : null;
@@ -546,7 +555,6 @@ export async function GET(req: NextRequest) {
     const subscriptionIdentifierData = providerSubscriptionId
       ? {
         externalSubscriptionId: providerSubscriptionId,
-        ...(providerName === 'stripe' ? { stripeSubscriptionId: providerSubscriptionId } : {})
       }
       : {};
 
@@ -596,8 +604,7 @@ export async function GET(req: NextRequest) {
             where: {
               userId,
               OR: [
-                { externalSessionId: sessionLookupId },
-                { stripeCheckoutSessionId: sessionLookupId }
+                { externalSessionId: sessionLookupId }
               ]
             }
           })
@@ -770,8 +777,6 @@ export async function GET(req: NextRequest) {
           paymentProvider: providerName,
           ...(sessIdForPayment ? { externalSessionId: sessIdForPayment } : {}),
           ...(paymentIntentId ? { externalPaymentId: paymentIntentId } : {}),
-          ...(isStripeProvider && sessIdForPayment ? { stripeCheckoutSessionId: sessIdForPayment } : {}),
-          ...(isStripeProvider && paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {})
         };
 
         const p = await tx.payment.create({

@@ -26,19 +26,20 @@ interface ReactiveProfileHeaderProps {
 export function ReactiveProfileHeader({ fallbackUser, subscription, preformattedCreatedAt }: ReactiveProfileHeaderProps) {
   const { user: clerkUser, isLoaded } = useAuthUser();
   const settings = useFormatSettings();
+  const isNextAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth';
 
   // No debug instrumentation here; server preformatted strings are consumed directly in the markup.
 
   // Use Clerk user data when available, fallback to database user
-  const displayName = isLoaded && clerkUser 
+  const displayName = !isNextAuth && isLoaded && clerkUser 
     ? (clerkUser.fullName || clerkUser.firstName || 'Anonymous User')
     : (fallbackUser.name || 'Anonymous User');
 
-  const displayEmail = isLoaded && clerkUser
+  const displayEmail = !isNextAuth && isLoaded && clerkUser
     ? clerkUser.emailAddresses?.[0]?.emailAddress
     : (fallbackUser.email || 'No email');
 
-  const displayImage = isLoaded && clerkUser
+  const displayImage = !isNextAuth && isLoaded && clerkUser
     ? clerkUser.imageUrl
     : fallbackUser.imageUrl;
 
@@ -87,7 +88,7 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
           </div>
           
           <div className="mt-4 flex items-center gap-3">
-            <ClerkProfileButtons />
+            <ClerkProfileButtons defaultName={fallbackUser.name} defaultEmail={fallbackUser.email} />
           </div>
         </div>
       </div>

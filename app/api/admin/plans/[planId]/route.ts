@@ -128,7 +128,8 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
     const priceProvided = Object.prototype.hasOwnProperty.call(payload, 'priceCents');
     const activeProvided = Object.prototype.hasOwnProperty.call(payload, 'active');
     const sortOrderProvided = Object.prototype.hasOwnProperty.call(payload, 'sortOrder');
-    const stripeProvided = Object.prototype.hasOwnProperty.call(payload, 'stripePriceId');
+    const externalPriceIdProvided = Object.prototype.hasOwnProperty.call(payload, 'externalPriceId');
+    const legacyStripePriceIdProvided = Object.prototype.hasOwnProperty.call(payload, 'stripePriceId');
     const autoRenewProvided = Object.prototype.hasOwnProperty.call(payload, 'autoRenew');
     const recurringProvided = Object.prototype.hasOwnProperty.call(payload, 'recurringInterval');
     const recurringIntervalCountProvided = Object.prototype.hasOwnProperty.call(payload, 'recurringIntervalCount');
@@ -211,15 +212,20 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       typeof payload.recurringIntervalCount === 'number' &&
       payload.recurringIntervalCount !== (existingPlan.recurringIntervalCount ?? 1);
 
-    const existingStripePriceId = existingPlan.stripePriceId ?? null;
-    const providedStripeId = stripeProvided ? (payload.stripePriceId ?? null) : undefined;
-    const providedStripeIdString = typeof providedStripeId === 'string' ? providedStripeId : undefined;
-    const providedMatchesExisting = stripeProvided && (providedStripeId === existingStripePriceId);
+    const existingExternalPriceId = existingPlan.externalPriceId ?? null;
+    const providedExternalPriceId = externalPriceIdProvided
+      ? (payload.externalPriceId ?? null)
+      : legacyStripePriceIdProvided
+        ? (payload.stripePriceId ?? null)
+        : undefined;
+    const providedExternalPriceIdString = typeof providedExternalPriceId === 'string' ? providedExternalPriceId : undefined;
+    const providedMatchesExisting = (externalPriceIdProvided || legacyStripePriceIdProvided)
+      && (providedExternalPriceId === existingExternalPriceId);
 
-    let stripePriceIdToUse = providedStripeId !== undefined
-      ? providedStripeId
-      : (existingStripePriceId ?? undefined);
-    let shouldPersistStripeId = stripeProvided;
+    let externalPriceIdToUse = providedExternalPriceId !== undefined
+      ? providedExternalPriceId
+      : (existingExternalPriceId ?? undefined);
+    let shouldPersistExternalPriceId = externalPriceIdProvided || legacyStripePriceIdProvided;
     let envPersistValue: string | undefined;
     const updateWarnings: string[] = [];
 
@@ -454,10 +460,9 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
           newExternalPriceIds = setIdByProvider(newExternalPriceIds, providerName, price.id);
           anyPriceCreated = true;
 
-          // Use first created price as the legacy stripePriceId
-          if (!stripePriceIdToUse || stripePriceIdToUse === existingStripePriceId) {
-            stripePriceIdToUse = price.id;
-            shouldPersistStripeId = true;
+          if (!externalPriceIdToUse || externalPriceIdToUse === existingExternalPriceId) {
+            externalPriceIdToUse = price.id;
+            shouldPersistExternalPriceId = true;
             envPersistValue = price.id;
           }
 
@@ -497,41 +502,44 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       }
     }
 
-    if (toggledAutoRenewOn && (!stripeProvided || providedMatchesExisting)) {
-      stripePriceIdToUse = undefined;
+    if (toggledAutoRenewOn && (!(externalPriceIdProvided || legacyStripePriceIdProvided) || providedMatchesExisting)) {
+      externalPriceIdToUse = undefined;
     }
 
-    const manualOneTimeOverride = toggledAutoRenewOff && typeof providedStripeIdString === 'string' && providedStripeIdString.length > 0 && providedStripeIdString !== existingStripePriceId;
+    const manualOneTimeOverride = toggledAutoRenewOff
+      && typeof providedExternalPriceIdString === 'string'
+      && providedExternalPriceIdString.length > 0
+      && providedExternalPriceIdString !== existingExternalPriceId;
 
     if (toggledAutoRenewOff) {
       if (manualOneTimeOverride) {
-        stripePriceIdToUse = providedStripeIdString;
-        shouldPersistStripeId = true;
-        envPersistValue = providedStripeIdString;
+        externalPriceIdToUse = providedExternalPriceIdString;
+        shouldPersistExternalPriceId = true;
+        envPersistValue = providedExternalPriceIdString;
       } else if (autoCreateEnabled) {
-        stripePriceIdToUse = undefined;
-        shouldPersistStripeId = true;
+        externalPriceIdToUse = undefined;
+        shouldPersistExternalPriceId = true;
         envPersistValue = '';
       } else {
-        if (typeof providedStripeIdString !== 'string' || providedStripeIdString.length === 0) {
+        if (typeof providedExternalPriceIdString !== 'string' || providedExternalPriceIdString.length === 0) {
           return NextResponse.json({
             error: 'Disabling auto-renew requires providing a one-time price ID when auto-create is disabled.',
           }, { status: 400 });
         }
-        stripePriceIdToUse = providedStripeIdString;
-        shouldPersistStripeId = true;
-        envPersistValue = providedStripeIdString;
+        externalPriceIdToUse = providedExternalPriceIdString;
+        shouldPersistExternalPriceId = true;
+        envPersistValue = providedExternalPriceIdString;
       }
     }
 
-    if (toggledAutoRenewOn && !autoCreateEnabled && (stripePriceIdToUse === undefined || stripePriceIdToUse === null || stripePriceIdToUse === '')) {
+    if (toggledAutoRenewOn && !autoCreateEnabled && (externalPriceIdToUse === undefined || externalPriceIdToUse === null || externalPriceIdToUse === '')) {
       return NextResponse.json({
         error: 'Auto-renew requires a recurring price ID when auto-create is disabled.',
       }, { status: 400 });
     }
 
     if (autoCreateEnabled && finalAutoRenew) {
-      const needsRecurringPrice = toggledAutoRenewOn || stripePriceIdToUse === undefined || stripePriceIdToUse === null;
+      const needsRecurringPrice = toggledAutoRenewOn || externalPriceIdToUse === undefined || externalPriceIdToUse === null;
       if (needsRecurringPrice) {
         if (typeof finalPriceCents !== 'number' || !Number.isFinite(finalPriceCents)) {
           Logger.error('Auto-create failed', {
@@ -567,9 +575,9 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
               newExternalProductIds = setIdByProvider(newExternalProductIds, providerName, productId);
               anyPriceCreated = true;
 
-              if (!stripePriceIdToUse) {
-                stripePriceIdToUse = price.id;
-                shouldPersistStripeId = true;
+              if (!externalPriceIdToUse) {
+                externalPriceIdToUse = price.id;
+                shouldPersistExternalPriceId = true;
                 envPersistValue = price.id;
               }
 
@@ -594,7 +602,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
     }
 
     if (autoCreateEnabled && toggledAutoRenewOff && !manualOneTimeOverride) {
-      const needsOneTimePrice = stripePriceIdToUse === undefined || stripePriceIdToUse === null || stripePriceIdToUse === '';
+      const needsOneTimePrice = externalPriceIdToUse === undefined || externalPriceIdToUse === null || externalPriceIdToUse === '';
       if (needsOneTimePrice) {
         if (typeof finalPriceCents !== 'number' || !Number.isFinite(finalPriceCents)) {
           Logger.error('Auto-create failed', {
@@ -634,9 +642,9 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
               newExternalProductIds = setIdByProvider(newExternalProductIds, providerName, productId);
               anyPriceCreated = true;
 
-              if (!stripePriceIdToUse) {
-                stripePriceIdToUse = price.id;
-                shouldPersistStripeId = true;
+              if (!externalPriceIdToUse) {
+                externalPriceIdToUse = price.id;
+                shouldPersistExternalPriceId = true;
                 envPersistValue = price.id;
               }
 
@@ -660,10 +668,10 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       }
     }
 
-    if (shouldPersistStripeId && envPersistValue === undefined) {
-      if (typeof stripePriceIdToUse === 'string') {
-        envPersistValue = stripePriceIdToUse;
-      } else if (stripePriceIdToUse === null) {
+    if (shouldPersistExternalPriceId && envPersistValue === undefined) {
+      if (typeof externalPriceIdToUse === 'string') {
+        envPersistValue = externalPriceIdToUse;
+      } else if (externalPriceIdToUse === null) {
         envPersistValue = '';
       }
     }
@@ -691,12 +699,10 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
     if (sortOrderProvided && typeof payload.sortOrder === 'number') {
       updateData.sortOrder = payload.sortOrder;
     }
-    if (shouldPersistStripeId) {
-      updateData.stripePriceId = stripePriceIdToUse ?? null;
-      updateData.externalPriceId = stripePriceIdToUse ?? null;
-    } else if (toggledAutoRenewOn && typeof stripePriceIdToUse === 'string') {
-      updateData.stripePriceId = stripePriceIdToUse;
-      updateData.externalPriceId = stripePriceIdToUse;
+    if (shouldPersistExternalPriceId) {
+      updateData.externalPriceId = externalPriceIdToUse ?? null;
+    } else if (toggledAutoRenewOn && typeof externalPriceIdToUse === 'string') {
+      updateData.externalPriceId = externalPriceIdToUse;
     }
 
     // Update provider-keyed maps if new prices were created

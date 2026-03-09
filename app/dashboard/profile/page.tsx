@@ -31,6 +31,7 @@ export async function generateMetadata() {
 
 export default async function UserProfilePage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
+  const emailChangeState = typeof resolvedSearchParams?.emailChange === 'string' ? resolvedSearchParams.emailChange : null;
   const returnPath = buildReturnPath('/dashboard/profile', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
@@ -126,6 +127,16 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
+      {emailChangeState === 'success' && (
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-4 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+          Your email address has been confirmed and updated successfully.
+        </div>
+      )}
+      {emailChangeState === 'already-used' && (
+        <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-900 shadow-sm dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
+          That email address is already in use by another account. Please try a different address.
+        </div>
+      )}
       <DashboardPageHeader
         accent="emerald"
         eyebrow="Account"

@@ -17,10 +17,7 @@ export async function handleInvoiceCreatedCancellation(params: {
     try {
         const dbSub = await prisma.subscription.findFirst({
             where: {
-                OR: [
-                    { externalSubscriptionId: subscriptionId },
-                    { stripeSubscriptionId: subscriptionId }
-                ]
+                externalSubscriptionId: subscriptionId,
             },
             include: { plan: true, user: true }
         });
@@ -45,7 +42,7 @@ export async function handleInvoiceCreatedCancellation(params: {
         });
 
         const provider = params.getProviderForRecord(dbSub.paymentProvider);
-        const externalSubId = dbSub.externalSubscriptionId || dbSub.stripeSubscriptionId;
+        const externalSubId = dbSub.externalSubscriptionId;
 
         if (!externalSubId) {
             Logger.error('No external subscription ID found for cancel-at-period-end', { dbSubscriptionId: dbSub.id });

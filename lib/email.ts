@@ -5,7 +5,52 @@ import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { getRenderedTemplate, type EmailVariables } from './email-templates';
 
-const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+async function getResolvedSiteName(): Promise<string> {
+	try {
+		const siteName = await getSiteNameSetting();
+		return siteName || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+	} catch {
+		return process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+	}
+}
+
+async function getResolvedSupportEmail(): Promise<string> {
+	try {
+		const supportEmail = await getSupportEmailSetting();
+		return supportEmail || process.env.SUPPORT_EMAIL || SETTING_DEFAULTS[SETTING_KEYS.SUPPORT_EMAIL];
+	} catch {
+		return process.env.SUPPORT_EMAIL || SETTING_DEFAULTS[SETTING_KEYS.SUPPORT_EMAIL];
+	}
+}
+
+function buildSiteBrandHtml(siteName: string): string {
+	const normalizedName = (siteName || 'YourApp').trim() || 'YourApp';
+	const safeName = escapeHtml(normalizedName);
+	const fontSize = normalizedName.length > 24 ? 26 : normalizedName.length > 16 ? 30 : 34;
+	const width = Math.max(220, Math.min(520, normalizedName.length * (fontSize * 0.72)));
+
+	return [
+		'<div style="display:inline-block;line-height:1;">',
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(width)}" height="56" viewBox="0 0 ${Math.round(width)} 56" role="img" aria-label="${safeName}">`,
+		'<defs><linearGradient id="emailBrandGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7c3aed" /><stop offset="100%" stop-color="#2563eb" /></linearGradient></defs>',
+		`<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="800" letter-spacing="-0.04em" fill="url(#emailBrandGradient)">${safeName}</text>`,
+		'</svg>',
+		'</div>',
+	].join('');
+}
+
+export async function getSiteBrandHtml(): Promise<string> {
+	return buildSiteBrandHtml(await getResolvedSiteName());
+}
 
 export type SendEmailOptions = {
 	to: string;
@@ -42,20 +87,20 @@ function getTransport(): nodemailer.Transporter {
 }
 
 export async function getSupportEmail(): Promise<string> {
-	return getSupportEmailSetting();
+	return getResolvedSupportEmail();
 }
 
 export async function getSiteName(): Promise<string> {
-	return getSiteNameSetting();
+	return getResolvedSiteName();
 }
 
 export async function getSiteLogo(): Promise<string> {
 	try {
 		const logo = await getSiteLogoSetting();
 		const envLogo = process.env.NEXT_PUBLIC_SITE_LOGO;
-		return logo || envLogo || TRANSPARENT_PIXEL;
+		return logo || envLogo || '';
 	} catch {
-		return process.env.NEXT_PUBLIC_SITE_LOGO || TRANSPARENT_PIXEL;
+		return process.env.NEXT_PUBLIC_SITE_LOGO || '';
 	}
 }
 
@@ -71,6 +116,27 @@ export async function shouldEmailUser(userId: string): Promise<boolean> {
 	}
 }
 
+function ensureSiteNameInSubject(subject: string | undefined, siteName: string | undefined): string | undefined {
+	const normalizedSubject = subject?.trim();
+	const normalizedSiteName = siteName?.trim();
+
+	if (!normalizedSubject || !normalizedSiteName) {
+		return normalizedSubject;
+	}
+
+	const lowerSubject = normalizedSubject.toLowerCase();
+	const lowerSiteName = normalizedSiteName.toLowerCase();
+	if (
+		lowerSubject.startsWith(`${lowerSiteName}:`) ||
+		lowerSubject.startsWith(`[${lowerSiteName}]`) ||
+		lowerSubject.includes(normalizedSiteName)
+	) {
+		return normalizedSubject;
+	}
+
+	return `${normalizedSiteName}: ${normalizedSubject.replace(/^[:\-–—\s]+/, '')}`;
+}
+
 export async function sendEmail(opts: SendEmailOptions): Promise<{ success: boolean; error?: string | null }> {
 	const from = process.env.EMAIL_FROM || `no-reply@${(process.env.NEXT_PUBLIC_APP_DOMAIN || 'example.com')}`;
 	let status: 'SENT' | 'FAILED' = 'SENT';
@@ -83,33 +149,31 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 	let html = opts.html;
 	let templateVariables: Partial<EmailVariables> | undefined = opts.variables ? { ...opts.variables } : undefined;
 
-	if (opts.templateKey) {
-		if (!templateVariables) {
-			templateVariables = {};
-		}
+	if (!templateVariables) {
+		templateVariables = {};
+	}
 
+	if (!templateVariables.siteName) {
+		templateVariables.siteName = await getResolvedSiteName();
+	}
+
+	if (opts.templateKey) {
 		const tasks: Promise<void>[] = [];
 
 		if (!templateVariables.siteName) {
 			tasks.push(
-				getSiteNameSetting()
+				getResolvedSiteName()
 					.then((value) => {
-						templateVariables!.siteName = value || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
-					})
-					.catch(() => {
-						templateVariables!.siteName = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+						templateVariables!.siteName = value;
 					})
 			);
 		}
 
 		if (!templateVariables.supportEmail) {
 			tasks.push(
-				getSupportEmailSetting()
+				getResolvedSupportEmail()
 					.then((value) => {
-						templateVariables!.supportEmail = value || process.env.SUPPORT_EMAIL || 'support@example.com';
-					})
-					.catch(() => {
-						templateVariables!.supportEmail = process.env.SUPPORT_EMAIL || 'support@example.com';
+						templateVariables!.supportEmail = value;
 					})
 			);
 		}
@@ -121,7 +185,19 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 						templateVariables!.siteLogo = value;
 					})
 					.catch(() => {
-						templateVariables!.siteLogo = TRANSPARENT_PIXEL;
+						templateVariables!.siteLogo = '';
+					})
+			);
+		}
+
+		if (!templateVariables.siteBrandHtml) {
+			tasks.push(
+				getSiteBrandHtml()
+					.then((value) => {
+						templateVariables!.siteBrandHtml = value;
+					})
+					.catch(() => {
+						templateVariables!.siteBrandHtml = buildSiteBrandHtml(templateVariables!.siteName || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
 					})
 			);
 		}
@@ -153,6 +229,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 			// Continue with provided text/html as fallback
 		}
 	}
+
+	subject = ensureSiteNameInSubject(subject, templateVariables?.siteName);
 
 	const transporter = getTransport();
 	try {

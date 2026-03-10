@@ -24,6 +24,27 @@ type Props = {
   initialTemplates: EmailTemplate[];
 };
 
+const DEFAULT_TEMPLATE_COUNT = 25;
+
+const DEFAULT_TEMPLATE_GROUPS = [
+  {
+    title: 'Authentication',
+    detail: 'Welcome, password reset, email verification, email change, and magic link flows.'
+  },
+  {
+    title: 'Billing lifecycle',
+    detail: 'Activation, renewals, upgrades, downgrades, cancellation, expiry, failed payments, refunds, and plan endings.'
+  },
+  {
+    title: 'Workspace & admin',
+    detail: 'Team invitations, admin notifications, plan assignments, and token credit/debit events.'
+  },
+  {
+    title: 'Template safety',
+    detail: 'Only missing template keys are created, so any customized templates already in use stay untouched.'
+  },
+] as const;
+
 export default function EmailTemplatesClient({ initialTemplates }: Props) {
   const [templates, setTemplates] = useState(initialTemplates);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
@@ -194,17 +215,7 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
   
   const openTestModal = (template: EmailTemplate) => {
     setTestTemplate(template);
-    let formattedVariables = '{}';
-    if (template.variables) {
-      try {
-        const parsed = JSON.parse(template.variables);
-        formattedVariables = JSON.stringify(parsed, null, 2);
-      } catch {
-        formattedVariables = template.variables;
-      }
-    }
-
-    setTestForm({ email: '', variables: formattedVariables });
+    setTestForm({ email: '', variables: '' });
     setTestError(null);
     setSendingTest(false);
   };
@@ -486,7 +497,7 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
                   spellCheck={false}
                 />
                 <p className="text-xs text-neutral-500 mt-2">
-                  Provide a JSON object with placeholder values. Leave empty to use the template&rsquo;s stored defaults.
+                  Provide a JSON object with any overrides you want. Leave empty to use auto-generated sample values for this test send.
                 </p>
               </div>
 
@@ -695,31 +706,27 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white">Seed Default Templates</h3>
-                  <p className="text-sm text-neutral-400">Initialize email templates</p>
+                  <p className="text-sm text-neutral-400">Add the latest branded starter set</p>
                 </div>
               </div>
               
               <p className="text-sm text-neutral-300 mb-4">
-                This will create all default email templates in your system:
+                This will add {DEFAULT_TEMPLATE_COUNT} polished email templates covering auth, billing, workspace invites, and admin notifications.
               </p>
               
               <div className="bg-neutral-800/50 border border-neutral-700 rounded p-3 mb-6">
-                <ul className="text-xs text-neutral-300 space-y-1">
-                  <li>• Subscription Activated</li>
-                  <li>• Subscription Upgraded</li>
-                  <li>• Subscription Renewed</li>
-                  <li>• Subscription Cancelled</li>
-                  <li>• Subscription Expired</li>
-                  <li>• Subscription Downgraded</li>
-                  <li>• Token Top-up</li>
-                  <li>• Refund Issued</li>
-                  <li>• Admin Notification</li>
-                  <li>• Upgrade (Recurring)</li>
+                <ul className="text-xs text-neutral-300 space-y-2">
+                  {DEFAULT_TEMPLATE_GROUPS.map((group) => (
+                    <li key={group.title}>
+                      <span className="font-semibold text-white">• {group.title}:</span>{' '}
+                      <span>{group.detail}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
               
               <p className="text-xs text-yellow-400 mb-6">
-                ⚠️ Note: If templates with the same keys already exist, they will be skipped. Existing templates will not be overwritten.
+                Existing templates with matching keys are left exactly as they are. Only missing defaults will be added.
               </p>
               
               <div className="flex gap-3">
@@ -735,7 +742,7 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
                   disabled={seeding}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {seeding ? 'Seeding...' : 'Seed Templates'}
+                  {seeding ? 'Seeding...' : 'Seed Missing Templates'}
                 </button>
               </div>
             </div>

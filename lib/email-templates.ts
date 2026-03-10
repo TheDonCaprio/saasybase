@@ -33,6 +33,7 @@ export type EmailVariables = {
   supportEmail?: string;
   siteUrl?: string;
   siteLogo?: string;
+  siteBrandHtml?: string;
   
   // Action URLs
   dashboardUrl?: string;
@@ -56,11 +57,20 @@ export type EmailVariables = {
   [key: string]: string | undefined;
 };
 
+const SITE_LOGO_PLACEHOLDER_PATTERN = /<img\b[^>]*src=["']\{\{siteLogo\}\}["'][^>]*>/gi;
+
 /**
  * Render a template by replacing {{variable}} placeholders with actual values
  */
 export function renderTemplate(template: string, variables: EmailVariables): string {
   let rendered = template;
+
+  const siteLogo = variables.siteLogo?.trim() ?? '';
+  const shouldUseBrandFallback = !siteLogo || siteLogo.startsWith('data:image/');
+
+  if (shouldUseBrandFallback && variables.siteBrandHtml) {
+    rendered = rendered.replace(SITE_LOGO_PLACEHOLDER_PATTERN, variables.siteBrandHtml);
+  }
   
   // Replace all {{variable}} patterns with corresponding values
   for (const [key, value] of Object.entries(variables)) {
@@ -333,21 +343,74 @@ The {{siteName}} Team`,
       htmlBody: `
 <!DOCTYPE html>
 <html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
+    .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
+    .brand { text-align: center; padding: 0 0 20px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
+    .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 10px 0 0; opacity: 0.95; font-size: 16px; }
+    .content { background: #ffffff; padding: 36px; }
+    .pill { display: inline-block; padding: 8px 14px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .summary { margin: 20px 0 0; }
+    .summary p { margin: 0 0 16px; }
+    .invite-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; }
+    .invite-card strong { color: #0f172a; }
+    .cta-section { margin: 28px 0 22px; text-align: center; }
+    .button { display: inline-block; padding: 14px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; }
+    .button-primary { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; }
+    .button-secondary { background: #ffffff; color: #dc2626; border: 1px solid #fecaca; margin-left: 12px; }
+    .helper { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 18px; margin: 24px 0; color: #5b21b6; }
+    .helper p { margin: 0 0 10px; }
+    .helper a { color: #6d28d9; text-decoration: none; font-weight: 600; }
+    .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
 <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #0f172a;">
-  <div style="max-width:600px;margin:0 auto;padding:20px;">
-    <div style="text-align:center;padding-bottom:12px;">
-      <img src="{{siteLogo}}" alt="{{siteName}} logo" style="max-height:56px;" />
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
-    <div style="background:#fff;border-radius:12px;padding:24px;border:1px solid #e6edf3;">
-      <p>Hi there,</p>
-      <p><strong>{{inviterName}}</strong> invited you to join <strong>{{organizationName}}</strong> on {{siteName}}.</p>
-      <p style="margin:18px 0;">
-        <a href="{{acceptUrl}}" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:600;">Accept invitation</a>
-        <a href="{{declineUrl}}" style="display:inline-block;margin-left:12px;padding:10px 18px;border-radius:999px;background:#fff;border:1px solid #ef4444;color:#ef4444;text-decoration:none;font-weight:600;">Decline</a>
-      </p>
-      <p>If you need an account, create one: <a href="{{joinUrl}}">Create account</a>. Already registered? <a href="{{signInUrl}}">Sign in</a> and revisit the invite link.</p>
-      <p>If you have any questions, reply to <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.</p>
-      <p style="margin-top:18px;">— The {{siteName}} Team</p>
+    <div class="card">
+      <div class="header">
+        <h1>🤝 You&apos;re invited</h1>
+        <p>Join {{organizationName}} on {{siteName}}</p>
+      </div>
+      <div class="content">
+        <span class="pill">Workspace invitation</span>
+
+        <div class="summary">
+          <p>Hi there,</p>
+          <p><strong>{{inviterName}}</strong> invited you to collaborate inside <strong>{{organizationName}}</strong> on <strong>{{siteName}}</strong>.</p>
+        </div>
+
+        <div class="invite-card">
+          <p style="margin: 0 0 10px;"><strong>What happens when you accept?</strong></p>
+          <p style="margin: 0;">You&apos;ll get access to the shared workspace, any included resources, and the team context tied to this invitation.</p>
+        </div>
+
+        <div class="cta-section">
+          <a href="{{acceptUrl}}" class="button button-primary">Accept invitation</a>
+          <a href="{{declineUrl}}" class="button button-secondary">Decline</a>
+        </div>
+
+        <div class="helper">
+          <p><strong>Need to create an account first?</strong></p>
+          <p>Create one here: <a href="{{joinUrl}}">{{joinUrl}}</a></p>
+          <p style="margin-bottom: 0;">Already registered? <a href="{{signInUrl}}">Sign in</a> and reopen the invite link.</p>
+        </div>
+
+        <p>If you have any questions, reply to <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.</p>
+        <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{siteName}}. All rights reserved.</p>
+        <p>This invitation was sent by {{inviterName}} for {{organizationName}}.</p>
+      </div>
     </div>
   </div>
 </body>

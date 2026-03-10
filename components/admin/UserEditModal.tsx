@@ -7,6 +7,34 @@ import { getCanonicalActiveSubscription, SubRecord } from '../../lib/subscriptio
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { useRouter } from 'next/navigation';
 
+function splitUserName(name: string | null | undefined): { firstName: string; lastName: string } {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) {
+    return { firstName: '', lastName: '' };
+  }
+
+  const [firstName = '', ...rest] = trimmed.split(/\s+/);
+
+  return {
+    firstName,
+    lastName: rest.join(' '),
+  };
+}
+
+function resolveUserNameParts(user: Pick<User, 'name' | 'clerkData'>): { firstName: string; lastName: string } {
+  const directFirstName = user.clerkData?.firstName?.trim() ?? '';
+  const directLastName = user.clerkData?.lastName?.trim() ?? '';
+
+  if (directFirstName || directLastName) {
+    return {
+      firstName: directFirstName,
+      lastName: directLastName,
+    };
+  }
+
+  return splitUserName(user.clerkData?.fullName ?? user.name);
+}
+
 interface ClerkData {
   firstName: string | null;
   lastName: string | null;
@@ -83,9 +111,10 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
 
   useEffect(() => {
     if (isOpen && user) {
+      const resolvedName = resolveUserNameParts(user);
       setFormData({
-        firstName: user.clerkData?.firstName || '',
-        lastName: user.clerkData?.lastName || '',
+        firstName: resolvedName.firstName,
+        lastName: resolvedName.lastName,
         email: user.email || '',
         role: user.role
       });
@@ -270,11 +299,32 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
         const asRecord = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object') ? v as Record<string, unknown> : null;
         const top = asRecord(json);
         const userRec = top && typeof top.user === 'object' ? (top.user as Record<string, unknown>) : null;
+        const resolvedFirstName = formData.firstName.trim();
+        const resolvedLastName = formData.lastName.trim();
+        const resolvedFullName = [resolvedFirstName, resolvedLastName].filter(Boolean).join(' ').trim() || null;
+        const fallbackClerkData: ClerkData = user.clerkData ?? {
+          firstName: null,
+          lastName: null,
+          fullName: null,
+          imageUrl: '',
+          emailAddresses: [],
+          phoneNumbers: [],
+          lastSignInAt: null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
 
         const coercedUser = userRec ? {
           id: typeof userRec.id === 'string' ? userRec.id : String(userRec.id ?? ''),
           email: userRec.hasOwnProperty('email') ? (userRec.email === null ? null : String(userRec.email ?? '')) : undefined,
+          name: userRec.hasOwnProperty('name') ? (userRec.name === null ? null : String(userRec.name ?? '')) : resolvedFullName,
           role: typeof userRec.role === 'string' ? userRec.role : undefined,
+          clerkData: {
+            ...fallbackClerkData,
+            firstName: resolvedFirstName || null,
+            lastName: resolvedLastName || null,
+            fullName: resolvedFullName,
+          },
         } : null;
 
         if (coercedUser) onUserUpdate(coercedUser);

@@ -1,8 +1,9 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import type { AppFormatMode } from '../lib/settings';
 
 type ContextValue = {
-  mode: 'short' | 'datetime' | 'iso' | 'locale';
+  mode: AppFormatMode;
   timezone?: string;
   refresh: () => Promise<void>;
 };

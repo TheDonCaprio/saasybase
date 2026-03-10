@@ -51,7 +51,36 @@ const FORMAT_OPTIONS = [
   }
 ];
 
+// Extend with the new presets requested
+FORMAT_OPTIONS.splice(FORMAT_OPTIONS.length - 1, 0,
+  {
+    value: 'short-time-24',
+    label: 'Short (24h)',
+    description: 'Compact month/day with 24-hour time',
+    example: 'Mar 10 (23:59)'
+  },
+  {
+    value: 'short-year-time-24',
+    label: 'Short with year (24h)',
+    description: 'Compact month/day/year with 24-hour time',
+    example: 'Mar 10, 2026 (23:59)'
+  },
+  {
+    value: 'numeric-dmy-12',
+    label: 'Numeric DMY (12h)',
+    description: 'Day/Month/Year with 12-hour time',
+    example: '10/03/2026 (11:59 PM)'
+  },
+  {
+    value: 'numeric-dmy-24',
+    label: 'Numeric DMY (24h)',
+    description: 'Day/Month/Year with 24-hour time',
+    example: '10/03/2026 (23:59)'
+  }
+);
+
 import TIMEZONES from '../../lib/timezones';
+import { formatDate, type FormatMode } from '../../lib/formatDate';
 
 // Admin presets: keep an Auto option but otherwise reuse the curated list
 const TIMEZONE_PRESETS = [
@@ -135,9 +164,15 @@ export default function AdminSettingsForm() {
   };
 
   const selectedFormat = FORMAT_OPTIONS.find(opt => opt.value === mode) || FORMAT_OPTIONS[0];
-  // keep these references to silence potential unused-variable warnings in certain flows
-  void selectedFormat;
-  void SAMPLE_DATE;
+  // Compute live preview using formatDate so the example matches actual rendering
+  const previewTimezone = showCustomTimezone ? (timezone || undefined) : (timezone || undefined);
+  const computedPreview = (() => {
+    try {
+      return formatDate(SAMPLE_DATE, { mode: mode as FormatMode, timezone: previewTimezone });
+    } catch {
+      return selectedFormat.example;
+    }
+  })();
 
   return (
     <div className="space-y-6">
@@ -177,7 +212,7 @@ export default function AdminSettingsForm() {
       <div className="bg-neutral-800/50 border border-neutral-600 rounded-lg p-4">
         <h4 className="text-sm font-medium text-neutral-300 mb-2">Preview</h4>
         <div className="font-mono text-sm text-emerald-400">
-          Current format: &quot;{selectedFormat.example}&quot;
+          Current format: &quot;{computedPreview}&quot;
         </div>
         <div className="text-xs text-neutral-500 mt-1">
           This is how dates will appear throughout the application

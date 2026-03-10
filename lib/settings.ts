@@ -1,7 +1,16 @@
 import { prisma } from './prisma';
 import { emitUnmigratedDbHealthWarningOnce, Logger } from './logger';
 
-export type AppFormatMode = 'short' | 'datetime' | 'iso' | 'locale';
+export type AppFormatMode =
+  | 'short'
+  | 'datetime'
+  | 'iso'
+  | 'locale'
+  // admin-selectable custom formats
+  | 'short-time-24'
+  | 'short-year-time-24'
+  | 'numeric-dmy-12'
+  | 'numeric-dmy-24';
 
 // Cache for settings to avoid redundant database hits within a single render.
 // The TTL is intentionally short (5 s) so that after an admin saves new values

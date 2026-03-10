@@ -1,4 +1,16 @@
-export type FormatMode = 'short' | 'long' | 'datetime' | 'datetime-long' | 'iso' | 'relative' | 'locale';
+export type FormatMode =
+  | 'short'
+  | 'long'
+  | 'datetime'
+  | 'datetime-long'
+  | 'iso'
+  | 'relative'
+  | 'locale'
+  // New custom formats
+  | 'short-time-24' // e.g. Mar 10 (23:59)
+  | 'short-year-time-24' // e.g. Mar 10, 2026 (23:59)
+  | 'numeric-dmy-12' // e.g. 10/03/2026 (11:59 PM)
+  | 'numeric-dmy-24'; // e.g. 10/03/2026 (23:59)
 
 function toDate(d?: string | Date | null): Date | null {
   if (!d) return null;
@@ -62,6 +74,45 @@ export function formatDate(d?: string | Date | null, opts?: { mode?: FormatMode;
     if (mode === 'locale') {
       // Let the user agent decide
       return dt.toLocaleString();
+    }
+
+    // Custom compact formats
+    if (mode === 'short-time-24' || mode === 'short-year-time-24') {
+      const dateOpts: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric'
+      };
+      if (mode === 'short-year-time-24') dateOpts.year = 'numeric';
+
+      const timeOpts: Intl.DateTimeFormatOptions = {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+
+      const dateStr = timezone
+        ? new Intl.DateTimeFormat('en-US', { ...dateOpts, timeZone: timezone }).format(dt)
+        : new Intl.DateTimeFormat('en-US', dateOpts).format(dt);
+      const timeStr = timezone
+        ? new Intl.DateTimeFormat('en-US', { ...timeOpts, timeZone: timezone }).format(dt)
+        : new Intl.DateTimeFormat('en-US', timeOpts).format(dt);
+
+      return `${dateStr} (${timeStr})`;
+    }
+
+    if (mode === 'numeric-dmy-12' || mode === 'numeric-dmy-24') {
+      const dateOpts: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
+      const timeOpts12: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+      const timeOpts24: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+
+      const dateStr = timezone
+        ? new Intl.DateTimeFormat('en-GB', { ...dateOpts, timeZone: timezone }).format(dt)
+        : new Intl.DateTimeFormat('en-GB', dateOpts).format(dt);
+      const timeStr = timezone
+        ? new Intl.DateTimeFormat('en-US', { ...(mode === 'numeric-dmy-12' ? timeOpts12 : timeOpts24), timeZone: timezone }).format(dt)
+        : new Intl.DateTimeFormat('en-US', mode === 'numeric-dmy-12' ? timeOpts12 : timeOpts24).format(dt);
+
+      return `${dateStr} (${timeStr})`;
     }
 
     let intlOpts: Intl.DateTimeFormatOptions;

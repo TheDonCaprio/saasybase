@@ -84,6 +84,10 @@ body {
   border-color: rgb(var(--border-primary)) !important;
 }
 
+/* Explicit white – use on text that must stay white regardless of theme (e.g. text on accent bg buttons) */
+.text-always-white { color: #ffffff !important; }
+.light .text-always-white { color: #ffffff !important; }
+
 /* Light mode text overrides */
 .light .text-white { color: rgb(var(--text-primary)) !important; }
 .light .text-neutral-300 { color: rgb(var(--text-secondary)) !important; }

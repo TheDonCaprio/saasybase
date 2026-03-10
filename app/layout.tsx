@@ -30,6 +30,7 @@ import Link from 'next/link';
 import TwitterLoader from '../components/twitter/TwitterLoader';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
+import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
 
 export const metadata = {
   title: process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME],
@@ -302,6 +303,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
           <ToastContainer />
           {/* Ensure Twitter embeds initialize on SPA navigation */}
           <TwitterLoader />
+          <ChunkLoadRecovery />
           {customBodySnippet ? (
             <div
               id="custom-theme-body-snippet"

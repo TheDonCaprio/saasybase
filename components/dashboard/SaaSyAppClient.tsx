@@ -323,6 +323,7 @@ export default function SaaSyAppClient() {
             </label>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <select
+                suppressHydrationWarning
                 value={bucket}
                 onChange={(e) => setBucket(e.target.value as Bucket)}
                 disabled={busy}
@@ -387,6 +388,7 @@ export default function SaaSyAppClient() {
           <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Custom operation</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <input
+              suppressHydrationWarning
               value={customLabel}
               onChange={(e) => setCustomLabel(e.target.value)}
               placeholder="Operation label"
@@ -394,6 +396,7 @@ export default function SaaSyAppClient() {
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-70 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
             />
             <input
+              suppressHydrationWarning
               value={customCost}
               onChange={(e) => setCustomCost(e.target.value)}
               inputMode="numeric"

@@ -169,10 +169,26 @@ export function CreateNotificationForm() {
               onChange={(e) => handleEmailChange(e.target.value)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
               required={target === 'user'}
-              className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500"
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:border-blue-500"
               placeholder="Start typing email (e.g., user@)"
               autoComplete="off"
             />
+            {targetEmail.trim().length > 0 ? (
+              <div className="absolute inset-y-0 right-0 z-10 flex items-center pr-3">
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setTargetEmail('');
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                  }}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
             {showSuggestions && suggestions.length > 0 && (
               <div 
                 ref={suggestionsRef}

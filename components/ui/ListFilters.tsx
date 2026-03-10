@@ -125,13 +125,28 @@ export function ListFilters<T extends string = string>({
   return (
     <>
     <div className="flex flex-col gap-3 min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:gap-4">
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="w-full min-[1025px]:max-w-md rounded-lg sm:rounded-full border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:placeholder:text-neutral-400"
-      />
+      <div className="relative w-full min-[1025px]:max-w-md">
+        <input
+          suppressHydrationWarning
+          type="text"
+          placeholder={placeholder}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full rounded-lg sm:rounded-full border border-slate-200 bg-white/80 px-4 py-3 pr-11 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:placeholder:text-neutral-400"
+        />
+        {search.trim().length > 0 ? (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => onSearchChange('')}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       {/* Desktop sort controls */}
       {(onSortByChange || onSortOrderChange) && (
@@ -147,6 +162,7 @@ export function ListFilters<T extends string = string>({
               {onDatePresetChange && (
             <div className="ml-2">
             <select
+              suppressHydrationWarning
               value={datePreset}
               onChange={(e) => {
                 const v = e.target.value;
@@ -183,6 +199,7 @@ export function ListFilters<T extends string = string>({
           <div className="hidden min-[1025px]:flex items-center gap-2">
             <div className="relative">
               <select
+                suppressHydrationWarning
                 value={currentStatus}
                 onChange={(e) => onStatusChange?.(e.target.value)}
                 className="appearance-none rounded-lg border border-slate-200 bg-white/90 px-4 py-2.5 pr-10 text-sm text-slate-700 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 hover:bg-white hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900/80 dark:text-neutral-200 dark:hover:bg-neutral-900 dark:focus:border-blue-500"
@@ -356,6 +373,7 @@ export function ListFilters<T extends string = string>({
                       <label className="block text-xs font-medium text-slate-600 dark:text-neutral-300 mb-1">Sort by:</label>
                       <div className="relative">
                         <select
+                          suppressHydrationWarning
                           value={sortBy}
                           onChange={(e) => onSortByChange && onSortByChange(e.target.value as T)}
                           className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 pr-8 text-xs text-slate-700 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:border-blue-500"
@@ -413,6 +431,7 @@ export function ListFilters<T extends string = string>({
                       <label className="block text-xs font-medium text-slate-600 dark:text-neutral-300 mb-1">Status:</label>
                       <div className="relative">
                         <select
+                          suppressHydrationWarning
                           value={currentStatus}
                           onChange={(e) => { onStatusChange?.(e.target.value); setShowFilters(false); }}
                           className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 pr-8 text-xs text-slate-700 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:border-blue-500"
@@ -524,6 +543,7 @@ export function ListFilters<T extends string = string>({
                     <label className="block text-xs font-medium text-slate-600 dark:text-neutral-300 mb-1">Date:</label>
                     <div className="relative">
                       <select
+                        suppressHydrationWarning
                         value={datePreset}
                         onChange={(e) => {
                           const v = e.target.value;
@@ -609,6 +629,7 @@ export function ListFilters<T extends string = string>({
           <div className="mt-3 grid grid-cols-1 gap-3">
             <label className="text-xs text-slate-600 dark:text-neutral-300">Start</label>
             <input
+              suppressHydrationWarning
               type="date"
               value={tempStart || ''}
               onChange={(e) => setTempStart(e.target.value || null)}
@@ -616,6 +637,7 @@ export function ListFilters<T extends string = string>({
             />
             <label className="text-xs text-slate-600 dark:text-neutral-300">End (exclusive)</label>
             <input
+              suppressHydrationWarning
               type="date"
               value={tempEnd || ''}
               onChange={(e) => setTempEnd(e.target.value || null)}

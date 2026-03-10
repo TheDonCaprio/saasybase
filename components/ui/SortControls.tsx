@@ -30,6 +30,7 @@ export default function SortControls<T extends string = string>({
       {onSortByChange && (
         <div className="relative">
           <select
+            suppressHydrationWarning
             value={sortBy}
             onChange={(e) => onSortByChange && onSortByChange(e.target.value as T)}
             className={

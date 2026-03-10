@@ -208,8 +208,25 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
                 }}
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="Search by name or email"
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-11 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
               />
+              {query.trim().length > 0 ? (
+                <div className="absolute inset-y-0 right-0 z-10 flex items-center pr-3">
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setQuery('');
+                      setSelectedUser(null);
+                      setSuggestions([]);
+                      setShowSuggestions(false);
+                    }}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
               {showSuggestions && suggestions.length > 0 && (
                 <div ref={suggestionsRef} className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900 z-10">
                   {suggestions.map((user) => (

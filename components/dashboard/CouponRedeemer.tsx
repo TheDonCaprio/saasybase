@@ -191,13 +191,27 @@ export function CouponRedeemer({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Your coupons</h2>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <input
-              type="text"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="Filter by code or description..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 md:w-72"
-            />
+            <div className="relative w-full md:w-72">
+              <input
+                type="text"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder="Filter by code or description..."
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-700 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+              />
+              {filter.trim().length > 0 ? (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setFilter('')}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <div className="text-xs text-slate-500 dark:text-neutral-400 md:text-right">
               Showing {redemptions.length} of {typeof totalCount === 'number' ? totalCount : redemptions.length}
             </div>

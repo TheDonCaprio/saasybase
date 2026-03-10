@@ -103,17 +103,30 @@ export function formatDate(d?: string | Date | null, opts?: { mode?: FormatMode;
         break;
     }
 
+    let result: string;
+
     if (timezone) {
       // Some runtimes may not support timeZone or the timezone may be invalid; guard it
       try {
-        return new Intl.DateTimeFormat('en-US', { ...intlOpts, timeZone: timezone }).format(dt);
+        result = new Intl.DateTimeFormat('en-US', { ...intlOpts, timeZone: timezone }).format(dt);
       } catch (e) {
         void e;
         // Fallback to admin locale formatting if timezone invalid
+        result = new Intl.DateTimeFormat('en-US', intlOpts).format(dt);
       }
+    } else {
+      result = new Intl.DateTimeFormat('en-US', intlOpts).format(dt);
     }
 
-    return new Intl.DateTimeFormat('en-US', intlOpts).format(dt);
+    // Normalize cross-platform Intl differences: Safari/iPad uses " at " between
+    // date and time (e.g. "Mar 9, 2026 at 11:00 PM") while Node.js uses ", "
+    // (e.g. "Mar 9, 2026, 11:00 PM"). Standardise to the comma form to prevent
+    // SSR/client hydration mismatches.
+    if (mode === 'datetime' || mode === 'datetime-long') {
+      result = result.replace(/\b at /, ', ');
+    }
+
+    return result;
   } catch (e) {
     void e;
     return String(d);

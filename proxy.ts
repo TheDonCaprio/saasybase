@@ -1,6 +1,31 @@
 import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function extractAuthenticatedUserId(authResult: unknown): string | null {
+  if (!authResult || typeof authResult !== 'object') {
+    return null;
+  }
+
+  if ('userId' in authResult) {
+    const userId = (authResult as { userId?: unknown }).userId;
+    if (typeof userId === 'string' && userId.length > 0) {
+      return userId;
+    }
+  }
+
+  if ('user' in authResult) {
+    const user = (authResult as { user?: unknown }).user;
+    if (user && typeof user === 'object' && 'id' in user) {
+      const userId = (user as { id?: unknown }).id;
+      if (typeof userId === 'string' && userId.length > 0) {
+        return userId;
+      }
+    }
+  }
+
+  return null;
+}
+
 const isProtectedRoute = createAuthRouteMatcher([
   // NOTE: Dashboard pages already enforce auth via server-side guards
   // (see `requireAuth()` usage under `app/dashboard/*`). Keeping dashboard
@@ -47,10 +72,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
     console.warn('proxy: auth resolution failed', error);
   }
 
-  const userId =
-    authResult && typeof authResult === 'object' && authResult !== null && 'userId' in authResult
-      ? (authResult as { userId?: unknown }).userId
-      : null;
+  const userId = extractAuthenticatedUserId(authResult);
 
   if (typeof userId === 'string' && userId.length > 0) {
     // User is authenticated; let them through to the page/API handler.

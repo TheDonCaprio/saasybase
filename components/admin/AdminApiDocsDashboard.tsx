@@ -86,8 +86,20 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
               value={query}
               placeholder="Search paths or descriptions"
               onChange={(event) => setQuery(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
             />
+            {query.trim().length > 0 ? (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setQuery('')}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
           </div>
           <select
             value={method}

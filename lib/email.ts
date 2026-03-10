@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { prisma } from './prisma';
-import { getSupportEmail as getSupportEmailSetting, getSiteLogo as getSiteLogoSetting, getSiteName as getSiteNameSetting, SETTING_DEFAULTS, SETTING_KEYS } from './settings';
+import { getSupportEmail as getSupportEmailSetting, getSiteLogo as getSiteLogoSetting, getSiteName as getSiteNameSetting, getThemeColorPalette, SETTING_DEFAULTS, SETTING_KEYS } from './settings';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { getRenderedTemplate, type EmailVariables } from './email-templates';
@@ -32,24 +32,45 @@ async function getResolvedSupportEmail(): Promise<string> {
 	}
 }
 
-function buildSiteBrandHtml(siteName: string): string {
+async function getResolvedAccentColors(): Promise<{ accentColor: string; accentHoverColor: string }> {
+	try {
+		const palette = await getThemeColorPalette();
+		return {
+			accentColor: palette.light.accentPrimary || '#3b82f6',
+			accentHoverColor: palette.light.accentHover || '#2563eb',
+		};
+	} catch {
+		return { accentColor: '#3b82f6', accentHoverColor: '#2563eb' };
+	}
+}
+
+function buildSiteBrandHtml(siteName: string, accentColor = '#3b82f6', accentHoverColor = '#2563eb'): string {
 	const normalizedName = (siteName || 'YourApp').trim() || 'YourApp';
 	const safeName = escapeHtml(normalizedName);
-	const fontSize = normalizedName.length > 24 ? 26 : normalizedName.length > 16 ? 30 : 34;
-	const width = Math.max(220, Math.min(520, normalizedName.length * (fontSize * 0.72)));
+	const fontSize = normalizedName.length > 24 ? 22 : normalizedName.length > 16 ? 26 : 28;
+	const width = Math.max(160, Math.min(400, normalizedName.length * (fontSize * 0.65)));
+	const height = 36;
 
 	return [
 		'<div style="display:inline-block;line-height:1;">',
-		`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(width)}" height="56" viewBox="0 0 ${Math.round(width)} 56" role="img" aria-label="${safeName}">`,
-		'<defs><linearGradient id="emailBrandGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7c3aed" /><stop offset="100%" stop-color="#2563eb" /></linearGradient></defs>',
-		`<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="800" letter-spacing="-0.04em" fill="url(#emailBrandGradient)">${safeName}</text>`,
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(width)}" height="${height}" viewBox="0 0 ${Math.round(width)} ${height}" role="img" aria-label="${safeName}">`,
+		`<defs><linearGradient id="emailBrandGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="${accentColor}" /><stop offset="100%" stop-color="${accentHoverColor}" /></linearGradient></defs>`,
+		`<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="${fontSize}" font-weight="700" fill="url(#emailBrandGradient)">${safeName}</text>`,
 		'</svg>',
 		'</div>',
 	].join('');
 }
 
 export async function getSiteBrandHtml(): Promise<string> {
-	return buildSiteBrandHtml(await getResolvedSiteName());
+	const [name, { accentColor, accentHoverColor }] = await Promise.all([
+		getResolvedSiteName(),
+		getResolvedAccentColors(),
+	]);
+	return buildSiteBrandHtml(name, accentColor, accentHoverColor);
+}
+
+export async function getAccentColors(): Promise<{ accentColor: string; accentHoverColor: string }> {
+	return getResolvedAccentColors();
 }
 
 export type SendEmailOptions = {
@@ -157,6 +178,12 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 		templateVariables.siteName = await getResolvedSiteName();
 	}
 
+	if (!templateVariables.accentColor || !templateVariables.accentHoverColor) {
+		const { accentColor, accentHoverColor } = await getResolvedAccentColors();
+		if (!templateVariables.accentColor) templateVariables.accentColor = accentColor;
+		if (!templateVariables.accentHoverColor) templateVariables.accentHoverColor = accentHoverColor;
+	}
+
 	if (opts.templateKey) {
 		const tasks: Promise<void>[] = [];
 
@@ -197,7 +224,11 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 						templateVariables!.siteBrandHtml = value;
 					})
 					.catch(() => {
-						templateVariables!.siteBrandHtml = buildSiteBrandHtml(templateVariables!.siteName || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
+						templateVariables!.siteBrandHtml = buildSiteBrandHtml(
+							templateVariables!.siteName || process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME],
+							templateVariables!.accentColor,
+							templateVariables!.accentHoverColor
+						);
 					})
 			);
 		}

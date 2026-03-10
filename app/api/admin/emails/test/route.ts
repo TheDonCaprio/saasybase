@@ -4,7 +4,7 @@ import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { prisma } from '../../../../../lib/prisma';
 import { Logger } from '../../../../../lib/logger';
 import { renderTemplate, type EmailVariables } from '../../../../../lib/email-templates';
-import { sendEmail, getSiteLogo, getSiteName, getSupportEmail, getSiteBrandHtml } from '../../../../../lib/email';
+import { sendEmail, getSiteLogo, getSiteName, getSupportEmail, getSiteBrandHtml, getAccentColors } from '../../../../../lib/email';
 
 function extractTemplateVariableKeys(template: { variables: string | null; subject: string; htmlBody: string; textBody: string | null }): string[] {
   const keys = new Set<string>();
@@ -31,7 +31,7 @@ function extractTemplateVariableKeys(template: { variables: string | null; subje
   return Array.from(keys);
 }
 
-function buildSampleVariables(keys: string[], context: { to: string; siteName: string; supportEmail: string; siteLogo: string; siteBrandHtml: string; baseUrl: string }): EmailVariables {
+function buildSampleVariables(keys: string[], context: { to: string; siteName: string; supportEmail: string; siteLogo: string; siteBrandHtml: string; accentColor: string; accentHoverColor: string; baseUrl: string }): EmailVariables {
   const samples: EmailVariables = {
     firstName: 'John',
     lastName: 'Doe',
@@ -54,6 +54,8 @@ function buildSampleVariables(keys: string[], context: { to: string; siteName: s
     siteUrl: context.baseUrl,
     siteLogo: context.siteLogo,
     siteBrandHtml: context.siteBrandHtml,
+    accentColor: context.accentColor,
+    accentHoverColor: context.accentHoverColor,
     dashboardUrl: `${context.baseUrl}/dashboard`,
     billingUrl: `${context.baseUrl}/pricing`,
     eventTitle: 'Example admin event',
@@ -123,11 +125,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [siteName, supportEmail, siteLogo, siteBrandHtml] = await Promise.all([
+    const [siteName, supportEmail, siteLogo, siteBrandHtml, { accentColor, accentHoverColor }] = await Promise.all([
       getSiteName(),
       getSupportEmail(),
       getSiteLogo(),
-      getSiteBrandHtml()
+      getSiteBrandHtml(),
+      getAccentColors()
     ]);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -138,6 +141,8 @@ export async function POST(req: NextRequest) {
       supportEmail,
       siteLogo,
       siteBrandHtml,
+      accentColor,
+      accentHoverColor,
       baseUrl,
     });
 
@@ -147,6 +152,8 @@ export async function POST(req: NextRequest) {
       supportEmail,
       siteLogo,
       siteBrandHtml,
+      accentColor,
+      accentHoverColor,
       ...overrideVariables
     };
 

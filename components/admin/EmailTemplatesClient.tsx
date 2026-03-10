@@ -317,32 +317,32 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {templates.map((template) => {
           const templateVariables = getVariables(template);
           return (
             <article
               key={template.id}
               className={dashboardPanelClass(
-                'flex h-full flex-col gap-5 p-5 transition-shadow hover:shadow-lg sm:p-6'
+                'flex h-full flex-col gap-4 p-4 transition-shadow hover:shadow-lg'
               )}
             >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">{template.name}</h3>
-                  <p className="text-xs font-mono uppercase tracking-wide text-slate-400 dark:text-neutral-500">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="space-y-0.5">
+                  <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-neutral-50">{template.name}</h3>
+                  <p className="text-[10px] font-mono uppercase tracking-wide text-slate-400 dark:text-neutral-500">
                     {template.key}
                   </p>
                 </div>
                 {template.description ? (
-                  <p className="text-sm text-slate-600 dark:text-neutral-300">{template.description}</p>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">{template.description}</p>
                 ) : null}
               </div>
               <button
                 onClick={() => handleToggleActive(template)}
                 className={clsx(
-                  'inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900',
+                  'inline-flex shrink-0 self-start items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900',
                   template.active
                     ? 'border-emerald-200 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 focus-visible:ring-emerald-400 dark:border-emerald-500/40 dark:text-emerald-200'
                     : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 focus-visible:ring-slate-400 dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-neutral-300'
@@ -352,38 +352,36 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
               </button>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="flex items-start gap-2 text-slate-600 dark:text-neutral-300">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">
+            <div className="flex-1 space-y-2 text-sm">
+              <div className="flex items-baseline gap-2 text-slate-600 dark:text-neutral-300">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">
                   Subject
                 </span>
-                <span className="leading-relaxed">{template.subject}</span>
+                <span className="truncate text-xs leading-relaxed">{template.subject}</span>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">
                   Variables
                 </span>
-                <div className="flex flex-wrap gap-1">
-                  {templateVariables.length > 0 ? (
-                    templateVariables.map((varName) => (
-                      <span
-                        key={varName}
-                        className={dashboardPillClass(
-                          'text-[11px] font-mono uppercase text-indigo-600 dark:text-indigo-200'
-                        )}
-                      >
-                        {`{{${varName}}}`}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-slate-400 dark:text-neutral-500">None</span>
-                  )}
-                </div>
+                {templateVariables.length > 0 ? (
+                  templateVariables.map((varName) => (
+                    <span
+                      key={varName}
+                      className={dashboardPillClass(
+                        'px-1.5 py-0.5 text-[9px] font-mono uppercase text-indigo-600 dark:text-indigo-200'
+                      )}
+                    >
+                      {`{{${varName}}}`}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[10px] text-slate-400 dark:text-neutral-500">None</span>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 border-t border-slate-200 pt-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-800 dark:text-neutral-400">
+            <div className="mt-auto flex flex-col gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-800 dark:text-neutral-400">
               <span>
                 Updated {dateFormatter.format(new Date(template.updatedAt))}
               </span>
@@ -465,40 +463,19 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
                 />
               </div>
 
-              <div className="bg-blue-900/20 border border-blue-700 rounded p-4 text-sm text-blue-200">
-                <p className="font-medium mb-2">Variables available for this template:</p>
-                <div className="flex flex-wrap gap-1">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-neutral-700 dark:bg-neutral-800/60">
+                <p className="mb-2.5 font-medium text-slate-700 dark:text-neutral-200">Variables available for this template:</p>
+                <div className="flex flex-wrap gap-1.5">
                   {getVariables(testTemplate).length > 0 ? (
                     getVariables(testTemplate).map((name) => (
-                      <code key={name} className="px-2 py-0.5 bg-blue-600/20 text-blue-200 rounded">
+                      <code key={name} className="rounded px-2 py-0.5 text-xs font-mono bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
                         {`{{${name}}}`}
                       </code>
                     ))
                   ) : (
-                    <span className="text-blue-200/70 text-xs">No variables defined</span>
+                    <span className="text-xs text-slate-400 dark:text-neutral-500">No variables defined</span>
                   )}
                 </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-white">Sample Variables (JSON)</label>
-                  <span className="text-xs text-neutral-500">Overrides defaults for this test send</span>
-                </div>
-                <textarea
-                  value={testForm.variables}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTestForm(prev => ({ ...prev, variables: value }));
-                    setTestError(null);
-                  }}
-                  rows={10}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-white font-mono text-xs"
-                  spellCheck={false}
-                />
-                <p className="text-xs text-neutral-500 mt-2">
-                  Provide a JSON object with any overrides you want. Leave empty to use auto-generated sample values for this test send.
-                </p>
               </div>
 
               {testError && (

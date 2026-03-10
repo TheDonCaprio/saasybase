@@ -34,6 +34,10 @@ export type EmailVariables = {
   siteUrl?: string;
   siteLogo?: string;
   siteBrandHtml?: string;
+
+  // Brand / accent colors (resolved from theme palette)
+  accentColor?: string;
+  accentHoverColor?: string;
   
   // Action URLs
   dashboardUrl?: string;
@@ -133,13 +137,15 @@ export function getDefaultTemplates() {
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 32px; }
     .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
@@ -150,7 +156,7 @@ export function getDefaultTemplates() {
     .feature-list li { padding: 8px 0; display: flex; align-items: center; }
     .feature-list li:before { content: "✓"; color: #10b981; font-weight: bold; margin-right: 12px; font-size: 18px; }
     .cta-section { margin: 32px 0; text-align: center; }
-    .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .button:hover { opacity: 0.95; }
     .next-steps { background: #ecf0ff; border: 1px solid #d1d5f0; border-radius: 12px; padding: 20px; margin: 24px 0; }
     .next-steps h3 { margin: 0 0 12px; color: #667eea; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -170,7 +176,7 @@ export function getDefaultTemplates() {
     </div>
     <div class="card">
       <div class="header">
-        <h1>🎉 Welcome!</h1>
+        <h1>Welcome!</h1>
         <p>Your account is ready to go</p>
       </div>
       <div class="content">
@@ -269,15 +275,17 @@ You received this email because you created an account. You can manage your emai
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .info-box { background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    .button { display: inline-block; background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -287,7 +295,7 @@ You received this email because you created an account. You can manage your emai
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>📅 Subscription Extended</h1>
+      <h1>Subscription Extended</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -344,13 +352,15 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 30px; }
     .header p { margin: 10px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
@@ -361,7 +371,7 @@ The {{siteName}} Team`,
     .invite-card strong { color: #0f172a; }
     .cta-section { margin: 28px 0 22px; text-align: center; }
     .button { display: inline-block; padding: 14px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; }
-    .button-primary { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; }
+    .button-primary { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; }
     .button-secondary { background: #ffffff; color: #dc2626; border: 1px solid #fecaca; margin-left: 12px; }
     .helper { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 18px; margin: 24px 0; color: #5b21b6; }
     .helper p { margin: 0 0 10px; }
@@ -377,7 +387,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>🤝 You&apos;re invited</h1>
+        <h1>You&apos;re invited</h1>
         <p>Join {{organizationName}} on {{siteName}}</p>
       </div>
       <div class="content">
@@ -452,14 +462,16 @@ Questions? Reply to {{supportEmail}}.
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
-    .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -469,7 +481,7 @@ Questions? Reply to {{supportEmail}}.
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>🎉 Subscription Upgraded!</h1>
+      <h1>Subscription Upgraded!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -523,15 +535,17 @@ Transaction ID: {{transactionId}}`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .highlight { background: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #f5576c; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -541,7 +555,7 @@ Transaction ID: {{transactionId}}`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>💎 {{tokenName}} Added!</h1>
+      <h1>{{tokenName}} Added!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -602,19 +616,21 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #34d399 0%, #10b981 100%); color: white; padding: 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; }
     .content { background: #ffffff; padding: 36px; }
     .stat { display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px 22px; margin: 22px 0; }
     .stat-value { font-size: 32px; font-weight: 700; color: #059669; }
     .highlight { background: #f0f4ff; border-left: 4px solid #6366f1; padding: 18px 22px; border-radius: 10px; margin-bottom: 24px; }
-    .button { display: inline-block; background: #10b981; color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 38px; }
   </style>
 </head>
@@ -625,7 +641,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>✨ {{tokenName}} Added!</h1>
+        <h1>{{tokenName}} Added!</h1>
         <p>Your balance just got a boost.</p>
       </div>
       <div class="content">
@@ -689,19 +705,21 @@ Need help? Reach us at {{supportEmail}}.
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.7; color: #1f2933; background: #faf7f7; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 22px 38px -28px rgba(148,54,54,0.5); }
-    .header { background: linear-gradient(140deg, #f97316 0%, #f43f5e 100%); color: white; padding: 34px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 34px; text-align: center; }
     .header h1 { margin: 0; font-size: 26px; }
     .content { background: #ffffff; padding: 34px 36px; }
     .alert { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 11px; padding: 20px 22px; margin: 22px 0; color: #9f1239; }
     .balance { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #cbd5f5; border-radius: 12px; padding: 18px 22px; margin-bottom: 26px; }
     .balance-value { font-size: 30px; font-weight: 700; color: #be123c; }
-    .button { display: inline-block; background: #1f2937; color: white; padding: 11px 26px; border-radius: 50px; text-decoration: none; font-weight: 600; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 11px 26px; border-radius: 50px; text-decoration: none; font-weight: 600; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 34px; }
   </style>
 </head>
@@ -774,20 +792,22 @@ You can review your account activity anytime at {{dashboardUrl}}. If something l
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f6f8fb; color: #1f2937; line-height: 1.7; }
     .container { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
     .brand { text-align: center; padding: 0 0 22px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 16px; overflow: hidden; box-shadow: 0 22px 44px -36px rgba(15,23,42,0.6); }
-    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 40px 38px; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 38px; }
     .header h1 { margin: 0; font-size: 30px; }
     .content { background: #ffffff; padding: 40px 42px; }
     .badge { display: inline-block; background: rgba(99,102,241,0.12); color: #4f46e5; border-radius: 999px; padding: 6px 16px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 18px; }
     .details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px 26px; margin: 24px 0; }
     .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; }
     .detail-row:last-child { margin-bottom: 0; }
-    .button { display: inline-block; background: #4f46e5; color: white; padding: 12px 30px; border-radius: 999px; text-decoration: none; font-weight: 600; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; border-radius: 999px; text-decoration: none; font-weight: 600; }
     .footer { text-align: center; font-size: 12px; color: #6b7280; margin-top: 34px; }
   </style>
 </head>
@@ -862,15 +882,17 @@ Questions? Contact us at {{supportEmail}}.
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .info-box { background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    .button { display: inline-block; background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -880,7 +902,7 @@ Questions? Contact us at {{supportEmail}}.
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>✅ Subscription Activated!</h1>
+      <h1>Subscription Activated!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -949,13 +971,15 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1a202c; background: #f7fafc; }
     .container { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
-    .brand { text-align: center; padding: 16px 0 12px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 52px; width: auto; display: inline-block; }
     .card { border-radius: 10px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(30, 41, 59, 0.65); }
-    .header { background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: #fff; padding: 28px 32px; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: #fff; padding: 28px 32px; }
     .header .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; opacity: 0.8; margin: 0 0 8px; }
     .header h2 { margin: 0; font-size: 24px; font-weight: 600; }
     .content { background: #fff; padding: 32px; }
@@ -967,7 +991,7 @@ The {{siteName}} Team`,
     .details .label { font-weight: 600; color: #2a4365; margin-right: 16px; }
     .details .value { font-family: "Menlo", "Courier New", monospace; color: #1a202c; text-align: right; }
     .actions { margin: 28px 0 0; text-align: center; }
-    .actions a.button { display: inline-block; background: #2b6cb0; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+    .actions a.button { display: inline-block; background: {{accentColor}}; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; }
     .actions a.button:hover { background: #2c5282; }
     .footer-note { font-size: 12px; color: #4a5568; margin: 24px 0 0; }
     .footer { text-align: center; margin-top: 28px; color: #4a5568; font-size: 12px; }
@@ -1045,15 +1069,17 @@ This message was sent to {{supportEmail}} for internal tracking.`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .refund-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1063,7 +1089,7 @@ This message was sent to {{supportEmail}} for internal tracking.`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>💳 Refund Processed</h1>
+      <h1>Refund Processed</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1123,15 +1149,17 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .info-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1141,7 +1169,7 @@ The {{siteName}} Team`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>❌ Subscription Cancelled</h1>
+      <h1>Subscription Cancelled</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1200,15 +1228,17 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .expiry-box { background: #fff7ed; border-left: 4px solid #f97316; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #f5576c; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1218,7 +1248,7 @@ The {{siteName}} Team`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>⏰ Subscription Expired</h1>
+      <h1>Subscription Expired</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1278,15 +1308,17 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .renewal-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1296,7 +1328,7 @@ The {{siteName}} Team`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>🔄 Subscription Renewed!</h1>
+      <h1>Subscription Renewed!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1363,19 +1395,21 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; background: #f8fafc; }
     .container { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
-    .brand { text-align: center; padding: 16px 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); background: white; }
-    .header { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: white; padding: 30px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; }
     .header h1 { margin: 0; font-size: 26px; }
     .content { padding: 28px; }
     .pill { display: inline-block; padding: 6px 12px; background: #e0f2fe; color: #0369a1; border-radius: 999px; font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
     .summary { margin: 22px 0; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 18px; background: #f9fafb; }
     .summary strong { display: block; margin-bottom: 6px; color: #111827; }
-    .cta { display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: white; padding: 12px 26px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 18px; }
+    .cta { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 12px 26px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 18px; }
     .footer { text-align: center; margin: 28px 0 6px; color: #6b7280; font-size: 12px; }
   </style>
 </head>
@@ -1448,15 +1482,17 @@ Questions? Email us at {{supportEmail}}.
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .change-box { background: #f3f4f6; border-left: 4px solid #6b7280; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1466,7 +1502,7 @@ Questions? Email us at {{supportEmail}}.
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>📉 Subscription Updated</h1>
+      <h1>Subscription Updated</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1533,15 +1569,17 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .brand { text-align: center; padding: 24px 0 16px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
-    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
     .upgrade-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
-    .button { display: inline-block; background: #f5576c; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
     .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
   </style>
 </head>
@@ -1551,7 +1589,7 @@ The {{siteName}} Team`,
       <img src="{{siteLogo}}" alt="{{siteName}} logo" />
     </div>
     <div class="header">
-      <h1>🚀 Subscription Upgraded!</h1>
+      <h1>Subscription Upgraded!</h1>
     </div>
     <div class="content">
       <p>Hi {{firstName}},</p>
@@ -1618,18 +1656,20 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; }
     .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
     .cta-section { margin: 28px 0; text-align: center; }
-    .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .notice { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #9a3412; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .footer p { margin: 4px 0; }
@@ -1642,7 +1682,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>🔑 Password Reset</h1>
+        <h1>Password Reset</h1>
         <p>We received a request to reset your password</p>
       </div>
       <div class="content">
@@ -1652,10 +1692,10 @@ The {{siteName}} Team`,
           <a href="{{actionUrl}}" class="button">Reset My Password</a>
         </div>
         <div class="notice">
-          <strong>⏱ This link expires in 1 hour.</strong> If you didn't request this, you can safely ignore this email — your password will remain unchanged.
+          <strong>This link expires in 1 hour.</strong> If you didn't request this, you can safely ignore this email — your password will remain unchanged.
         </div>
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; font-size: 13px; color: #667eea;">{{actionUrl}}</p>
+        <p style="word-break: break-all; font-size: 13px; color: {{accentColor}};">{{actionUrl}}</p>
         <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
       </div>
       <div class="footer">
@@ -1696,18 +1736,20 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; }
     .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
     .cta-section { margin: 28px 0; text-align: center; }
-    .button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .notice { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #065f46; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .footer p { margin: 4px 0; }
@@ -1720,7 +1762,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>✉️ Verify Your Email</h1>
+        <h1>Verify Your Email</h1>
         <p>One quick step to secure your account</p>
       </div>
       <div class="content">
@@ -1730,10 +1772,10 @@ The {{siteName}} Team`,
           <a href="{{actionUrl}}" class="button">Verify Email Address</a>
         </div>
         <div class="notice">
-          <strong>⏱ This link expires in 24 hours.</strong> If you didn't create an account on {{siteName}}, you can safely ignore this email.
+          <strong>This link expires in 24 hours.</strong> If you didn't create an account on {{siteName}}, you can safely ignore this email.
         </div>
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; font-size: 13px; color: #10b981;">{{actionUrl}}</p>
+        <p style="word-break: break-all; font-size: 13px; color: {{accentColor}};">{{actionUrl}}</p>
         <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
       </div>
       <div class="footer">
@@ -1774,18 +1816,20 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; }
     .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
     .cta-section { margin: 28px 0; text-align: center; }
-    .button { display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #1d4ed8; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .footer p { margin: 4px 0; }
@@ -1798,7 +1842,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>📬 Confirm Your New Email</h1>
+        <h1>Confirm Your New Email</h1>
         <p>Finish updating the email address on your account</p>
       </div>
       <div class="content">
@@ -1808,10 +1852,10 @@ The {{siteName}} Team`,
           <a href="{{actionUrl}}" class="button">Confirm New Email</a>
         </div>
         <div class="notice">
-          <strong>⏱ This link expires in 24 hours.</strong> Your current email stays active until you confirm this change.
+          <strong>This link expires in 24 hours.</strong> Your current email stays active until you confirm this change.
         </div>
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; font-size: 13px; color: #2563eb;">{{actionUrl}}</p>
+        <p style="word-break: break-all; font-size: 13px; color: {{accentColor}};">{{actionUrl}}</p>
         <p style="margin-bottom: 0;">If you didn’t request this change, you can ignore this message and keep using your current email.</p>
       </div>
       <div class="footer">
@@ -1856,18 +1900,20 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; }
     .header p { margin: 8px 0 0; opacity: 0.95; font-size: 16px; }
     .content { background: #ffffff; padding: 36px; }
     .cta-section { margin: 28px 0; text-align: center; }
-    .button { display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .notice { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #5b21b6; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
     .footer p { margin: 4px 0; }
@@ -1880,7 +1926,7 @@ The {{siteName}} Team`,
     </div>
     <div class="card">
       <div class="header">
-        <h1>✨ Sign In Securely</h1>
+        <h1>Sign In Securely</h1>
         <p>Your passwordless sign-in link is ready</p>
       </div>
       <div class="content">
@@ -1890,10 +1936,10 @@ The {{siteName}} Team`,
           <a href="{{actionUrl}}" class="button">Sign In to {{siteName}}</a>
         </div>
         <div class="notice">
-          <strong>⏱ This link expires soon.</strong> If you didn't request this sign-in email, you can safely ignore it.
+          <strong>This link expires soon.</strong> If you didn't request this sign-in email, you can safely ignore it.
         </div>
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; font-size: 13px; color: #7c3aed;">{{actionUrl}}</p>
+        <p style="word-break: break-all; font-size: 13px; color: {{accentColor}};">{{actionUrl}}</p>
         <p style="margin-bottom: 0;">Best regards,<br><strong>The {{siteName}} Team</strong></p>
       </div>
       <div class="footer">
@@ -1934,22 +1980,24 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .content { background: #ffffff; padding: 36px; }
-    .button { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .cta-section { margin: 28px 0; text-align: center; }
     .notice { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #9a3412; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
   </style>
 </head>
 <body>
-  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>⚠️ Payment Failed</h1><p>Action may be required to keep your account active</p></div><div class="content"><p>Hi {{firstName}},</p><p>We couldn't process your recent payment for <strong>{{siteName}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{errorMessage}}</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Update Billing</a></div><p>Please update your payment method to avoid service interruption.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>Payment Failed</h1><p>Action may be required to keep your account active</p></div><div class="content"><p>Hi {{firstName}},</p><p>We couldn't process your recent payment for <strong>{{siteName}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{errorMessage}}</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Update Billing</a></div><p>Please update your payment method to avoid service interruption.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
 </body>
 </html>
       `,
@@ -1983,22 +2031,24 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .content { background: #ffffff; padding: 36px; }
-    .button { display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .cta-section { margin: 28px 0; text-align: center; }
     .notice { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #991b1b; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
   </style>
 </head>
 <body>
-  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>💳 Subscription Payment Failed</h1><p>Your subscription is waiting for payment</p></div><div class="content"><p>Hi {{firstName}},</p><p>We were unable to process your latest subscription payment for <strong>{{siteName}}</strong>.</p><div class="notice">Update your payment method to restore smooth renewal and avoid losing access.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Manage Billing</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>Subscription Payment Failed</h1><p>Your subscription is waiting for payment</p></div><div class="content"><p>Hi {{firstName}},</p><p>We were unable to process your latest subscription payment for <strong>{{siteName}}</strong>.</p><div class="notice">Update your payment method to restore smooth renewal and avoid losing access.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">Manage Billing</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
 </body>
 </html>
       `,
@@ -2029,20 +2079,22 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .content { background: #ffffff; padding: 36px; }
     .notice { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #065f46; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
   </style>
 </head>
 <body>
-  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>💸 Refund Processed</h1><p>Your refund has been completed</p></div><div class="content"><p>Hi {{firstName}},</p><p>We've processed your refund of <strong>{{amount}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{reason}}</div><p>The funds may take a few business days to appear depending on your bank or payment provider.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>Refund Processed</h1><p>Your refund has been completed</p></div><div class="content"><p>Hi {{firstName}},</p><p>We've processed your refund of <strong>{{amount}}</strong>.</p><div class="notice"><strong>Reason:</strong> {{reason}}</div><p>The funds may take a few business days to appear depending on your bank or payment provider.</p></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
 </body>
 </html>
       `,
@@ -2074,22 +2126,24 @@ The {{siteName}} Team`,
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933; background: #f5f7fb; }
     .container { max-width: 620px; margin: 0 auto; padding: 32px 20px; }
-    .brand { text-align: center; padding: 0 0 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
     .brand img { max-height: 56px; width: auto; display: inline-block; }
     .card { border-radius: 14px; overflow: hidden; box-shadow: 0 18px 35px -24px rgba(15,23,42,0.65); }
-    .header { background: linear-gradient(135deg, #64748b 0%, #334155 100%); color: white; padding: 40px 36px; text-align: center; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 40px 36px; text-align: center; }
     .content { background: #ffffff; padding: 36px; }
-    .button { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 14px 36px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px; }
     .cta-section { margin: 28px 0; text-align: center; }
     .notice { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin: 24px 0; font-size: 13px; color: #334155; }
     .footer { text-align: center; font-size: 12px; color: #6c7a89; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
   </style>
 </head>
 <body>
-  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>📅 Subscription Ended</h1><p>Your plan has ended as scheduled</p></div><div class="content"><p>Hi {{firstName}},</p><p>Your <strong>{{planName}}</strong> subscription has ended as scheduled.</p><div class="notice">You can renew or choose a new plan whenever you're ready.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">View Plans</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
+  <div class="container"><div class="brand"><img src="{{siteLogo}}" alt="{{siteName}} logo" /></div><div class="card"><div class="header"><h1>Subscription Ended</h1><p>Your plan has ended as scheduled</p></div><div class="content"><p>Hi {{firstName}},</p><p>Your <strong>{{planName}}</strong> subscription has ended as scheduled.</p><div class="notice">You can renew or choose a new plan whenever you're ready.</div><div class="cta-section"><a href="{{billingUrl}}" class="button">View Plans</a></div></div><div class="footer"><p>&copy; {{siteName}}. All rights reserved.</p></div></div></div>
 </body>
 </html>
       `,

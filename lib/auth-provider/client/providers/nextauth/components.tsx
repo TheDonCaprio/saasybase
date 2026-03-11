@@ -20,7 +20,7 @@ import { validateAndFormatPersonName } from '@/lib/name-validation';
 // Shared UI helpers
 // ---------------------------------------------------------------------------
 
-function ErrorAlert({ message }: { message: string }) {
+function ErrorAlert({ message }: { message: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
       {message}
@@ -28,7 +28,7 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
-function SuccessAlert({ message }: { message: string }) {
+function SuccessAlert({ message }: { message: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
       {message}
@@ -36,7 +36,7 @@ function SuccessAlert({ message }: { message: string }) {
   );
 }
 
-function InfoAlert({ message }: { message: string }) {
+function InfoAlert({ message }: { message: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
       {message}
@@ -353,7 +353,50 @@ function SignInForm({
   return (
     <div className="w-full max-w-sm mx-auto space-y-4">
       {notice && (notice.tone === 'success' ? <SuccessAlert message={notice.message} /> : <InfoAlert message={notice.message} />)}
-      {error && <ErrorAlert message={error} />}
+      {error && (
+        <ErrorAlert
+          message={
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span>{error}</span>
+              {pendingVerificationEmail && error === 'Your email is not verified.' && (
+                <button
+                  type="button"
+                  disabled={resendLoading}
+                  onClick={async () => {
+                    setResendLoading(true);
+                    setError('');
+                    try {
+                      const response = await fetch('/api/auth/resend-verification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: pendingVerificationEmail }),
+                      });
+                      const data = await response.json().catch(() => ({}));
+
+                      if (!response.ok) {
+                        setError(data.error || 'Could not resend the verification email.');
+                        return;
+                      }
+
+                      setNotice({
+                        tone: 'success',
+                        message: data.message || 'A new verification email has been sent.',
+                      });
+                    } catch {
+                      setError('Could not resend the verification email.');
+                    } finally {
+                      setResendLoading(false);
+                    }
+                  }}
+                  className="text-left font-semibold text-red-700 underline underline-offset-4 transition hover:text-red-800 disabled:opacity-50 dark:text-red-200 dark:hover:text-red-100"
+                >
+                  {resendLoading ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+            </div>
+          }
+        />
+      )}
 
       <form
         onSubmit={async (e) => {
@@ -441,46 +484,6 @@ function SignInForm({
         </button>
       </form>
 
-      {pendingVerificationEmail && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span>Need a new verification link for {pendingVerificationEmail}?</span>
-            <button
-              type="button"
-              disabled={resendLoading}
-              onClick={async () => {
-                setResendLoading(true);
-                setError('');
-                try {
-                  const response = await fetch('/api/auth/resend-verification', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: pendingVerificationEmail }),
-                  });
-                  const data = await response.json().catch(() => ({}));
-
-                  if (!response.ok) {
-                    setError(data.error || 'Could not resend the verification email.');
-                    return;
-                  }
-
-                  setNotice({
-                    tone: 'success',
-                    message: data.message || 'A new verification email has been sent.',
-                  });
-                } catch {
-                  setError('Could not resend the verification email.');
-                } finally {
-                  setResendLoading(false);
-                }
-              }}
-              className="text-left font-semibold text-blue-700 underline underline-offset-4 transition hover:text-blue-800 disabled:opacity-50 dark:text-blue-200 dark:hover:text-blue-100"
-            >
-              {resendLoading ? 'Sending…' : 'Resend verification email'}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="space-y-2">
         <OAuthButton provider="github" label="Continue with GitHub" />
@@ -1178,9 +1181,8 @@ export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
           <button
             type="button"
             onClick={() => switchOrg(null)}
-            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80 ${
-              !activeOrgId ? 'bg-violet-50/60 dark:bg-violet-500/10' : ''
-            }`}
+            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80 ${!activeOrgId ? 'bg-violet-50/60 dark:bg-violet-500/10' : ''
+              }`}
           >
             <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-violet-500 text-xs font-semibold text-white">
               P
@@ -1204,9 +1206,8 @@ export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
               key={org.id}
               type="button"
               onClick={() => switchOrg(org.id)}
-              className={`flex w-full items-center gap-2.5 border-b border-neutral-200/80 px-3 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-neutral-50 dark:border-neutral-700/80 dark:hover:bg-neutral-800/80 ${
-                activeOrgId === org.id ? 'bg-violet-50/60 dark:bg-violet-500/10' : ''
-              }`}
+              className={`flex w-full items-center gap-2.5 border-b border-neutral-200/80 px-3 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-neutral-50 dark:border-neutral-700/80 dark:hover:bg-neutral-800/80 ${activeOrgId === org.id ? 'bg-violet-50/60 dark:bg-violet-500/10' : ''
+                }`}
             >
               <span
                 className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-xs font-semibold text-white"

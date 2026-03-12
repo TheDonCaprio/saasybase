@@ -204,6 +204,47 @@ body {
   color: white !important;
 }
 
+.bg-indigo-500, .bg-indigo-500 * {
+  color: white !important;
+}
+.hover\:bg-indigo-600:hover, .hover\:bg-indigo-600:hover * {
+  color: white !important;
+}
+.light .bg-indigo-500, .light .bg-indigo-500 * {
+  color: white !important;
+}
+.light .hover\:bg-indigo-600:hover, .light .hover\:bg-indigo-600:hover * {
+  color: white !important;
+}
+
+.bg-purple-500, .bg-purple-500 *,
+.bg-purple-600, .bg-purple-600 *,
+.bg-purple-700, .bg-purple-700 * {
+  color: white !important;
+}
+.hover\:bg-purple-700:hover, .hover\:bg-purple-700:hover *,
+.hover\:bg-purple-600:hover, .hover\:bg-purple-600:hover * {
+  color: white !important;
+}
+.light .bg-purple-500, .light .bg-purple-500 *,
+.light .bg-purple-600, .light .bg-purple-600 *,
+.light .bg-purple-700, .light .bg-purple-700 * {
+  color: white !important;
+}
+.light .hover\:bg-purple-700:hover, .light .hover\:bg-purple-700:hover *,
+.light .hover\:bg-purple-600:hover, .light .hover\:bg-purple-600:hover * {
+  color: white !important;
+}
+
+.bg-brand, .bg-brand * {
+  background-color: rgb(var(--accent-primary)) !important;
+  color: white !important;
+}
+.light .bg-brand, .light .bg-brand * {
+  background-color: rgb(var(--accent-primary)) !important;
+  color: white !important;
+}
+
 /* TipTap editor typography alignment */
 .ProseMirror {
   max-width: none;

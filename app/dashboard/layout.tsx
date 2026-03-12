@@ -22,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Determine whether the current user has any NEW admin replies
   let supportBadge: string | undefined = undefined;
   let couponBadge: string | undefined = undefined;
+  let teamBadge: string | undefined = undefined;
   let pendingEmailChange: { newEmail: string; expires: string } | null = null;
   try {
     const { userId } = await authService.getSession();
@@ -51,6 +52,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
         couponBadge = String(pendingCoupons);
       }
 
+      const viewer = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+
+      if (viewer?.email) {
+        const pendingTeamInvites = await prisma.organizationInvite.count({
+          where: {
+            email: viewer.email,
+            status: 'PENDING',
+          },
+        });
+        if (pendingTeamInvites > 0) {
+          teamBadge = 'NEW';
+        }
+      }
+
       if (authService.providerName === 'nextauth') {
         const pending = await getPendingEmailChangeForUser(userId);
         if (pending) {
@@ -73,7 +91,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: '/dashboard/billing', label: 'Billing', icon: faFileInvoiceDollar },
     { href: '/dashboard/coupons', label: 'Coupons', icon: faTicketAlt, badge: couponBadge },
     { href: '/dashboard/transactions', label: 'Transactions', icon: faSackDollar },
-    { href: '/dashboard/team', label: 'Team', icon: faUserShield },
+    { href: '/dashboard/team', label: 'Team', icon: faUserShield, badge: teamBadge },
     { href: '/dashboard/activity', label: 'Activity', icon: faHistory },
     { href: '/dashboard/support', label: 'Support', icon: faLifeRing, badge: supportBadge },
     { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },

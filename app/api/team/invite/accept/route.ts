@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (invite.status === 'ACCEPTED') {
-      return NextResponse.json({ ok: true, alreadyAccepted: true });
+      return NextResponse.json({ ok: true, alreadyAccepted: true, activeOrganizationId: invite.organizationId });
     }
 
     const seats = invite.organization.seatLimit ?? invite.organization.plan?.organizationSeatLimit ?? null;
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     await markInviteAccepted(token, userId);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, activeOrganizationId: invite.organizationId });
   } catch (err) {
     const error = toError(err);
     Logger.error('team invite accept failed', { userId, error: error.message });

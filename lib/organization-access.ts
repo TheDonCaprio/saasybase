@@ -76,15 +76,15 @@ export async function getActiveTeamSubscription(
 
   const unexpiredAccessClause = includeCancelled
     ? {
-        // Preserve historical behavior: any non-EXPIRED status with time remaining
-        // still confers org access.
-        status: { not: 'EXPIRED' },
-        expiresAt: { gt: now },
-      }
+      // Preserve historical behavior: any non-EXPIRED status with time remaining
+      // still confers org access.
+      status: { not: 'EXPIRED' },
+      expiresAt: { gt: now },
+    }
     : {
-        status: { in: eligibleStatuses as unknown as string[] },
-        expiresAt: { gt: now },
-      };
+      status: { in: eligibleStatuses as unknown as string[] },
+      expiresAt: { gt: now },
+    };
 
   const graceWindowStatuses = includeCancelled ? ['EXPIRED', 'CANCELLED', 'PAST_DUE'] : ['EXPIRED', 'PAST_DUE'];
 
@@ -111,11 +111,11 @@ export async function getActiveTeamSubscription(
 export async function getOrganizationAccessSummary(userId: string, activeOrganizationId?: string | null): Promise<TeamSubscriptionStatus> {
   const targetedOrgCondition = activeOrganizationId
     ? {
-        OR: [
-          { id: activeOrganizationId },
-          { clerkOrganizationId: activeOrganizationId },
-        ],
-      }
+      OR: [
+        { id: activeOrganizationId },
+        { clerkOrganizationId: activeOrganizationId },
+      ],
+    }
     : {};
 
   // First, check if they are an OWNER directly, factoring in the targeted org context if requested.
@@ -631,15 +631,71 @@ async function updateOrganizationMetadataIfNeeded(orgId: string, params: { planI
   });
 }
 
+async function backfillTeamBillingOrganizationLinks(params: {
+  userId: string;
+  planId: string;
+  organizationId: string;
+}) {
+  const candidateSubscriptions = await prisma.subscription.findMany({
+    where: {
+      userId: params.userId,
+      planId: params.planId,
+      organizationId: null,
+      status: { in: TEAM_SUB_STATUSES as unknown as string[] },
+      plan: { supportsOrganizations: true },
+    },
+    select: { id: true },
+  });
+
+  if (candidateSubscriptions.length === 0) {
+    return { subscriptionsUpdated: 0, paymentsUpdated: 0 };
+  }
+
+  const subscriptionIds = candidateSubscriptions.map((subscription) => subscription.id);
+  const [subscriptionsResult, paymentsResult] = await prisma.$transaction([
+    prisma.subscription.updateMany({
+      where: {
+        id: { in: subscriptionIds },
+        organizationId: null,
+      },
+      data: { organizationId: params.organizationId },
+    }),
+    prisma.payment.updateMany({
+      where: {
+        subscriptionId: { in: subscriptionIds },
+        organizationId: null,
+      },
+      data: { organizationId: params.organizationId },
+    }),
+  ]);
+
+  Logger.info('Backfilled team billing organization linkage after provisioning', {
+    userId: params.userId,
+    organizationId: params.organizationId,
+    planId: params.planId,
+    subscriptionsUpdated: subscriptionsResult.count,
+    paymentsUpdated: paymentsResult.count,
+  });
+
+  return {
+    subscriptionsUpdated: subscriptionsResult.count,
+    paymentsUpdated: paymentsResult.count,
+  };
+}
+
 export async function ensureTeamOrganization(userId: string, orgName?: string) {
-  const access = await getOrganizationAccessSummary(userId);
-  if (!access.allowed || access.kind !== 'OWNER') {
+  const activeOwnerSubscription = await getActiveTeamSubscription(userId, {
+    includeGrace: false,
+    includeCancelled: false,
+  });
+
+  if (!activeOwnerSubscription?.plan) {
     throw new Error('Team plan required to provision an organization');
   }
 
   const providerName = workspaceService.providerName;
   const isNextAuthProvider = providerName === 'nextauth';
-  const plan = access.plan;
+  const plan = activeOwnerSubscription.plan;
   const desiredSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
   const desiredStrategy = 'SHARED_FOR_ORG';
 
@@ -762,6 +818,12 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
       }
     }
 
+    await backfillTeamBillingOrganizationLinks({
+      userId,
+      planId: plan.id,
+      organizationId: existing.id,
+    });
+
     // Migrate personal tokens to organization if any exist
     if (userTokens > 0) {
       try {
@@ -864,6 +926,14 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
       seatLimit: desiredSeatLimit ?? undefined,
       tokenPoolStrategy: desiredStrategy,
       tokenBalance: userTokens,
+    });
+  }
+
+  if (saved?.id) {
+    await backfillTeamBillingOrganizationLinks({
+      userId,
+      planId: plan.id,
+      organizationId: saved.id,
     });
   }
 

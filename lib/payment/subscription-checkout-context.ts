@@ -137,6 +137,9 @@ export async function processSubscriptionCheckout(params: {
         userId: params.userId,
         subscription: sub,
         planToUse,
+        organizationId: params.organizationContext?.role === 'OWNER'
+            ? params.organizationContext.organization.id
+            : null,
         desiredStatus,
         effectiveStartedAt,
         effectiveExpiresAt,

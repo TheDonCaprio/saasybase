@@ -110,7 +110,7 @@ export default function AdjustOrgTokensModal({ orgId, orgName, currentBalance = 
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Applying...' : 'Apply Adjustment'}
           </button>

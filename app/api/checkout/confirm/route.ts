@@ -693,6 +693,9 @@ export async function GET(req: NextRequest) {
     }
 
     let subscription: unknown = null;
+    const subscriptionOrganizationId = plan.supportsOrganizations === true
+      ? activeOwnedOrganization?.id ?? null
+      : null;
     if (effectiveSubscriptionId) {
       // We already updated an existing subscription to extend it
       subscription = await prisma.subscription.findUnique({ where: { id: effectiveSubscriptionId }, include: { plan: true } });
@@ -701,6 +704,7 @@ export async function GET(req: NextRequest) {
         data: {
           userId,
           planId: plan.id,
+          organizationId: subscriptionOrganizationId,
           status: subscriptionStatus,
           startedAt: newStartDate,
           expiresAt: newExpiresAt,

@@ -757,6 +757,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
           const obj = asRecord(json);
           if (res.ok && obj?.ok === true && obj?.scheduled === true) {
             showToast('Plan will switch at the end of your current cycle.', 'success');
+            router.refresh();
             return;
           }
 

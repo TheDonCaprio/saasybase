@@ -69,17 +69,6 @@ export async function POST(
       data: { status: 'EXPIRED', expiresAt: now, canceledAt: now, clearPaidTokensOnExpiry: clearPaidTokens }
     });
 
-    try {
-      await syncOrganizationEligibilityForUser(subscription.userId, { ignoreGrace: true });
-    } catch (err: unknown) {
-      const syncError = toError(err);
-      Logger.warn('Failed to sync organization eligibility after admin expired purchase subscription', {
-        subscriptionId: subscription.id,
-        userId: subscription.userId,
-        error: syncError.message
-      });
-    }
-
     if (payment.userId) {
       try {
         const shouldClear = await shouldClearPaidTokensOnExpiry({ userId: payment.userId, requestFlag: clearPaidTokens });
@@ -103,6 +92,17 @@ export async function POST(
           error: inner.message
         });
       }
+    }
+
+    try {
+      await syncOrganizationEligibilityForUser(subscription.userId, { ignoreGrace: true });
+    } catch (err: unknown) {
+      const syncError = toError(err);
+      Logger.warn('Failed to sync organization eligibility after admin expired purchase subscription', {
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+        error: syncError.message
+      });
     }
 
     await recordAdminAction({

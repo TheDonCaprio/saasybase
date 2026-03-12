@@ -109,17 +109,13 @@ export async function POST(request: NextRequest) {
     try {
       const recipient = await prisma.user.findUnique({ where: { email } });
       if (recipient) {
-        const baseUrl = getEnv().NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-        const token = savedInvite?.token ?? '';
-        const acceptUrl = `${baseUrl}/invite/${encodeURIComponent(token)}`;
-
         await prisma.notification.create({
           data: {
             userId: recipient.id,
             title: `Invitation to join ${organization.name}`,
             message: `${inviter?.name ?? 'A teammate'} invited you to join ${organization.name}. Open your team dashboard to accept or decline.`,
             type: 'TEAM_INVITE',
-            url: acceptUrl,
+            url: '/dashboard/team',
             read: false,
           },
         });

@@ -6,21 +6,21 @@ const toAuthGuardErrorResponseMock = vi.hoisted(() => vi.fn(() => null));
 const adminRateLimitMock = vi.hoisted(() => vi.fn(async () => ({ success: true, allowed: true, remaining: 59, reset: Date.now() + 60_000 })));
 const recordAdminActionMock = vi.hoisted(() => vi.fn(async () => undefined));
 const shouldClearPaidTokensOnExpiryMock = vi.hoisted(() => vi.fn(async () => true));
-const sendBillingNotificationMock = vi.hoisted(() => vi.fn(async () => ({ notificationCreated: true, emailSent: true })));
 const syncOrganizationEligibilityForUserMock = vi.hoisted(() => vi.fn(async () => ({ allowed: false, reason: 'NO_PLAN' })));
 const resetOrganizationSharedTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
-const cancelSubscriptionMock = vi.hoisted(() => vi.fn(async () => ({ currentPeriodEnd: null })));
 
 const prismaMock = vi.hoisted(() => ({
-  subscription: {
+  payment: {
     findUnique: vi.fn(),
+  },
+  subscription: {
+    update: vi.fn(async () => undefined),
+  },
+  user: {
     update: vi.fn(async () => undefined),
   },
   plan: {
     findUnique: vi.fn(),
-  },
-  user: {
-    update: vi.fn(async () => undefined),
   },
 }));
 
@@ -29,58 +29,46 @@ vi.mock('../lib/auth', () => ({
   toAuthGuardErrorResponse: toAuthGuardErrorResponseMock,
 }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('../lib/admin-actions', () => ({ recordAdminAction: recordAdminActionMock }));
-vi.mock('../lib/rateLimit', () => ({ adminRateLimit: adminRateLimitMock }));
-vi.mock('../lib/paidTokens', () => ({ shouldClearPaidTokensOnExpiry: shouldClearPaidTokensOnExpiryMock }));
-vi.mock('../lib/payment/service', () => ({
-  paymentService: {
-    provider: { name: 'stripe' },
-    getProviderForRecord: vi.fn(() => ({ cancelSubscription: cancelSubscriptionMock })),
-  },
-}));
-vi.mock('../lib/teams', () => ({ resetOrganizationSharedTokens: resetOrganizationSharedTokensMock }));
-vi.mock('../lib/organization-access', () => ({ syncOrganizationEligibilityForUser: syncOrganizationEligibilityForUserMock }));
-vi.mock('../lib/notifications', () => ({ sendBillingNotification: sendBillingNotificationMock }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+vi.mock('../lib/admin-actions', () => ({ recordAdminAction: recordAdminActionMock }));
+vi.mock('../lib/paidTokens', () => ({ shouldClearPaidTokensOnExpiry: shouldClearPaidTokensOnExpiryMock }));
+vi.mock('../lib/rateLimit', () => ({ adminRateLimit: adminRateLimitMock }));
+vi.mock('../lib/organization-access', () => ({ syncOrganizationEligibilityForUser: syncOrganizationEligibilityForUserMock }));
+vi.mock('../lib/teams', () => ({ resetOrganizationSharedTokens: resetOrganizationSharedTokensMock }));
 
-import { POST } from '../app/api/admin/subscriptions/[id]/force-cancel/route';
+import { POST } from '../app/api/admin/purchases/[id]/expire/route';
 
-describe('admin force-cancel notifications', () => {
+describe('admin purchase expire cleanup order', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    prismaMock.subscription.findUnique.mockResolvedValue({
-      id: 'sub_1',
+    prismaMock.payment.findUnique.mockResolvedValue({
+      id: 'pay_1',
       userId: 'user_1',
-      planId: 'plan_team',
-      organizationId: 'org_1',
-      paymentProvider: 'stripe',
-      externalSubscriptionId: 'sub_ext_1',
+      subscriptionId: 'sub_1',
+      subscription: {
+        id: 'sub_1',
+        userId: 'user_1',
+        planId: 'plan_team',
+        organizationId: 'org_1',
+        status: 'ACTIVE',
+      },
+      user: { id: 'user_1' },
     });
-    prismaMock.plan.findUnique.mockResolvedValue({
-      name: 'Team Plan',
-      supportsOrganizations: true,
-    });
+    prismaMock.plan.findUnique.mockResolvedValue({ supportsOrganizations: true });
   });
 
-  it('sends a billing notification after admin force-cancel', async () => {
-    const req = new NextRequest('http://localhost/api/admin/subscriptions/sub_1/force-cancel', {
+  it('resets org tokens before syncing organization eligibility', async () => {
+    const req = new NextRequest('http://localhost/api/admin/purchases/pay_1/expire', {
       method: 'POST',
       body: JSON.stringify({ clearPaidTokens: true }),
       headers: { 'content-type': 'application/json' },
     });
 
-    const res = await POST(req, { params: Promise.resolve({ id: 'sub_1' }) });
+    const res = await POST(req, { params: Promise.resolve({ id: 'pay_1' }) });
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-    expect(sendBillingNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'user_1',
-        title: 'Subscription Cancelled',
-        templateKey: 'subscription_cancelled',
-      })
-    );
+    expect(body.success).toBe(true);
     expect(resetOrganizationSharedTokensMock).toHaveBeenCalledWith({ organizationId: 'org_1' });
     expect(syncOrganizationEligibilityForUserMock).toHaveBeenCalledWith('user_1', { ignoreGrace: true });
     expect(resetOrganizationSharedTokensMock.mock.invocationCallOrder[0]).toBeLessThan(

@@ -106,4 +106,78 @@ describe('invoice payment org resolution for NextAuth', () => {
       })
     );
   });
+
+  it('credits the org bucket on renewal via subscription.organizationId after provisioning when renewal metadata has no org id', async () => {
+    prismaMock.$transaction.mockImplementation(async (cb: any) => {
+      const tx = {
+        payment: {
+          findUnique: vi.fn(async () => null),
+          count: vi.fn(async () => 1),
+          create: vi.fn(async (args) => ({ id: 'pay_renew_1', externalPaymentId: args.data.externalPaymentId })),
+        },
+        user: {
+          update: vi.fn(async () => undefined),
+        },
+        organization: {
+          update: vi.fn(async () => undefined),
+        },
+      };
+      return cb(tx);
+    });
+
+    const resolveOrganizationContext = vi.fn(async () => null);
+    const preflight = await resolveInvoicePaidProcessingContext({
+      invoice: {
+        id: 'inv_renew_1',
+        subscriptionId: 'sub_provider_1',
+        paymentIntentId: 'pi_renew_1',
+        billingReason: 'subscription_recurring',
+        metadata: {},
+      } as any,
+      findSubscriptionByProviderId: vi.fn(async () => ({
+        id: 'sub_db_1',
+        userId: 'user_1',
+        planId: 'plan_team',
+        organizationId: 'org_after_provision',
+        plan: { autoRenew: true, tokenLimit: 100, supportsOrganizations: true },
+      })),
+      ensureProviderBackedSubscription: vi.fn(async () => null),
+      resolveOrganizationContext,
+      shouldClearPaidTokensOnRenewal: vi.fn(async () => false),
+    });
+
+    expect(preflight.shouldSkip).toBe(false);
+    expect(preflight.resolvedOrganizationId).toBe('org_after_provision');
+    expect(resolveOrganizationContext).toHaveBeenCalledWith('user_1', null);
+
+    const result = await recordInvoicePaymentAndApplyTokens({
+      dbSub: {
+        id: 'sub_db_1',
+        userId: 'user_1',
+        planId: 'plan_team',
+        plan: { tokenLimit: 100, supportsOrganizations: true },
+      },
+      invoice: {
+        id: 'inv_renew_1',
+        amountPaid: 5000,
+        subtotal: 5000,
+        amountDiscount: 0,
+        billingReason: 'subscription_recurring',
+      } as any,
+      paymentIntentId: 'pi_renew_1',
+      subscriptionId: 'sub_provider_1',
+      resolvedOrganizationId: preflight.resolvedOrganizationId ?? null,
+      shouldResetTokensOnRenewal: false,
+      providerKey: 'paddle',
+      mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => value ?? null,
+    });
+
+    expect(result.created).toBe(true);
+    expect(creditOrganizationSharedTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org_after_provision',
+        amount: 100,
+      })
+    );
+  });
 });

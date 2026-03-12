@@ -63,6 +63,14 @@ export async function GET() {
   const ownedOrganizationCount = await prisma.organization.count({
     where: { ownerUserId: user.id },
   });
+  const pendingTeamInviteCount = user.email
+    ? await prisma.organizationInvite.count({
+        where: {
+          email: user.email,
+          status: 'PENDING',
+        },
+      })
+    : 0;
 
   // Get user token balances
   const paidTokenBalance = typeof user.tokenBalance === 'number' ? user.tokenBalance : 0;
@@ -162,6 +170,7 @@ export async function GET() {
     },
     planSource,
     canCreateOrganization,
+    hasPendingTeamInvites: pendingTeamInviteCount > 0,
   });
   } catch (error: unknown) {
     // If the error is an auth guard error (no session), return 401 so static export

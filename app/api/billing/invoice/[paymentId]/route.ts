@@ -120,7 +120,7 @@ export async function GET(
     const invoicePlan = payment.subscription?.plan
       ? {
         name: payment.subscription.plan.name,
-        description: payment.subscription.plan.description,
+        description: payment.subscription.plan.shortDescription ?? payment.subscription.plan.description,
         durationHours: payment.subscription.plan.durationHours,
       }
       : null;

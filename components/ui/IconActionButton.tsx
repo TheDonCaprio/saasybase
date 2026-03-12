@@ -12,7 +12,7 @@ const bgClasses: Record<ColorKey, string> = {
   amber:
     'bg-amber-500 hover:bg-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400',
   emerald:
-    'bg-emerald-500 hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400',
+    'bg-blue-500 hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400',
   rose:
     'bg-rose-500 hover:bg-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 dark:border-rose-500/40 dark:text-rose-300 dark:bg-transparent dark:hover:bg-rose-500/10',
 };

@@ -1,0 +1,98 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const prismaMock = vi.hoisted(() => ({
+  user: {
+    findUnique: vi.fn(),
+    update: vi.fn(async () => undefined),
+  },
+  subscription: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    updateMany: vi.fn(async () => ({ count: 1 })),
+  },
+  organization: {
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn(async () => undefined),
+  },
+  organizationMembership: {
+    aggregate: vi.fn(),
+  },
+  payment: {
+    findFirst: vi.fn(),
+    updateMany: vi.fn(async () => ({ count: 1 })),
+  },
+  $transaction: vi.fn(),
+}));
+
+const workspaceServiceMock = vi.hoisted(() => ({
+  providerName: 'nextauth',
+}));
+
+vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
+vi.mock('../lib/logger', () => ({ Logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+vi.mock('../lib/teams', () => ({
+  upsertOrganization: vi.fn(async () => null),
+  syncOrganizationMembership: vi.fn(async () => null),
+}));
+vi.mock('../lib/workspace-service', () => ({ workspaceService: workspaceServiceMock }));
+
+import { ensureTeamOrganization } from '../lib/organization-access';
+
+describe('ensureTeamOrganization billing backfill', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (ops: Array<Promise<unknown>>) => Promise.all(ops));
+    prismaMock.user.findUnique.mockResolvedValue({ name: 'Owner', email: 'owner@example.com', tokenBalance: 0 });
+    prismaMock.subscription.findFirst
+      .mockResolvedValueOnce({
+        id: 'sub_active',
+        userId: 'user_1',
+        plan: { id: 'plan_team', tokenLimit: 100, organizationSeatLimit: 5, supportsOrganizations: true },
+      })
+      .mockResolvedValueOnce({ id: 'sub_active' });
+    prismaMock.organization.findFirst.mockResolvedValue({
+      id: 'org_1',
+      ownerUserId: 'user_1',
+      planId: 'plan_team',
+      seatLimit: 5,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+    });
+    prismaMock.subscription.findMany.mockResolvedValue([{ id: 'sub_active' }]);
+    prismaMock.organization.findUnique
+      .mockResolvedValueOnce({ id: 'org_1', tokenBalance: 0 })
+      .mockResolvedValueOnce({ id: 'org_1' });
+    prismaMock.organizationMembership.aggregate.mockResolvedValue({ _sum: { memberTokenUsage: 0 } });
+    prismaMock.payment.findFirst.mockResolvedValue({ id: 'pay_1' });
+  });
+
+  it('backfills active team subscriptions and payments with the provisioned organization id', async () => {
+    await ensureTeamOrganization('user_1');
+
+    expect(prismaMock.subscription.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['sub_active'] },
+        organizationId: null,
+      },
+      data: { organizationId: 'org_1' },
+    });
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        subscriptionId: { in: ['sub_active'] },
+        organizationId: null,
+      },
+      data: { organizationId: 'org_1' },
+    });
+  });
+
+  it('rejects provisioning when the user no longer has an active team subscription', async () => {
+    prismaMock.subscription.findFirst.mockReset();
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+
+    await expect(ensureTeamOrganization('user_1')).rejects.toThrow(
+      'Team plan required to provision an organization'
+    );
+
+    expect(prismaMock.organization.findFirst).not.toHaveBeenCalled();
+  });
+});

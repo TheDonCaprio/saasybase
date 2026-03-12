@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { activateWorkspaceAndNavigate } from '../../lib/active-workspace.client';
 
 interface InviteAcceptanceClientProps {
   token: string;
@@ -14,6 +16,7 @@ interface InviteAcceptanceClientProps {
 type InviteStatus = 'idle' | 'accepting' | 'accepted' | 'declining' | 'declined';
 
 export function InviteAcceptanceClient({ token, organizationName, inviteEmail, viewerEmail, alreadyMember }: InviteAcceptanceClientProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<InviteStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +26,7 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
         <p>You already have access to {organizationName}. Head to the workspace dashboard to get started.</p>
         <Link
           href="/dashboard/team"
-          className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           Go to dashboard
         </Link>
@@ -51,6 +54,14 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error || 'Unable to accept invite.');
       }
+
+      if (typeof payload.activeOrganizationId === 'string' && payload.activeOrganizationId.length > 0) {
+        const switched = await activateWorkspaceAndNavigate(payload.activeOrganizationId, '/dashboard/team');
+        if (switched) {
+          return;
+        }
+      }
+
       setStatus('accepted');
     } catch (err) {
       setStatus('idle');
@@ -73,6 +84,8 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error || 'Unable to decline invite.');
       }
+      router.replace('/dashboard/team?inviteDeclined=1');
+      router.refresh();
       setStatus('declined');
     } catch (err) {
       setStatus('idle');
@@ -88,7 +101,7 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
         </div>
         <Link
           href="/dashboard/team"
-          className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           Go to workspace
         </Link>

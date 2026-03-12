@@ -502,7 +502,7 @@ export default function SitePagesList({
                   type="button"
                   onClick={() => handleBulkAction('restore')}
                   disabled={isBulkProcessing}
-                  className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold !text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-70"
+                  className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold !text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70"
                 >
                   Restore selected
                 </button>
@@ -1059,7 +1059,7 @@ export default function SitePagesList({
                               className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
                                 isPendingRestore
                                   ? 'border border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-100 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
-                                  : 'border border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500 dark:border-emerald-500/70 dark:bg-emerald-500/80 dark:hover:bg-emerald-500 dark:focus:ring-emerald-400'
+                                  : 'border border-blue-500 bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 dark:border-blue-500/70 dark:bg-blue-500/80 dark:hover:bg-blue-500 dark:focus:ring-blue-400'
                               }`}
                             >
                               {isPendingRestore ? (

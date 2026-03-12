@@ -597,7 +597,7 @@ export function PaginatedSubscriptionsManagement({
     'schedule-cancel':
       'border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:border-amber-500/70 dark:bg-amber-500/80 dark:hover:bg-amber-500 dark:focus:ring-amber-400',
     undo:
-      'border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:border-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-600',
+      'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
     refund:
       'border border-purple-600 bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 dark:border-purple-500 dark:bg-purple-500 dark:hover:bg-purple-600'
   };

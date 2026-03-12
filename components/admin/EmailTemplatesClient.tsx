@@ -496,7 +496,7 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
               <button
                 onClick={handleSendTest}
                 disabled={sendingTest}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                className="flex-1 rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
                 {sendingTest ? 'Sending...' : 'Send Test Email'}
               </button>

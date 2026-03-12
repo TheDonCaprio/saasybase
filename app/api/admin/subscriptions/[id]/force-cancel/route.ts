@@ -81,19 +81,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       data: { status: 'CANCELLED', expiresAt: new Date(), canceledAt: new Date(), cancelAtPeriodEnd: false }
     });
 
-    // Admin force-cancel must revoke team/org access immediately (no natural-expiry grace).
-    // This prevents the org + memberships from lingering until a user visits a page that triggers a sync.
-    try {
-      await syncOrganizationEligibilityForUser(sub.userId, { ignoreGrace: true });
-    } catch (err: unknown) {
-      Logger.warn('Failed to sync organization eligibility after admin force-cancel', {
-        actorId,
-        subscriptionId: id,
-        userId: sub.userId,
-        error: toError(err).message,
-      });
-    }
-
     try {
       const shouldClear = await shouldClearPaidTokensOnExpiry({ userId: sub.userId, subscription: sub, requestFlag: clearPaidTokens });
       if (shouldClear) {
@@ -109,6 +96,19 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       }
     } catch (err: unknown) {
       Logger.warn('Failed to reset token balance after force cancel', { error: toError(err).message, userId: sub.userId, subscriptionId: id });
+    }
+
+    // Admin force-cancel must revoke team/org access immediately (no natural-expiry grace).
+    // Perform this after token clearing so org-token cleanup can still target the existing org row.
+    try {
+      await syncOrganizationEligibilityForUser(sub.userId, { ignoreGrace: true });
+    } catch (err: unknown) {
+      Logger.warn('Failed to sync organization eligibility after admin force-cancel', {
+        actorId,
+        subscriptionId: id,
+        userId: sub.userId,
+        error: toError(err).message,
+      });
     }
 
     try {

@@ -212,7 +212,7 @@ export default function PaymentManagement({
                         }
                       }}
                       disabled={isUndoing}
-                      className="inline-flex items-center gap-2 self-start rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                      className="inline-flex items-center gap-2 self-start rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                     >
                       {isUndoing ? 'Undoing…' : 'Undo cancellation'}
                     </button>

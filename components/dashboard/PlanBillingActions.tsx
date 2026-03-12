@@ -91,7 +91,7 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
           <button
             type="button"
             onClick={() => setShowRedeem(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-emerald-700"
+            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-blue-700"
           >
             Redeem a coupon
           </button>

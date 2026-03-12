@@ -4,12 +4,18 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TeamInviteForm } from './TeamInviteForm';
 
+type InviteNotice = {
+    tone: 'success' | 'error';
+    message: string;
+};
+
 interface InviteTeammatesModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onInvite: (email: string, role: string) => Promise<void> | void;
+    onInvite: (email: string, role: string) => Promise<boolean> | boolean;
     isSubmitting: boolean;
     seatsRemaining: number | null;
+    notice?: InviteNotice | null;
 }
 
 export function InviteTeammatesModal({
@@ -18,6 +24,7 @@ export function InviteTeammatesModal({
     onInvite,
     isSubmitting,
     seatsRemaining,
+    notice,
 }: InviteTeammatesModalProps) {
     const [mounted, setMounted] = useState(false);
 
@@ -60,6 +67,15 @@ export function InviteTeammatesModal({
                 </div>
 
                 <div className="p-6">
+                    {notice ? (
+                        <div
+                            className={notice.tone === 'success'
+                                ? 'mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200'
+                                : 'mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200'}
+                        >
+                            {notice.message}
+                        </div>
+                    ) : null}
                     <TeamInviteForm onInvite={onInvite} isSubmitting={isSubmitting} seatsRemaining={seatsRemaining} />
                 </div>
             </div>

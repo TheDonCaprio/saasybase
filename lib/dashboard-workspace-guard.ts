@@ -3,7 +3,7 @@ import { prisma } from './prisma';
 import { getActiveTeamSubscription } from './organization-access';
 
 export async function enforceTeamWorkspaceProvisioningGuard(userId: string) {
-  const activeTeamSubscription = await getActiveTeamSubscription(userId, { includeGrace: true });
+  const activeTeamSubscription = await getActiveTeamSubscription(userId, { includeGrace: false });
   if (!activeTeamSubscription) {
     return;
   }

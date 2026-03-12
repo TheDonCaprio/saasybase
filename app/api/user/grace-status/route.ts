@@ -50,13 +50,55 @@ export async function GET() {
     },
     orderBy: { expiresAt: 'desc' },
     select: {
+      id: true,
       expiresAt: true,
       plan: { select: { supportsOrganizations: true, autoRenew: true, name: true } },
     },
   });
 
-  if (!latestEndedWithinGrace?.expiresAt) {
+  if (!latestEndedWithinGrace?.expiresAt || !latestEndedWithinGrace.id) {
     return NextResponse.json({ inGrace: false });
+  }
+
+  const adminActionLog = (prisma as unknown as {
+    adminActionLog?: {
+      findFirst: (args: Record<string, unknown>) => Promise<{ id: string } | null>;
+    };
+  }).adminActionLog;
+
+  if (adminActionLog) {
+    const immediateAdminTermination = await adminActionLog.findFirst({
+      where: {
+        targetUserId: userId,
+        createdAt: { gte: graceCutoff },
+        OR: [
+          {
+            action: { in: ['subscriptions.forceCancel', 'subscriptions.expire', 'purchases.expireSubscription'] },
+            details: { contains: `"subscriptionId":"${latestEndedWithinGrace.id}"` },
+          },
+          {
+            action: 'payments.refund',
+            AND: [
+              {
+                details: {
+                  contains: `"subscriptionId":"${latestEndedWithinGrace.id}"`,
+                },
+              },
+              {
+                details: {
+                  contains: '"localCancelMode":"immediate"',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (immediateAdminTermination) {
+      return NextResponse.json({ inGrace: false });
+    }
   }
 
   const expiresAt = latestEndedWithinGrace.expiresAt;

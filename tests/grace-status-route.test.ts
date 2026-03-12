@@ -4,6 +4,9 @@ const prismaMock = vi.hoisted(() => ({
   subscription: {
     findFirst: vi.fn(),
   },
+  adminActionLog: {
+    findFirst: vi.fn(),
+  },
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
@@ -33,8 +36,10 @@ describe('GET /api/user/grace-status', () => {
     const expiresAt = new Date(Date.now() - 60 * 60 * 1000);
     prismaMock.subscription.findFirst.mockResolvedValueOnce({
       expiresAt,
+      id: 'sub_expired',
       plan: { supportsOrganizations: true, autoRenew: false, name: 'Team' },
     });
+    prismaMock.adminActionLog.findFirst.mockResolvedValueOnce(null);
 
     const res = await GET();
     expect(res.status).toBe(200);
@@ -51,13 +56,33 @@ describe('GET /api/user/grace-status', () => {
     const expiresAt = new Date(Date.now() - 30 * 60 * 1000);
     prismaMock.subscription.findFirst.mockResolvedValueOnce({
       expiresAt,
+      id: 'sub_cancelled',
       plan: { supportsOrganizations: true, autoRenew: false, name: 'Team' },
     });
+    prismaMock.adminActionLog.findFirst.mockResolvedValueOnce(null);
 
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.inGrace).toBe(true);
     expect(new Date(body.expiresAt).toISOString()).toBe(expiresAt.toISOString());
+  });
+
+  it('returns inGrace=false for force-cancelled subscriptions within the grace window', async () => {
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+
+    const expiresAt = new Date(Date.now() - 15 * 60 * 1000);
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_force_cancelled',
+      expiresAt,
+      plan: { supportsOrganizations: true, autoRenew: true, name: 'Team' },
+    });
+
+    prismaMock.adminActionLog.findFirst.mockResolvedValueOnce({ id: 'action_1' });
+
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.inGrace).toBe(false);
   });
 });

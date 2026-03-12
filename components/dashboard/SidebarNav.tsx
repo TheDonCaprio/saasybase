@@ -15,6 +15,7 @@ type SidebarProfile = {
   };
   permissions?: Record<string, boolean>;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  hasPendingTeamInvites?: boolean;
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
@@ -71,7 +72,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
       return items.filter((it) => {
         if (it.adminOnly) return false;
         const section = hrefToSection(it.href);
-        if (!section) return false;
+        if (!section) return true;
         if (section === 'overview') return true;
         if (CLIENT_MODERATOR_SECTIONS.includes(section)) return Boolean(perms[section]);
         return false;
@@ -81,9 +82,15 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     return items.filter((it) => !it.adminOnly);
   })();
 
+  const displayItems = visibleItems.map((item) => (
+    item.href === '/dashboard/team' && profile?.hasPendingTeamInvites
+      ? { ...item, badge: 'NEW' }
+      : item
+  ));
+
   return (
     <nav className="space-y-1">
-      {visibleItems.map(it => {
+      {displayItems.map(it => {
         const label = (() => {
           if (it.href !== '/dashboard/plan') return it.label;
           if (!profile?.planSource) return it.label;

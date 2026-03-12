@@ -407,7 +407,7 @@ export default function SaaSyAppClient() {
             <button
               type="button"
               disabled={busy}
-              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-70 dark:bg-emerald-500 dark:text-white dark:hover:bg-emerald-400"
+              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-70 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-400"
               onClick={() => {
                 const cost = safeInt(customCost);
                 spend(cost ?? 0, customLabel || 'Custom operation', bucket, 'custom');

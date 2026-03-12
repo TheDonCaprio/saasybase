@@ -46,6 +46,8 @@ vi.mock('../lib/settings', () => ({ getDefaultTokenLabel: vi.fn(async () => 'tok
 import { tryRecordPaystackRenewalStyleCharge } from '../lib/payment/subscription-payment-linking';
 import type { StandardizedCheckoutSession } from '../lib/payment/types';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../lib/notifications';
+import { shouldClearPaidTokensOnRenewal } from '../lib/paidTokens';
+import { creditOrganizationSharedTokens } from '../lib/teams';
 
 describe('Paystack switch-at-cycle-end payment linking', () => {
 	beforeEach(() => {
@@ -177,5 +179,67 @@ describe('Paystack switch-at-cycle-end payment linking', () => {
 
 		expect(didHandle).toBe(false);
 		expect(prismaMock.$transaction).not.toHaveBeenCalled();
+	});
+
+	it('credits the org bucket on paystack renewal via candidate subscription organizationId when metadata is empty', async () => {
+		vi.mocked(shouldClearPaidTokensOnRenewal).mockResolvedValueOnce(false as never);
+		prismaMock.subscription.findFirst.mockResolvedValue({
+			id: 'sub_db_team',
+			organizationId: 'org_after_provision',
+			externalSubscriptionId: 'SUB_paystack_team',
+			status: 'ACTIVE',
+			expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+		});
+		prismaMock.payment.findFirst.mockResolvedValue({ id: 'pay_existing' });
+
+		const session: StandardizedCheckoutSession = {
+			id: 'txn_ref_team_1',
+			mode: 'subscription',
+			userId: 'user_1',
+			userEmail: 'test@example.com',
+			customerId: 'CUS_123',
+			amountTotal: 5000,
+			currency: 'NGN',
+			paymentStatus: 'paid',
+			metadata: {},
+			lineItems: [{ priceId: 'PLN_team', quantity: 1 }],
+		};
+
+		const didHandle = await tryRecordPaystackRenewalStyleCharge({
+			session,
+			userId: 'user_1',
+			plan: {
+				id: 'plan_team',
+				name: 'Team',
+				autoRenew: true,
+				supportsOrganizations: true,
+				tokenLimit: 100,
+				durationHours: 24 * 30,
+			},
+			providerKey: 'paystack',
+			finalPaymentIntent: 'txn_ref_team_1',
+			amountCents: 5000,
+			mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => (value ? JSON.stringify({ paystack: value }) : null),
+			resolveOrganizationContext: vi.fn(async () => null),
+			refreshSubscriptionExpiryFromProvider: vi.fn(async () => ({ refreshedPeriodEnd: null })),
+			markSubscriptionActive: vi.fn(async () => undefined),
+			findRecentNotificationByExactMessage: vi.fn(async () => null),
+			consumeCouponRedemptionFromMetadata: vi.fn(async () => undefined),
+		});
+
+		expect(didHandle).toBe(true);
+		expect(prismaMock.__tx.payment.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					organizationId: 'org_after_provision',
+				}),
+			}),
+		);
+		expect(creditOrganizationSharedTokens).toHaveBeenCalledWith(
+			expect.objectContaining({
+				organizationId: 'org_after_provision',
+				amount: 100,
+			}),
+		);
 	});
 });

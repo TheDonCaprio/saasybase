@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { TeamDashboardOrganization, TeamDashboardState } from '../../lib/team-dashboard';
 import type { TeamSubscriptionStatus } from '../../lib/organization-access';
+import { activateWorkspaceAndNavigate } from '../../lib/active-workspace.client';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../dashboard/dashboardSurfaces';
 import { ProvisionRefreshButton } from './ProvisionRefreshButton';
 
@@ -58,7 +59,16 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
 
   const allowed = state.access.allowed;
   const organization = state.organization;
-  const isOwner = allowed && state.access.kind === 'OWNER';
+  const ownerAccess = state.access.allowed && state.access.kind === 'OWNER'
+    ? state.access
+    : null;
+  const isOwner = ownerAccess !== null;
+  const ownerSubscription = ownerAccess?.subscription ?? null;
+  const canProvisionOrganization = Boolean(
+    ownerSubscription
+      && ['ACTIVE', 'PENDING', 'PAST_DUE'].includes(ownerSubscription.status)
+      && new Date(ownerSubscription.expiresAt).getTime() > Date.now()
+  );
   const canManageMembers = Boolean(isOwner);
 
   useEffect(() => {
@@ -83,9 +93,11 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
       const response = await fetch(url, init);
       const payload = (await response.json()) as ApiResponse;
       applyState(payload, successMessage);
+      return payload;
     } catch (err) {
       console.error(err);
       setStatus({ tone: 'error', message: defaultError });
+      return null;
     }
   }, [applyState]);
 
@@ -112,6 +124,14 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
       const payload = (await response.json()) as ApiResponse;
       applyState(payload, 'Workspace provisioned.');
       if (payload.ok && payload.access) {
+        const nextOrganizationId = payload.organization?.id ?? null;
+        if (nextOrganizationId) {
+          const switched = await activateWorkspaceAndNavigate(nextOrganizationId, '/dashboard/team');
+          if (switched) {
+            return;
+          }
+        }
+
         router.refresh();
         window.location.reload();
       }
@@ -126,7 +146,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
   const handleInvite = useCallback(
     async (email: string, role: string) => {
       setBusyAction('invite');
-      await callEndpoint(
+      const payload = await callEndpoint(
         '/api/team/invite',
         {
           method: 'POST',
@@ -136,6 +156,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
         'Invitation sent.'
       );
       setBusyAction(null);
+      return payload?.ok === true;
     },
     [callEndpoint]
   );
@@ -315,6 +336,25 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
       );
     }
 
+    if (!canProvisionOrganization) {
+      return (
+        <div className={dashboardPanelClass('space-y-5')}>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-neutral-100">Workspace provisioning unavailable</h2>
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
+              An active team plan is required before you can create a new workspace.
+            </p>
+          </div>
+          <Link
+            href="/pricing"
+            className="inline-flex w-fit items-center justify-center rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+          >
+            Explore team plans
+          </Link>
+        </div>
+      );
+    }
+
     return (
       <div className={dashboardPanelClass('space-y-5')}>
         <div>
@@ -412,7 +452,10 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
             </div>
             {canManageMembers && (
               <button
-                onClick={() => setShowInviteModal(true)}
+                onClick={() => {
+                  setStatus(null);
+                  setShowInviteModal(true);
+                }}
                 className="inline-flex items-center justify-center rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
               >
                 Invite member
@@ -482,10 +525,14 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
           />
           <InviteTeammatesModal
             isOpen={showInviteModal}
-            onClose={() => setShowInviteModal(false)}
+            onClose={() => {
+              setShowInviteModal(false);
+              setStatus(null);
+            }}
             onInvite={handleInvite}
             isSubmitting={busyAction === 'invite'}
             seatsRemaining={organization.stats.seatsRemaining}
+            notice={showInviteModal ? status : null}
           />
         </>
       )}

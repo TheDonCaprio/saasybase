@@ -11,6 +11,7 @@ export async function persistSubscriptionCheckoutState(params: {
     userId: string;
     subscription: SubscriptionDetails;
     planToUse: Plan;
+    organizationId?: string | null;
     desiredStatus: 'ACTIVE' | 'PENDING';
     effectiveStartedAt: Date;
     effectiveExpiresAt: Date;
@@ -55,15 +56,19 @@ export async function persistSubscriptionCheckoutState(params: {
 
     const existingSub = await prisma.subscription.findUnique({
         where: { externalSubscriptionId: params.subscription.id },
-        select: { externalSubscriptionIds: true }
+        select: { externalSubscriptionIds: true, organizationId: true }
     });
     const mergedSubIds = params.mergeIdMap(existingSub?.externalSubscriptionIds, params.providerKey, params.subscription.id);
+    const nextOrganizationId = typeof params.organizationId === 'string' && params.organizationId.length > 0
+        ? params.organizationId
+        : null;
 
     return prisma.subscription.upsert({
         where: { externalSubscriptionId: params.subscription.id },
         update: {
             userId: params.userId,
             planId: params.planToUse.id,
+            ...(nextOrganizationId ? { organizationId: nextOrganizationId } : {}),
             status: params.desiredStatus,
             startedAt: params.effectiveStartedAt,
             expiresAt: params.effectiveExpiresAt,
@@ -76,6 +81,7 @@ export async function persistSubscriptionCheckoutState(params: {
         create: {
             userId: params.userId,
             planId: params.planToUse.id,
+            organizationId: nextOrganizationId,
             status: params.desiredStatus,
             startedAt: params.effectiveStartedAt,
             expiresAt: params.effectiveExpiresAt,

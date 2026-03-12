@@ -2233,7 +2233,7 @@ export default function PageEditor({
                 }}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
                   formData.published
-                    ? 'bg-emerald-600 hover:bg-emerald-500 dark:hover:bg-emerald-500/90 [&]:!text-white [&_*]:!text-white'
+                    ? 'bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500/90 [&]:!text-white [&_*]:!text-white'
                     : 'bg-neutral-200 text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -2352,7 +2352,7 @@ export default function PageEditor({
                       <button
                         type="button"
                         onClick={() => setShowConfirmAutoRestore(true)}
-                        className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900"
+                        className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900"
                       >
                         Restore
                       </button>
@@ -2688,7 +2688,7 @@ export default function PageEditor({
                     console.warn('Auto restore failed:', err);
                   }
                 }}
-                className="rounded px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
               >
                 Restore
               </button>

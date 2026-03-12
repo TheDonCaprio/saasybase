@@ -134,7 +134,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
               <div className="mt-4 flex justify-center">
                 <Link
                   href="/dashboard"
-                  className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                 >
                   Enter dashboard
                 </Link>

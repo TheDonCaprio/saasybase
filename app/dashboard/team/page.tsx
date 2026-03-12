@@ -23,6 +23,7 @@ export default async function TeamDashboardPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/team', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
+  const inviteDeclined = resolvedSearchParams?.inviteDeclined === '1';
 
   const viewerRecord = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true } });
   const [state, pendingInvites] = await Promise.all([
@@ -47,6 +48,11 @@ export default async function TeamDashboardPage({ searchParams }: PageProps) {
         eyebrow="Team workspace"
         title="Manage your organization"
       />
+      {inviteDeclined ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
+          The invitation was declined.
+        </div>
+      ) : null}
       <TeamProvisioner initialState={state} viewer={viewer} pendingInvitesForViewer={pendingInvites} />
     </div>
   );

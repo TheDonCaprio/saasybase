@@ -511,7 +511,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
               <button
                 type="button"
                 onClick={openCreate}
-                className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                className="inline-flex items-center rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               >
                 New plan
               </button>

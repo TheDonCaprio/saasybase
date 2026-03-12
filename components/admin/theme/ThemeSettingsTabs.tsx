@@ -1098,7 +1098,7 @@ export function ThemeSettingsTabs({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-emerald-500/40"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-500/40"
         >
           <FontAwesomeIcon icon={faFloppyDisk} className="h-4 w-4" />
           {saving ? 'Saving…' : 'Save changes'}

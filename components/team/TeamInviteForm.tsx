@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 
 interface TeamInviteFormProps {
-  onInvite: (email: string, role: string) => Promise<void> | void;
+  onInvite: (email: string, role: string) => Promise<boolean> | boolean;
   isSubmitting: boolean;
   seatsRemaining: number | null;
 }
@@ -22,9 +22,11 @@ export function TeamInviteForm({ onInvite, isSubmitting, seatsRemaining }: TeamI
       return;
     }
     setError(null);
-    await onInvite(email.trim(), role);
-    setEmail('');
-    setRole('org:member');
+    const ok = await onInvite(email.trim(), role);
+    if (ok) {
+      setEmail('');
+      setRole('org:member');
+    }
   };
 
   return (

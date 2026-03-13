@@ -83,37 +83,41 @@ export default function PaddlePayClient() {
       />
 
       {!transactionId ? (
-        <div>
-          <h1 className="text-xl font-semibold">Missing transaction</h1>
-          <p className="mt-2 text-sm opacity-80">
-            This page is intended to be opened by Paddle with a <code>_ptxn</code> query parameter.
+        <div className="text-center py-10">
+          <h1 className="text-xl font-semibold">Something went wrong</h1>
+          <p className="mt-2 text-sm opacity-70">
+            We couldn&apos;t find your checkout session. Please try again or contact support if this persists.
           </p>
         </div>
       ) : !isValidTransactionId ? (
-        <div>
-          <h1 className="text-xl font-semibold">Invalid transaction</h1>
-          <p className="mt-2 text-sm opacity-80">
-            Expected <code>_ptxn</code> to be a Paddle transaction ID starting with <code>txn_</code>.
-          </p>
-          <p className="mt-2 text-sm opacity-80">
-            Received: <code>{transactionId}</code>
+        <div className="text-center py-10">
+          <h1 className="text-xl font-semibold">Invalid checkout session</h1>
+          <p className="mt-2 text-sm opacity-70">
+            This checkout link appears to be invalid. Please go back and try again.
           </p>
         </div>
       ) : !publicToken ? (
-        <div>
-          <h1 className="text-xl font-semibold">Paddle is not configured</h1>
-          <p className="mt-2 text-sm opacity-80">
-            Set <code>NEXT_PUBLIC_PADDLE_CLIENT_TOKEN</code> (and optionally <code>NEXT_PUBLIC_PADDLE_ENV</code>) to enable Paddle.js.
-          </p>
-          <p className="mt-2 text-sm opacity-80">
-            Transaction: <code>{transactionId}</code>
+        <div className="text-center py-10">
+          <h1 className="text-xl font-semibold">Payments unavailable</h1>
+          <p className="mt-2 text-sm opacity-70">
+            The payment system is currently unavailable. Please contact support.
           </p>
         </div>
       ) : (
-        <div>
-          <h1 className="text-xl font-semibold">Opening checkout…</h1>
-          <p className="mt-2 text-sm opacity-80">
-            If checkout doesn’t open, ensure this domain is approved in Paddle and that this URL is set as your Default payment link.
+        <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
+          <svg
+            className="h-10 w-10 animate-spin text-blue-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <h1 className="text-xl font-semibold">Preparing your checkout…</h1>
+          <p className="text-sm opacity-70">
+            Please wait while we set up your payment. This should only take a moment.
           </p>
         </div>
       )}

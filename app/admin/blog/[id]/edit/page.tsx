@@ -58,6 +58,7 @@ export default async function EditBlogPostPage({ params }: EditBlogPostPageProps
         previewPathPrefix="/blog"
         backHref="/admin/blog"
         categoriesHref="/admin/blog/categories"
+        uploadScope="blog"
       />
     );
   } catch (error) {

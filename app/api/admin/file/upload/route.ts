@@ -18,8 +18,9 @@ const EXTENSIONS: Record<string, string> = {
 
 const LOGO_SCOPE = 'logo';
 const FILE_SCOPE = 'file';
+const BLOG_SCOPE = 'blog';
 
-type UploadScope = typeof LOGO_SCOPE | typeof FILE_SCOPE;
+type UploadScope = typeof LOGO_SCOPE | typeof FILE_SCOPE | typeof BLOG_SCOPE;
 
 type DomPurifyLike = {
   sanitize: (input: string, options?: Record<string, unknown>) => string;
@@ -88,6 +89,7 @@ function resolveScope(req: NextRequest): UploadScope {
   const headerScope = (req.headers.get('x-upload-scope') || '').toLowerCase();
   const detected = headerScope || queryScope;
   if (detected === LOGO_SCOPE) return LOGO_SCOPE;
+  if (detected === BLOG_SCOPE) return BLOG_SCOPE;
   return FILE_SCOPE;
 }
 
@@ -158,9 +160,12 @@ export async function POST(req: NextRequest) {
     }
 
     const safeName = deriveStoredFilename(scope, originalName, ext);
-    const url = scope === LOGO_SCOPE
-      ? await saveLogo({ buffer, filename: safeName, mimetype: effectiveMime })
-      : await saveAdminFile({ buffer, filename: safeName, mimetype: effectiveMime });
+    let url;
+    if (scope === LOGO_SCOPE) {
+      url = await saveLogo({ buffer, filename: safeName, mimetype: effectiveMime });
+    } else {
+      url = await saveAdminFile({ buffer, filename: safeName, mimetype: effectiveMime, scope });
+    }
 
     await recordAdminAction({
       actorId: adminAuth?.userId ?? 'unknown',

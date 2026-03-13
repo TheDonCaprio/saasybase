@@ -8,6 +8,7 @@ import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/curr
 import { Logger } from '../../../../lib/logger';
 import { paymentService } from '../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
+import { buildDashboardUrl } from '../../../../lib/payment/provider-config';
 
 export async function GET(req: Request) {
   try {
@@ -318,7 +319,8 @@ export async function GET(req: Request) {
           externalRefundId: typeof latestPaymentRec.externalRefundId === 'string' ? latestPaymentRec.externalRefundId : null,
           status: typeof latestPaymentRec.status === 'string' ? latestPaymentRec.status : null,
           dashboardUrl: typeof latestPaymentRec.externalPaymentId === 'string'
-            ? paymentService.getDashboardUrl('payment', latestPaymentRec.externalPaymentId)
+            ? (buildDashboardUrl(typeof latestPaymentRec.paymentProvider === 'string' ? latestPaymentRec.paymentProvider : null, 'transaction', latestPaymentRec.externalPaymentId) ||
+               paymentService.getDashboardUrl('payment', latestPaymentRec.externalPaymentId))
             : null,
           paymentProvider: typeof latestPaymentRec.paymentProvider === 'string' ? latestPaymentRec.paymentProvider : null
         };
@@ -337,7 +339,8 @@ export async function GET(req: Request) {
         createdAt: createdAtIso || new Date().toISOString(),
         externalSubscriptionId: typeof rec?.externalSubscriptionId === 'string' ? rec!.externalSubscriptionId as string : null,
         dashboardUrl: typeof rec?.externalSubscriptionId === 'string'
-          ? paymentService.getDashboardUrl('subscription', rec!.externalSubscriptionId as string)
+          ? (buildDashboardUrl(typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null, 'subscription', rec!.externalSubscriptionId as string) ||
+             paymentService.getDashboardUrl('subscription', rec!.externalSubscriptionId as string))
           : null,
         paymentProvider: typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null,
         latestPayment

@@ -61,6 +61,7 @@ interface PageEditorProps {
   previewPathPrefix?: string;
   backHref?: string;
   categoriesHref?: string;
+  uploadScope?: 'file' | 'blog' | 'logo';
 }
 
 interface FormData {
@@ -148,7 +149,8 @@ export default function PageEditor({
   entityLabelPlural,
   previewPathPrefix = '',
   backHref,
-  categoriesHref = ''
+  categoriesHref = '',
+  uploadScope = 'file'
 }: PageEditorProps) {
   const router = useRouter();
   const { mode: formatMode, timezone: formatTimezone } = useFormatSettings();
@@ -999,7 +1001,7 @@ export default function PageEditor({
         headers: {
           'x-filename': file.name,
           'x-mimetype': file.type,
-          'x-upload-scope': 'file'
+          'x-upload-scope': uploadScope
         },
         body: file
       });
@@ -1424,7 +1426,7 @@ export default function PageEditor({
             ? `Create a new ${entityNames.singularLower}`
             : `Edit ${initialPage?.title ?? entityNames.singularLower}`
         }
-        description="Draft copy, adjust metadata, and publish when you are ready. Updates go live instantly."
+        description=""
         actionsAlign={mode === 'edit' ? 'right' : 'left'}
         actions={
           <>
@@ -2885,6 +2887,7 @@ export default function PageEditor({
         onSelectImage={handleImageSelected}
         title="Select or Upload Image"
         allowUpload={true}
+        uploadScope={uploadScope}
       />
 
       {/* Fullscreen Editor Portal */}

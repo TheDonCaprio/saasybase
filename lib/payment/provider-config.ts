@@ -389,6 +389,12 @@ z"/>
         webhookSecretEnvVar: 'RAZORPAY_WEBHOOK_SECRET',
         supportedCurrencies: ['INR', 'USD', 'MYR', 'SGD'],
         docsUrl: 'https://razorpay.com/docs/',
+        dashboardUrls: {
+            // Razorpay dashboard deep-link patterns
+            transaction: 'https://dashboard.razorpay.com/app/payments/{id}',
+            subscription: 'https://dashboard.razorpay.com/app/subscriptions/{id}',
+            customer: 'https://dashboard.razorpay.com/app/customers/{id}',
+        },
     },
 };
 

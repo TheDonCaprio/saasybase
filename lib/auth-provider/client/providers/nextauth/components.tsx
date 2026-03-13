@@ -1285,6 +1285,20 @@ export function AuthUserProfile(_props: Record<string, unknown>) {
 export const authDarkTheme = undefined;
 
 // ---------------------------------------------------------------------------
+// Loading State Boundaries (NextAuth NO-OP)
+// ---------------------------------------------------------------------------
+
+export function AuthLoading({ children }: { children: React.ReactNode }) {
+  // NextAuth manages its session inherently without throwing async suspense boundaries globally like Clerk
+  return null;
+}
+
+export function AuthLoaded({ children }: { children: React.ReactNode }) {
+  // Always render children for NextAuth
+  return <>{children}</>;
+}
+
+// ---------------------------------------------------------------------------
 // Internal: OAuth Button
 // ---------------------------------------------------------------------------
 

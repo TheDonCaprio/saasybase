@@ -27,6 +27,7 @@ interface ImagePickerModalProps {
   onSelectImage: (imageUrl: string) => void;
   title?: string;
   allowUpload?: boolean;
+  uploadScope?: 'file' | 'blog' | 'logo';
 }
 
 const FALLBACK_MIME_BY_EXTENSION: Record<string, string> = {
@@ -77,6 +78,7 @@ export function ImagePickerModal({
   onSelectImage,
   title = 'Select Image',
   allowUpload = true,
+  uploadScope = 'file',
 }: ImagePickerModalProps) {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,6 +169,9 @@ export function ImagePickerModal({
         if (searchQuery) {
           params.set('search', searchQuery);
         }
+        if (uploadScope !== 'file') {
+          params.set('scope', uploadScope);
+        }
 
         const response = await fetch(`/api/admin/file/list?${params.toString()}`, {
           signal: controller.signal,
@@ -238,7 +243,7 @@ export function ImagePickerModal({
         }
       }
     },
-    [searchQuery],
+    [searchQuery, uploadScope],
   );
 
   const handleUpload = useCallback(
@@ -263,7 +268,7 @@ export function ImagePickerModal({
             headers: {
               'x-filename': file.name,
               'x-mimetype': detectedType,
-              'x-upload-scope': 'file',
+              'x-upload-scope': uploadScope,
             },
             body: file,
           });

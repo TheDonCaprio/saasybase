@@ -1,4 +1,6 @@
 import { AuthSignIn } from '@/lib/auth-provider/client/components';
+import { AuthLoadingSkeleton } from '@/components/ui/AuthLoadingSkeleton';
+import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 import { authService } from '@/lib/auth-provider';
 import { redirect } from 'next/navigation';
 
@@ -55,10 +57,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Access your dashboard and manage your subscription
           </p>
         </div>
-        <div className="flex justify-center">
+        <AuthFormWrapper>
+          <div className="flex justify-center">
           <AuthSignIn 
             routing="path"
             path="/sign-in"
+            fallback={<AuthLoadingSkeleton />}
             appearance={{
               elements: {
                 formButtonPrimary: 
@@ -109,7 +113,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             forceRedirectUrl={redirectPath}
             signUpUrl={signUpUrl}
           />
-        </div>
+          </div>
+        </AuthFormWrapper>
       </div>
     </div>
   );

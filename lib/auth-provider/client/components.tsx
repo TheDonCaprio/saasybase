@@ -21,4 +21,6 @@ export const AuthSignOutButton = _mod.AuthSignOutButton;
 export const AuthOrganizationSwitcher = _mod.AuthOrganizationSwitcher;
 export const AuthUserProfile = _mod.AuthUserProfile;
 export const AuthProvider = _mod.AuthProvider;
+export const AuthLoaded = _mod.AuthLoaded;
+export const AuthLoading = _mod.AuthLoading;
 export const authDarkTheme = _mod.authDarkTheme;

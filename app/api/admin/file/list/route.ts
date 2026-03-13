@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
   const limit = Number.isFinite(limitParam) ? limitParam : 20;
   const cursor = searchParams.get('cursor');
   const search = searchParams.get('search');
+  const scope = searchParams.get('scope') || 'file';
 
-  const result = await listAdminFiles({ limit, cursor, search });
+  const result = await listAdminFiles({ limit, cursor, search, scope });
 
     return NextResponse.json({
       files: result.files.map(({ url, filename, size, uploadedAt, key }) => ({

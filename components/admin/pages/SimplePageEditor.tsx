@@ -60,9 +60,10 @@ interface SimplePageEditorProps {
 	value: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
+	uploadScope?: 'file' | 'blog' | 'logo';
 }
 
-export function SimplePageEditor({ value, onChange, placeholder = 'Start writing…' }: SimplePageEditorProps) {
+export function SimplePageEditor({ value, onChange, placeholder = 'Start writing…', uploadScope = 'file' }: SimplePageEditorProps) {
 	const [isMounted, setIsMounted] = useState(false);
 	const [showLinkModal, setShowLinkModal] = useState(false);
 	const [linkUrl, setLinkUrl] = useState('');
@@ -156,7 +157,7 @@ export function SimplePageEditor({ value, onChange, placeholder = 'Start writing
 				headers: {
 					'x-filename': file.name,
 					'x-mimetype': file.type,
-					'x-upload-scope': 'file',
+					'x-upload-scope': uploadScope,
 				},
 				body: file,
 			});
@@ -561,6 +562,7 @@ export function SimplePageEditor({ value, onChange, placeholder = 'Start writing
 				onSelectImage={handleImageSelected}
 				title="Select or Upload Image"
 				allowUpload
+				uploadScope={uploadScope}
 			/>
 
 			{isMounted && showLinkModal && createPortal(

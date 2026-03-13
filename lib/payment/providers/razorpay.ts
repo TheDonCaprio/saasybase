@@ -1473,11 +1473,19 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		return null;
 	}
 
-	getDashboardUrl(_type: 'payment' | 'subscription' | 'customer', _id: string): string {
-		void _type;
-		void _id;
-		// Razorpay dashboard URLs vary by account and are not stable as simple patterns.
-		return 'https://dashboard.razorpay.com';
+	getDashboardUrl(type: 'payment' | 'subscription' | 'customer', id: string): string {
+		if (!id) return 'https://dashboard.razorpay.com';
+
+		switch (type) {
+			case 'payment':
+				return `https://dashboard.razorpay.com/app/payments/${encodeURIComponent(id)}`;
+			case 'subscription':
+				return `https://dashboard.razorpay.com/app/subscriptions/${encodeURIComponent(id)}`;
+			case 'customer':
+				return `https://dashboard.razorpay.com/app/customers/${encodeURIComponent(id)}`;
+			default:
+				return 'https://dashboard.razorpay.com';
+		}
 	}
 
 	// ============== Elements / Embedded Checkout ==============

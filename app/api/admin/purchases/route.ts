@@ -10,6 +10,7 @@ import type { Prisma } from '@prisma/client';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { paymentService } from '../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
+import { buildDashboardUrl } from '../../../../lib/payment/provider-config';
 
 export async function GET(req: NextRequest) {
   const { userId: actorId } = await requireAdminOrModerator('purchases');
@@ -357,7 +358,8 @@ export async function GET(req: NextRequest) {
         externalPaymentId: typeof rec?.externalPaymentId === 'string' ? rec!.externalPaymentId as string : null,
         externalSessionId: typeof rec?.externalSessionId === 'string' ? rec!.externalSessionId as string : null,
         dashboardUrl: typeof rec?.externalPaymentId === 'string'
-          ? paymentService.getDashboardUrl('payment', rec!.externalPaymentId as string)
+          ? (buildDashboardUrl(typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null, 'transaction', rec!.externalPaymentId as string) ||
+             paymentService.getDashboardUrl('payment', rec!.externalPaymentId as string))
           : null,
         paymentProvider: typeof rec?.paymentProvider === 'string' ? rec.paymentProvider : null,
         subscription: subRec ? {

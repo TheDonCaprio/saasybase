@@ -89,7 +89,7 @@ export type SendEmailOptions = {
 let cachedTransport: nodemailer.Transporter | null = null;
 
 function createTransporter(): nodemailer.Transporter {
-	const defaultHost = '::1';
+	const defaultHost = '127.0.0.1';
 	const host = process.env.SMTP_HOST || defaultHost;
 	const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
 	const user = process.env.SMTP_USER || undefined;
@@ -99,7 +99,16 @@ function createTransporter(): nodemailer.Transporter {
 		return nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true });
 	}
 
-	return nodemailer.createTransport({ host, port, secure: port === 465, auth: user && pass ? { user, pass } : undefined });
+	return nodemailer.createTransport({
+		host,
+		port,
+		secure: port === 465,
+		auth: user && pass ? { user, pass } : undefined,
+		// Give slow local mail catchers (MailHog, Mailpit) time to respond
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 15_000,
+	});
 }
 
 function getTransport(): nodemailer.Transporter {
@@ -274,20 +283,6 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 		errMsg = e1?.message || String(e);
 		status = 'FAILED';
 		Logger.warn('sendEmail failed', { to: opts.to, error: errMsg });
-
-		if (errMsg && errMsg.includes('Greeting never received') && (process.env.SMTP_HOST === '127.0.0.1' || process.env.SMTP_HOST === 'localhost')) {
-			try {
-				const alt = nodemailer.createTransport({ host: '::1', port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 1025, secure: false });
-				await alt.sendMail({ from, to: opts.to, subject: subject ?? fallbackSubject, text, html });
-				status = 'SENT';
-				errMsg = null;
-			} catch (e2: unknown) {
-				const e2n = toError(e2);
-				errMsg = e2n?.message || String(e2);
-				status = 'FAILED';
-				Logger.warn('sendEmail IPv6 retry failed', { to: opts.to, error: errMsg });
-			}
-		}
 	}
 
 		try {

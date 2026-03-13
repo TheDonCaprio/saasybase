@@ -4,6 +4,7 @@ export interface SaveAssetParams {
   buffer: Buffer;
   filename: string;
   mimetype: string;
+  scope?: string;
 }
 
 export declare function saveLogo(params: SaveAssetParams): Promise<string>;
@@ -21,6 +22,7 @@ export interface ListAdminFilesOptions {
   limit?: number;
   cursor?: string | null;
   search?: string | null;
+  scope?: string;
 }
 
 export interface ListAdminFilesResult {
@@ -33,6 +35,7 @@ export interface ListAdminFilesResult {
 export declare function listAdminFiles(options?: ListAdminFilesOptions): Promise<ListAdminFilesResult>;
 export interface DeleteAdminFileParams {
   key: string;
+  scope?: string;
 }
 
 export declare function deleteAdminFile(params: DeleteAdminFileParams): Promise<boolean>;

@@ -16,6 +16,8 @@ export {
   OrganizationSwitcher as AuthOrganizationSwitcher,
   UserProfile as AuthUserProfile,
   ClerkProvider as AuthProvider,
+  ClerkLoaded as AuthLoaded,
+  ClerkLoading as AuthLoading,
 } from '@clerk/nextjs';
 
 export { dark as authDarkTheme } from '@clerk/themes';

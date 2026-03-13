@@ -9,6 +9,7 @@ import type { Prisma } from '@prisma/client';
 import { paymentService } from '../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/currency';
+import { buildDashboardUrl } from '../../../../lib/payment/provider-config';
 
 export async function GET(request: NextRequest) {
   // use shared runtime guards
@@ -316,7 +317,8 @@ export async function GET(request: NextRequest) {
         externalRefundId: typeof rec.externalRefundId === 'string' ? rec.externalRefundId : null,
         paymentProvider: typeof rec.paymentProvider === 'string' ? rec.paymentProvider : null,
         dashboardUrl: typeof rec.externalPaymentId === 'string'
-          ? paymentService.getDashboardUrl('payment', rec.externalPaymentId)
+          ? (buildDashboardUrl(typeof rec.paymentProvider === 'string' ? rec.paymentProvider : null, 'transaction', rec.externalPaymentId) ||
+             paymentService.getDashboardUrl('payment', rec.externalPaymentId))
           : null,
         // Provide nested objects that client components expect
         user: {

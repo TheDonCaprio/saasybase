@@ -7,6 +7,7 @@ import { adminRateLimit } from '../../../../../../lib/rateLimit';
 import { paymentService } from '../../../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../../../lib/payment/registry';
 import { formatCurrency as formatCurrencyUtil } from '../../../../../../lib/utils/currency';
+import { buildDashboardUrl } from '../../../../../../lib/payment/provider-config';
 
 export async function GET(
   request: NextRequest,
@@ -71,7 +72,10 @@ export async function GET(
         externalPaymentId: typeof rec.externalPaymentId === 'string' ? rec.externalPaymentId : null,
         externalSessionId: typeof rec.externalSessionId === 'string' ? rec.externalSessionId : null,
         externalRefundId: typeof rec.externalRefundId === 'string' ? rec.externalRefundId : null,
-        dashboardUrl: typeof rec.externalPaymentId === 'string' ? paymentService.getDashboardUrl('payment', rec.externalPaymentId) : null
+        dashboardUrl: typeof rec.externalPaymentId === 'string'
+          ? (buildDashboardUrl(typeof rec.paymentProvider === 'string' ? rec.paymentProvider : null, 'transaction', rec.externalPaymentId) ||
+             paymentService.getDashboardUrl('payment', rec.externalPaymentId))
+          : null
       };
     });
 

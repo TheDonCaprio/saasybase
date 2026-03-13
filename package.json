@@ -28,7 +28,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/nextjs": "^6.37.3",
-    "@clerk/themes": "^2.4.30",
+    "@clerk/themes": "^2.4.57",
     "@fortawesome/fontawesome-svg-core": "^6.5.0",
     "@fortawesome/free-brands-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^6.5.0",

@@ -1427,7 +1427,7 @@ export default function PageEditor({
             : `Edit ${initialPage?.title ?? entityNames.singularLower}`
         }
         description=""
-        actionsAlign={mode === 'edit' ? 'right' : 'left'}
+        actionsAlign="right"
         actions={
           <>
             <button
@@ -1441,7 +1441,7 @@ export default function PageEditor({
               Back to {entityNames.pluralLower}
             </button>
 
-            {mode === 'edit' && initialPage?.published && previewHref ? (
+            {mode === 'edit' && formData.published && previewHref ? (
               <NextLink
                 href={previewHref}
                 target="_blank"

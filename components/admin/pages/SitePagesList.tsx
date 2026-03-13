@@ -16,13 +16,13 @@ import type { BlogCategoryDTO } from '@/lib/blog';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faEye,
-  faEyeSlash,
   faEdit,
   faTrash,
   faUndo,
   faTrashCan,
   faSpinner,
-  faSearchPlus
+  faGlobe,
+  faLock
 } from '@fortawesome/free-solid-svg-icons';
 
 export interface SitePageDTO {
@@ -61,6 +61,7 @@ interface SitePagesListProps {
   storageNamespace?: string;
   entityLabel?: string;
   entityLabelPlural?: string;
+  previewPathPrefix?: string;
 }
 
 type BulkAction = 'trash' | 'restore' | 'delete';
@@ -78,11 +79,14 @@ export default function SitePagesList({
   newItemHref,
   storageNamespace = 'page-editor',
   entityLabel = 'Page',
-  entityLabelPlural
+  entityLabelPlural,
+  previewPathPrefix = ''
 }: SitePagesListProps) {
   const normalizedApiBasePath = apiBasePath.replace(/\/$/, '');
   const normalizedEditBasePath = editBasePath.replace(/\/$/, '');
   const normalizedStorageNamespace = storageNamespace.replace(/\s+/g, '-');
+  const normalizedPreviewPrefix = previewPathPrefix.replace(/\/+$/, '');
+  const getPreviewPath = (slug: string) => `${normalizedPreviewPrefix}/${slug}`;
   const computedNewItemHref = newItemHref ?? `${normalizedEditBasePath}/new`;
   const pluralLabel = entityLabelPlural ?? (entityLabel.endsWith('s') ? entityLabel : `${entityLabel}s`);
   const entityLabelLower = entityLabel.toLowerCase();
@@ -689,7 +693,7 @@ export default function SitePagesList({
                         <>
                           {page.published && (
                             <a
-                              href={`/${page.slug}`}
+                              href={getPreviewPath(page.slug)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
@@ -861,13 +865,13 @@ export default function SitePagesList({
           <div className="hidden min-[1025px]:block overflow-hidden rounded-xl border border-neutral-200 bg-white/80 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/40">
             {/* Table Header */}
             <div className="border-b border-neutral-200 bg-neutral-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
-              <div className="grid grid-cols-12 gap-4 items-center">
-                <div className="col-span-1"></div> {/* Checkbox column */}
-                <div className="col-span-3">Page</div>
-                <div className="col-span-2">Status</div>
-                <div className="col-span-2">Dates</div>
-                <div className="col-span-2">Slug</div>
-                <div className="col-span-2">Actions</div>
+              <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_14rem_10rem_10rem] gap-4 items-center">
+                <div></div> {/* Checkbox column */}
+                <div>Page</div>
+                <div>Status</div>
+                <div>Dates</div>
+                <div>Slug</div>
+                <div>Actions</div>
               </div>
             </div>
 
@@ -883,10 +887,10 @@ export default function SitePagesList({
                 return (
                   <div
                     key={page.id}
-                    className="grid grid-cols-12 gap-4 items-center px-6 py-4 text-sm text-neutral-600 transition-colors hover:bg-neutral-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
+                    className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_14rem_10rem_10rem] gap-4 items-center px-6 py-4 text-sm text-neutral-600 transition-colors hover:bg-neutral-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
                   >
                     {/* Checkbox */}
-                    <div className="col-span-1">
+                    <div className="col-span-1 flex items-center">
                       {!page.system ? (
                         <input
                           type="checkbox"
@@ -899,7 +903,7 @@ export default function SitePagesList({
                     </div>
 
                     {/* Page Title */}
-                    <div className="col-span-3 space-y-1">
+                    <div className="space-y-1">
                       <div className="font-medium text-neutral-800 dark:text-neutral-100 truncate">{page.title}</div>
                       <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                         {page.description || 'No description'}
@@ -907,7 +911,7 @@ export default function SitePagesList({
                     </div>
 
                     {/* Status */}
-                    <div className="col-span-2 space-y-1">
+                    <div className="space-y-1">
                       <div className="flex flex-wrap gap-1">
                         {page.system ? (
                           <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
@@ -933,7 +937,7 @@ export default function SitePagesList({
                     </div>
 
                     {/* Dates */}
-                    <div className="col-span-2 space-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    <div className="space-y-1 text-xs text-neutral-500 dark:text-neutral-400">
                       <div>
                         Updated{' '}
                         {formatDate(page.updatedAt, {
@@ -969,12 +973,12 @@ export default function SitePagesList({
                     </div>
 
                     {/* Slug */}
-                    <div className="col-span-2 font-mono text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                    <div className="font-mono text-xs text-neutral-500 dark:text-neutral-400 truncate">
                       /{page.slug}
                     </div>
 
                     {/* Actions */}
-                    <div className="col-span-2 flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2">
                       {!isTrashed ? (
                         <>
                           {/* Publish/Unpublish */}
@@ -994,15 +998,15 @@ export default function SitePagesList({
                             {updatingPageId === page.id ? (
                               <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin" style={{ color: 'white' }} />
                             ) : page.published ? (
-                              <FontAwesomeIcon icon={faEyeSlash} className="h-4 w-4" style={{ color: 'white' }} />
+                              <FontAwesomeIcon icon={faLock} className="h-4 w-4" style={{ color: 'white' }} />
                             ) : (
-                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" style={{ color: 'white' }} />
+                              <FontAwesomeIcon icon={faGlobe} className="h-4 w-4" style={{ color: 'white' }} />
                             )}
                           </button>
 
                           {/* Preview (always visible, but grayed out for drafts) */}
                           <button
-                            onClick={page.published ? () => window.open(`/${page.slug}`, '_blank') : undefined}
+                            onClick={page.published ? () => window.open(getPreviewPath(page.slug), '_blank') : undefined}
                             disabled={!page.published}
                             aria-label="Preview page"
                             title={page.published ? 'Preview page' : 'Preview unavailable for drafts'}
@@ -1012,7 +1016,7 @@ export default function SitePagesList({
                                 : 'border border-neutral-300 bg-neutral-100 text-neutral-400 cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-500'
                             }`}
                           >
-                            <FontAwesomeIcon icon={faSearchPlus} className="h-4 w-4" />
+                            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                           </button>
 
                           {/* Edit */}

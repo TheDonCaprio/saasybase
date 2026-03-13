@@ -62,6 +62,7 @@ export default async function AdminBlogPostsPage() {
         storageNamespace="blog-editor"
         entityLabel="Post"
         entityLabelPlural="Posts"
+        previewPathPrefix="/blog"
       />
     </div>
   );

@@ -10,6 +10,7 @@ import { PurchaseNotice } from '../../components/dashboard/PurchaseNotice';
 import { getAnnouncementMessage } from '../../lib/settings';
 import { getPendingEmailChangeForUser } from '../../lib/nextauth-email-verification';
 import { PendingEmailChangeNotice } from '../../components/dashboard/PendingEmailChangeNotice';
+import { getCurrentUserWithFallback } from '../../lib/user-helpers';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Middleware handles authentication protection
@@ -52,10 +53,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         couponBadge = String(pendingCoupons);
       }
 
-      const viewer = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true },
-      });
+      // This ensures the user exists in our DB and that their token balance is evaluated
+      // (and potentially reset) on every visit without spiking performance, as it efficiently
+      // leverages caching and minimal checks.
+      const viewer = await getCurrentUserWithFallback();
 
       if (viewer?.email) {
         const pendingTeamInvites = await prisma.organizationInvite.count({

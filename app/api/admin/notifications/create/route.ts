@@ -55,27 +55,42 @@ export async function POST(request: NextRequest) {
     }
 
     if (target === 'all') {
-      // Send to all users
-      const users = await prisma.user.findMany({ select: { id: true } });
-      const notifications = users.map((user) => {
-        return type
-          ? { userId: user.id, title, message, type }
-          : { userId: user.id, title, message };
-      });
+      // Send to all users in batches to prevent OOM
+      const BATCH_SIZE = 1000;
+      let lastId: string | undefined = undefined;
+      let totalUsers = 0;
 
-      await prisma.notification.createMany({ data: notifications });
+      while (true) {
+        const batchUsers: { id: string }[] = await prisma.user.findMany({
+          select: { id: true },
+          take: BATCH_SIZE,
+          ...(lastId ? { cursor: { id: lastId }, skip: 1 } : {})
+        });
+
+        if (batchUsers.length === 0) break;
+        totalUsers += batchUsers.length;
+        lastId = batchUsers[batchUsers.length - 1].id;
+
+        const notifications = batchUsers.map((user: { id: string }) => {
+          return type
+            ? { userId: user.id, title, message, type }
+            : { userId: user.id, title, message };
+        });
+
+        await prisma.notification.createMany({ data: notifications });
+      }
 
       await recordAdminAction({
         actorId,
         actorRole: actor.role,
         action: 'notification.broadcast',
         targetType: 'notification',
-        details: { title, recipientCount: users.length },
+        details: { title, recipientCount: totalUsers },
       });
 
       return NextResponse.json({ 
         success: true, 
-        message: `Notification sent to ${users.length} users` 
+        message: `Notification sent to ${totalUsers} users` 
       });
     } else {
       // Send to specific user

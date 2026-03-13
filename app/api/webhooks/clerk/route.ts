@@ -323,6 +323,20 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = extractUserId(payload);
+    
+    // Explicitly handle user.created to reliably initialize token balances
+    if (userId && typeof eventType === 'string' && eventType.toLowerCase() === 'user.created') {
+      const emailObj = (payloadRecord.data as any)?.email_addresses?.[0];
+      const email = emailObj?.email_address;
+      
+      try {
+        await ensureUserExists({ userId, emailOverride: email });
+        Logger.info('Clerk webhook: guaranteed user.created token allocation', { userId });
+      } catch (err) {
+        Logger.error('Clerk webhook: failed to allocate initial tokens on user.created', { userId, error: toError(err).message });
+      }
+    }
+
     if (!userId) {
       // Try to find an email in the payload and map to our user. Clerk webhook payloads
       // can vary by event type - try several likely locations.

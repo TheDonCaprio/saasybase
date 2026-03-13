@@ -116,51 +116,62 @@ export async function GET(request: NextRequest) {
         // - OR Owner has an active subscription but it does NOT support organizations
 
         // First, get all organization owners
-        const organizations = await prisma.organization.findMany({
-            select: {
-                id: true,
-                ownerUserId: true,
-                name: true
-            }
-        });
+        // In order to not exhaust memory if organization count scales up, we process in chunks
+        const BATCH_SIZE = 500;
+        let lastId: string | undefined = undefined;
 
-        // For each organization, check if the owner has a valid team plan
-        for (const org of organizations) {
-            try {
-                const validSubscription = await prisma.subscription.findFirst({
-                    where: {
-                        userId: org.ownerUserId,
-                        plan: {
-                            supportsOrganizations: true
-                        },
-                        OR: [
-                            // Any non-EXPIRED subscription with time remaining still confers org access.
-                            { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
-                            // After wall-clock expiry, keep org access during the grace window.
-                            // Include CANCELLED and PAST_DUE — not just EXPIRED.
-                            { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
-                        ]
-                    }
-                });
+        while (true) {
+            const batchOrgs: { id: string; ownerUserId: string; name: string }[] = await prisma.organization.findMany({
+                select: {
+                    id: true,
+                    ownerUserId: true,
+                    name: true
+                },
+                take: BATCH_SIZE,
+                ...(lastId ? { cursor: { id: lastId }, skip: 1 } : {})
+            });
 
-                if (!validSubscription) {
-                    // Owner has no valid team subscription -> Dismantle Organization
-                    Logger.info('Cron: Dismantling zombie organization', {
-                        orgId: org.id,
-                        orgName: org.name,
-                        ownerId: org.ownerUserId
+            if (batchOrgs.length === 0) break;
+            lastId = batchOrgs[batchOrgs.length - 1].id;
+
+            // For each organization in the chunk, check if the owner has a valid team plan
+            for (const org of batchOrgs) {
+                try {
+                    const validSubscription = await prisma.subscription.findFirst({
+                        where: {
+                            userId: org.ownerUserId,
+                            plan: {
+                                supportsOrganizations: true
+                            },
+                            OR: [
+                                // Any non-EXPIRED subscription with time remaining still confers org access.
+                                { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
+                                // After wall-clock expiry, keep org access during the grace window.
+                                // Include CANCELLED and PAST_DUE — not just EXPIRED.
+                                { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
+                            ]
+                        }
                     });
 
-                    await deactivateUserOrganizations(org.ownerUserId);
-                    results.dismantledOrganizations++;
+                    if (!validSubscription) {
+                        // Owner has no valid team subscription -> Dismantle Organization
+                        Logger.info('Cron: Dismantling zombie organization', {
+                            orgId: org.id,
+                            orgName: org.name,
+                            ownerId: org.ownerUserId
+                        });
+
+                        await deactivateUserOrganizations(org.ownerUserId);
+                        results.dismantledOrganizations++;
+                    }
+                } catch (err) {
+                    const error = toError(err);
+                    Logger.error('Cron: Failed to process organization cleanup', {
+                        orgId: org.id,
+                        error: error.message
+                    });
+                    results.errors.push(`Org ${org.id}: ${error.message}`);
                 }
-            } catch (err) {
-                const error = toError(err);
-                Logger.error('Cron: Failed to process organization cleanup', {
-                    orgId: org.id,
-                    error: error.message
-                });
-                results.errors.push(`Org ${org.id}: ${error.message}`);
             }
         }
 

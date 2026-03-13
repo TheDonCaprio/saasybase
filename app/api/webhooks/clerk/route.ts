@@ -336,7 +336,6 @@ export async function POST(req: NextRequest) {
         Logger.error('Clerk webhook: failed to allocate initial tokens on user.created', { userId, error: toError(err).message });
       }
     }
-
     if (!userId) {
       // Try to find an email in the payload and map to our user. Clerk webhook payloads
       // can vary by event type - try several likely locations.

@@ -188,6 +188,7 @@ function buildInvoiceLineItems(txn: PaddleTransaction): Array<{
 
 export class PaddlePaymentProvider implements PaymentProvider {
 	name = 'paddle';
+	private static readonly DEFAULT_WEBHOOK_TOLERANCE_SECONDS = 300;
 	private apiKey: string;
 	private apiBaseUrl: string;
 	private debugSubscriptionUpdates: boolean;
@@ -561,6 +562,17 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		const parsed = this.parsePaddleSignature(signature);
 		if (!parsed) throw new WebhookSignatureVerificationError('Missing Paddle webhook signature parts');
 
+		const timestampSeconds = Number(parsed.ts);
+		if (!Number.isFinite(timestampSeconds)) {
+			throw new WebhookSignatureVerificationError('Invalid Paddle webhook timestamp');
+		}
+
+		const toleranceSeconds = this.getWebhookToleranceSeconds();
+		const nowSeconds = Math.floor(Date.now() / 1000);
+		if (Math.abs(nowSeconds - Math.trunc(timestampSeconds)) > toleranceSeconds) {
+			throw new WebhookSignatureVerificationError('Expired Paddle webhook signature');
+		}
+
 		// Paddle signs the raw request payload with a timestamp prefix.
 		// Compute against raw bytes to avoid any accidental string normalization.
 		const expected = crypto
@@ -589,6 +601,15 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		}
 
 		return this.normalizeWebhookEvent(evt);
+	}
+
+	private getWebhookToleranceSeconds(): number {
+		const raw = Number(process.env.PADDLE_WEBHOOK_TOLERANCE_SECONDS);
+		if (Number.isFinite(raw) && raw > 0) {
+			return Math.trunc(raw);
+		}
+
+		return PaddlePaymentProvider.DEFAULT_WEBHOOK_TOLERANCE_SECONDS;
 	}
 
 	private parsePaddleSignature(header: string): { ts: string; h1: string[] } | null {

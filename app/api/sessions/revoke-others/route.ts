@@ -44,5 +44,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-	return NextResponse.json({ message: 'Revoke others endpoint (POST expected)' });
+	return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }

@@ -29,6 +29,7 @@ import {
     UpdateProductOptions,
 } from '../types';
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
+import { Logger } from '../../logger';
 import { prisma } from '../../prisma';
 
 // Paystack response envelopes
@@ -278,7 +279,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
 
         // Debug logging for subscription checkout
         if (opts.mode === 'subscription') {
-            console.log('[Paystack] Creating subscription checkout:', {
+            Logger.debug('Paystack creating subscription checkout', {
                 mode: opts.mode,
                 priceId: opts.priceId,
                 planInPayload: payload.plan,
@@ -539,7 +540,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
             } catch (rollbackErr) {
                 // Rollback also failed — the user may have NO active subscription.
                 // Log prominently so admins can intervene.
-                console.error('[Paystack] CRITICAL: Scheduled plan change failed AND rollback failed. User may have no active subscription.', {
+                Logger.error('Paystack scheduled plan change failed and rollback failed', {
                     subscriptionId,
                     userId,
                     originalError: err instanceof Error ? err.message : String(err),
@@ -580,9 +581,13 @@ export class PaystackPaymentProvider implements PaymentProvider {
 
     async constructWebhookEvent(requestBody: Buffer, signature: string, secret?: string): Promise<StandardizedWebhookEvent> {
         const signingSecret = secret || this.secretKey;
-        const hash = crypto.createHmac('sha512', signingSecret).update(requestBody).digest('hex');
+        const expected = crypto.createHmac('sha512', signingSecret).update(requestBody).digest('hex');
+        const actual = (signature || '').trim().toLowerCase();
 
-        if (hash !== signature) {
+        const expectedBuf = Buffer.from(expected.toLowerCase(), 'utf8');
+        const actualBuf = Buffer.from(actual, 'utf8');
+
+        if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
             throw new WebhookSignatureVerificationError('Invalid webhook signature');
         }
 
@@ -596,7 +601,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                 let tx = event.data as PaystackTransaction;
 
                 // Debug: Log the full transaction data to see what Paystack actually sends
-                console.log('[Paystack] charge.success webhook received:', {
+                Logger.debug('Paystack charge.success webhook received', {
                     reference: tx.reference,
                     hasPlan: !!tx.plan,
                     planObject: tx.plan, // Log the entire plan object to see its structure
@@ -605,7 +610,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                     subscriptionCode: tx.subscription?.subscription_code,
                     // CRITICAL: Check if authorization is reusable - subscriptions ONLY work with reusable=true
                     authorizationReusable: tx.authorization?.reusable,
-                    authorizationCode: tx.authorization?.authorization_code,
+                    hasAuthorizationCode: !!tx.authorization?.authorization_code,
                     metadata: tx.metadata,
                     metadataCheckoutMode: tx.metadata?.checkoutMode,
                     metadataPlanCode: tx.metadata?.planCode,
@@ -615,7 +620,9 @@ export class PaystackPaymentProvider implements PaymentProvider {
                 // IMPORTANT: If authorization is not reusable, Paystack will NOT create a subscription
                 // even if a plan was passed to /transaction/initialize
                 if (tx.authorization && !tx.authorization.reusable) {
-                    console.warn('[Paystack] WARNING: Authorization is NOT reusable - subscription will NOT be created by Paystack');
+                    Logger.warn('Paystack authorization is not reusable; subscription will not be created by provider', {
+                        reference: tx.reference,
+                    });
                 }
 
                 // Determine mode: first from tx.plan, then from metadata (stored during checkout creation)
@@ -633,21 +640,21 @@ export class PaystackPaymentProvider implements PaymentProvider {
                         const verify = await this.request<PaystackTransaction>(`/transaction/verify/${encodeURIComponent(tx.reference)}`);
                         tx = verify.data;
                         planCode = planCode || tx.plan?.plan_code || (tx.metadata?.planCode as string | undefined) || (tx.metadata?.priceId as string | undefined);
-                        console.log('[Paystack] verify transaction hydrate', {
+                        Logger.debug('Paystack verify transaction hydrate', {
                             reference: tx.reference,
                             hydratedPlan: tx.plan,
                             hydratedPlanCode: tx.plan?.plan_code,
                             hydratedSubscription: tx.subscription,
                         });
                     } catch (err) {
-                        console.warn('[Paystack] Failed to verify transaction for missing plan/subscription', {
+                        Logger.warn('Paystack failed to verify transaction for missing plan/subscription', {
                             reference: tx.reference,
                             error: err instanceof Error ? err.message : String(err),
                         });
                     }
                 }
 
-                console.log('[Paystack] Normalized values:', { mode, planCode });
+                Logger.debug('Paystack normalized charge.success values', { reference: tx.reference, mode, planCode });
 
                 const session: StandardizedCheckoutSession = {
                     id: tx.reference,
@@ -707,7 +714,13 @@ export class PaystackPaymentProvider implements PaymentProvider {
             case 'subscription.create': {
                 // Paystack subscription.create - fires after initial charge.success
                 const sub = event.data as PaystackSubscriptionData;
-                console.log('[Paystack] subscription.create webhook received:', sub);
+                Logger.debug('Paystack subscription.create webhook received', {
+                    subscriptionCode: sub.subscription_code,
+                    status: sub.status,
+                    customerCode: sub.customer?.customer_code,
+                    planCode: sub.plan?.plan_code,
+                    nextPaymentDate: sub.next_payment_date,
+                });
 
                 const nextPayment = this.safeParseDate(sub.next_payment_date) ?? new Date();
                 const createdAt = this.safeParseDate(sub.created_at) ?? new Date();
@@ -960,12 +973,16 @@ export class PaystackPaymentProvider implements PaymentProvider {
             if (intervalCount === 3) paystackInterval = 'quarterly';
             else if (intervalCount === 6) paystackInterval = 'biannually';
             else if (intervalCount !== 1) {
-                console.warn(`[Paystack] intervalCount=${intervalCount} months not supported; falling back to monthly.`);
+                Logger.warn('Paystack intervalCount months not supported; falling back to monthly', { intervalCount });
                 paystackInterval = 'monthly';
             }
         } else if (recurringInterval && intervalCount !== 1) {
             // Paystack does not support interval counts for daily/weekly/annually via plan creation.
-            console.warn(`[Paystack] intervalCount=${intervalCount} ignored for interval=${recurringInterval}; using ${paystackInterval}.`);
+            Logger.warn('Paystack intervalCount ignored for recurring interval', {
+                intervalCount,
+                recurringInterval,
+                paystackInterval,
+            });
         }
 
         const response = await this.request<PaystackPlan>(
@@ -1025,7 +1042,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
     }
 
     async archivePrice(priceId: string): Promise<void> {
-        console.warn(`Paystack does not support archiving plans. Plan ${priceId} cannot be archived.`);
+        Logger.warn('Paystack does not support archiving plans', { priceId });
     }
 
     async createCoupon(opts: CreateCouponOptions): Promise<string> {
@@ -1131,14 +1148,14 @@ export class PaystackPaymentProvider implements PaymentProvider {
             try {
                 await this.undoCancelSubscription(subscriptionId);
             } catch (rollbackErr) {
-                console.error('[Paystack] CRITICAL: Immediate plan switch failed AND rollback failed.', {
+                Logger.error('Paystack immediate plan switch failed and rollback failed', {
                     subscriptionId,
                     userId,
                     originalError: err instanceof Error ? err.message : String(err),
                     rollbackError: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
                 });
             }
-            console.error('[Paystack] Immediate plan switch failed after disabling old subscription.', {
+            Logger.error('Paystack immediate plan switch failed after disabling old subscription', {
                 subscriptionId,
                 userId,
                 error: err instanceof Error ? err.message : String(err),
@@ -1152,7 +1169,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                 const newSub = await this.getSubscription(newSubscriptionCode);
                 newPeriodEnd = newSub.currentPeriodEnd ?? undefined;
             } catch (err) {
-                console.warn('[Paystack] Unable to fetch new subscription period end after switch', {
+                Logger.warn('Paystack unable to fetch new subscription period end after switch', {
                     subscriptionId,
                     newSubscriptionCode,
                     userId,
@@ -1313,7 +1330,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
         };
 
         // Debug logging for subscription intent
-        console.log('[Paystack] Creating subscription intent:', {
+        Logger.debug('Paystack creating subscription intent', {
             priceId: opts.priceId,
             planInPayload: payload.plan,
             reference,

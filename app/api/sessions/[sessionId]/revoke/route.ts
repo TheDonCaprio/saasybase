@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
-import { prisma } from '../../../../../lib/prisma';
 import { toError } from '../../../../../lib/runtime-guards';
 
 export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
@@ -16,13 +15,10 @@ export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessi
 	const { sessionId } = params;
 
 	try {
-		// Verify the session belongs to the requesting user before revoking
-		const session = await prisma.session.findUnique({
-			where: { id: sessionId },
-			select: { userId: true },
-		});
+		const sessionInfos = await authService.getUserSessions(userId);
+		const session = sessionInfos.find((entry) => entry.id === sessionId);
 
-		if (session && session.userId !== userId) {
+		if (!session) {
 			return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 		}
 
@@ -35,8 +31,6 @@ export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessi
 	}
 }
 
-// Also respond to GET for simple testing in browser
-export async function GET(_request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
-	const params = await ctx.params;
-	return NextResponse.json({ message: 'Revoke endpoint', sessionId: params.sessionId });
+export async function GET() {
+	return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }

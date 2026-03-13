@@ -7,7 +7,7 @@ describe('paddle-renewal-webhook', () => {
 	const apiKey = 'pdl_test_dummy';
 	const webhookSecret = 'whsec_test_dummy';
 
-	function paddleSignatureHeader(body: Buffer, secret: string, ts = '1730000000') {
+	function paddleSignatureHeader(body: Buffer, secret: string, ts = `${Math.floor(Date.now() / 1000)}`) {
 		const h1 = crypto
 			.createHmac('sha256', secret)
 			.update(ts, 'utf8')
@@ -122,5 +122,33 @@ describe('paddle-renewal-webhook', () => {
 		expect(payload.mode).toBe('subscription');
 		expect(payload.subscriptionId).toBe('sub_123');
 		expect(payload.paymentIntentId).toBe('txn_initial_1');
+	});
+
+	it('rejects stale signed webhooks', async () => {
+		const provider = new PaddlePaymentProvider(apiKey);
+		const evt = {
+			event_id: 'evt_stale_1',
+			event_type: 'transaction.completed',
+			occurred_at: '2026-03-08T00:00:00Z',
+			data: {
+				id: 'txn_stale_1',
+				status: 'completed',
+				origin: 'web',
+				customer_id: 'ctm_123',
+				currency_code: 'USD',
+				custom_data: { userId: 'user_123' },
+				items: [{ price_id: 'pri_123', quantity: 1 }],
+				details: {
+					totals: { total: '1299', subtotal: '1299', discount: '0' },
+				},
+			},
+		};
+
+		const body = Buffer.from(JSON.stringify(evt));
+		const oldTs = `${Math.floor(Date.now() / 1000) - 3600}`;
+		const sig = paddleSignatureHeader(body, webhookSecret, oldTs);
+
+		await expect(provider.constructWebhookEvent(body, sig, webhookSecret))
+			.rejects.toThrow('Expired Paddle webhook signature');
 	});
 });

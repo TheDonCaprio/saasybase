@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /Users/doncaprio/Documents/GitHub/skrinsot/pro-app
+cd /Users/doncaprio/Documents/GitHub/saasybase
 
 # Start both Next.js dev server and Stripe webhook forwarder
 concurrently \

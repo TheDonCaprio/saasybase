@@ -55,7 +55,7 @@ describe('Refund webhook normalization consistency', () => {
 		const paddleApiKey = 'pdl_test_dummy';
 		const paddleWebhookSecret = 'whsec_test_dummy';
 
-		function paddleSignatureHeader(body: Buffer, secret: string, ts = '1730000000') {
+		function paddleSignatureHeader(body: Buffer, secret: string, ts = `${Math.floor(Date.now() / 1000)}`) {
 			const signedPayload = `${ts}:${body.toString('utf8')}`;
 			const h1 = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
 			return `ts=${ts};h1=${h1}`;

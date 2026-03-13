@@ -1,14 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authService } from '@/lib/auth-provider';
 
-// Basic stub for session retrieval / placeholder. Having at least one export
-// ensures this file is treated as a module by the type generator.
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
 	const params = await ctx.params;
-	const { sessionId } = params;
-	return NextResponse.json({ message: 'Session endpoint', sessionId }, { status: 200 });
+	const { userId } = await authService.getSession();
+	if (!userId) {
+		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	}
+	if (!authService.supportsFeature('session_management')) {
+		return NextResponse.json({ error: 'Session management is not supported by the active auth provider' }, { status: 501 });
+	}
+
+	const sessionInfos = await authService.getUserSessions(userId);
+	const session = sessionInfos.find((entry) => entry.id === params.sessionId);
+	if (!session) {
+		return NextResponse.json({ error: 'Not found' }, { status: 404 });
+	}
+
+	return NextResponse.json({
+		id: session.id,
+		status: session.status,
+		lastActiveAt: session.lastActiveAt?.toISOString() ?? null,
+		latestActivity: session.activity ?? null,
+	});
 }
 
-// Accept other methods but return Method Not Allowed for now.
 export async function POST() {
 	return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }

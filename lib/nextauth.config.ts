@@ -17,12 +17,43 @@ import NodemailerProvider from 'next-auth/providers/nodemailer';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendNextAuthMagicLinkEmail } from '@/lib/nextauth-email-verification';
+import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const BCRYPT_SALT_ROUNDS = 12;
+
+function getRequestHeader(headers: unknown, key: string): string | null {
+  if (!headers || typeof headers !== 'object') return null;
+
+  const candidate = headers as { get?: (name: string) => string | null };
+  if (typeof candidate.get !== 'function') return null;
+
+  try {
+    return candidate.get(key);
+  } catch {
+    return null;
+  }
+}
+
+function getAuthRequestIp(request: unknown): string | null {
+  if (!request || typeof request !== 'object' || !('headers' in request)) {
+    return null;
+  }
+
+  const headers = (request as { headers?: unknown }).headers;
+  const forwarded = getRequestHeader(headers, 'x-forwarded-for');
+  const firstForwarded = forwarded?.split(',')[0]?.trim();
+
+  return firstForwarded
+    || getRequestHeader(headers, 'x-real-ip')
+    || getRequestHeader(headers, 'cf-connecting-ip')
+    || getRequestHeader(headers, 'x-client-ip')
+    || getRequestHeader(headers, 'x-forwarded')
+    || null;
+}
 
 /** Hash a password with bcrypt. */
 async function hashPassword(password: string): Promise<string> {
@@ -50,18 +81,56 @@ function buildProviders(): NextAuthConfig['providers'] {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const email = credentials.email as string;
+        const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
+        const ip = getAuthRequestIp(request) || 'unknown';
+        const rateLimitKey = `auth:credentials-signin:${ip}`;
+
+        const nowMs = Date.now();
+        const windowMs = RATE_LIMITS.AUTH.windowMs;
+        const windowStart = new Date(Math.floor(nowMs / windowMs) * windowMs);
+
+        const existingBucket = await prisma.rateLimitBucket.findUnique({
+          where: {
+            rate_limit_key_window_unique: {
+              key: rateLimitKey,
+              windowStart,
+            },
+          },
+          select: { hits: true },
+        });
+
+        if ((existingBucket?.hits ?? 0) >= RATE_LIMITS.AUTH.limit) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          await rateLimit(rateLimitKey, RATE_LIMITS.AUTH, {
+            ip,
+            actorId: email,
+            route: '/api/auth/callback/credentials',
+            method: 'POST',
+            userAgent: getRequestHeader((request as { headers?: unknown } | undefined)?.headers, 'user-agent'),
+          });
+          return null;
+        }
         if (!user.emailVerified) return null;
 
         const valid = await verifyPassword(password, user.password);
-        if (!valid) return null;
+        if (!valid) {
+          await rateLimit(rateLimitKey, RATE_LIMITS.AUTH, {
+            ip,
+            actorId: user.id,
+            route: '/api/auth/callback/credentials',
+            method: 'POST',
+            userAgent: getRequestHeader((request as { headers?: unknown } | undefined)?.headers, 'user-agent'),
+          });
+          return null;
+        }
 
         return {
           id: user.id,

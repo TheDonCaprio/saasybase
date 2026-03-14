@@ -38,7 +38,6 @@ async function detectMime(buffer: Buffer): Promise<string | null> {
     }
   } catch (error) {
     // Detection failure is non-fatal; fall back to header hint below.
-    // eslint-disable-next-line no-console
     console.warn('file-type detection failed', error);
   }
   if (buffer.slice(0, 512).toString('utf8').trimStart().startsWith('<svg')) {
@@ -176,7 +175,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ url });
   } catch (error: unknown) {
-    // eslint-disable-next-line no-console
     console.error('file upload error', toErrorMessage(error));
     if (process.env.NODE_ENV !== 'production') {
       const message = toErrorMessage(error);

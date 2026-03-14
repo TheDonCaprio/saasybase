@@ -32,6 +32,7 @@ const ORGANIZATION_WITH_PLAN_SELECT = {
   memberTokenCap: true,
   memberCapStrategy: true,
   memberCapResetIntervalHours: true,
+  ownerExemptFromCaps: true,
   planId: true,
   plan: {
     select: PLAN_WITH_BILLING_FIELDS,
@@ -115,6 +116,9 @@ export function getMemberCapStrategy(context: OrganizationPlanContext | null): C
 export function getEffectiveMemberTokenCap(context: OrganizationPlanContext | null): number | null {
   if (!context) return null;
   if (getMemberCapStrategy(context) === 'DISABLED') {
+    return null;
+  }
+  if (context.role === 'OWNER' && context.organization.ownerExemptFromCaps === true) {
     return null;
   }
   const override = context.membership?.memberTokenCapOverride;

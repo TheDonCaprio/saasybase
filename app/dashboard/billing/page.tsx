@@ -107,9 +107,10 @@ export default async function BillingPage({ searchParams }: PageProps) {
 
   // Pre-format values on the server using DB-backed settings to avoid
   // SSR/CSR hydration mismatches.
+  const nowTimeMs = now.getTime();
   const formattedNextBillingDate = nextBillingDate ? await formatDateServer(nextBillingDate) : null;
   const daysUntilRenewal = nextBillingDate
-    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((nextBillingDate.getTime() - nowTimeMs) / (1000 * 60 * 60 * 24)))
     : null;
   const latestPayment = recentPayments[0] ?? null;
   const latestPaymentDate = latestPayment ? await formatDateServer(latestPayment.createdAt) : null;
@@ -129,13 +130,11 @@ export default async function BillingPage({ searchParams }: PageProps) {
           Math.max(
             0,
             Math.round(
-              ((Date.now() - subscriptionStart.getTime()) / (nextBillingDate.getTime() - subscriptionStart.getTime())) * 100
+              ((nowTimeMs - subscriptionStart.getTime()) / (nextBillingDate.getTime() - subscriptionStart.getTime())) * 100
             )
           )
         )
       : 0;
-
-  const cycleProgressValue = personalActive && nextBillingDate && subscriptionStart ? `${accessProgressPercent}%` : '—';
   const cycleProgressHelper =
     personalActive && daysUntilRenewal != null
       ? `${pluralize(daysUntilRenewal, 'day')} remaining`
@@ -189,8 +188,6 @@ export default async function BillingPage({ searchParams }: PageProps) {
     if (hours >= 168) return 'Weekly access';
     return 'One-time access';
   })();
-  const currentPlanDescription =
-    subscription?.plan?.shortDescription || subscription?.plan?.description || `${process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} subscription`;
   const planInfoTiles: PlanInfoTile[] = personalActive
     ? [
         {
@@ -362,7 +359,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
 
               <div className="space-y-4">
                 {upcomingWithFormattedDates.map((sub) => {
-                  const startsInFuture = new Date(sub.startedAt).getTime() > Date.now() + 1000;
+                  const startsInFuture = sub.startedAt.getTime() > nowTimeMs + 1000;
                   return (
                     <div
                       key={sub.id}

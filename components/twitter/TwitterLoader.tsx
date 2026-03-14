@@ -17,7 +17,6 @@ export default function TwitterLoader() {
         }
       } catch (e) {
         // Non-fatal; just log for debugging
-        // eslint-disable-next-line no-console
         console.warn('twttr.widgets.load error', e);
       }
     };
@@ -40,7 +39,6 @@ export default function TwitterLoader() {
             w.widgets.load();
           }
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.warn('twttr.widgets.load onLoad error', e);
         }
       }}

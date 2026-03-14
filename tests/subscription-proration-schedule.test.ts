@@ -52,6 +52,13 @@ vi.mock('../lib/utils/provider-ids', () => ({
 import { GET, POST } from '../app/api/subscription/proration/route';
 import { NextRequest } from 'next/server';
 
+type RouteProvider = typeof providerMock;
+type MutableError = Error & { originalError?: { code?: string; decline_code?: string } };
+
+function toNextRequest(request: Request): NextRequest {
+	return new NextRequest(request);
+}
+
 describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -97,7 +104,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target', scheduleAt: 'cycle_end' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.ok).toBe(true);
@@ -115,10 +122,10 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 	});
 
 	it('returns 409 when provider does not implement scheduling', async () => {
-		(paymentServiceMock.getProviderForRecord as any).mockReturnValue({
+		paymentServiceMock.getProviderForRecord.mockReturnValue({
 			...providerMock,
 			scheduleSubscriptionPlanChange: undefined,
-		});
+		} as unknown as RouteProvider);
 
 		const req = new Request('http://localhost/api/subscription/proration', {
 			method: 'POST',
@@ -126,7 +133,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target', scheduleAt: 'cycle_end' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.prorationEnabled).toBe(false);
@@ -144,7 +151,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target', scheduleAt: 'cycle_end' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('RAZORPAY_REMAINING_COUNT_REQUIRED');
@@ -161,7 +168,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target', scheduleAt: 'cycle_end' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('RAZORPAY_SUBSCRIPTION_NOT_UPDATABLE_STATE');
@@ -178,7 +185,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('RAZORPAY_REMAINING_COUNT_REQUIRED');
@@ -195,7 +202,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('RAZORPAY_SUBSCRIPTION_NOT_UPDATABLE_STATE');
@@ -217,7 +224,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.ok).toBe(true);
@@ -243,7 +250,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.ok).toBe(true);
@@ -257,7 +264,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 
 	it('maps Stripe card_declined error to 402', async () => {
 		const stripeError = new Error('Failed to update subscription plan');
-		(stripeError as any).originalError = { code: 'card_declined', decline_code: 'insufficient_funds' };
+		(stripeError as MutableError).originalError = { code: 'card_declined', decline_code: 'insufficient_funds' };
 		providerMock.updateSubscriptionPlan.mockRejectedValue(stripeError);
 
 		const req = new Request('http://localhost/api/subscription/proration', {
@@ -266,7 +273,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(402);
 		const body = await res.json();
 		expect(body.code).toBe('STRIPE_PAYMENT_FAILED');
@@ -275,7 +282,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 
 	it('maps Stripe authentication_required error to 402', async () => {
 		const stripeError = new Error('Failed to update subscription plan');
-		(stripeError as any).originalError = { code: 'authentication_required' };
+		(stripeError as MutableError).originalError = { code: 'authentication_required' };
 		providerMock.updateSubscriptionPlan.mockRejectedValue(stripeError);
 
 		const req = new Request('http://localhost/api/subscription/proration', {
@@ -284,7 +291,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(402);
 		const body = await res.json();
 		expect(body.code).toBe('STRIPE_AUTHENTICATION_REQUIRED');
@@ -305,7 +312,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		// Falls back to schedule at cycle end
 		expect(res.status).toBe(200);
 		const body = await res.json();
@@ -326,7 +333,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('RAZORPAY_CYCLE_NOT_STARTED');
@@ -389,7 +396,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			body: JSON.stringify({ planId: 'plan_target', scheduleAt: 'cycle_end' }),
 		});
 
-		const res = await POST(req as any);
+		const res = await POST(toNextRequest(req));
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.scheduled).toBe(true);

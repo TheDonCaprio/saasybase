@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { SessionProvider, signIn, signOut } from 'next-auth/react';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 
@@ -1035,7 +1036,7 @@ interface ActiveOrgResponse {
   organizations: OrgItem[];
 }
 
-export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
+export function AuthOrganizationSwitcher() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
@@ -1231,12 +1232,12 @@ export function AuthOrganizationSwitcher(_props: Record<string, unknown>) {
 
           {/* Footer — manage workspace link */}
           <div className="border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40">
-            <a
+            <Link
               href="/dashboard/team"
               className="flex min-h-[2.75rem] w-full items-center px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
             >
               Manage workspace →
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -1262,18 +1263,18 @@ function stringToColor(str: string): string {
 // UserProfile — redirect-based
 // ---------------------------------------------------------------------------
 
-export function AuthUserProfile(_props: Record<string, unknown>) {
+export function AuthUserProfile() {
   return (
     <div className="text-center py-8">
       <p className="text-neutral-600 dark:text-neutral-400 mb-4">
         Profile management is available in your dashboard settings.
       </p>
-      <a
+      <Link
         href="/dashboard/profile"
-        className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+        className="inline-flex px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
       >
         Go to Settings
-      </a>
+      </Link>
     </div>
   );
 }
@@ -1288,7 +1289,7 @@ export const authDarkTheme = undefined;
 // Loading State Boundaries (NextAuth NO-OP)
 // ---------------------------------------------------------------------------
 
-export function AuthLoading({ children }: { children: React.ReactNode }) {
+export function AuthLoading() {
   // NextAuth manages its session inherently without throwing async suspense boundaries globally like Clerk
   return null;
 }

@@ -19,6 +19,7 @@ type OrganizationDetail = {
   memberCapResetIntervalHours: number | null;
   tokenPoolStrategy: string | null;
   seatLimit: number | null;
+  ownerExemptFromCaps: boolean;
   stats: { activeMembers: number; pendingInvites: number; totalMembers: number };
 };
 
@@ -40,6 +41,7 @@ type FormState = {
   memberCapStrategy: string;
   memberCapResetIntervalHours: string;
   tokenPoolStrategy: string;
+  ownerExemptFromCaps: boolean;
 };
 
 const DEFAULT_FORM_STATE: FormState = {
@@ -50,7 +52,8 @@ const DEFAULT_FORM_STATE: FormState = {
   memberTokenCap: '',
   memberCapStrategy: 'DISABLED',
   memberCapResetIntervalHours: '',
-  tokenPoolStrategy: 'SHARED_FOR_ORG'
+  tokenPoolStrategy: 'SHARED_FOR_ORG',
+  ownerExemptFromCaps: false
 };
 
 export default function EditOrganizationModal({ orgId, initialName, initialSlug, initialTokenBalance, onClose, onUpdated }: Props) {
@@ -89,7 +92,8 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
             memberTokenCap: org.memberTokenCap != null ? String(org.memberTokenCap) : '',
             memberCapStrategy: org.memberCapStrategy ?? 'DISABLED',
             memberCapResetIntervalHours: org.memberCapResetIntervalHours != null ? String(org.memberCapResetIntervalHours) : '',
-            tokenPoolStrategy: org.tokenPoolStrategy ?? 'SHARED_FOR_ORG'
+            tokenPoolStrategy: org.tokenPoolStrategy ?? 'SHARED_FOR_ORG',
+            ownerExemptFromCaps: org.ownerExemptFromCaps ?? false
           });
         }
       } catch (error) {
@@ -126,7 +130,8 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
         memberTokenCap: formState.memberTokenCap.trim() === '' ? null : Number(formState.memberTokenCap),
         memberCapStrategy: formState.memberCapStrategy,
         memberCapResetIntervalHours: formState.memberCapResetIntervalHours.trim() === '' ? null : Number(formState.memberCapResetIntervalHours),
-        tokenPoolStrategy: formState.tokenPoolStrategy
+        tokenPoolStrategy: formState.tokenPoolStrategy,
+        ownerExemptFromCaps: formState.ownerExemptFromCaps
       };
 
       const response = await fetch(`/api/admin/organizations/${orgId}`, {
@@ -315,6 +320,17 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
                 <option value="ALLOCATED_PER_MEMBER">Allocated per member</option>
               </select>
             </label>
+            <div className="flex items-center gap-3 pt-6">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={formState.ownerExemptFromCaps}
+                  onChange={(e) => handleChange('ownerExemptFromCaps', e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-200 text-blue-600 focus:ring-blue-500 dark:border-neutral-800 dark:bg-neutral-900"
+                />
+                <span className="text-sm text-slate-600 dark:text-neutral-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Exclude admin from caps</span>
+              </label>
+            </div>
           </section>
 
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-neutral-900">

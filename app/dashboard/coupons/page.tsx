@@ -64,15 +64,15 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
     }
   }
 
-  let where = whereRaw as Prisma.CouponRedemptionWhereInput;
+  const where = whereRaw as Prisma.CouponRedemptionWhereInput;
 
   const runWithFallback = async <T,>(fn: (criteria: Prisma.CouponRedemptionWhereInput) => Promise<T>): Promise<T> => {
     try {
       return await fn(where);
     } catch (err: unknown) {
       if (isPrismaModeError(err)) {
-        where = stripMode(whereRaw) as Prisma.CouponRedemptionWhereInput;
-        return await fn(where);
+        const fallbackWhere = stripMode(whereRaw) as Prisma.CouponRedemptionWhereInput;
+        return await fn(fallbackWhere);
       }
       throw err;
     }

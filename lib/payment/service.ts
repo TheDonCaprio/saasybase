@@ -3,24 +3,15 @@ import { Logger } from '../logger';
 import {
     StandardizedWebhookEvent,
     PaymentProvider,
-    SubscriptionDetails,
     StandardizedCheckoutSession,
     StandardizedSubscription,
     StandardizedInvoice
 } from './types';
-import {
-    createBillingNotification,
-    sendBillingNotification,
-    notifyExpiredSubscriptions,
-    sendAdminNotificationEmail
-} from '../notifications';
 import { shouldClearPaidTokensOnRenewal as shouldClearPaidTokensOnRenewalExternal } from '../paidTokens';
-import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../paidTokenCleanup';
 import { syncOrganizationEligibilityForUser } from '../organization-access';
-import { getOrganizationPlanContext, OrganizationPlanContext } from '../user-plan-context';
+import { OrganizationPlanContext } from '../user-plan-context';
 import { PLAN_DEFINITIONS } from '../plans';
 import { resetOrganizationSharedTokens } from '../teams';
-import { markRedemptionConsumed } from '../couponRedemptions';
 import { toError } from '../runtime-guards';
 import {
     parseProviderIdMap,
@@ -29,8 +20,6 @@ import {
 } from '../utils/provider-ids';
 import type { Prisma, Plan } from '@prisma/client';
 import { PaymentProviderFactory } from './factory';
-import { formatCurrency } from '../utils/currency';
-import { getActiveCurrencyAsync } from './registry';
 import {
     findRecentNotificationByExactMessage as findRecentNotificationByExactMessageExternal,
     findRecentNotificationByTitles as findRecentNotificationByTitlesExternal,
@@ -224,7 +213,7 @@ export class PaymentService {
 
         const legacy = await prisma.user.findFirst({
             where: {
-                OR: legacyOr as any,
+                OR: legacyOr as Prisma.UserWhereInput[],
             },
             select: { id: true },
         });
@@ -903,7 +892,7 @@ export class PaymentService {
                 return;
             }
 
-            let { dbSub } = updateState;
+            const { dbSub } = updateState;
             const {
                 isNewlyCreated,
                 previousStatus,
@@ -912,7 +901,7 @@ export class PaymentService {
                 effectiveStatus,
             } = updateState;
 
-            dbSub = await this.processSubscriptionUpdatedPostMutation({
+            await this.processSubscriptionUpdatedPostMutation({
                 dbSub,
                 subscriptionId,
                 status,

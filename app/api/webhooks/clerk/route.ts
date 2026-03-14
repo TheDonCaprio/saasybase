@@ -326,11 +326,12 @@ export async function POST(req: NextRequest) {
     
     // Explicitly handle user.created to reliably initialize token balances
     if (userId && typeof eventType === 'string' && eventType.toLowerCase() === 'user.created') {
-      const emailObj = (payloadRecord.data as any)?.email_addresses?.[0];
-      const email = emailObj?.email_address;
+      const dataRecord = asRecord(payloadRecord.data);
+      const emailAddresses = Array.isArray(dataRecord?.email_addresses) ? dataRecord.email_addresses : [];
+      const email = asRecord(emailAddresses[0])?.email_address;
       
       try {
-        await ensureUserExists({ userId, emailOverride: email });
+        await ensureUserExists({ userId, emailOverride: typeof email === 'string' ? email : undefined });
         Logger.info('Clerk webhook: guaranteed user.created token allocation', { userId });
       } catch (err) {
         Logger.error('Clerk webhook: failed to allocate initial tokens on user.created', { userId, error: toError(err).message });

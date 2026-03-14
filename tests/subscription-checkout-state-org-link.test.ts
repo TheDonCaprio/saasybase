@@ -19,6 +19,8 @@ vi.mock('../lib/notifications', () => ({ notifyExpiredSubscriptions: vi.fn(async
 
 import { persistSubscriptionCheckoutState } from '../lib/payment/subscription-checkout-state';
 
+type PersistSubscriptionCheckoutStateInput = Parameters<typeof persistSubscriptionCheckoutState>[0];
+
 describe('persistSubscriptionCheckoutState organization linkage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -33,8 +35,8 @@ describe('persistSubscriptionCheckoutState organization linkage', () => {
         id: 'sub_provider_1',
         customerId: 'cus_1',
         canceledAt: null,
-      } as any,
-      planToUse: { id: 'plan_team' } as any,
+      } as PersistSubscriptionCheckoutStateInput['subscription'],
+      planToUse: { id: 'plan_team' } as PersistSubscriptionCheckoutStateInput['planToUse'],
       organizationId: 'org_1',
       desiredStatus: 'ACTIVE',
       effectiveStartedAt: new Date('2026-03-10T00:00:00.000Z'),

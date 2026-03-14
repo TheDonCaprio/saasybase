@@ -2,12 +2,29 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { RazorpayPaymentProvider } from '../lib/payment/providers/razorpay';
 
-function jsonResponse(body: unknown, init?: { ok?: boolean; status?: number }) {
+type FetchUrl = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+type MockResponse = Pick<Response, 'ok' | 'status' | 'json'>;
+type FetchHandler = (url: FetchUrl, init?: FetchInit) => Promise<MockResponse>;
+
+function jsonResponse(body: unknown, init?: { ok?: boolean; status?: number }): MockResponse {
 	return {
 		ok: init?.ok ?? true,
 		status: init?.status ?? 200,
 		json: async () => body,
-	} as any;
+	};
+}
+
+function installFetch(handler: FetchHandler) {
+	global.fetch = vi.fn((url: FetchUrl, init?: FetchInit) => handler(url, init)) as unknown as typeof fetch;
+}
+
+function parseJsonBody(init?: FetchInit): Record<string, unknown> {
+	if (typeof init?.body !== 'string') {
+		return {};
+	}
+
+	return JSON.parse(init.body) as Record<string, unknown>;
 }
 
 describe('razorpay-provider (minimum working)', () => {
@@ -29,13 +46,13 @@ describe('razorpay-provider (minimum working)', () => {
 	it('createCheckoutSession (payment) creates a payment link and returns short_url', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).endsWith('/payment_links') && method === 'POST') {
 				return jsonResponse({ id: 'plink_123', short_url: 'https://rzp.io/i/abc', status: 'created' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const session = await provider.createCheckoutSession({
 			userId: 'user_1',
@@ -54,13 +71,13 @@ describe('razorpay-provider (minimum working)', () => {
 	it('createCheckoutSession (subscription) creates subscription and returns short_url', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).endsWith('/subscriptions') && method === 'POST') {
 				return jsonResponse({ id: 'sub_123', short_url: 'https://rzp.io/i/sub', status: 'created', plan_id: 'plan_abc' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const session = await provider.createCheckoutSession({
 			userId: 'user_1',
@@ -78,15 +95,15 @@ describe('razorpay-provider (minimum working)', () => {
 	it('cancelSubscription maps immediately=false to cancel_at_cycle_end', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_123/cancel') && method === 'POST') {
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.cancel_at_cycle_end).toBe(1);
 				return jsonResponse({ id: 'sub_123', status: 'active', current_end: Math.floor(Date.now() / 1000) + 3600 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const res = await provider.cancelSubscription('sub_123', false);
 		expect(res.id).toBe('sub_123');
@@ -95,13 +112,13 @@ describe('razorpay-provider (minimum working)', () => {
 	it('createCustomerPortalSession returns subscription short_url', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_123') && method === 'GET') {
 				return jsonResponse({ id: 'sub_123', status: 'active', short_url: 'https://rzp.io/i/manage' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const url = await provider.createCustomerPortalSession('sub_123', 'https://example.com/return');
 		expect(url).toBe('https://rzp.io/i/manage');
@@ -111,10 +128,10 @@ describe('razorpay-provider (minimum working)', () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 		expect(provider.supportsFeature('subscription_updates')).toBe(true);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_123') && method === 'PATCH') {
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.plan_id).toBe('plan_new');
 				expect(body.schedule_change_at).toBe('now');
 				return jsonResponse({
@@ -125,7 +142,7 @@ describe('razorpay-provider (minimum working)', () => {
 				});
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const res = await provider.updateSubscriptionPlan('sub_123', 'plan_new', 'user_1');
 		expect(res.success).toBe(true);
@@ -136,11 +153,11 @@ describe('razorpay-provider (minimum working)', () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 		let patchCount = 0;
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_456') && method === 'PATCH') {
 				patchCount += 1;
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.plan_id).toBe('plan_yearly');
 				expect(body.schedule_change_at).toBe('now');
 
@@ -172,7 +189,7 @@ describe('razorpay-provider (minimum working)', () => {
 			}
 
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const res = await provider.updateSubscriptionPlan('sub_456', 'plan_yearly', 'user_1');
 		expect(res.success).toBe(true);
@@ -182,7 +199,7 @@ describe('razorpay-provider (minimum working)', () => {
 	it('updateSubscriptionPlan throws RAZORPAY_NO_CAPTURED_PAYMENTS when invoice has no captured payments', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_pending') && method === 'PATCH') {
 				return jsonResponse(
@@ -191,7 +208,7 @@ describe('razorpay-provider (minimum working)', () => {
 				);
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		// Should throw a specific RAZORPAY_NO_CAPTURED_PAYMENTS error so the
 		// route handler can auto-schedule at cycle end.
@@ -203,7 +220,7 @@ describe('razorpay-provider (minimum working)', () => {
 	it('updateSubscriptionPlan throws RAZORPAY_CYCLE_NOT_STARTED when cycle start is in future', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_future') && method === 'PATCH') {
 				return jsonResponse(
@@ -212,7 +229,7 @@ describe('razorpay-provider (minimum working)', () => {
 				);
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		await expect(provider.updateSubscriptionPlan('sub_future', 'plan_new', 'user_1'))
 			.rejects
@@ -223,13 +240,13 @@ describe('razorpay-provider (minimum working)', () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 		let patchCount = 0;
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			const urlStr = String(url);
 
 			if (urlStr.includes('/subscriptions/sub_weekly') && method === 'PATCH') {
 				patchCount++;
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 
 				// 1st PATCH: no remaining_count → needs remaining_count
 				if (patchCount === 1 && !body.remaining_count) {
@@ -258,7 +275,7 @@ describe('razorpay-provider (minimum working)', () => {
 			}
 
 			throw new Error('Unexpected fetch: ' + method + ' ' + urlStr);
-		}) as any;
+		});
 
 		const res = await provider.updateSubscriptionPlan('sub_weekly', 'plan_monthly', 'user_1');
 		expect(res.success).toBe(true);
@@ -268,7 +285,7 @@ describe('razorpay-provider (minimum working)', () => {
 	it('scheduleSubscriptionPlanChange PATCHes /subscriptions/:id with schedule_change_at=cycle_end', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_123') && method === 'GET') {
 				return jsonResponse({
@@ -280,7 +297,7 @@ describe('razorpay-provider (minimum working)', () => {
 				});
 			}
 			if (String(url).includes('/subscriptions/sub_123') && method === 'PATCH') {
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.plan_id).toBe('plan_next');
 				expect(body.schedule_change_at).toBe('cycle_end');
 				return jsonResponse({
@@ -291,7 +308,7 @@ describe('razorpay-provider (minimum working)', () => {
 				});
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const res = await provider.scheduleSubscriptionPlanChange?.('sub_123', 'plan_next', 'user_1');
 		expect(res?.success).toBe(true);
@@ -301,11 +318,11 @@ describe('razorpay-provider (minimum working)', () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 		let patchCount = 0;
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/subscriptions/sub_789') && method === 'PATCH') {
 				patchCount += 1;
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.plan_id).toBe('plan_yearly');
 				expect(body.schedule_change_at).toBe('cycle_end');
 
@@ -337,7 +354,7 @@ describe('razorpay-provider (minimum working)', () => {
 			}
 
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const res = await provider.scheduleSubscriptionPlanChange?.('sub_789', 'plan_yearly', 'user_1');
 		expect(res?.success).toBe(true);
@@ -347,13 +364,13 @@ describe('razorpay-provider (minimum working)', () => {
 	it('refundPayment POSTs /payments/:id/refund', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/payments/pay_123/refund') && method === 'POST') {
 				return jsonResponse({ id: 'rfnd_1', amount: 500, status: 'processed', created_at: Math.floor(Date.now() / 1000) });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const refund = await provider.refundPayment('pay_123', 500);
 		expect(refund.id).toBe('rfnd_1');
@@ -364,15 +381,15 @@ describe('razorpay-provider (minimum working)', () => {
 		process.env.RAZORPAY_ENABLE_OFFERS = 'true';
 		const provider = new RazorpayPaymentProvider(keySecret);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).endsWith('/payment_links') && method === 'POST') {
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				expect(body.offer_id).toBe('offer_abc123');
 				return jsonResponse({ id: 'plink_456', short_url: 'https://rzp.io/i/offer', status: 'created' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const session = await provider.createCheckoutSession({
 			userId: 'user_1',
@@ -394,11 +411,11 @@ describe('razorpay-provider (minimum working)', () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 
 		let call = 0;
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).endsWith('/payment_links') && method === 'POST') {
 				call += 1;
-				const body = JSON.parse(init?.body || '{}');
+				const body = parseJsonBody(init);
 				if (call === 1) {
 					expect(body.offer_id).toBe('offer_badfield');
 					return jsonResponse(
@@ -410,7 +427,7 @@ describe('razorpay-provider (minimum working)', () => {
 				return jsonResponse({ id: 'plink_789', short_url: 'https://rzp.io/i/fallback', status: 'created' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const session = await provider.createCheckoutSession({
 			userId: 'user_1',

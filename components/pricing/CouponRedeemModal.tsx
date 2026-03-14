@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthSession } from '@/lib/auth-provider/client';
@@ -106,12 +107,12 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
               <p className="text-sm text-neutral-300">
                 You need to log in to redeem a coupon code.
               </p>
-              <a
+              <Link
                 href="/sign-in"
                 className="block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-blue-700"
               >
                 Sign In
-              </a>
+              </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PaddlePaymentProvider } from '../lib/payment/providers/paddle';
 
+type FetchUrl = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+type MockJsonResponse = {
+	ok: boolean;
+	status: number;
+	json: () => Promise<unknown>;
+};
+type SeenCall = { url: string; method: string; body?: Record<string, unknown> };
+
+function installFetch(handler: (url: FetchUrl, init?: FetchInit) => Promise<MockJsonResponse>) {
+	global.fetch = vi.fn((url: FetchUrl, init?: FetchInit) => handler(url, init)) as unknown as typeof fetch;
+}
+
 describe('Paddle proration', () => {
 	const apiKey = 'pdl_test_dummy';
 	const originalFetch = global.fetch;
@@ -14,12 +27,12 @@ describe('Paddle proration', () => {
 	});
 
 	it('uses prorated_immediately preview totals and swaps the first subscription item price', async () => {
-		const seen: Array<{ url: string; method: string; body?: any }> = [];
+		const seen: SeenCall[] = [];
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const u = String(url);
 			const method = String(init?.method || 'GET').toUpperCase();
-			const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+			const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
 			seen.push({ url: u, method, body });
 
 			if (u.includes('/subscriptions/sub_123') && method === 'GET') {
@@ -62,7 +75,7 @@ describe('Paddle proration', () => {
 			}
 
 			throw new Error(`Unexpected fetch call: ${u} ${method}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const preview = await provider.getProrationPreview('sub_123', 'pri_new', 'user_1');
@@ -79,12 +92,12 @@ describe('Paddle proration', () => {
 	});
 
 	it('updates subscription with prorated_immediately and returns new period end + expected amount', async () => {
-		const seen: Array<{ url: string; method: string; body?: any }> = [];
+		const seen: SeenCall[] = [];
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const u = String(url);
 			const method = String(init?.method || 'GET').toUpperCase();
-			const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+			const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
 			seen.push({ url: u, method, body });
 
 			if (u.includes('/subscriptions/sub_123') && !u.includes('/preview') && method === 'GET') {
@@ -139,7 +152,7 @@ describe('Paddle proration', () => {
 			}
 
 			throw new Error(`Unexpected fetch call: ${u} ${method}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const result = await provider.updateSubscriptionPlan('sub_123', 'pri_new', 'user_1');
@@ -155,12 +168,12 @@ describe('Paddle proration', () => {
 	});
 
 	it('schedules subscription update for next billing period with full_next_billing_period', async () => {
-		const seen: Array<{ url: string; method: string; body?: any }> = [];
+		const seen: SeenCall[] = [];
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const u = String(url);
 			const method = String(init?.method || 'GET').toUpperCase();
-			const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+			const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
 			seen.push({ url: u, method, body });
 
 			if (u.includes('/subscriptions/sub_123') && !u.includes('/preview') && method === 'GET') {
@@ -204,7 +217,7 @@ describe('Paddle proration', () => {
 			}
 
 			throw new Error(`Unexpected fetch call: ${u} ${method}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const result = await provider.scheduleSubscriptionPlanChange?.('sub_123', 'pri_new', 'user_1');
@@ -219,7 +232,7 @@ describe('Paddle proration', () => {
 	});
 
 	it('getSubscription does NOT set cancelAtPeriodEnd when scheduled_change action is update', async () => {
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const u = String(url);
 			const method = String(init?.method || 'GET').toUpperCase();
 
@@ -247,7 +260,7 @@ describe('Paddle proration', () => {
 				};
 			}
 			throw new Error(`Unexpected fetch: ${u}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const sub = await provider.getSubscription('sub_plan_change');
@@ -257,7 +270,7 @@ describe('Paddle proration', () => {
 	});
 
 	it('getSubscription DOES set cancelAtPeriodEnd when scheduled_change action is cancel', async () => {
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const u = String(url);
 			const method = String(init?.method || 'GET').toUpperCase();
 
@@ -285,7 +298,7 @@ describe('Paddle proration', () => {
 				};
 			}
 			throw new Error(`Unexpected fetch: ${u}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const sub = await provider.getSubscription('sub_pending_cancel');

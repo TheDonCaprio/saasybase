@@ -6,6 +6,7 @@ const prismaMock = vi.hoisted(() => {
 		user: { update: vi.fn() },
 		organization: { update: vi.fn() },
 	};
+	type TransactionClient = typeof tx;
 
 	return {
 		__tx: tx,
@@ -26,7 +27,7 @@ const prismaMock = vi.hoisted(() => {
 		paymentAuthorization: {
 			findFirst: vi.fn(),
 		},
-		$transaction: vi.fn(async (fn: any) => fn(tx)),
+		$transaction: vi.fn(async <T>(fn: (client: TransactionClient) => Promise<T>) => fn(tx)),
 	};
 });
 

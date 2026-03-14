@@ -24,6 +24,26 @@ vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error:
 
 import { processOneTimeRecurringTopup } from '../lib/payment/one-time-topup';
 
+type ProcessOneTimeTopupInput = Parameters<typeof processOneTimeRecurringTopup>[0];
+type ResolvedOrganizationContext = NonNullable<Awaited<ReturnType<ProcessOneTimeTopupInput['resolveOrganizationContext']>>>;
+
+function createCheckoutSession(id: string): ProcessOneTimeTopupInput['session'] {
+  return {
+    id,
+    mode: 'payment',
+    paymentStatus: 'paid',
+    metadata: { activeClerkOrgId: 'org_clerk_1' },
+  };
+}
+
+function createResolvedOrganizationContext(): ResolvedOrganizationContext {
+  return {
+    role: 'OWNER',
+    organization: { id: 'org_db_1', name: 'Team Org' },
+    membership: null,
+  } as ResolvedOrganizationContext;
+}
+
 describe('processOneTimeRecurringTopup plan-family guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -40,23 +60,16 @@ describe('processOneTimeRecurringTopup plan-family guard', () => {
         name: 'Personal Topup',
         tokenLimit: 50,
         supportsOrganizations: false,
-      } as any,
+      } as ProcessOneTimeTopupInput['planToUse'],
       resolvedAmountCents: 500,
       resolvedSubtotalCents: 500,
       resolvedDiscountCents: 0,
       couponCode: null,
-      session: {
-        id: 'sess_1',
-        metadata: { activeClerkOrgId: 'org_clerk_1' },
-      } as any,
+      session: createCheckoutSession('sess_1'),
       finalPaymentIntent: 'pi_1',
       providerKey: 'stripe',
       mergeIdMap: () => null,
-      resolveOrganizationContext: (vi.fn(async () => ({
-        role: 'OWNER',
-        organization: { id: 'org_db_1', name: 'Team Org' },
-        membership: null,
-      })) as any),
+      resolveOrganizationContext: vi.fn(async () => createResolvedOrganizationContext()),
     });
 
     expect(creditOrganizationSharedTokensMock).not.toHaveBeenCalled();
@@ -77,23 +90,16 @@ describe('processOneTimeRecurringTopup plan-family guard', () => {
         name: 'Team Topup',
         tokenLimit: 30,
         supportsOrganizations: true,
-      } as any,
+      } as ProcessOneTimeTopupInput['planToUse'],
       resolvedAmountCents: 900,
       resolvedSubtotalCents: 900,
       resolvedDiscountCents: 0,
       couponCode: null,
-      session: {
-        id: 'sess_2',
-        metadata: { activeClerkOrgId: 'org_clerk_1' },
-      } as any,
+      session: createCheckoutSession('sess_2'),
       finalPaymentIntent: 'pi_2',
       providerKey: 'stripe',
       mergeIdMap: () => null,
-      resolveOrganizationContext: (vi.fn(async () => ({
-        role: 'OWNER',
-        organization: { id: 'org_db_1', name: 'Team Org' },
-        membership: null,
-      })) as any),
+      resolveOrganizationContext: vi.fn(async () => createResolvedOrganizationContext()),
     });
 
     expect(creditOrganizationSharedTokensMock).toHaveBeenCalledWith(

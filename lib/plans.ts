@@ -5,7 +5,7 @@ import { parseProviderIdMap, getCurrentProviderKey } from './utils/provider-ids'
 import { formatCurrency } from './utils/currency';
 import { getActiveCurrency } from './payment/registry';
 
-export type CorePlanId = '24H' | '7D' | '1M' | '3M' | '1Y';
+export type CorePlanId = string;
 
 export interface PlanSeed {
   id: CorePlanId;
@@ -17,9 +17,13 @@ export interface PlanSeed {
   priceMode: 'payment' | 'subscription';
   description?: string;
   sortOrder: number;
+  autoRenew?: boolean;
+  recurringInterval?: 'day' | 'week' | 'month' | 'year';
+  recurringIntervalCount?: number;
 }
 
 export const PLAN_DEFINITIONS: PlanSeed[] = [
+  // One-time plans
   {
     id: '24H',
     name: '24 Hour Pro',
@@ -29,6 +33,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     legacyExternalPriceEnv: 'PRICE_24H',
     priceMode: 'payment',
     sortOrder: 0,
+    autoRenew: false,
   },
   {
     id: '7D',
@@ -39,37 +44,57 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     legacyExternalPriceEnv: 'PRICE_7D',
     priceMode: 'payment',
     sortOrder: 1,
+    autoRenew: false,
   },
   {
-    id: '1M',
-    name: '1 Month Pro',
+    id: '1M_OT',
+    name: '1 Month Extra',
     durationHours: 24 * 30,
     priceCents: 1999,
-    externalPriceEnv: 'PAYMENT_PRICE_1M',
+    externalPriceEnv: 'PAYMENT_PRICE_1M_OT',
     legacyExternalPriceEnv: 'PRICE_1M',
     priceMode: 'payment',
     sortOrder: 2,
+    autoRenew: false,
+  },
+  
+  // Subscription plans
+  {
+    id: '1M_SUB',
+    name: 'Monthly Pro',
+    durationHours: 24 * 30,
+    priceCents: 1999,
+    externalPriceEnv: 'SUBSCRIPTION_PRICE_1M',
+    priceMode: 'subscription',
+    sortOrder: 3,
+    autoRenew: true,
+    recurringInterval: 'month',
+    recurringIntervalCount: 1,
   },
   {
-    id: '3M',
-    name: '3 Month Pro',
+    id: '3M_SUB',
+    name: 'Quarterly Pro',
     durationHours: 24 * 90,
     priceCents: 4999,
-    externalPriceEnv: 'PAYMENT_PRICE_3M',
-    legacyExternalPriceEnv: 'PRICE_3M',
-    priceMode: 'payment',
-    sortOrder: 3,
+    externalPriceEnv: 'SUBSCRIPTION_PRICE_3M',
+    priceMode: 'subscription',
+    sortOrder: 4,
+    autoRenew: true,
+    recurringInterval: 'month',
+    recurringIntervalCount: 3,
     description: 'Save 20%',
   },
   {
-    id: '1Y',
-    name: '1 Year Pro',
+    id: '1Y_SUB',
+    name: 'Yearly Pro',
     durationHours: 24 * 365,
     priceCents: 14999,
-    externalPriceEnv: 'PAYMENT_PRICE_1Y',
-    legacyExternalPriceEnv: 'PRICE_1Y',
-    priceMode: 'payment',
-    sortOrder: 4,
+    externalPriceEnv: 'SUBSCRIPTION_PRICE_1Y',
+    priceMode: 'subscription',
+    sortOrder: 5,
+    autoRenew: true,
+    recurringInterval: 'year',
+    recurringIntervalCount: 1,
     description: 'Save 40%',
   },
 ];
@@ -93,6 +118,17 @@ export function resolvePlanPriceEnv(def: PlanSeed): { priceId?: string; envKey?:
 }
 
 export async function ensurePlansSeeded() {
+  const currentNames = PLAN_DEFINITIONS.map(p => p.name);
+  
+  // Deactivate plans that are no longer in the definitions
+  await prisma.plan.updateMany({
+    where: {
+      name: { notIn: currentNames },
+      active: true,
+    },
+    data: { active: false }
+  });
+
   for (const plan of PLAN_DEFINITIONS) {
     await prisma.plan.upsert({
       where: { name: plan.name },
@@ -100,12 +136,21 @@ export async function ensurePlansSeeded() {
         durationHours: plan.durationHours,
         priceCents: plan.priceCents,
         sortOrder: plan.sortOrder,
+        autoRenew: plan.autoRenew ?? (plan.priceMode === 'subscription'),
+        recurringInterval: plan.recurringInterval || (plan.priceMode === 'subscription' ? 'month' : null),
+        recurringIntervalCount: plan.recurringIntervalCount || 1,
+        active: true, // Ensure it's active
       },
       create: {
         name: plan.name,
         durationHours: plan.durationHours,
         priceCents: plan.priceCents,
         sortOrder: plan.sortOrder,
+        autoRenew: plan.autoRenew ?? (plan.priceMode === 'subscription'),
+        recurringInterval: plan.recurringInterval || (plan.priceMode === 'subscription' ? 'month' : null),
+        recurringIntervalCount: plan.recurringIntervalCount || 1,
+        scope: 'INDIVIDUAL',
+        active: true,
       }
     });
   }

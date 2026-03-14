@@ -101,15 +101,15 @@ export default async function AdminCouponsPage({ searchParams }: PageProps) {
     }
   }
 
-  let where = whereRaw as Prisma.CouponWhereInput;
+  const where = whereRaw as Prisma.CouponWhereInput;
 
   const runWithFallback = async <T,>(fn: (criteria: Prisma.CouponWhereInput) => Promise<T>): Promise<T> => {
     try {
       return await fn(where);
     } catch (err: unknown) {
       if (isPrismaModeError(err)) {
-        where = stripMode(whereRaw) as Prisma.CouponWhereInput;
-        return await fn(where);
+        const fallbackWhere = stripMode(whereRaw) as Prisma.CouponWhereInput;
+        return await fn(fallbackWhere);
       }
       throw err;
     }

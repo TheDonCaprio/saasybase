@@ -3,6 +3,7 @@ import crypto from 'crypto';
 
 import { RazorpayPaymentProvider } from '../lib/payment/providers/razorpay';
 import { WebhookSignatureVerificationError } from '../lib/payment/errors';
+import type { StandardizedCheckoutSession, StandardizedInvoice } from '../lib/payment/types';
 
 describe('razorpay-webhook', () => {
 	const keyId = 'rzp_test_keyid';
@@ -45,7 +46,7 @@ describe('razorpay-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('checkout.completed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedCheckoutSession;
 		expect(payload.id).toBe('plink_123');
 		expect(payload.userId).toBe('user_123');
 		expect(payload.paymentStatus).toBe('paid');
@@ -87,7 +88,7 @@ describe('razorpay-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('checkout.completed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedCheckoutSession;
 		expect(payload.mode).toBe('subscription');
 		expect(payload.subscriptionId).toBe('sub_123');
 		expect(payload.lineItems?.[0]?.priceId).toBe('plan_abc');
@@ -118,7 +119,7 @@ describe('razorpay-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_succeeded');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.subscriptionId).toBe('sub_123');
 		expect(payload.paymentIntentId).toBe('pay_renewal_1');
 		expect(payload.amountPaid).toBe(12900);
@@ -150,7 +151,7 @@ describe('razorpay-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_failed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.subscriptionId).toBe('sub_123');
 		expect(payload.paymentIntentId).toBe('pay_renewal_failed_1');
 		expect(payload.amountDue).toBe(12900);

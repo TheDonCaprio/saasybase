@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { describe, it, expect } from 'vitest';
 
 import { PaddlePaymentProvider } from '../lib/payment/providers/paddle';
+import type { StandardizedCheckoutSession, StandardizedInvoice } from '../lib/payment/types';
 
 describe('paddle-renewal-webhook', () => {
 	const apiKey = 'pdl_test_dummy';
@@ -45,7 +46,7 @@ describe('paddle-renewal-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_succeeded');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.id).toBe('inv_123');
 		expect(payload.paymentIntentId).toBe('txn_renew_1');
 		expect(payload.subscriptionId).toBe('sub_123');
@@ -83,7 +84,7 @@ describe('paddle-renewal-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_failed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.id).toBe('inv_124');
 		expect(payload.paymentIntentId).toBe('txn_renew_failed_1');
 		expect(payload.subscriptionId).toBe('sub_123');
@@ -118,7 +119,7 @@ describe('paddle-renewal-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, webhookSecret);
 
 		expect(normalized.type).toBe('checkout.completed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedCheckoutSession;
 		expect(payload.mode).toBe('subscription');
 		expect(payload.subscriptionId).toBe('sub_123');
 		expect(payload.paymentIntentId).toBe('txn_initial_1');

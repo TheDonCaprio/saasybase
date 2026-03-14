@@ -19,6 +19,24 @@ import {
   resolveInvoicePaidProcessingContext,
   recordInvoicePaymentAndApplyTokens,
 } from '../lib/payment/invoice-payment-recording';
+import type { StandardizedInvoice } from '../lib/payment/types';
+
+type ResolveInvoicePaidInput = Parameters<typeof resolveInvoicePaidProcessingContext>[0];
+type RecordInvoicePaymentInput = Parameters<typeof recordInvoicePaymentAndApplyTokens>[0];
+
+function createInvoice(overrides: Partial<StandardizedInvoice>): StandardizedInvoice {
+  return {
+    id: 'inv_test',
+    amountPaid: 0,
+    amountDue: 0,
+    amountDiscount: 0,
+    subtotal: 0,
+    total: 0,
+    currency: 'usd',
+    status: 'paid',
+    ...overrides,
+  };
+}
 
 describe('invoice payment org resolution for NextAuth', () => {
   beforeEach(() => {
@@ -32,7 +50,7 @@ describe('invoice payment org resolution for NextAuth', () => {
     }));
 
     const result = await resolveInvoicePaidProcessingContext({
-      invoice: {
+      invoice: createInvoice({
         id: 'inv_1',
         subscriptionId: 'sub_provider_1',
         paymentIntentId: 'pi_1',
@@ -40,7 +58,7 @@ describe('invoice payment org resolution for NextAuth', () => {
         metadata: {
           activeOrganizationId: 'org_local_1',
         },
-      } as any,
+      }),
       findSubscriptionByProviderId: vi.fn(async () => ({
         id: 'sub_db_1',
         userId: 'user_1',
@@ -59,7 +77,7 @@ describe('invoice payment org resolution for NextAuth', () => {
   });
 
   it('credits shared org tokens for initial invoice payments when a local org is resolved', async () => {
-    prismaMock.$transaction.mockImplementation(async (cb: any) => {
+    prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
       const tx = {
         payment: {
           findUnique: vi.fn(async () => null),
@@ -73,7 +91,8 @@ describe('invoice payment org resolution for NextAuth', () => {
           update: vi.fn(async () => undefined),
         },
       };
-      return cb(tx);
+      type TransactionClient = typeof tx;
+      return (cb as (tx: TransactionClient) => unknown)(tx);
     });
 
     const result = await recordInvoicePaymentAndApplyTokens({
@@ -83,13 +102,13 @@ describe('invoice payment org resolution for NextAuth', () => {
         planId: 'plan_team',
         plan: { tokenLimit: 100, supportsOrganizations: true },
       },
-      invoice: {
+      invoice: createInvoice({
         id: 'inv_1',
         amountPaid: 5000,
         subtotal: 5000,
         amountDiscount: 0,
         billingReason: 'subscription_create',
-      } as any,
+      }),
       paymentIntentId: 'pi_1',
       subscriptionId: 'sub_provider_1',
       resolvedOrganizationId: 'org_local_1',
@@ -108,7 +127,7 @@ describe('invoice payment org resolution for NextAuth', () => {
   });
 
   it('credits the org bucket on renewal via subscription.organizationId after provisioning when renewal metadata has no org id', async () => {
-    prismaMock.$transaction.mockImplementation(async (cb: any) => {
+    prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
       const tx = {
         payment: {
           findUnique: vi.fn(async () => null),
@@ -122,18 +141,19 @@ describe('invoice payment org resolution for NextAuth', () => {
           update: vi.fn(async () => undefined),
         },
       };
-      return cb(tx);
+      type TransactionClient = typeof tx;
+      return (cb as (tx: TransactionClient) => unknown)(tx);
     });
 
     const resolveOrganizationContext = vi.fn(async () => null);
     const preflight = await resolveInvoicePaidProcessingContext({
-      invoice: {
+      invoice: createInvoice({
         id: 'inv_renew_1',
         subscriptionId: 'sub_provider_1',
         paymentIntentId: 'pi_renew_1',
         billingReason: 'subscription_recurring',
         metadata: {},
-      } as any,
+      }),
       findSubscriptionByProviderId: vi.fn(async () => ({
         id: 'sub_db_1',
         userId: 'user_1',
@@ -157,13 +177,13 @@ describe('invoice payment org resolution for NextAuth', () => {
         planId: 'plan_team',
         plan: { tokenLimit: 100, supportsOrganizations: true },
       },
-      invoice: {
+      invoice: createInvoice({
         id: 'inv_renew_1',
         amountPaid: 5000,
         subtotal: 5000,
         amountDiscount: 0,
         billingReason: 'subscription_recurring',
-      } as any,
+      }),
       paymentIntentId: 'pi_renew_1',
       subscriptionId: 'sub_provider_1',
       resolvedOrganizationId: preflight.resolvedOrganizationId ?? null,

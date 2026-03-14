@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { formatDate } from '../../lib/formatDate';
 import { pluralize } from '../../lib/pluralize';
@@ -115,7 +116,6 @@ export function PaginatedTransactionList({
         }
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, statusFilter]);
 
   const handleDownloadInvoice = async (paymentId: string) => {
@@ -271,12 +271,12 @@ export function PaginatedTransactionList({
               }
               {statusFilter === 'ALL' && (
                 <div className="mt-4">
-                  <a 
-                    href="/pricing" 
+                  <Link
+                    href="/pricing"
                     className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     View Plans
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>

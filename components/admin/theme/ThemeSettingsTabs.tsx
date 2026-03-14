@@ -12,7 +12,6 @@ import {
   faNewspaper, 
   faTableCells, 
   faCode, 
-  faPlus, 
   faArrowRotateLeft, 
   faFloppyDisk,
   faPalette,
@@ -135,11 +134,11 @@ export function ThemeSettingsTabs({
   const applyPaletteToDocument = useCallback((palette: ThemeColorPalette) => {
     if (typeof document === 'undefined') return;
 
-    const buildBlock = (t: ColorTokens, _mode: 'light' | 'dark') => {
+    const buildBlock = (t: ColorTokens) => {
       const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.headerBlur) ? t.headerBlur : 12)));
       const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.headerBorderWidth) ? t.headerBorderWidth : 1)));
-      const headerMenuFontSizePx = Math.max(10, Math.min(20, Math.round(Number.isFinite((t as any).headerMenuFontSize) ? (t as any).headerMenuFontSize : 14)));
-      const headerMenuFontWeight = Math.max(300, Math.min(800, Math.round(Number.isFinite((t as any).headerMenuFontWeight) ? (t as any).headerMenuFontWeight : 400)));
+      const headerMenuFontSizePx = Math.max(10, Math.min(20, Math.round(Number.isFinite(t.headerMenuFontSize) ? t.headerMenuFontSize : 14)));
+      const headerMenuFontWeight = Math.max(300, Math.min(800, Math.round(Number.isFinite(t.headerMenuFontWeight) ? t.headerMenuFontWeight : 400)));
 
       const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(t.stickyHeaderBlur) ? t.stickyHeaderBlur : 14)));
       const stickyHeaderBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(t.stickyHeaderBorderWidth) ? t.stickyHeaderBorderWidth : 1)));
@@ -168,11 +167,11 @@ export function ThemeSettingsTabs({
       const stickyHeaderText = parseHexColor(t.stickyHeaderText ?? t.textPrimary);
       const stickyHeaderBorder = parseHexColor(t.stickyHeaderBorder ?? t.headerBorder ?? t.borderPrimary);
       const sidebarBg = parseHexColor(t.sidebarBg);
-      const sidebarBorder = parseHexColor((t as any).sidebarBorder ?? t.borderPrimary);
+      const sidebarBorder = parseHexColor(t.sidebarBorder ?? t.borderPrimary);
       const pageGlow = parseHexColor(t.pageGlow);
-      const headerShadow = parseHexColor((t as any).headerShadow ?? '#00000014');
+      const headerShadow = parseHexColor(t.headerShadow ?? '#00000014');
       const stickyHeaderShadow = parseHexColor(
-        (t as any).stickyHeaderShadow ?? (t as any).headerShadow ?? '#00000014'
+        t.stickyHeaderShadow ?? t.headerShadow ?? '#00000014'
       );
 
       const pageFrom = parseHexColor(t.pageGradientFrom);
@@ -235,7 +234,7 @@ export function ThemeSettingsTabs({
       ].join('\n');
     };
 
-    const css = `html.light {\n${buildBlock(palette.light, 'light')}\n}\nhtml.dark {\n${buildBlock(palette.dark, 'dark')}\n}`;
+    const css = `html.light {\n${buildBlock(palette.light)}\n}\nhtml.dark {\n${buildBlock(palette.dark)}\n}`;
     const styleId = 'runtime-theme-color-vars';
     let tag = document.getElementById(styleId) as HTMLStyleElement | null;
     if (!tag) {

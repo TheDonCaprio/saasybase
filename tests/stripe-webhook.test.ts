@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import Stripe from 'stripe';
 
 import { StripePaymentProvider } from '../lib/payment/providers/stripe';
+import type { StandardizedInvoice } from '../lib/payment/types';
 
 describe('stripe-webhook', () => {
 	const stripeSecretKey = 'sk_test_123';
@@ -56,7 +57,7 @@ describe('stripe-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(Buffer.from(body), sign(body), webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_succeeded');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.id).toBe('in_123');
 		expect(payload.paymentIntentId).toBe('pi_123');
 		expect(payload.subscriptionId).toBe('sub_123');
@@ -101,7 +102,7 @@ describe('stripe-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(Buffer.from(body), sign(body), webhookSecret);
 
 		expect(normalized.type).toBe('invoice.payment_failed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedInvoice;
 		expect(payload.id).toBe('in_124');
 		expect(payload.paymentIntentId).toBe('pi_124');
 		expect(payload.subscriptionId).toBe('sub_123');

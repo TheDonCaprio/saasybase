@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { randomBytes, createHash } from 'crypto';
-import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {

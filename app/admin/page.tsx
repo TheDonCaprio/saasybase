@@ -7,6 +7,7 @@ import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { asRecord } from '../../lib/runtime-guards';
 import { getAdminTrafficSnapshot } from '../../lib/admin-traffic';
 import { DashboardPageHeader, type DashboardPageHeaderStat } from '../../components/dashboard/DashboardPageHeader';
+import Link from 'next/link';
 import {
   dashboardPanelClass,
   dashboardMutedPanelClass,
@@ -420,13 +421,13 @@ export default async function AdminHome() {
             <p className="text-sm text-slate-600 dark:text-neutral-300">Visits today • {formatNumber(visitsYesterday)} yesterday</p>
           </div>
           {canAccess('traffic') ? (
-            <a
+            <Link
               href="/admin/traffic"
               className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
             >
               Open traffic analytics
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
-            </a>
+            </Link>
           ) : null}
         </div>
 
@@ -453,13 +454,13 @@ export default async function AdminHome() {
             </div>
           </dl>
           {canAccess('transactions') ? (
-            <a
+            <Link
               href="/admin/transactions"
               className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
             >
               Open transactions
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
-            </a>
+            </Link>
           ) : null}
         </div>
 
@@ -485,13 +486,13 @@ export default async function AdminHome() {
               <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-neutral-100">{formatNumber(inProgressTickets)}</p>
             </div>
           </div>
-          <a
+          <Link
             href="/admin/support"
             className="relative mt-auto inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
           >
             Open support desk
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3.5 w-3.5" />
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -578,12 +579,12 @@ export default async function AdminHome() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Quick actions</h3>
                   {isAdmin ? (
-                    <a
+                    <Link
                       href="/admin/logs"
                       className="text-xs font-semibold uppercase tracking-wide text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300"
                     >
                       System logs
-                    </a>
+                    </Link>
                   ) : null}
                 </div>
                 <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 dark:border-neutral-800/70 dark:bg-neutral-900/70">

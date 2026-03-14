@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Brand from './Brand';
@@ -39,8 +39,9 @@ export function SiteHeader({
   layout: HeaderLayoutSettings;
 }) {
   const [isSticky, setIsSticky] = useState(false);
+  const stickyActive = layout.stickyEnabled && isSticky;
 
-  const stickyStyles = isSticky
+  const stickyStyles = stickyActive
     ? {
         backgroundColor: 'var(--theme-sticky-header-bg)',
         color: 'var(--theme-sticky-header-text)',
@@ -57,7 +58,6 @@ export function SiteHeader({
       };
   useEffect(() => {
     if (!layout.stickyEnabled) {
-      setIsSticky(false);
       return;
     }
 
@@ -66,9 +66,12 @@ export function SiteHeader({
       setIsSticky(y >= (layout.stickyScrollY || 0));
     };
 
-    onScroll();
+    const initialMeasure = window.requestAnimationFrame(onScroll);
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.cancelAnimationFrame(initialMeasure);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [layout.stickyEnabled, layout.stickyScrollY]);
 
   const clampInt = (n: unknown, min: number, max: number, fallback: number) => {
@@ -79,45 +82,43 @@ export function SiteHeader({
 
   const normalHeight = clampInt(layout.height, 48, 160, 80);
   const stickyHeight = clampInt(layout.stickyHeight, 40, 160, 64);
-  const currentHeight = isSticky ? stickyHeight : normalHeight;
+  const currentHeight = stickyActive ? stickyHeight : normalHeight;
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isSticky) {
+    if (stickyActive) {
       root.style.setProperty('--sticky-header-height', `${currentHeight}px`);
     } else {
       root.style.setProperty('--sticky-header-height', '0px');
     }
-  }, [isSticky, currentHeight]);
+  }, [stickyActive, currentHeight]);
 
-  const headerPositionClass = isSticky ? 'fixed top-0 left-0 right-0' : 'relative';
+  const headerPositionClass = stickyActive ? 'fixed top-0 left-0 right-0' : 'relative';
 
-  const renderNavLink = useMemo(() => {
-    const className = isSticky
-      ? 'text-[color:var(--theme-sticky-header-text)] transition-opacity hover:opacity-90'
-      : 'text-[color:var(--theme-header-text)] transition-opacity hover:opacity-90';
+  const navLinkClassName = stickyActive
+    ? 'text-[color:var(--theme-sticky-header-text)] transition-opacity hover:opacity-90'
+    : 'text-[color:var(--theme-header-text)] transition-opacity hover:opacity-90';
 
-    return (link: ThemeLink) => {
-      const isExternal = /^https?:\/\//i.test(link.href);
-      if (isExternal) {
-        return (
-          <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={className}>
-            {link.label}
-          </a>
-        );
-      }
+  const renderNavLink = (link: ThemeLink) => {
+    const isExternal = /^https?:\/\//i.test(link.href);
+    if (isExternal) {
       return (
-        <Link key={`${link.label}-${link.href}`} href={link.href} className={className}>
+        <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={navLinkClassName}>
           {link.label}
-        </Link>
+        </a>
       );
-    };
-  }, [isSticky]);
+    }
+    return (
+      <Link key={`${link.label}-${link.href}`} href={link.href} className={navLinkClassName}>
+        {link.label}
+      </Link>
+    );
+  };
 
   const nav = headerLinks.length ? (
     <nav
       className={
-        isSticky
+        stickyActive
           ? 'hidden lg:flex gap-4 text-[color:var(--theme-sticky-header-text)]'
           : 'hidden lg:flex gap-4 text-[color:var(--theme-header-text)]'
       }
@@ -142,14 +143,14 @@ export function SiteHeader({
 
   return (
     <>
-      {isSticky ? <div aria-hidden style={{ height: currentHeight }} /> : null}
+      {stickyActive ? <div aria-hidden style={{ height: currentHeight }} /> : null}
       <header
         className={`px-6 flex items-center bg-[color:var(--theme-header-bg)] backdrop-blur z-40 ${headerPositionClass}`}
         style={{ minHeight: currentHeight, height: currentHeight, ...stickyStyles }}
       >
         {layout.style === 'center-nav' ? (
           <div className="flex w-full items-center">
-            <a href="/" className="font-semibold text-lg flex items-center gap-3">
+            <Link href="/" className="font-semibold text-lg flex items-center gap-3">
               <LogoBlock
                 siteName={siteName}
                 siteLogo={siteLogo}
@@ -158,14 +159,14 @@ export function SiteHeader({
                 logoHeight={logoHeight}
                 aspectRatioCss={aspectRatioCss}
               />
-            </a>
+            </Link>
             <div className="flex-1 flex items-center justify-center">{nav}</div>
             {actions}
           </div>
         ) : layout.style === 'left-nav' ? (
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-6">
-              <a href="/" className="font-semibold text-lg flex items-center gap-3">
+              <Link href="/" className="font-semibold text-lg flex items-center gap-3">
                 <LogoBlock
                   siteName={siteName}
                   siteLogo={siteLogo}
@@ -174,14 +175,14 @@ export function SiteHeader({
                   logoHeight={logoHeight}
                   aspectRatioCss={aspectRatioCss}
                 />
-              </a>
+              </Link>
               {nav}
             </div>
             {actions}
           </div>
         ) : (
           <div className="flex w-full items-center justify-between">
-            <a href="/" className="font-semibold text-lg flex items-center gap-3">
+            <Link href="/" className="font-semibold text-lg flex items-center gap-3">
               <LogoBlock
                 siteName={siteName}
                 siteLogo={siteLogo}
@@ -190,7 +191,7 @@ export function SiteHeader({
                 logoHeight={logoHeight}
                 aspectRatioCss={aspectRatioCss}
               />
-            </a>
+            </Link>
             <div className="flex items-center gap-4">
               {nav}
               {actions}

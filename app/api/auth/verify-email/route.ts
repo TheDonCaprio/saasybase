@@ -12,7 +12,6 @@ import { authService } from '@/lib/auth-provider';
 import { createHash } from 'crypto';
 import {
   parseVerificationIdentifier,
-  sendNextAuthEmailChangeVerification,
   sendNextAuthVerificationEmail,
 } from '@/lib/nextauth-email-verification';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';

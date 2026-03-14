@@ -149,7 +149,6 @@ export default function PageEditor({
   entityLabelPlural,
   previewPathPrefix = '',
   backHref,
-  categoriesHref = '',
   uploadScope = 'file'
 }: PageEditorProps) {
   const router = useRouter();
@@ -718,7 +717,7 @@ export default function PageEditor({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEditorFullscreen]);
+  }, [isEditorFullscreen, toggleEditorFullscreen]);
 
   useEffect(() => {
     if (!editor) return;
@@ -1055,7 +1054,7 @@ export default function PageEditor({
     } finally {
       setIsUploading(false);
     }
-  }, []);
+  }, [uploadScope]);
 
   // processImageFile removed — not currently referenced in the editor flow.
 

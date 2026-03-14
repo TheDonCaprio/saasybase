@@ -28,41 +28,51 @@ export async function generateMetadata({ params }: EditBlogPostPageProps) {
   }
 }
 
+async function loadEditBlogPostData(postId: string) {
+  try {
+    const [post, categories] = await Promise.all([
+      getBlogPostById(postId),
+      listBlogCategories(),
+    ]);
+
+    if (!post) {
+      return null;
+    }
+
+    return {
+      categories,
+      postDTO: toBlogPostDTO(post),
+    };
+  } catch (error) {
+    console.error('Error loading blog post:', error);
+    return null;
+  }
+}
+
 export default async function EditBlogPostPage({ params }: EditBlogPostPageProps) {
   await requireAdminSectionAccess('blog');
   const resolved = await params;
 
-  try {
-    const [post, categories] = await Promise.all([
-      getBlogPostById(resolved.id),
-      listBlogCategories()
-    ]);
-
-    if (!post) {
-      notFound();
-    }
-
-    const postDTO = toBlogPostDTO(post);
-
-    return (
-      <PageEditor
-        mode="edit"
-        initialPage={postDTO}
-        apiBasePath="/api/admin/blog"
-        editBasePath="/admin/blog"
-        storageNamespace="blog-editor"
-        enableCategories
-        categories={categories}
-        entityLabel="Blog Post"
-        entityLabelPlural="Blog Posts"
-        previewPathPrefix="/blog"
-        backHref="/admin/blog"
-        categoriesHref="/admin/blog/categories"
-        uploadScope="blog"
-      />
-    );
-  } catch (error) {
-    console.error('Error loading blog post:', error);
+  const data = await loadEditBlogPostData(resolved.id);
+  if (!data) {
     notFound();
   }
+
+  return (
+    <PageEditor
+      mode="edit"
+      initialPage={data.postDTO}
+      apiBasePath="/api/admin/blog"
+      editBasePath="/admin/blog"
+      storageNamespace="blog-editor"
+      enableCategories
+      categories={data.categories}
+      entityLabel="Blog Post"
+      entityLabelPlural="Blog Posts"
+      previewPathPrefix="/blog"
+      backHref="/admin/blog"
+      categoriesHref="/admin/blog/categories"
+      uploadScope="blog"
+    />
+  );
 }

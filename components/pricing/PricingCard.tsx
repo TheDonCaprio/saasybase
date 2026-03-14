@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 import React, { useTransition, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -1739,7 +1740,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 </div>
 
                 <p className="mt-4 text-center text-[11px] text-neutral-500 dark:text-neutral-500">
-                  Having trouble? <a href="/support" className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Contact support</a>
+                  Having trouble? <Link href="/support" className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Contact support</Link>
                 </p>
               </div>
             </div>

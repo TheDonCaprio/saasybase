@@ -3,7 +3,6 @@ import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { listBlogPostsPaginated, toBlogPostDTO } from '@/lib/blog';
 import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader';
 import SitePagesList from '@/components/admin/pages/SitePagesList';
-import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 

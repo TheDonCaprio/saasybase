@@ -142,7 +142,7 @@ const statToneStyles: Record<Tone, { wrapper: string; label: string; value: stri
 };
 
 export function DashboardPageHeader({
-	accent: _accent = 'theme',
+	accent = 'theme',
 	eyebrow,
 	eyebrowIcon,
 	title,
@@ -153,6 +153,7 @@ export function DashboardPageHeader({
 	children,
 	className
 }: DashboardPageHeaderProps) {
+	void accent;
 	const palette = accentStyles.theme;
 
 	return (

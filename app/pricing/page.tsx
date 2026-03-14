@@ -9,6 +9,7 @@ import PlanBillingActions from '../../components/dashboard/PlanBillingActions';
 import { PricingPageClient } from '../../components/pricing/PricingPageClient';
 import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { formatCurrency } from '../../lib/utils/currency';
+import Link from 'next/link';
 
 export default async function PricingPage() {
   const { userId } = await authService.getSession();
@@ -98,8 +99,6 @@ export default async function PricingPage() {
     if (hours >= 168) return 'Weekly access';
     return 'One-time access';
   })();
-  const planDescription =
-    currentSubscription?.plan?.shortDescription || currentSubscription?.plan?.description || `${process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} subscription`;
   const planTokenNameRaw = currentSubscription?.plan?.tokenName;
   const planTokenName = typeof planTokenNameRaw === 'string' ? planTokenNameRaw.trim() : '';
   const paidTokenBalance = typeof userRecord?.tokenBalance === 'number' ? userRecord.tokenBalance : 0;
@@ -219,7 +218,7 @@ export default async function PricingPage() {
             <div className="font-medium text-neutral-100">Have a promo code?</div>
             <p className="text-neutral-400 mt-1">
               Redeem it on the{' '}
-              <a href="/dashboard/coupons" className="text-blue-400 underline underline-offset-4">dashboard coupons page</a>{' '}
+              <Link href="/dashboard/coupons" className="text-blue-400 underline underline-offset-4">dashboard coupons page</Link>{' '}
               before checking out so it appears here automatically.
             </p>
           </div>

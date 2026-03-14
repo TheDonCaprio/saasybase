@@ -28,34 +28,40 @@ export async function generateMetadata({ params }: EditPageProps) {
   }
 }
 
+async function loadEditPageData(pageId: string) {
+  try {
+    const page = await getPageById(pageId);
+    if (!page) {
+      return null;
+    }
+
+    return toSitePageDTO(page);
+  } catch (error) {
+    console.error('Error loading page:', error);
+    return null;
+  }
+}
+
 export default async function EditPagePage({ params }: EditPageProps) {
   const resolved = await params;
   await requireAdminAuth(`/admin/pages/${resolved.id}/edit`);
 
-  try {
-    const page = await getPageById(resolved.id);
-    
-    if (!page) {
-      notFound();
-    }
-
-    const pageDTO = toSitePageDTO(page);
-
-    return (
-      <PageEditor
-        mode="edit"
-        initialPage={pageDTO}
-        enableCategories={false}
-        categories={[]}
-        entityLabel="Page"
-        entityLabelPlural="Pages"
-        previewPathPrefix=""
-        backHref="/admin/pages"
-        categoriesHref=""
-      />
-    );
-  } catch (error) {
-    console.error('Error loading page:', error);
+  const pageDTO = await loadEditPageData(resolved.id);
+  if (!pageDTO) {
     notFound();
   }
+
+  return (
+    <PageEditor
+      mode="edit"
+      initialPage={pageDTO}
+      enableCategories={false}
+      categories={[]}
+      entityLabel="Page"
+      entityLabelPlural="Pages"
+      previewPathPrefix=""
+      backHref="/admin/pages"
+      categoriesHref=""
+    />
+  );
 }

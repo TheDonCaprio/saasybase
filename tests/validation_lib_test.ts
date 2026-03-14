@@ -1,5 +1,6 @@
 import assert from 'assert';
-import { validateParams, withValidation, ValidationResult } from '../lib/validation.js';
+import { NextRequest } from 'next/server.js';
+import { validateParams, withValidation } from '../lib/validation';
 import { z } from 'zod';
 
 async function run() {
@@ -19,21 +20,17 @@ async function run() {
     return new Response(JSON.stringify({ ok: true, id: data.id }), { status: 200 });
   };
 
-  // Create a fake NextRequest-like object that has json() and headers - typed for the test
-  type FakeReq = Partial<Request> & { json: () => Promise<unknown>; headers: Headers; url: string; method?: string };
-
   const headers = new Headers();
   headers.set('content-type', 'application/json');
 
-  const fakeReq: FakeReq = {
+  const fakeReq = new NextRequest('http://localhost/test', {
     method: 'POST',
     headers,
-    json: async () => ({ id: 'xyz' }),
-    url: 'http://localhost/test'
-  };
+    body: JSON.stringify({ id: 'xyz' })
+  });
 
-  const wrapped = withValidation(schema, handler as any);
-  const res = await wrapped(fakeReq as any, undefined as any);
+  const wrapped = withValidation(schema, handler);
+  const res = await wrapped(fakeReq);
   const body = await res.json();
   assert.ok(body.id === 'xyz', 'Expected handler to receive parsed data');
 

@@ -44,6 +44,7 @@ export type TeamDashboardOrganization = {
   memberTokenCap: number | null;
   memberCapStrategy: string | null;
   memberCapResetIntervalHours: number | null;
+  ownerExemptFromCaps: boolean;
   createdAt: string;
   members: TeamDashboardMember[];
   invites: TeamDashboardInvite[];
@@ -176,6 +177,7 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
     memberTokenCap: orgCap,
     memberCapStrategy: capStrategy,
     memberCapResetIntervalHours: capReset,
+    ownerExemptFromCaps: record.ownerExemptFromCaps ?? false,
     createdAt: record.createdAt.toISOString(),
     members,
     invites,

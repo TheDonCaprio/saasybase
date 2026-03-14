@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SupportTicketForm } from './SupportTicketForm';
 import { dashboardMutedPanelClass } from './dashboardSurfaces';
@@ -139,7 +139,7 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
               role="dialog"
               aria-modal="true"
               aria-labelledby="support-request-modal-title"
-              className={`relative z-10 w-full max-w-2xl bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl overflow-hidden transition-transform transition-opacity duration-150 ${modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.98]'}`}
+              className={`relative z-10 w-full max-w-2xl overflow-hidden rounded-xl border border-neutral-200 bg-white text-neutral-900 shadow-2xl transition-all duration-150 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white ${modalVisible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'}`}
             >
               <div className="flex items-start justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900">
                 <div>

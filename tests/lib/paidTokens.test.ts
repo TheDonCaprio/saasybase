@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Vitest will allow us to mock the settings module used by paidTokens.
 vi.mock('../../lib/settings', () => ({
@@ -9,6 +8,8 @@ vi.mock('../../lib/settings', () => ({
 
 import * as paidTokens from '../../lib/paidTokens';
 import * as settings from '../../lib/settings';
+
+type SubscriptionInput = NonNullable<Parameters<typeof paidTokens.shouldClearPaidTokensOnExpiry>[0]['subscription']>;
 
 describe('paidTokens.shouldClearPaidTokensOnExpiry', () => {
   beforeEach(() => {
@@ -26,19 +27,19 @@ describe('paidTokens.shouldClearPaidTokensOnExpiry', () => {
   });
 
   it('honors subscription.clearPaidTokensOnExpiry when present', async () => {
-    const sub = { id: 's1', clearPaidTokensOnExpiry: true } as any;
+    const sub: SubscriptionInput = { id: 's1', clearPaidTokensOnExpiry: true };
     const res = await paidTokens.shouldClearPaidTokensOnExpiry({ subscription: sub });
     expect(res).toBe(true);
   });
 
   it('honors subscription.clearPaidTokensOnExpiry=false when present', async () => {
-    const sub = { id: 's1', clearPaidTokensOnExpiry: false } as any;
+    const sub: SubscriptionInput = { id: 's1', clearPaidTokensOnExpiry: false };
     const res = await paidTokens.shouldClearPaidTokensOnExpiry({ subscription: sub });
     expect(res).toBe(false);
   });
 
   it('falls back to settings.shouldResetPaidTokensOnExpiryForUser', async () => {
-    (settings.shouldResetPaidTokensOnExpiryForUser as any).mockResolvedValueOnce(true);
+    vi.mocked(settings.shouldResetPaidTokensOnExpiryForUser).mockResolvedValueOnce(true);
     const res = await paidTokens.shouldClearPaidTokensOnExpiry({ userId: 'u2' });
     expect(res).toBe(true);
   });
@@ -60,7 +61,7 @@ describe('paidTokens.shouldClearPaidTokensOnRenewal', () => {
   });
 
   it('falls back to settings.shouldResetPaidTokensOnRenewalForPlanAutoRenew', async () => {
-    (settings.shouldResetPaidTokensOnRenewalForPlanAutoRenew as any).mockResolvedValueOnce(false);
+    vi.mocked(settings.shouldResetPaidTokensOnRenewalForPlanAutoRenew).mockResolvedValueOnce(false);
     const res = await paidTokens.shouldClearPaidTokensOnRenewal(true);
     expect(res).toBe(false);
   });

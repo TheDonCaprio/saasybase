@@ -1,23 +1,33 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { FlatCompat } from '@eslint/eslintrc';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypeScript from 'eslint-config-next/typescript';
 
 export default [
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
-    ignores: ['node_modules/', '.next/', 'dist/', 'scripts/'],
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'dist/**',
+      'scripts/**',
+      'prisma/seed.js',
+      'tests/**/*.js',
+      'tests/**/*.cjs',
+      'tests/**/*.mjs',
+      'update-admin.js',
+    ],
+  },
+  ...nextCoreWebVitals,
+  ...nextTypeScript,
+  {
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/ban-ts-comment': 'warn',
       'react/no-unescaped-entities': 'warn',
       '@next/next/no-img-element': 'warn',
+      '@next/next/no-html-link-for-pages': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ];

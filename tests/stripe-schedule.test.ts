@@ -1,5 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+type StripeMockState = {
+	prices: { retrieve: ReturnType<typeof vi.fn> };
+	subscriptions: { retrieve: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
+	subscriptionSchedules: { create: ReturnType<typeof vi.fn>; retrieve: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+	checkout: { sessions: { create: ReturnType<typeof vi.fn>; retrieve: ReturnType<typeof vi.fn> } };
+	customers: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+	billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
+	promotionCodes: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+	invoices: { retrieveUpcoming: ReturnType<typeof vi.fn> };
+	refunds: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn> };
+	paymentIntents: { retrieve: ReturnType<typeof vi.fn> };
+	charges: { retrieve: ReturnType<typeof vi.fn> };
+};
+
+function getStripeMock(): StripeMockState {
+	return (globalThis as typeof globalThis & { __stripeMock: StripeMockState }).__stripeMock;
+}
+
 // Mock the Stripe SDK so we can validate the calls we make.
 vi.mock('stripe', () => {
 	const mockState = {
@@ -50,7 +68,7 @@ vi.mock('stripe', () => {
 		},
 	};
 
-	(globalThis as any).__stripeMock = mockState;
+	(globalThis as typeof globalThis & { __stripeMock: StripeMockState }).__stripeMock = mockState;
 
 	class Stripe {
 		prices = mockState.prices;
@@ -65,7 +83,10 @@ vi.mock('stripe', () => {
 		paymentIntents = mockState.paymentIntents;
 		charges = mockState.charges;
 
-		constructor(_secretKey: string, _opts: any) {}
+		constructor(secretKey: string, opts: unknown) {
+			void secretKey;
+			void opts;
+		}
 	}
 
 	return { default: Stripe };
@@ -79,7 +100,7 @@ describe('Stripe scheduled plan change', () => {
 	});
 
 	it('creates/updates a subscription schedule to change price at cycle end', async () => {
-		const m = (globalThis as any).__stripeMock;
+		const m = getStripeMock();
 
 		m.subscriptions.retrieve.mockResolvedValue({
 			id: 'sub_123',
@@ -146,7 +167,7 @@ describe('Stripe scheduled plan change', () => {
 	});
 
 	it('preserves addon items when scheduling a plan change', async () => {
-		const m = (globalThis as any).__stripeMock;
+		const m = getStripeMock();
 
 		m.subscriptions.retrieve.mockResolvedValue({
 			id: 'sub_123',
@@ -192,7 +213,8 @@ describe('Stripe scheduled plan change', () => {
 		await provider.scheduleSubscriptionPlanChange?.('sub_123', 'price_primary_new', 'user_1');
 
 		expect(m.subscriptionSchedules.update).toHaveBeenCalledTimes(1);
-		const [_scheduleId, params] = m.subscriptionSchedules.update.mock.calls[0];
+		const [scheduleId, params] = m.subscriptionSchedules.update.mock.calls[0];
+		expect(scheduleId).toBe('sub_sched_1');
 
 		// Phase 0 should include BOTH the primary and addon item (unchanged).
 		expect(params.phases[0]).toMatchObject({
@@ -218,7 +240,7 @@ describe('Stripe scheduled plan change', () => {
 	});
 
 	it('creates a fresh schedule when the existing one is released', async () => {
-		const m = (globalThis as any).__stripeMock;
+		const m = getStripeMock();
 
 		m.subscriptions.retrieve.mockResolvedValue({
 			id: 'sub_stale',

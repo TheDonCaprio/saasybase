@@ -35,7 +35,7 @@ const userPlanContextMock = vi.hoisted(() => ({
   getEffectiveMemberTokenCap: vi.fn(() => null),
   getMemberCapStrategy: vi.fn(() => null),
   getMemberSharedTokenBalance: vi.fn(() => null),
-  getOrganizationPlanContext: vi.fn<[], Promise<any>>(async () => null),
+  getOrganizationPlanContext: vi.fn<[], Promise<unknown>>(async () => null),
 }));
 
 vi.mock('../lib/user-plan-context', () => userPlanContextMock);

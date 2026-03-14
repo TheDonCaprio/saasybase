@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PaddlePaymentProvider } from '../lib/payment/providers/paddle';
 
+type FetchUrl = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+type MockJsonResponse = {
+	ok: boolean;
+	status: number;
+	json: () => Promise<unknown>;
+};
+
+function installFetch(handler: (url: FetchUrl, init?: FetchInit) => Promise<MockJsonResponse>) {
+	global.fetch = vi.fn((url: FetchUrl, init?: FetchInit) => handler(url, init)) as unknown as typeof fetch;
+}
+
 describe('Paddle customer dedupe', () => {
 	const apiKey = 'pdl_test_dummy';
 
@@ -15,7 +27,7 @@ describe('Paddle customer dedupe', () => {
 	});
 
 	it('returns existing customer id when Paddle reports customer_already_exists', async () => {
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			if (String(url).includes('/customers') && init?.method === 'POST') {
 				return {
 					ok: false,
@@ -30,7 +42,7 @@ describe('Paddle customer dedupe', () => {
 				};
 			}
 			throw new Error(`Unexpected fetch call: ${String(url)}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		const id = await provider.createCustomer('user_1', 'test@example.com');
@@ -38,7 +50,7 @@ describe('Paddle customer dedupe', () => {
 	});
 
 	it('still throws when customer_already_exists error lacks a customer id', async () => {
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			if (String(url).includes('/customers') && init?.method === 'POST') {
 				return {
 					ok: false,
@@ -53,7 +65,7 @@ describe('Paddle customer dedupe', () => {
 				};
 			}
 			throw new Error(`Unexpected fetch call: ${String(url)}`);
-		}) as any;
+		});
 
 		const provider = new PaddlePaymentProvider(apiKey);
 		await expect(provider.createCustomer('user_1', 'test@example.com')).rejects.toThrow(

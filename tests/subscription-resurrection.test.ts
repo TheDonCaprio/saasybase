@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { PaymentProvider, StandardizedWebhookEvent, SubscriptionDetails } from '../lib/payment/types';
 
 vi.mock('../lib/notifications', () => ({
   createBillingNotification: vi.fn(),
@@ -87,10 +88,28 @@ const prismaMock = {
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 
-function makeProvider(overrides: Partial<any> = {}) {
+function makeProvider(overrides: Partial<PaymentProvider> = {}): PaymentProvider {
   return {
     name: 'stripe',
     getSubscription: vi.fn(),
+    ...overrides,
+  } as unknown as PaymentProvider;
+}
+
+function createWebhookEvent(event: Omit<StandardizedWebhookEvent, 'originalEvent'>): StandardizedWebhookEvent {
+  return {
+    originalEvent: null,
+    ...event,
+  };
+}
+
+function createSubscriptionDetails(overrides: Partial<SubscriptionDetails>): SubscriptionDetails {
+  return {
+    id: 'sub_test',
+    status: 'active',
+    currentPeriodStart: new Date(0),
+    currentPeriodEnd: new Date(0),
+    cancelAtPeriodEnd: false,
     ...overrides,
   };
 }
@@ -137,9 +156,9 @@ describe('PaymentService subscription resurrection', () => {
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider() as any);
+    const svc = new PaymentService(makeProvider());
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'subscription.updated',
       payload: {
         id: 'sub_1',
@@ -148,7 +167,7 @@ describe('PaymentService subscription resurrection', () => {
         cancelAtPeriodEnd: false,
         canceledAt: null,
       },
-    } as any);
+    }));
 
     expect(prismaMock.subscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -198,9 +217,9 @@ describe('PaymentService subscription resurrection', () => {
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider() as any);
+    const svc = new PaymentService(makeProvider());
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'subscription.updated',
       payload: {
         id: 'sub_2',
@@ -209,7 +228,7 @@ describe('PaymentService subscription resurrection', () => {
         cancelAtPeriodEnd: false,
         canceledAt: null,
       },
-    } as any);
+    }));
 
     // The update call may happen for cancelAtPeriodEnd/canceledAt/expiresAt diffs,
     // but it must never set status to ACTIVE for a locally CANCELLED subscription.
@@ -245,7 +264,7 @@ describe('PaymentService subscription resurrection', () => {
       name: 'New Plan',
       priceCents: 999,
       autoRenew: true,
-    } as any);
+    });
 
     prismaMock.subscription.update.mockResolvedValueOnce({
       id: 'db_sub_plan_change',
@@ -264,9 +283,9 @@ describe('PaymentService subscription resurrection', () => {
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider() as any);
+    const svc = new PaymentService(makeProvider());
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'subscription.updated',
       payload: {
         id: 'sub_plan_change',
@@ -276,7 +295,7 @@ describe('PaymentService subscription resurrection', () => {
         canceledAt: null,
         priceId: 'price_new',
       },
-    } as any);
+    }));
 
     expect(prismaMock.subscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -320,20 +339,20 @@ describe('PaymentService subscription resurrection', () => {
       organization: { update: vi.fn(async () => undefined) },
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    prismaMock.$transaction.mockImplementation(async (fn: unknown) => (fn as (client: typeof tx) => unknown)(tx));
 
     prismaMock.subscription.update.mockResolvedValue({
       id: 'db_sub_3',
-    } as any);
+    });
 
     const provider = makeProvider({
-      getSubscription: vi.fn(async () => ({ currentPeriodEnd: futureEnd })),
+      getSubscription: vi.fn(async () => createSubscriptionDetails({ currentPeriodEnd: futureEnd })),
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(provider as any);
+    const svc = new PaymentService(provider);
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'invoice.payment_succeeded',
       payload: {
         id: 'in_1',
@@ -345,7 +364,7 @@ describe('PaymentService subscription resurrection', () => {
         currency: 'usd',
         billingReason: 'subscription_cycle',
       },
-    } as any);
+    }));
 
     expect(prismaMock.subscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -380,9 +399,9 @@ describe('PaymentService subscription resurrection', () => {
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }));
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'subscription.updated',
       payload: {
         id: 'sub_paystack_1',
@@ -391,7 +410,7 @@ describe('PaymentService subscription resurrection', () => {
         cancelAtPeriodEnd: false,
         canceledAt: null,
       },
-    } as any);
+    }));
 
     const updateCalls = prismaMock.subscription.update.mock.calls;
     for (const call of updateCalls) {
@@ -414,10 +433,10 @@ describe('PaymentService subscription resurrection', () => {
       tokenName: 'credits',
       externalPriceIds: null,
       externalPriceId: null,
-    } as any);
-    prismaMock.subscription.findMany.mockResolvedValueOnce([] as any);
-    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 } as any);
-    prismaMock.subscription.findFirst.mockResolvedValueOnce(null as any);
+    });
+    prismaMock.subscription.findMany.mockResolvedValueOnce([]);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
 
     const tx = {
       subscription: {
@@ -434,12 +453,12 @@ describe('PaymentService subscription resurrection', () => {
       },
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    prismaMock.$transaction.mockImplementation(async (fn: unknown) => (fn as (client: typeof tx) => unknown)(tx));
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }));
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'checkout.completed',
       payload: {
         id: `cs_paystack_one_time_${now}`,
@@ -456,7 +475,7 @@ describe('PaymentService subscription resurrection', () => {
           checkoutMode: 'subscription',
         },
       },
-    } as any);
+    }));
 
     expect(tx.subscription.create).toHaveBeenCalledTimes(1);
     expect(tx.payment.create).toHaveBeenCalledWith(
@@ -490,10 +509,10 @@ describe('PaymentService subscription resurrection', () => {
       recurringInterval: 'month',
       recurringIntervalCount: 1,
       durationHours: 720,
-    } as any);
+    });
 
-    prismaMock.subscription.findMany.mockResolvedValueOnce([] as any);
-    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 } as any);
+    prismaMock.subscription.findMany.mockResolvedValueOnce([]);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 });
     prismaMock.subscription.findFirst.mockResolvedValueOnce({
       id: 'sub_one_time_active',
       userId: 'user_1',
@@ -507,22 +526,22 @@ describe('PaymentService subscription resurrection', () => {
         autoRenew: false,
         priceCents: 1000,
       },
-    } as any);
+    });
 
     prismaMock.user.findUnique
-      .mockResolvedValueOnce({ externalCustomerIds: null } as any)
-      .mockResolvedValueOnce(null as any);
-    prismaMock.user.update.mockResolvedValue(undefined as any);
+      .mockResolvedValueOnce({ externalCustomerIds: null })
+      .mockResolvedValueOnce(null);
+    prismaMock.user.update.mockResolvedValue(undefined);
 
-    prismaMock.subscription.findUnique.mockResolvedValueOnce(null as any);
+    prismaMock.subscription.findUnique.mockResolvedValueOnce(null);
     prismaMock.subscription.upsert.mockResolvedValueOnce({
       id: 'sub_recurring_new',
       userId: 'user_1',
       planId: 'plan_recurring',
       status: 'ACTIVE',
-    } as any);
+    });
 
-    prismaMock.payment.findUnique.mockResolvedValueOnce(null as any);
+    prismaMock.payment.findUnique.mockResolvedValueOnce(null);
 
     const tx = {
       payment: {
@@ -538,11 +557,11 @@ describe('PaymentService subscription resurrection', () => {
         update: vi.fn(async () => undefined),
       },
     };
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    prismaMock.$transaction.mockImplementation(async (fn: unknown) => (fn as (client: typeof tx) => unknown)(tx));
 
     const provider = makeProvider({
       name: 'paystack',
-      getSubscription: vi.fn(async () => ({
+      getSubscription: vi.fn(async () => createSubscriptionDetails({
         id: 'SUB_new_1',
         status: 'active',
         customerId: 'CUS_new_1',
@@ -553,19 +572,21 @@ describe('PaymentService subscription resurrection', () => {
         latestInvoice: {
           id: 'inv_1',
           paymentIntentId: 'pi_recur_1',
+          amountPaid: 5000,
+          amountDue: 0,
+          status: 'paid',
           total: 5000,
           subtotal: 5000,
           amountDiscount: 0,
-          currency: 'ngn',
         },
         metadata: {},
       })),
     });
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(provider as any);
+    const svc = new PaymentService(provider);
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'checkout.completed',
       payload: {
         id: 'cs_recur_1',
@@ -578,7 +599,7 @@ describe('PaymentService subscription resurrection', () => {
         metadata: { userId: 'user_1' },
         paymentIntentId: 'pi_recur_1',
       },
-    } as any);
+    }));
 
     expect(prismaMock.subscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -608,9 +629,9 @@ describe('PaymentService subscription resurrection', () => {
     const periodEnd = new Date(now + 30 * 24 * 60 * 60 * 1000);
 
     prismaMock.subscription.findUnique
-      .mockResolvedValueOnce(null as any)
-      .mockResolvedValueOnce(null as any);
-    prismaMock.subscription.findMany.mockResolvedValue([] as any);
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prismaMock.subscription.findMany.mockResolvedValue([]);
 
     prismaMock.plan.findFirst.mockResolvedValueOnce({
       id: 'plan_recurring',
@@ -623,7 +644,7 @@ describe('PaymentService subscription resurrection', () => {
       recurringInterval: 'month',
       recurringIntervalCount: 1,
       durationHours: 720,
-    } as any);
+    });
 
     prismaMock.subscription.upsert.mockResolvedValueOnce({
       id: 'sub_paystack_new_db',
@@ -643,16 +664,16 @@ describe('PaymentService subscription resurrection', () => {
         autoRenew: true,
         priceCents: 5000,
       },
-    } as any);
+    });
 
-    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 1 } as any);
-    prismaMock.payment.findFirst.mockResolvedValueOnce(null as any);
-    prismaMock.payment.findMany.mockResolvedValueOnce([] as any);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 1 });
+    prismaMock.payment.findFirst.mockResolvedValueOnce(null);
+    prismaMock.payment.findMany.mockResolvedValueOnce([]);
 
     const { PaymentService } = await import('../lib/payment/service');
-    const svc = new PaymentService(makeProvider({ name: 'paystack' }) as any);
+    const svc = new PaymentService(makeProvider({ name: 'paystack' }));
 
-    await svc.processWebhookEvent({
+    await svc.processWebhookEvent(createWebhookEvent({
       type: 'subscription.created',
       payload: {
         id: 'SUB_paystack_new',
@@ -668,7 +689,7 @@ describe('PaymentService subscription resurrection', () => {
           planId: 'plan_recurring',
         },
       },
-    } as any);
+    }));
 
     expect(prismaMock.subscription.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({

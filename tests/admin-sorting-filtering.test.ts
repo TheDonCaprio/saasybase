@@ -1,4 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+
+type FindManyArgs = {
+  where?: {
+    status?: string;
+    canceledAt?: null;
+    expiresAt?: { gt?: Date; lte?: Date };
+    OR?: Array<{ status?: string | { not?: string }; expiresAt?: { lte?: Date } }>;
+  };
+  orderBy?: Array<Record<string, unknown>>;
+  skip?: number;
+  take?: number;
+};
+
+function toNextRequest(url: string): NextRequest {
+  return new NextRequest(url);
+}
 
 const prismaMock = vi.hoisted(() => ({
   payment: {
@@ -59,11 +76,11 @@ describe('Admin list sorting/filtering', () => {
   });
 
   it('supports payments sortBy=expiresAt (orders by subscription.expiresAt)', async () => {
-    const req = { url: 'http://localhost/api/admin/payments?page=1&limit=50&sortBy=expiresAt&sortOrder=desc' } as any;
+    const req = toNextRequest('http://localhost/api/admin/payments?page=1&limit=50&sortBy=expiresAt&sortOrder=desc');
     const res = await getAdminPayments(req);
 
     expect(prismaMock.payment.findMany).toHaveBeenCalledTimes(1);
-    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as any;
+    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as FindManyArgs;
     expect(args.orderBy?.[0]).toEqual({ subscription: { expiresAt: 'desc' } });
 
     expect(res.status).toBe(200);
@@ -72,11 +89,11 @@ describe('Admin list sorting/filtering', () => {
   });
 
   it('supports purchases sort=expiresAt (orders by subscription.expiresAt)', async () => {
-    const req = { url: 'http://localhost/api/admin/purchases?page=1&limit=50&sort=expiresAt&order=desc' } as any;
+    const req = toNextRequest('http://localhost/api/admin/purchases?page=1&limit=50&sort=expiresAt&order=desc');
     const res = await getAdminPurchases(req);
 
     expect(prismaMock.payment.findMany).toHaveBeenCalledTimes(1);
-    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as any;
+    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as FindManyArgs;
     expect(args.orderBy?.[0]).toEqual({ subscription: { expiresAt: 'desc' } });
 
     expect(res.status).toBe(200);
@@ -85,11 +102,11 @@ describe('Admin list sorting/filtering', () => {
   });
 
   it('treats subscriptions status=ACTIVE as access-based (expiresAt > now, not scheduled cancel)', async () => {
-    const req = { url: 'http://localhost/api/admin/subscriptions?page=1&limit=50&status=ACTIVE' } as any;
+    const req = toNextRequest('http://localhost/api/admin/subscriptions?page=1&limit=50&status=ACTIVE');
     const res = await getAdminSubscriptions(req);
 
     expect(prismaMock.subscription.findMany).toHaveBeenCalledTimes(1);
-    const args = prismaMock.subscription.findMany.mock.calls[0]?.[0] as any;
+    const args = prismaMock.subscription.findMany.mock.calls[0]?.[0] as FindManyArgs;
 
     expect(args.where?.status).toBe('ACTIVE');
     expect(args.where?.canceledAt).toBeNull();
@@ -99,17 +116,17 @@ describe('Admin list sorting/filtering', () => {
   });
 
   it('treats subscriptions status=EXPIRED as access-based (expiresAt <= now) even if status not normalized', async () => {
-    const req = { url: 'http://localhost/api/admin/subscriptions?page=1&limit=50&status=EXPIRED' } as any;
+    const req = toNextRequest('http://localhost/api/admin/subscriptions?page=1&limit=50&status=EXPIRED');
     const res = await getAdminSubscriptions(req);
 
     expect(prismaMock.subscription.findMany).toHaveBeenCalledTimes(1);
-    const args = prismaMock.subscription.findMany.mock.calls[0]?.[0] as any;
+    const args = prismaMock.subscription.findMany.mock.calls[0]?.[0] as FindManyArgs;
 
     // When no search filter is present, EXPIRED becomes a top-level OR.
-    const or = args.where?.OR as any[] | undefined;
+    const or = args.where?.OR;
     expect(Array.isArray(or)).toBe(true);
     expect(or?.some((c) => c?.status === 'EXPIRED')).toBe(true);
-    expect(or?.some((c) => c?.expiresAt?.lte instanceof Date && c?.status?.not === 'CANCELLED')).toBe(true);
+    expect(or?.some((c) => c?.expiresAt?.lte instanceof Date && typeof c?.status === 'object' && c.status?.not === 'CANCELLED')).toBe(true);
 
     expect(res.status).toBe(200);
   });
@@ -118,11 +135,11 @@ describe('Admin list sorting/filtering', () => {
     prismaMock.payment.findMany.mockResolvedValueOnce([]);
     prismaMock.payment.count.mockResolvedValueOnce(60);
 
-    const req = { url: 'http://localhost/api/admin/users/user_1/payments?page=2&limit=25' } as any;
-    const res = await getAdminUserPayments(req, { params: { userId: 'user_1' } } as any);
+    const req = toNextRequest('http://localhost/api/admin/users/user_1/payments?page=2&limit=25');
+    const res = await getAdminUserPayments(req, { params: Promise.resolve({ userId: 'user_1' }) });
 
     expect(prismaMock.payment.findMany).toHaveBeenCalledTimes(1);
-    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as any;
+    const args = prismaMock.payment.findMany.mock.calls[0]?.[0] as FindManyArgs;
     expect(args.skip).toBe(25);
     expect(args.take).toBe(25);
 

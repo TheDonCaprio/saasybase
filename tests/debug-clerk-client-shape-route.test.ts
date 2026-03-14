@@ -1,16 +1,14 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { GET } from '../app/api/debug/clerk-client-shape/route';
 
 describe('debug clerk-client-shape route', () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    vi.unstubAllEnvs();
   });
 
   it('returns 404 in production', async () => {
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('NODE_ENV', 'production');
 
     const res = await GET();
     const body = await res.json();
@@ -20,7 +18,7 @@ describe('debug clerk-client-shape route', () => {
   });
 
   it('returns debug payload outside production', async () => {
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('NODE_ENV', 'test');
 
     const res = await GET();
     const body = await res.json();

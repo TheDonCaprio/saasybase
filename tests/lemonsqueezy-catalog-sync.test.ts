@@ -2,12 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { LemonSqueezyPaymentProvider } from '../lib/payment/providers/lemonsqueezy';
 
-function jsonResponse(body: unknown, init?: { ok?: boolean; status?: number }) {
+type FetchUrl = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+type MockResponse = Pick<Response, 'ok' | 'status' | 'json'>;
+
+function jsonResponse(body: unknown, init?: { ok?: boolean; status?: number }): MockResponse {
 	return {
 		ok: init?.ok ?? true,
 		status: init?.status ?? 200,
 		json: async () => body,
-	} as any;
+	};
+}
+
+function installFetch(handler: (url: FetchUrl, init?: FetchInit) => Promise<MockResponse>) {
+	global.fetch = vi.fn((url: FetchUrl, init?: FetchInit) => handler(url, init)) as unknown as typeof fetch;
+}
+
+function getFetchCalls(): Array<[FetchUrl, FetchInit?]> {
+	return vi.mocked(global.fetch).mock.calls as Array<[FetchUrl, FetchInit?]>;
 }
 
 describe('lemonsqueezy-catalog-sync', () => {
@@ -27,7 +39,7 @@ describe('lemonsqueezy-catalog-sync', () => {
 	it('createProduct reuses existing product by slug', async () => {
 		const provider = new LemonSqueezyPaymentProvider(apiKey);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/products') && method === 'GET') {
 				return jsonResponse({
@@ -37,7 +49,7 @@ describe('lemonsqueezy-catalog-sync', () => {
 				});
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const productId = await provider.createProduct({
 			name: 'Pro',
@@ -46,13 +58,13 @@ describe('lemonsqueezy-catalog-sync', () => {
 		});
 
 		expect(productId).toBe('p_1');
-		expect((global.fetch as any).mock.calls.length).toBe(1);
+		expect(getFetchCalls().length).toBe(1);
 	});
 
 	it('createProduct POSTs when missing', async () => {
 		const provider = new LemonSqueezyPaymentProvider(apiKey);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/products') && method === 'GET') {
 				return jsonResponse({ data: [] });
@@ -61,7 +73,7 @@ describe('lemonsqueezy-catalog-sync', () => {
 				return jsonResponse({ data: { type: 'products', id: 'p_created', attributes: {} } }, { status: 201 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const productId = await provider.createProduct({
 			name: 'Pro',
@@ -70,14 +82,14 @@ describe('lemonsqueezy-catalog-sync', () => {
 		});
 
 		expect(productId).toBe('p_created');
-		const calls = (global.fetch as any).mock.calls;
-		expect(calls.map((c: any[]) => (c[1]?.method || 'GET').toUpperCase())).toEqual(['GET', 'POST']);
+		const calls = getFetchCalls();
+		expect(calls.map(([, init]) => (init?.method || 'GET').toUpperCase())).toEqual(['GET', 'POST']);
 	});
 
 	it('createPrice reuses existing variant and returns its id as the price id', async () => {
 		const provider = new LemonSqueezyPaymentProvider(apiKey);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/variants') && method === 'GET') {
 				return jsonResponse({
@@ -98,7 +110,7 @@ describe('lemonsqueezy-catalog-sync', () => {
 				});
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		const price = await provider.createPrice({
 			productId: 'p_1',
@@ -115,18 +127,18 @@ describe('lemonsqueezy-catalog-sync', () => {
 	it('archivePrice PATCHes the variant status to draft', async () => {
 		const provider = new LemonSqueezyPaymentProvider(apiKey);
 
-		global.fetch = vi.fn(async (url: any, init?: any) => {
+		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).includes('/variants/777') && method === 'PATCH') {
 				return jsonResponse({ data: { type: 'variants', id: '777', attributes: { status: 'draft' } } });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
-		}) as any;
+		});
 
 		await provider.archivePrice('777');
 
-		expect((global.fetch as any).mock.calls.length).toBe(1);
-		const [url, init] = (global.fetch as any).mock.calls[0];
+		expect(getFetchCalls().length).toBe(1);
+		const [url, init] = getFetchCalls()[0];
 		expect(String(url)).toContain('/variants/777');
 		expect(init?.method).toBe('PATCH');
 	});

@@ -28,8 +28,6 @@ export function UserActions({ user, onEdit, currentAdminId }: UserActionsProps) 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const router = useRouter();
 
-  const isSelf = currentAdminId === user.id;
-
   const expireSubscription = async () => {
     setLoading(true);
     try {

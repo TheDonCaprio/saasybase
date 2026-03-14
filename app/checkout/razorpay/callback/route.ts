@@ -68,7 +68,7 @@ async function handleCallback(
   const paymentId = getParam(params, 'razorpay_payment_id');
   let paymentLinkId = getParam(params, 'razorpay_payment_link_id');
   const referenceId = getParam(params, 'razorpay_payment_link_reference_id') || '';
-  let linkStatus = getParam(params, 'razorpay_payment_link_status') || '';
+  const linkStatus = getParam(params, 'razorpay_payment_link_status') || '';
   const signature = getParam(params, 'razorpay_signature') || '';
   let subscriptionId = getParam(params, 'razorpay_subscription_id');
   let orderId = getParam(params, 'razorpay_order_id');

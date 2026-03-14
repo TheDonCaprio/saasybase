@@ -3,6 +3,7 @@ import crypto from 'crypto';
 
 import { PaystackPaymentProvider } from '../lib/payment/providers/paystack';
 import { PaddlePaymentProvider } from '../lib/payment/providers/paddle';
+import type { StandardizedRefund } from '../lib/payment/types';
 
 const PAYSTACK_TEST_SECRET_KEY = 'sk_test_xxxxxxxxxxxxx';
 
@@ -46,7 +47,7 @@ describe('Refund webhook normalization consistency', () => {
 			const normalized = await provider.constructWebhookEvent(body, sig);
 
 			expect(normalized.type).toBe('refund.processed');
-			const payload = normalized.payload as any;
+			const payload = normalized.payload as StandardizedRefund;
 			expect(payload.paymentIntentId).toBe('ps_ref_456');
 		});
 	});
@@ -107,7 +108,7 @@ describe('Refund webhook normalization consistency', () => {
 			const normalized = await provider.constructWebhookEvent(body, sigHeader, paddleWebhookSecret);
 
 			expect(normalized.type).toBe('refund.processed');
-			const payload = normalized.payload as any;
+			const payload = normalized.payload as StandardizedRefund;
 			expect(payload.paymentIntentId).toBe('txn_456');
 			expect(payload.id).toBe('adj_456');
 		});

@@ -16,7 +16,12 @@ interface SharedTokenCapsModalProps {
     isOpen: boolean;
     onClose: () => void;
     organization: TeamDashboardOrganization;
-    onUpdateCaps: (caps: { memberTokenCap: number | null; memberCapStrategy: CapStrategy; memberCapResetIntervalHours: number | null }) => Promise<void>;
+    onUpdateCaps: (caps: {
+        memberTokenCap: number | null;
+        memberCapStrategy: CapStrategy;
+        memberCapResetIntervalHours: number | null;
+        ownerExemptFromCaps: boolean;
+    }) => Promise<void>;
     busyAction: string | null;
     tokenLabel: string;
     tokenLabelTitle: string;
@@ -35,6 +40,7 @@ export function SharedTokenCapsModal({
     const [capInput, setCapInput] = useState('');
     const [capStrategy, setCapStrategy] = useState<CapStrategy>('SOFT');
     const [resetInput, setResetInput] = useState('');
+    const [ownerExempt, setOwnerExempt] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -52,6 +58,7 @@ export function SharedTokenCapsModal({
                     ? String(organization.memberCapResetIntervalHours)
                     : ''
             );
+            setOwnerExempt(organization.ownerExemptFromCaps || false);
             setError(null);
         }
     }, [isOpen, organization]);
@@ -85,6 +92,7 @@ export function SharedTokenCapsModal({
             memberTokenCap: parsedCap,
             memberCapStrategy: capStrategy,
             memberCapResetIntervalHours: parsedReset,
+            ownerExemptFromCaps: ownerExempt,
         });
         onClose();
     };
@@ -152,7 +160,7 @@ export function SharedTokenCapsModal({
                             <span className="text-xs text-neutral-400">Soft caps warn members; hard caps block usage.</span>
                         </label>
 
-                        <label className="flex flex-col gap-1 text-sm text-neutral-200 md:col-span-2">
+                        <label className="flex flex-col gap-1 text-sm text-neutral-200">
                             <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Reset window (hours)</span>
                             <input
                                 type="number"
@@ -162,8 +170,26 @@ export function SharedTokenCapsModal({
                                 placeholder="Plan default"
                                 className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 shadow-sm transition focus:border-indigo-400 focus:outline-none"
                             />
-                            <span className="text-xs text-neutral-400">Blank follows the billing cycle or plan defaults.</span>
+                            <span className="text-xs text-neutral-400">Blank follows the billing cycle.</span>
                         </label>
+
+                        <div className="flex flex-col gap-2 pt-2">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Exemptions</span>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={ownerExempt}
+                                        onChange={(e) => setOwnerExempt(e.target.checked)}
+                                        className="peer sr-only"
+                                    />
+                                    <div className="h-5 w-9 rounded-full bg-neutral-700 transition peer-checked:bg-indigo-600"></div>
+                                    <div className="absolute left-1 h-3 w-3 rounded-full bg-white transition peer-checked:translate-x-4"></div>
+                                </div>
+                                <span className="text-sm text-neutral-200 group-hover:text-white transition-colors">Exclude admin from caps</span>
+                            </label>
+                            <span className="text-xs text-neutral-400">The workspace owner will have unlimited access to shared pool tokens regardless of caps.</span>
+                        </div>
                     </div>
                 </div>
 

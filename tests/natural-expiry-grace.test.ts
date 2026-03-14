@@ -41,13 +41,15 @@ import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../lib/paidTokenCle
 import { syncOrganizationEligibilityForUser } from '../lib/organization-access';
 import * as settings from '../lib/settings';
 
+type EligibilityResult = Awaited<ReturnType<typeof syncOrganizationEligibilityForUser>>;
+
 describe('Natural expiry grace', () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
     // vi.resetAllMocks() clears vi.fn() implementations, so reapply defaults.
-    (settings.getPaidTokensNaturalExpiryGraceHours as any).mockResolvedValue(24);
-    (settings.shouldResetPaidTokensOnExpiryForPlanAutoRenew as any).mockResolvedValue(true);
+    vi.mocked(settings.getPaidTokensNaturalExpiryGraceHours).mockResolvedValue(24);
+    vi.mocked(settings.shouldResetPaidTokensOnExpiryForPlanAutoRenew).mockResolvedValue(true);
   });
 
   it('does not clear tokens if there is time remaining on a non-EXPIRED subscription (e.g., cancel-at-period-end)', async () => {
@@ -119,7 +121,7 @@ describe('Natural expiry grace', () => {
     const res = await syncOrganizationEligibilityForUser('user_1');
 
     expect(res.allowed).toBe(true);
-    expect((res as any).kind).toBe('OWNER');
+    expect((res as EligibilityResult & { kind?: string }).kind).toBe('OWNER');
     expect(prismaMock.organization.findMany).not.toHaveBeenCalled();
   });
 
@@ -144,7 +146,7 @@ describe('Natural expiry grace', () => {
     const res = await syncOrganizationEligibilityForUser('user_1');
 
     expect(res.allowed).toBe(true);
-    expect((res as any).kind).toBe('OWNER');
+    expect((res as EligibilityResult & { kind?: string }).kind).toBe('OWNER');
     expect(prismaMock.organization.findMany).not.toHaveBeenCalled();
   });
 
@@ -155,7 +157,7 @@ describe('Natural expiry grace', () => {
     const res = await syncOrganizationEligibilityForUser('user_1', { ignoreGrace: true });
 
     expect(res.allowed).toBe(false);
-    expect((res as any).reason).toBe('NO_PLAN');
+    expect((res as EligibilityResult & { reason?: string }).reason).toBe('NO_PLAN');
     expect(prismaMock.organization.findMany).toHaveBeenCalledTimes(1);
   });
 });

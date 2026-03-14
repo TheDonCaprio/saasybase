@@ -22,7 +22,8 @@ import {
   getThemeCustomBodySnippet,
   getThemeColorPalette,
   getHeaderLayoutSettings,
-  type ThemeLink
+  type ThemeLink,
+  type ThemeColorTokens,
 } from '../lib/settings';
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
 import Script from 'next/script';
@@ -75,19 +76,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
 
   const buildThemeColorVarsCss = () => {
-    const buildBlock = (t: typeof colorPalette.light, mode: 'light' | 'dark') => {
-      const headerBlurNum = typeof (t as any).headerBlur === 'number' ? (t as any).headerBlur : 12;
+    const buildBlock = (t: ThemeColorTokens) => {
+      const headerBlurNum = typeof t.headerBlur === 'number' ? t.headerBlur : 12;
       const headerBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(headerBlurNum) ? headerBlurNum : 12)));
-      const headerBorderWidthNum = typeof (t as any).headerBorderWidth === 'number' ? (t as any).headerBorderWidth : 1;
+      const headerBorderWidthNum = typeof t.headerBorderWidth === 'number' ? t.headerBorderWidth : 1;
       const headerBorderWidthPx = Math.max(0, Math.min(4, Math.round(Number.isFinite(headerBorderWidthNum) ? headerBorderWidthNum : 1)));
-      const headerMenuFontSizeNum = typeof (t as any).headerMenuFontSize === 'number' ? (t as any).headerMenuFontSize : 14;
+      const headerMenuFontSizeNum = typeof t.headerMenuFontSize === 'number' ? t.headerMenuFontSize : 14;
       const headerMenuFontSizePx = Math.max(10, Math.min(20, Math.round(Number.isFinite(headerMenuFontSizeNum) ? headerMenuFontSizeNum : 14)));
-      const headerMenuFontWeightNum = typeof (t as any).headerMenuFontWeight === 'number' ? (t as any).headerMenuFontWeight : 400;
+      const headerMenuFontWeightNum = typeof t.headerMenuFontWeight === 'number' ? t.headerMenuFontWeight : 400;
       const headerMenuFontWeight = Math.max(300, Math.min(800, Math.round(Number.isFinite(headerMenuFontWeightNum) ? headerMenuFontWeightNum : 400)));
-      const stickyHeaderBlurNum = typeof (t as any).stickyHeaderBlur === 'number' ? (t as any).stickyHeaderBlur : 14;
+      const stickyHeaderBlurNum = typeof t.stickyHeaderBlur === 'number' ? t.stickyHeaderBlur : 14;
       const stickyHeaderBlurPx = Math.max(0, Math.min(40, Math.round(Number.isFinite(stickyHeaderBlurNum) ? stickyHeaderBlurNum : 14)));
       const stickyHeaderBorderWidthNum =
-        typeof (t as any).stickyHeaderBorderWidth === 'number' ? (t as any).stickyHeaderBorderWidth : headerBorderWidthPx;
+        typeof t.stickyHeaderBorderWidth === 'number' ? t.stickyHeaderBorderWidth : headerBorderWidthPx;
       const stickyHeaderBorderWidthPx = Math.max(
         0,
         Math.min(4, Math.round(Number.isFinite(stickyHeaderBorderWidthNum) ? stickyHeaderBorderWidthNum : headerBorderWidthPx))
@@ -100,35 +101,35 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       };
 
       const headerBg = parseHexColor(t.headerBg);
-      const headerText = parseHexColor((t as any).headerText ?? t.textPrimary);
-      const headerBorder = parseHexColor((t as any).headerBorder ?? t.borderPrimary);
-      const stickyHeaderBg = parseHexColor((t as any).stickyHeaderBg ?? t.headerBg);
-      const stickyHeaderText = parseHexColor((t as any).stickyHeaderText ?? t.textPrimary);
+      const headerText = parseHexColor(t.headerText ?? t.textPrimary);
+      const headerBorder = parseHexColor(t.headerBorder ?? t.borderPrimary);
+      const stickyHeaderBg = parseHexColor(t.stickyHeaderBg ?? t.headerBg);
+      const stickyHeaderText = parseHexColor(t.stickyHeaderText ?? t.textPrimary);
       const stickyHeaderBorder = parseHexColor(
-        (t as any).stickyHeaderBorder ?? (t as any).headerBorder ?? t.borderPrimary
+        t.stickyHeaderBorder ?? t.headerBorder ?? t.borderPrimary
       );
       const sidebarBg = parseHexColor(t.sidebarBg);
-      const sidebarBorder = parseHexColor((t as any).sidebarBorder ?? t.borderPrimary);
+      const sidebarBorder = parseHexColor(t.sidebarBorder ?? t.borderPrimary);
       const pageGlow = parseHexColor(t.pageGlow);
-      const headerShadow = parseHexColor((t as any).headerShadow ?? '#00000014');
-      const stickyHeaderShadow = parseHexColor((t as any).stickyHeaderShadow ?? (t as any).headerShadow ?? '#00000014');
+      const headerShadow = parseHexColor(t.headerShadow ?? '#00000014');
+      const stickyHeaderShadow = parseHexColor(t.stickyHeaderShadow ?? t.headerShadow ?? '#00000014');
 
-      const headerShadowBlurNum = typeof (t as any).headerShadowBlur === 'number' ? (t as any).headerShadowBlur : 30;
+      const headerShadowBlurNum = typeof t.headerShadowBlur === 'number' ? t.headerShadowBlur : 30;
       const headerShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(headerShadowBlurNum) ? headerShadowBlurNum : 30)));
-      const headerShadowSpreadNum = typeof (t as any).headerShadowSpread === 'number' ? (t as any).headerShadowSpread : -22;
+      const headerShadowSpreadNum = typeof t.headerShadowSpread === 'number' ? t.headerShadowSpread : -22;
       const headerShadowSpreadPx = Math.max(
         -80,
         Math.min(80, Math.round(Number.isFinite(headerShadowSpreadNum) ? headerShadowSpreadNum : -22))
       );
 
       const stickyHeaderShadowBlurNum =
-        typeof (t as any).stickyHeaderShadowBlur === 'number' ? (t as any).stickyHeaderShadowBlur : headerShadowBlurPx;
+        typeof t.stickyHeaderShadowBlur === 'number' ? t.stickyHeaderShadowBlur : headerShadowBlurPx;
       const stickyHeaderShadowBlurPx = Math.max(
         0,
         Math.min(80, Math.round(Number.isFinite(stickyHeaderShadowBlurNum) ? stickyHeaderShadowBlurNum : headerShadowBlurPx))
       );
       const stickyHeaderShadowSpreadNum =
-        typeof (t as any).stickyHeaderShadowSpread === 'number' ? (t as any).stickyHeaderShadowSpread : headerShadowSpreadPx;
+        typeof t.stickyHeaderShadowSpread === 'number' ? t.stickyHeaderShadowSpread : headerShadowSpreadPx;
       const stickyHeaderShadowSpreadPx = Math.max(
         -80,
         Math.min(80, Math.round(Number.isFinite(stickyHeaderShadowSpreadNum) ? stickyHeaderShadowSpreadNum : headerShadowSpreadPx))
@@ -168,20 +169,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `  --theme-page-gradient-from: rgb(${parseHexColor(t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientFrom).a)});`,
         `  --theme-page-gradient-via: rgb(${parseHexColor(t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientVia).a)});`,
         `  --theme-page-gradient-to: rgb(${parseHexColor(t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientTo).a)});`,
-        `  --theme-hero-gradient-from: rgb(${parseHexColor((t as any).heroGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientFrom ?? t.pageGradientFrom).a)});`,
-        `  --theme-hero-gradient-via: rgb(${parseHexColor((t as any).heroGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientVia ?? t.pageGradientVia).a)});`,
-        `  --theme-hero-gradient-to: rgb(${parseHexColor((t as any).heroGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).heroGradientTo ?? t.pageGradientTo).a)});`,
-        `  --theme-card-gradient-from: rgb(${parseHexColor((t as any).cardGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientFrom ?? t.pageGradientFrom).a)});`,
-        `  --theme-card-gradient-via: rgb(${parseHexColor((t as any).cardGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientVia ?? t.pageGradientVia).a)});`,
-        `  --theme-card-gradient-to: rgb(${parseHexColor((t as any).cardGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).cardGradientTo ?? t.pageGradientTo).a)});`,
-        `  --theme-tabs-gradient-from: rgb(${parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientFrom ?? t.pageGradientFrom).a)});`,
-        `  --theme-tabs-gradient-via: rgb(${parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientVia ?? t.pageGradientVia).a)});`,
-        `  --theme-tabs-gradient-to: rgb(${parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor((t as any).tabsGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-hero-gradient-from: rgb(${parseHexColor(t.heroGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.heroGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-hero-gradient-via: rgb(${parseHexColor(t.heroGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.heroGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-hero-gradient-to: rgb(${parseHexColor(t.heroGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.heroGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-card-gradient-from: rgb(${parseHexColor(t.cardGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.cardGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-card-gradient-via: rgb(${parseHexColor(t.cardGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.cardGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-card-gradient-to: rgb(${parseHexColor(t.cardGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.cardGradientTo ?? t.pageGradientTo).a)});`,
+        `  --theme-tabs-gradient-from: rgb(${parseHexColor(t.tabsGradientFrom ?? t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.tabsGradientFrom ?? t.pageGradientFrom).a)});`,
+        `  --theme-tabs-gradient-via: rgb(${parseHexColor(t.tabsGradientVia ?? t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.tabsGradientVia ?? t.pageGradientVia).a)});`,
+        `  --theme-tabs-gradient-to: rgb(${parseHexColor(t.tabsGradientTo ?? t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.tabsGradientTo ?? t.pageGradientTo).a)});`,
         `  --theme-page-glow: rgb(${pageGlow.rgb} / ${fmtAlpha(pageGlow.a)});`,
       ].join('\n');
     };
 
-    return `html.light {\n${buildBlock(colorPalette.light, 'light')}\n}\nhtml.dark {\n${buildBlock(colorPalette.dark, 'dark')}\n}`;
+    return `html.light {\n${buildBlock(colorPalette.light)}\n}\nhtml.dark {\n${buildBlock(colorPalette.dark)}\n}`;
   };
 
   const themeColorVarsCss = buildThemeColorVarsCss();

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 
 import { LemonSqueezyPaymentProvider } from '../lib/payment/providers/lemonsqueezy';
 import { WebhookSignatureVerificationError } from '../lib/payment/errors';
+import type { StandardizedCheckoutSession, StandardizedSubscription } from '../lib/payment/types';
 
 describe('lemonsqueezy-webhook', () => {
 	const apiKey = 'ls_test_dummy_api_key';
@@ -39,7 +40,7 @@ describe('lemonsqueezy-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, signingSecret);
 
 		expect(normalized.type).toBe('checkout.completed');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedCheckoutSession;
 		expect(payload.userId).toBe('user_123');
 		expect(payload.amountTotal).toBe(1199);
 		expect(payload.lineItems?.[0]?.priceId).toBe('42');
@@ -80,7 +81,7 @@ describe('lemonsqueezy-webhook', () => {
 		const normalized = await provider.constructWebhookEvent(body, sig, signingSecret);
 
 		expect(normalized.type).toBe('subscription.updated');
-		const payload = normalized.payload as any;
+		const payload = normalized.payload as StandardizedSubscription;
 		expect(payload.id).toBe('sub_1');
 		expect(payload.priceId).toBe('777');
 	});

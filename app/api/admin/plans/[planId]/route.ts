@@ -16,6 +16,7 @@ import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { PaymentError, PaymentProviderError } from '@/lib/payment/errors';
 import type { Prisma } from '@prisma/client';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
+import type { PriceDetails } from '@/lib/payment/types';
 
 function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown } {
   const messages: string[] = [];
@@ -241,7 +242,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
             intervalCount: number;
           };
           metadata?: Record<string, string>;
-        }) => Promise<any>;
+        }) => Promise<PriceDetails>;
       },
       options: {
         unitAmount: number;

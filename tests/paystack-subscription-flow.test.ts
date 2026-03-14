@@ -8,6 +8,7 @@
  * This tests the normalization of webhooks and the pending subscription payment flow.
  */
 
+import crypto from 'node:crypto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PaystackPaymentProvider } from '../lib/payment/providers/paystack';
 import type { StandardizedCheckoutSession, StandardizedInvoice, StandardizedSubscription } from '../lib/payment/types';
@@ -391,6 +392,5 @@ describe('Paystack Subscription Flow', () => {
 
 // Helper to create HMAC signature like Paystack does
 function createHmacSignature(body: Buffer, secret: string): string {
-    const crypto = require('crypto');
     return crypto.createHmac('sha512', secret).update(body).digest('hex');
 }

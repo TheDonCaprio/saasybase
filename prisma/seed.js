@@ -1,11 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 // Inline plan definitions to avoid importing TS/ESM modules from this CommonJS seed script
 const PLAN_DEFINITIONS = [
-  { id: '24H', name: '24 Hour Pro', durationHours: 24, priceCents: 299, externalPriceEnv: 'PRICE_24H', sortOrder: 0 },
-  { id: '7D', name: '7 Day Pro', durationHours: 24 * 7, priceCents: 799, externalPriceEnv: 'PRICE_7D', sortOrder: 1 },
-  { id: '1M', name: '1 Month Pro', durationHours: 24 * 30, priceCents: 1999, externalPriceEnv: 'PRICE_1M', sortOrder: 2 },
-  { id: '3M', name: '3 Month Pro', durationHours: 24 * 90, priceCents: 4999, externalPriceEnv: 'PRICE_3M', sortOrder: 3, description: 'Save 20%' },
-  { id: '1Y', name: '1 Year Pro', durationHours: 24 * 365, priceCents: 14999, externalPriceEnv: 'PRICE_1Y', sortOrder: 4, description: 'Save 40%' },
+  // One-time plans
+  { id: '24H', name: '24 Hour Pro', durationHours: 24, priceCents: 299, externalPriceEnv: 'PAYMENT_PRICE_24H', sortOrder: 0, autoRenew: false },
+  { id: '7D', name: '7 Day Pro', durationHours: 7 * 24, priceCents: 799, externalPriceEnv: 'PAYMENT_PRICE_7D', sortOrder: 1, autoRenew: false },
+  { id: '1M_OT', name: '1 Month Extra', durationHours: 30 * 24, priceCents: 1999, externalPriceEnv: 'PAYMENT_PRICE_1M_OT', sortOrder: 2, autoRenew: false },
+  
+  // Subscription plans
+  { id: '1M_SUB', name: 'Monthly Pro', durationHours: 30 * 24, priceCents: 1999, externalPriceEnv: 'SUBSCRIPTION_PRICE_1M', sortOrder: 3, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1 },
+  { id: '3M_SUB', name: 'Quarterly Pro', durationHours: 90 * 24, priceCents: 4999, externalPriceEnv: 'SUBSCRIPTION_PRICE_3M', sortOrder: 4, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 3, description: 'Save 20%' },
+  { id: '1Y_SUB', name: 'Yearly Pro', durationHours: 365 * 24, priceCents: 14999, externalPriceEnv: 'SUBSCRIPTION_PRICE_1Y', sortOrder: 5, autoRenew: true, recurringInterval: 'year', recurringIntervalCount: 1, description: 'Save 40%' },
 ];
 const CORE_SITE_PAGES = [
   {
@@ -133,13 +138,21 @@ async function main() {
   await ensureSitePagesSeeded();
 
   console.log('Creating test admin user...');
+  const hashedPassword = await bcrypt.hash('password', 12);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: { name: 'Admin', role: 'ADMIN' },
+    where: { email: 'admin@saasybase.com' },
+    update: { 
+      name: 'Admin', 
+      role: 'ADMIN',
+      password: hashedPassword,
+      emailVerified: new Date(),
+    },
     create: {
-      email: 'admin@example.com',
+      email: 'admin@saasybase.com',
       name: 'Admin',
       role: 'ADMIN',
+      password: hashedPassword,
+      emailVerified: new Date(),
     }
   });
 

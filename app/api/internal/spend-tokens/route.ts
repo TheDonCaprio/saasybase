@@ -103,6 +103,7 @@ async function resolveSharedContext(params: {
           memberTokenCap: true,
           memberCapStrategy: true,
           memberCapResetIntervalHours: true,
+          ownerExemptFromCaps: true,
         },
       },
     },
@@ -145,7 +146,11 @@ async function resolveSharedContext(params: {
 
   const overrideCap = typeof membership.memberTokenCapOverride === 'number' ? membership.memberTokenCapOverride : null;
   const orgCap = typeof membership.organization.memberTokenCap === 'number' ? membership.organization.memberTokenCap : null;
-  const effectiveMemberCap = capsDisabled ? null : overrideCap ?? orgCap;
+
+  // Owner exemption: bypass caps if the org has flagged the owner as exempt
+  const isOwner = membership.organization.ownerUserId === userId;
+  const ownerExempt = isOwner && (membership.organization.ownerExemptFromCaps === true);
+  const effectiveMemberCap = ownerExempt ? null : (capsDisabled ? null : overrideCap ?? orgCap);
 
   const reset = typeof membership.organization.memberCapResetIntervalHours === 'number'
     ? membership.organization.memberCapResetIntervalHours

@@ -5,25 +5,20 @@ import { adminRateLimit } from '../../../../../lib/rateLimit';
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
+import type { Prisma } from '@prisma/client';
 
-function buildOrgPayload(org: {
-  id: string;
-  name: string;
-  slug: string;
-  billingEmail: string | null;
-  tokenBalance: number;
-  memberTokenCap: number | null;
-  memberCapStrategy: string | null;
-  memberCapResetIntervalHours: number | null;
-  tokenPoolStrategy: string | null;
-  seatLimit: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-  owner?: { id: string; name: string | null; email: string | null } | null;
-  plan?: { id: string; name: string } | null;
-  memberships: { id?: string; status: string }[];
-  invites: { id?: string; status: string }[];
-}) {
+const adminOrganizationInclude = {
+  owner: { select: { id: true, name: true, email: true } },
+  plan: { select: { id: true, name: true } },
+  memberships: { select: { id: true, status: true } },
+  invites: { select: { id: true, status: true } }
+} satisfies Prisma.OrganizationInclude;
+
+type AdminOrganizationRecord = Prisma.OrganizationGetPayload<{
+  include: typeof adminOrganizationInclude;
+}>;
+
+function buildOrgPayload(org: AdminOrganizationRecord) {
   return {
     id: org.id,
     name: org.name,
@@ -37,6 +32,7 @@ function buildOrgPayload(org: {
     memberCapResetIntervalHours: org.memberCapResetIntervalHours,
     tokenPoolStrategy: org.tokenPoolStrategy,
     seatLimit: org.seatLimit,
+    ownerExemptFromCaps: org.ownerExemptFromCaps,
     stats: {
       activeMembers: org.memberships.filter((m) => m.status === 'ACTIVE').length,
       totalMembers: org.memberships.length,
@@ -60,16 +56,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ org
       const retryAfterSeconds = Math.max(0, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
     }
-
-    const org = await prisma.organization.findUnique({
+    const org = (await prisma.organization.findUnique({
       where: { id: params.orgId },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        plan: { select: { id: true, name: true } },
-        memberships: { select: { id: true, status: true } },
-        invites: { select: { id: true, status: true } }
-      }
-    });
+      include: adminOrganizationInclude
+    })) as AdminOrganizationRecord | null;
 
     if (!org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
@@ -184,21 +174,21 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ o
       changes.tokenPoolStrategy = normalized;
     }
 
+    if (body.hasOwnProperty('ownerExemptFromCaps')) {
+      data.ownerExemptFromCaps = body.ownerExemptFromCaps === true;
+      changes.ownerExemptFromCaps = data.ownerExemptFromCaps;
+    }
+
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No changes provided' }, { status: 400 });
     }
 
     try {
-      const updated = await prisma.organization.update({
+      const updated = (await prisma.organization.update({
         where: { id: orgId },
         data,
-        include: {
-          owner: { select: { id: true, name: true, email: true } },
-          plan: { select: { id: true, name: true } },
-          memberships: { select: { id: true, status: true } },
-          invites: { select: { id: true, status: true } }
-        }
-      });
+        include: adminOrganizationInclude
+      })) as AdminOrganizationRecord;
 
       await recordAdminAction({
         actorId: actor.userId,

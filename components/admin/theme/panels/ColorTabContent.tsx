@@ -468,8 +468,8 @@ export function ColorTabContent({
                 min={10}
                 max={20}
                 step={1}
-                value={clampInt((colors as any).headerMenuFontSize, 10, 20, 14)}
-                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) } as any)}
+                value={clampInt(colors.headerMenuFontSize, 10, 20, 14)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) })}
                 className="h-2 w-full flex-1 cursor-pointer"
               />
               <input
@@ -477,8 +477,8 @@ export function ColorTabContent({
                 min={10}
                 max={20}
                 step={1}
-                value={clampInt((colors as any).headerMenuFontSize, 10, 20, 14)}
-                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) } as any)}
+                value={clampInt(colors.headerMenuFontSize, 10, 20, 14)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontSize: clampInt(e.target.value, 10, 20, 14) })}
                 className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                 aria-label="Header menu font size pixels"
               />
@@ -494,8 +494,8 @@ export function ColorTabContent({
                 min={300}
                 max={800}
                 step={50}
-                value={clampInt((colors as any).headerMenuFontWeight, 300, 800, 400)}
-                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) } as any)}
+                value={clampInt(colors.headerMenuFontWeight, 300, 800, 400)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) })}
                 className="h-2 w-full flex-1 cursor-pointer"
               />
               <input
@@ -503,8 +503,8 @@ export function ColorTabContent({
                 min={300}
                 max={800}
                 step={50}
-                value={clampInt((colors as any).headerMenuFontWeight, 300, 800, 400)}
-                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) } as any)}
+                value={clampInt(colors.headerMenuFontWeight, 300, 800, 400)}
+                onChange={(e) => setColors({ ...colors, headerMenuFontWeight: clampInt(e.target.value, 300, 800, 400) })}
                 className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                 aria-label="Header menu font weight"
               />
@@ -656,7 +656,7 @@ export function ColorTabContent({
                     Welcome back, Alex 👋
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
-                    Here's what's happening today.
+                    Here&apos;s what&apos;s happening today.
                   </p>
                 </div>
                 <div
@@ -769,7 +769,7 @@ export function ColorTabContent({
         <p className="mt-2 text-xs text-slate-500 dark:text-neutral-500">
           All color, gradient, shadow, glow and layout tokens are reflected above.
           The thin strip below the header shows sticky-header colors.
-          The "Analytics" sidebar item shows the hover fill (<span className="font-semibold">bgQuaternary</span>).
+          The &quot;Analytics&quot; sidebar item shows the hover fill (<span className="font-semibold">bgQuaternary</span>).
         </p>
       </section>
     </div>

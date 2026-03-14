@@ -15,7 +15,6 @@ import { faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
-import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
@@ -39,7 +38,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
   await enforceTeamWorkspaceProvisioningGuard(userId);
 
   // Get all subscriptions (active and pending) to show complete picture
-  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, activeCurrency] = await Promise.all([
+  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan] = await Promise.all([
     prisma.subscription.findFirst({
       where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
       include: {
@@ -71,7 +70,6 @@ export default async function PlanPage({ searchParams }: PageProps) {
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
     getOrganizationPlanContext(userId, orgId),
-    getActiveCurrencyAsync(),
   ]);
 
   const plansForPricing = allPlansRaw.map((plan) => {
@@ -120,6 +118,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
 
   // Calculate next billing date (expires date for one-time, renewal date for auto-renew)
   const nextBillingDate = activeSub?.expiresAt;
+  const nowTimeMs = Date.now();
   const formattedNextBilling = nextBillingDate ? await formatDateServer(nextBillingDate) : null;
   const formattedCanceledAt = activeSub?.canceledAt ? await formatDateServer(activeSub.canceledAt) : null;
   const isCancellationScheduled = !!activeSub?.canceledAt;
@@ -138,7 +137,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
   );
 
   const daysUntilRenewal = nextBillingDate
-    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((nextBillingDate.getTime() - nowTimeMs) / (1000 * 60 * 60 * 24)))
     : null;
   const pendingCount = pendingSubsWithFormats.length;
   const subscriptionStart = activeSub?.startedAt ?? null;
@@ -149,7 +148,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
         Math.max(
           0,
           Math.round(
-            ((Date.now() - subscriptionStart.getTime()) /
+            ((nowTimeMs - subscriptionStart.getTime()) /
               (nextBillingDate.getTime() - subscriptionStart.getTime())) *
             100
           )
@@ -381,7 +380,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
                   const plan = subscription.planForUI ?? mapPlanForUI(subscription.plan);
                   const price = plan?.priceCents != null ? plan.priceCents : 0;
                   const durationHours = plan?.durationHours ?? 0;
-                  const startsInFuture = new Date(subscription.startedAt).getTime() > Date.now() + 1000;
+                  const startsInFuture = subscription.startedAt.getTime() > nowTimeMs + 1000;
 
                   return (
                     <div

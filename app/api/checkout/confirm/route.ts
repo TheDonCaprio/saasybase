@@ -12,6 +12,7 @@ import { syncOrganizationEligibilityForUser } from '../../../../lib/organization
 import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
+import type { Prisma } from '@prisma/client';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
@@ -150,7 +151,7 @@ export async function GET(req: NextRequest) {
 
       if (dbOr.length > 0) {
         const existing = await prisma.payment.findFirst({
-          where: { userId, OR: dbOr as any },
+          where: { userId, OR: dbOr as Prisma.PaymentWhereInput[] },
           orderBy: { createdAt: 'desc' },
           include: { plan: true, subscription: { include: { plan: true } } }
         });
@@ -338,7 +339,7 @@ export async function GET(req: NextRequest) {
         }
 
         let payment = await prisma.payment.findFirst({
-          where: { userId, OR: paymentLookupOr as any },
+          where: { userId, OR: paymentLookupOr as Prisma.PaymentWhereInput[] },
           orderBy: { createdAt: 'desc' },
           include: {
             plan: true,

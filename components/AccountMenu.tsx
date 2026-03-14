@@ -5,7 +5,7 @@ import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSig
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   user: {
@@ -70,7 +70,6 @@ export default function AccountMenu() {
   const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
   const { signOut } = useAuthInstance();
-  const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);

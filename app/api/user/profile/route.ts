@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUser, getAuthSafe } from '../../../../lib/auth';
+import { getAuthSafe } from '../../../../lib/auth';
 import { fetchModeratorPermissions, buildAdminLikePermissions } from '../../../../lib/moderator';
 import { prisma } from '../../../../lib/prisma';
 import { authService } from '../../../../lib/auth-provider';
@@ -60,10 +60,12 @@ export async function GET() {
     }
   });
 
-  const ownedOrganizationCount = await prisma.organization.count({
-    where: { ownerUserId: user.id },
-  });
-  const pendingTeamInviteCount = user.email
+  const ownedOrganizationCount = prisma.organization?.count
+    ? await prisma.organization.count({
+        where: { ownerUserId: user.id },
+      })
+    : 0;
+  const pendingTeamInviteCount = user.email && prisma.organizationInvite?.count
     ? await prisma.organizationInvite.count({
         where: {
           email: user.email,
@@ -152,6 +154,7 @@ export async function GET() {
           memberTokenCap: organizationContext.organization.memberTokenCap,
           memberCapStrategy: organizationContext.organization.memberCapStrategy,
           memberCapResetIntervalHours: organizationContext.organization.memberCapResetIntervalHours,
+          ownerExemptFromCaps: organizationContext.organization.ownerExemptFromCaps,
         }
       : null,
     sharedTokens:

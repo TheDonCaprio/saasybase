@@ -28,7 +28,6 @@ export default async function AdminSettingsPage() {
     // requireAdminAuth already redirected, so just swallow here
     // but log unexpected errors for observability
     const e = toError(err);
-    // eslint-disable-next-line no-console
     console.warn('Admin settings: requireAdmin check failed or redirected', e?.message);
   }
 
@@ -48,8 +47,6 @@ export default async function AdminSettingsPage() {
   const readSetting = (key: string, fallback = '') => settings.find((setting) => setting.key === key)?.value ?? fallback;
 
   const siteName = readSetting('SITE_NAME', process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
-  const supportEmail = readSetting('SUPPORT_EMAIL', 'support@example.com');
-  const stripeMode = envSettings.find((setting) => setting.key === 'STRIPE_MODE')?.value ?? 'UNKNOWN';
   const databaseType = envSettings.find((setting) => setting.key === 'DATABASE_TYPE')?.value ?? 'N/A';
   const nodeEnv = envSettings.find((setting) => setting.key === 'NODE_ENV')?.value ?? 'development';
 

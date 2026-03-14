@@ -229,7 +229,12 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
     [callEndpoint]
   );
 
-  const handleUpdateCaps = useCallback(async (caps: { memberTokenCap: number | null; memberCapStrategy: CapStrategy; memberCapResetIntervalHours: number | null }) => {
+  const handleUpdateCaps = useCallback(async (caps: {
+    memberTokenCap: number | null;
+    memberCapStrategy: CapStrategy;
+    memberCapResetIntervalHours: number | null;
+    ownerExemptFromCaps: boolean;
+  }) => {
     if (!isOwner) return;
 
     setBusyAction('updateCaps');

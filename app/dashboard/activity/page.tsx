@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { formatDateServer } from '../../../lib/formatDate.server';
@@ -167,9 +168,10 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     freePlanSettings,
     defaultTokenLabel,
   });
+  const nowTimeMs = Date.now();
 
   const daysRemaining = activeSubscription
-    ? Math.max(0, Math.ceil((new Date(activeSubscription.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(activeSubscription.expiresAt).getTime() - nowTimeMs) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const planTimelineLabel =
@@ -350,9 +352,9 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
 
           {/* Add quick link to view full transactions history */}
           <div className={dashboardMutedPanelClass('text-sm text-slate-600 dark:text-neutral-300') + ' mt-2'}>
-            <a href="/dashboard/transactions" className="text-sm font-medium text-slate-900 dark:text-neutral-100 hover:underline">
+            <Link href="/dashboard/transactions" className="text-sm font-medium text-slate-900 dark:text-neutral-100 hover:underline">
               View all transactions →
-            </a>
+            </Link>
           </div>
 
           {recentVisitsWithFormats.length > 0 ? (
@@ -392,7 +394,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
             <div className={dashboardMutedPanelClass('text-sm text-slate-600 dark:text-neutral-300')}>
               If you notice any suspicious activity or anomalies in your account activity, please contact our support team so we can investigate.
               <div className="mt-3">
-                <a href="/help/index.html" className="text-sm font-medium text-slate-900 dark:text-neutral-100 hover:underline">Contact support →</a>
+                <Link href="/help" className="text-sm font-medium text-slate-900 dark:text-neutral-100 hover:underline">Contact support →</Link>
               </div>
             </div>
           )}

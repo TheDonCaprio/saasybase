@@ -41,8 +41,9 @@ export async function PATCH(request: NextRequest) {
   const memberTokenCapProvided = Object.prototype.hasOwnProperty.call(payload, 'memberTokenCap');
   const memberCapStrategyProvided = Object.prototype.hasOwnProperty.call(payload, 'memberCapStrategy');
   const resetIntervalProvided = Object.prototype.hasOwnProperty.call(payload, 'memberCapResetIntervalHours');
+  const ownerExemptProvided = Object.prototype.hasOwnProperty.call(payload, 'ownerExemptFromCaps');
 
-  if (!memberTokenCapProvided && !memberCapStrategyProvided && !resetIntervalProvided) {
+  if (!memberTokenCapProvided && !memberCapStrategyProvided && !resetIntervalProvided && !ownerExemptProvided) {
     return NextResponse.json({ ok: false, error: 'No fields to update.' }, { status: 400 });
   }
 
@@ -88,6 +89,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (resetIntervalProvided) {
       data.memberCapResetIntervalHours = nextResetInterval ?? null;
+    }
+    if (ownerExemptProvided) {
+      data.ownerExemptFromCaps = payload.ownerExemptFromCaps === true;
     }
 
     if (Object.keys(data).length === 0) {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthSession } from '@/lib/auth-provider/client/hooks';
-import { AuthLoadingSkeleton } from './AuthLoadingSkeleton';
 
 /**
  * AuthFormWrapper

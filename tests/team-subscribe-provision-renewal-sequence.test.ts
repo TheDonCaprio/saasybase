@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+type MockRecord = Record<string, unknown>;
+type MockWhere = Record<string, unknown>;
+type MockWhereArgs = { where: MockWhere };
+type MockWhereDataArgs = { where: MockWhere; data: MockRecord };
+type MockCreateArgs = { data: MockRecord };
+type MockUpsertArgs = { where: MockWhere; create: MockRecord; update: MockRecord };
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined;
+}
+
 const state = vi.hoisted(() => {
   const basePlan = {
     id: 'plan_team',
@@ -36,25 +47,29 @@ const state = vi.hoisted(() => {
 });
 
 const prismaMock = vi.hoisted(() => {
-  const findMatchingSubscription = (where: Record<string, any>) => {
+  const findMatchingSubscription = (where: MockWhere) => {
     return state.subscriptions
       .filter((subscription) => {
         const planWhere = where.plan as Record<string, unknown> | undefined;
         const subscriptionPlan = subscription.plan as Record<string, unknown> | undefined;
+        const organizationIdFilter = asRecord(where.organizationId);
+        const idFilter = asRecord(where.id);
+        const statusFilter = asRecord(where.status);
+        const expiresAtFilter = asRecord(where.expiresAt);
         if (where.userId && subscription.userId !== where.userId) return false;
         if (where.planId && subscription.planId !== where.planId) return false;
         if (where.organizationId === null && subscription.organizationId !== null) return false;
-        if (where.organizationId?.in && !where.organizationId.in.includes(subscription.organizationId)) return false;
-        if (where.id?.in && !where.id.in.includes(subscription.id)) return false;
+        if (Array.isArray(organizationIdFilter?.in) && !organizationIdFilter.in.includes(subscription.organizationId)) return false;
+        if (Array.isArray(idFilter?.in) && !idFilter.in.includes(subscription.id)) return false;
         if (where.externalSubscriptionId && subscription.externalSubscriptionId !== where.externalSubscriptionId) return false;
         if (where.paymentProvider && subscription.paymentProvider !== where.paymentProvider) return false;
         if (where.status) {
           if (typeof where.status === 'string' && subscription.status !== where.status) return false;
-          if (where.status.in && !where.status.in.includes(subscription.status)) return false;
-          if (where.status.not && subscription.status === where.status.not) return false;
+          if (Array.isArray(statusFilter?.in) && !statusFilter.in.includes(subscription.status)) return false;
+          if (statusFilter?.not && subscription.status === statusFilter.not) return false;
         }
-        if (where.expiresAt?.gt && !(new Date(String(subscription.expiresAt)) > where.expiresAt.gt)) return false;
-        if (where.expiresAt?.gte && !(new Date(String(subscription.expiresAt)) >= where.expiresAt.gte)) return false;
+        if (expiresAtFilter?.gt instanceof Date && !(new Date(String(subscription.expiresAt)) > expiresAtFilter.gt)) return false;
+        if (expiresAtFilter?.gte instanceof Date && !(new Date(String(subscription.expiresAt)) >= expiresAtFilter.gte)) return false;
         if (planWhere?.['supportsOrganizations'] === true && subscriptionPlan?.['supportsOrganizations'] !== true) return false;
         return true;
       })
@@ -63,25 +78,28 @@ const prismaMock = vi.hoisted(() => {
 
   const tx = {
     payment: {
-      findUnique: vi.fn(async ({ where }: any) => state.payments.find((payment) => payment.externalPaymentId === where.externalPaymentId) ?? null),
-      count: vi.fn(async ({ where }: any) => state.payments.filter((payment) => payment.subscriptionId === where.subscriptionId && payment.status === where.status).length),
-      create: vi.fn(async ({ data }: any) => {
+      findUnique: vi.fn(async ({ where }: MockWhereArgs) => state.payments.find((payment) => payment.externalPaymentId === where.externalPaymentId) ?? null),
+      count: vi.fn(async ({ where }: MockWhereArgs) => state.payments.filter((payment) => payment.subscriptionId === where.subscriptionId && payment.status === where.status).length),
+      create: vi.fn(async ({ data }: MockCreateArgs) => {
         const payment = { id: `pay_${state.payments.length + 1}`, ...data };
         state.payments.push(payment);
         return payment;
       }),
     },
     user: {
-      update: vi.fn(async ({ data }: any) => {
+      update: vi.fn(async ({ data }: { data: MockRecord }) => {
+        const tokenBalanceChange = asRecord(data.tokenBalance);
+        const paymentsCountChange = asRecord(data.paymentsCount);
         if (!state.user) return null;
         if (typeof data.tokenBalance === 'number') state.user.tokenBalance = data.tokenBalance;
-        if (data.tokenBalance?.increment) state.user.tokenBalance = Number(state.user.tokenBalance ?? 0) + data.tokenBalance.increment;
-        if (data.paymentsCount?.increment) state.user.paymentsCount = Number(state.user.paymentsCount ?? 0) + data.paymentsCount.increment;
+        if (typeof tokenBalanceChange?.increment === 'number') state.user.tokenBalance = Number(state.user.tokenBalance ?? 0) + tokenBalanceChange.increment;
+        if (typeof paymentsCountChange?.increment === 'number') state.user.paymentsCount = Number(state.user.paymentsCount ?? 0) + paymentsCountChange.increment;
         return state.user;
       }),
     },
     organization: {
-      update: vi.fn(async ({ where, data }: any) => {
+      update: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
+        const tokenBalanceChange = asRecord(data.tokenBalance);
         if (!state.organization || state.organization.id !== where.id) {
           state.organization = {
             id: where.id,
@@ -93,7 +111,7 @@ const prismaMock = vi.hoisted(() => {
           };
         }
         if (typeof data.tokenBalance === 'number') state.organization.tokenBalance = data.tokenBalance;
-        if (data.tokenBalance?.increment) state.organization.tokenBalance = Number(state.organization.tokenBalance ?? 0) + data.tokenBalance.increment;
+        if (typeof tokenBalanceChange?.increment === 'number') state.organization.tokenBalance = Number(state.organization.tokenBalance ?? 0) + tokenBalanceChange.increment;
         if (data.planId !== undefined) state.organization.planId = data.planId;
         if (data.seatLimit !== undefined) state.organization.seatLimit = data.seatLimit;
         if (data.tokenPoolStrategy !== undefined) state.organization.tokenPoolStrategy = data.tokenPoolStrategy;
@@ -104,27 +122,27 @@ const prismaMock = vi.hoisted(() => {
 
   return {
     user: {
-      findUnique: vi.fn(async ({ where }: any) => {
+      findUnique: vi.fn(async ({ where }: MockWhereArgs) => {
         if (!state.user) return null;
         if (where.id && state.user.id === where.id) return state.user;
         if (where.externalCustomerId && state.user.externalCustomerId === where.externalCustomerId) return { id: state.user.id };
         return null;
       }),
-      update: vi.fn(async ({ where, data }: any) => {
+      update: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
         if (!state.user || state.user.id !== where.id) return null;
         Object.assign(state.user, data);
         return state.user;
       }),
     },
     subscription: {
-      findUnique: vi.fn(async ({ where }: any) => {
+      findUnique: vi.fn(async ({ where }: MockWhereArgs) => {
         if (where.id) return state.subscriptions.find((subscription) => subscription.id === where.id) ?? null;
         if (where.externalSubscriptionId) return state.subscriptions.find((subscription) => subscription.externalSubscriptionId === where.externalSubscriptionId) ?? null;
         return null;
       }),
-      findFirst: vi.fn(async ({ where }: any) => findMatchingSubscription(where ?? {})[0] ?? null),
-      findMany: vi.fn(async ({ where }: any) => findMatchingSubscription(where ?? {})),
-      upsert: vi.fn(async ({ where, create, update }: any) => {
+      findFirst: vi.fn(async ({ where }: MockWhereArgs) => findMatchingSubscription(where ?? {})[0] ?? null),
+      findMany: vi.fn(async ({ where }: MockWhereArgs) => findMatchingSubscription(where ?? {})),
+      upsert: vi.fn(async ({ where, create, update }: MockUpsertArgs) => {
         const existing = state.subscriptions.find((subscription) => subscription.externalSubscriptionId === where.externalSubscriptionId);
         if (existing) {
           Object.assign(existing, update);
@@ -138,7 +156,7 @@ const prismaMock = vi.hoisted(() => {
         state.subscriptions.push(created);
         return created;
       }),
-      updateMany: vi.fn(async ({ where, data }: any) => {
+      updateMany: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
         const matches = findMatchingSubscription(where ?? {});
         for (const subscription of matches) {
           Object.assign(subscription, data);
@@ -147,18 +165,18 @@ const prismaMock = vi.hoisted(() => {
       }),
     },
     organization: {
-      findFirst: vi.fn(async ({ where }: any) => {
+      findFirst: vi.fn(async ({ where }: MockWhereArgs) => {
         if (!state.organization) return null;
         if (where.ownerUserId && state.organization.ownerUserId !== where.ownerUserId) return null;
         return state.organization;
       }),
-      findUnique: vi.fn(async ({ where }: any) => {
+      findUnique: vi.fn(async ({ where }: MockWhereArgs) => {
         if (!state.organization) return null;
         if (where.id && state.organization.id === where.id) return state.organization;
         if (where.clerkOrganizationId && state.organization.clerkOrganizationId === where.clerkOrganizationId) return state.organization;
         return null;
       }),
-      update: vi.fn(async ({ where, data }: any) => {
+      update: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
         if (!state.organization || state.organization.id !== where.id) {
           state.organization = {
             id: where.id,
@@ -176,7 +194,7 @@ const prismaMock = vi.hoisted(() => {
       aggregate: vi.fn(async () => ({ _sum: { memberTokenUsage: 0 } })),
     },
     payment: {
-      findFirst: vi.fn(async ({ where }: any) => {
+      findFirst: vi.fn(async ({ where }: MockWhereArgs) => {
         return state.payments.find((payment) => {
           if (where.userId && payment.userId !== where.userId) return false;
           if (where.planId && payment.planId !== where.planId) return false;
@@ -186,9 +204,10 @@ const prismaMock = vi.hoisted(() => {
           return true;
         }) ?? null;
       }),
-      updateMany: vi.fn(async ({ where, data }: any) => {
+      updateMany: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
+        const subscriptionIdFilter = asRecord(where.subscriptionId);
         const matches = state.payments.filter((payment) => {
-          if (where.subscriptionId?.in && !where.subscriptionId.in.includes(payment.subscriptionId)) return false;
+          if (Array.isArray(subscriptionIdFilter?.in) && !subscriptionIdFilter.in.includes(payment.subscriptionId)) return false;
           if (where.organizationId === null && payment.organizationId !== null) return false;
           return true;
         });
@@ -198,11 +217,11 @@ const prismaMock = vi.hoisted(() => {
         return { count: matches.length };
       }),
     },
-    $transaction: vi.fn(async (arg: any) => {
+    $transaction: vi.fn(async (arg: unknown) => {
       if (Array.isArray(arg)) {
         return Promise.all(arg);
       }
-      return arg(tx);
+      return (arg as (client: typeof tx) => unknown)(tx);
     }),
     __tx: tx,
   };
@@ -235,13 +254,17 @@ vi.mock('../lib/teams', () => ({
   syncOrganizationMembership: vi.fn(async () => null),
 }));
 vi.mock('../lib/payments', () => ({ updateSubscriptionLastPaymentAmount: vi.fn(async () => undefined) }));
-vi.mock('../lib/payment/invoice-payment-state-updates', () => ({ applyInvoicePaymentStateUpdates: vi.fn(async ({ dbSub }: any) => dbSub) }));
-vi.mock('../lib/payment/invoice-payment-expiry-refresh', () => ({ refreshInvoicePaymentSubscriptionExpiry: vi.fn(async ({ dbSub }: any) => ({ dbSub, refreshedExpiresAt: null })) }));
+vi.mock('../lib/payment/invoice-payment-state-updates', () => ({ applyInvoicePaymentStateUpdates: vi.fn(async ({ dbSub }: { dbSub: unknown }) => dbSub) }));
+vi.mock('../lib/payment/invoice-payment-expiry-refresh', () => ({ refreshInvoicePaymentSubscriptionExpiry: vi.fn(async ({ dbSub }: { dbSub: unknown }) => ({ dbSub, refreshedExpiresAt: null })) }));
 vi.mock('../lib/payment/invoice-payment-notifications', () => ({ processInvoicePaidNotifications: vi.fn(async () => ({ shouldReturnEarly: false })) }));
 
 import { ensureTeamOrganization } from '../lib/organization-access';
 import { processInvoicePaidEvent } from '../lib/payment/invoice-payment-recording';
 import { persistSubscriptionCheckoutState } from '../lib/payment/subscription-checkout-state';
+
+type PersistSubscriptionCheckoutInput = Parameters<typeof persistSubscriptionCheckoutState>[0];
+type ProcessInvoicePaidInput = Parameters<typeof processInvoicePaidEvent>[0];
+type FoundInvoiceSubscription = Awaited<ReturnType<ProcessInvoicePaidInput['findSubscriptionByProviderId']>>;
 
 describe('team subscribe -> provision -> renew sequence', () => {
   beforeEach(() => {
@@ -256,8 +279,8 @@ describe('team subscribe -> provision -> renew sequence', () => {
         id: 'sub_provider_1',
         customerId: 'cus_1',
         canceledAt: null,
-      } as any,
-      planToUse: state.plan as any,
+      } as PersistSubscriptionCheckoutInput['subscription'],
+      planToUse: state.plan as PersistSubscriptionCheckoutInput['planToUse'],
       organizationId: null,
       desiredStatus: 'ACTIVE',
       effectiveStartedAt: new Date('2026-03-01T00:00:00.000Z'),
@@ -295,11 +318,11 @@ describe('team subscribe -> provision -> renew sequence', () => {
         amountDiscount: 0,
         billingReason: 'subscription_recurring',
         metadata: {},
-      } as any,
+      } as ProcessInvoicePaidInput['invoice'],
       providerKey: 'paddle',
       mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => value ?? null,
       findSubscriptionByProviderId: vi.fn(async (subscriptionId: string) => {
-        return state.subscriptions.find((subscription) => subscription.externalSubscriptionId === subscriptionId) as any;
+        return state.subscriptions.find((subscription) => subscription.externalSubscriptionId === subscriptionId) as FoundInvoiceSubscription;
       }),
       ensureProviderBackedSubscription: vi.fn(async () => null),
       resolveOrganizationContext: vi.fn(async () => null),

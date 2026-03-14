@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCreditCard, faLock, faBuilding, faTag, faGauge, faEnvelope,
   faArrowsRotate, faShield, faNewspaper, faFileLines, faHeadset, faUserShield,
-  faUsers, faLayerGroup, faChartLine, faCode, faDollarSign, faTicket, faBars,
+  faUsers, faChartLine, faDollarSign, faTicket, faBars,
   faWaveSquare, faGaugeHigh, faLifeRing, faArrowUpRightFromSquare, faBolt, faGear, faTriangleExclamation,
   faPen, faHourglassEnd, faHandHoldingDollar,
 } from '@fortawesome/free-solid-svg-icons';
@@ -130,8 +130,10 @@ function TypewriterProvider() {
         t = setTimeout(() => setDisplayed(d => d.slice(0, -1)), 55);
       } else {
         const next = (providerIdx + 1) % PROVIDER_NAMES.length;
-        setProviderIdx(next);
-        setPhase('typing');
+        t = setTimeout(() => {
+          setProviderIdx(next);
+          setPhase('typing');
+        }, 0);
       }
     } else {
       if (displayed.length < target.length) {
@@ -982,7 +984,10 @@ function FeatureCard({ icon, title, desc, delay }: { icon: IconDefinition; title
 /* ─── Main landing component ─── */
 export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <>
@@ -1359,7 +1364,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           </div>
 
           <h1 className="lp-hero-h1">
-            Don't re-invent the wheel,<br />
+            Don&apos;t re-invent the wheel,<br />
             <span
               style={{
                 backgroundImage: 'linear-gradient(92deg, rgb(161 29 179) 0%, rgb(251, 113, 133) 18%, rgb(2 167 250) 38%, rgb(16 155 195) 52%, rgb(167 8 230) 68%, rgb(180 153 14) 82%, rgb(139, 92, 246) 100%)',

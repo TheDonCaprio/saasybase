@@ -163,7 +163,7 @@ export function useAuthUser(): UseAuthUserReturn {
         await nextAuthSignOut({ redirectTo: '/' });
       },
     };
-  }, [session, session?.user?.name, session?.user?.email, session?.user?.image]);
+  }, [session]);
 
   return { isSignedIn, isLoaded, user };
 }
@@ -206,7 +206,7 @@ export function useAuthInstance(): UseAuthInstanceReturn {
     await nextAuthSignOut({ redirectTo: opts?.redirectUrl ?? '/' });
   }, []);
 
-  const doOpenProfile = useCallback((_opts?: { appearance?: Record<string, unknown> }) => {
+  const doOpenProfile = useCallback(() => {
     // NextAuth has no built-in profile modal. Redirect to profile page.
     window.location.href = '/dashboard/profile';
   }, []);

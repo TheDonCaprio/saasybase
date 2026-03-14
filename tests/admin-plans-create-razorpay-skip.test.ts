@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const prismaMock = vi.hoisted(() => ({
   plan: {
@@ -58,8 +59,8 @@ vi.mock('@/lib/env-files', () => ({
 
 vi.mock('@/lib/validation', () => ({
   apiSchemas: { adminPlanCreate: {} },
-  withValidation: (_schema: unknown, handler: (request: Request, payload: any) => Promise<Response>) => {
-    return async (request: Request) => {
+  withValidation: (_schema: unknown, handler: (request: NextRequest, payload: unknown) => Promise<Response>) => {
+    return async (request: NextRequest) => {
       const payload = await request.json();
       return handler(request, payload);
     };
@@ -194,7 +195,7 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
   });
 
   it('skips Razorpay price creation and returns warnings[] when daily recurring intervalCount is below 7', async () => {
-    const req = new Request('http://localhost/api/admin/plans', {
+    const req = new NextRequest('http://localhost/api/admin/plans', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -217,7 +218,7 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
       }),
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req);
     expect(res.status).toBe(200);
 
     const body = await res.json();
@@ -254,7 +255,7 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
         type: 'recurring',
       });
 
-    const req = new Request('http://localhost/api/admin/plans', {
+    const req = new NextRequest('http://localhost/api/admin/plans', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -277,7 +278,7 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
       }),
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req);
     expect(res.status).toBe(200);
 
     const body = await res.json();

@@ -16,21 +16,35 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
    - [Paddle](#paddle)
    - [Razorpay](#razorpay)
    - [Provider Feature Matrix](#provider-feature-matrix)
+   - [Currency System](#currency-system)
    - [Adding New Providers](#adding-new-providers)
 6. [Token System](#token-system)
 7. [Team Plans & Organizations](#team-plans--organizations)
 8. [Feature Gating](#feature-gating)
-9. [Blog & CMS](#blog--cms)
-10. [Site Pages](#site-pages)
-11. [Webhooks](#webhooks)
-12. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
-13. [File & Logo Storage (S3)](#file--logo-storage-s3)
-14. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
-15. [Visit Tracking](#visit-tracking)
-16. [Moderator Roles](#moderator-roles)
-17. [Production Setup](#production-setup)
-18. [Self-hosted Deployments](#self-hosted-deployments)
-19. [Environment Variable Reference](#environment-variable-reference)
+9. [Coupon System](#coupon-system)
+10. [Blog & CMS](#blog--cms)
+11. [Site Pages](#site-pages)
+12. [Theming & Branding](#theming--branding)
+13. [Email Templates](#email-templates)
+14. [Notifications](#notifications)
+15. [Support Tickets](#support-tickets)
+16. [Contact Page](#contact-page)
+17. [Invoice & Refund Receipts](#invoice--refund-receipts)
+18. [Webhooks](#webhooks)
+19. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
+20. [File & Logo Storage (S3)](#file--logo-storage-s3)
+21. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
+22. [Visit Tracking](#visit-tracking)
+23. [Moderator Roles](#moderator-roles)
+24. [Rate Limiting](#rate-limiting)
+25. [Logging & Audit Trail](#logging--audit-trail)
+26. [Security](#security)
+27. [Dark Mode](#dark-mode)
+28. [Testing](#testing)
+29. [Admin Dashboard Overview](#admin-dashboard-overview)
+30. [Production Setup](#production-setup)
+31. [Self-hosted Deployments](#self-hosted-deployments)
+32. [Environment Variable Reference](#environment-variable-reference)
 
 ---
 
@@ -38,13 +52,17 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Auth | **Clerk** or **NextAuth (Auth.js v5)** — switchable via `AUTH_PROVIDER` |
 | Payment | **Stripe**, **Paystack**, **Paddle**, **Razorpay** — switchable via `PAYMENT_PROVIDER` |
 | Database | Prisma ORM · SQLite (dev) · PostgreSQL / MySQL (prod) |
 | Styling | Tailwind CSS |
+| Rich Text Editor | TipTap (blog posts, site pages, email templates) |
 | Email | Nodemailer (SMTP; dev uses MailHog by default) |
 | Analytics | Google Analytics 4 (via Data API) |
+| PDF Generation | pdf-lib (invoices, refund receipts) |
+| Validation | Zod |
+| Testing | Vitest (unit) · Playwright (E2E) |
 | Monitoring | `/api/health` endpoint |
 
 ---
@@ -67,6 +85,16 @@ npm run dev
 
 > **Database note:** The default `DATABASE_URL=file:./dev.db` keeps everything local. For deployments on read-only filesystems (Vercel, Netlify previews), point `DATABASE_URL` at a hosted PostgreSQL instance.
 
+### Alternative dev scripts
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Standard dev server (webpack) |
+| `npm run dev:turbo` | Dev server with Turbopack (faster cold starts) |
+| `npm run dev:full` | Dev server + Stripe CLI listener in parallel |
+
+> **Env validation:** A `validate-env.js` script runs automatically before `dev` and `build` via npm predev/prebuild hooks. It checks for required variables and logs warnings for missing optional ones.
+
 ---
 
 ## Authentication
@@ -80,6 +108,8 @@ AUTH_PROVIDER="clerk"     # Options: "clerk", "nextauth"
 
 `next.config.mjs` automatically exposes this as `NEXT_PUBLIC_AUTH_PROVIDER` to the client bundle so that the auth abstraction layer (`lib/auth-provider`) can DCE (dead-code eliminate) the unused provider at build time.
 
+The abstraction layer (`lib/auth-provider/`) defines a full `AuthProvider` interface with feature detection, mirroring the payment provider pattern. Every method (session, user management, organizations, webhooks, middleware) is provider-agnostic — the rest of the codebase never imports vendor-specific modules directly.
+
 ### Clerk
 
 ```bash
@@ -90,7 +120,7 @@ CLERK_WEBHOOK_SECRET=""   # Required for webhook-driven user init and welcome em
 ```
 
 - UI components (`<AuthSignIn>`, `<AuthSignUp>`, `<AuthLoaded>`, `<AuthLoading>`, etc.) are re-exported from `lib/auth-provider/client/components` and switch automatically.
-- Clerk's `ClerkProvider` wraps the app in `components/AppAuthProvider.tsx`.
+- Clerk's `ClerkProvider` wraps the app in `components/AppAuthProvider.tsx` with automatic dark mode theming via a `MutationObserver` on the `<html>` class.
 - Organization primitives are powered by Clerk and synced to the local DB via webhooks.
 
 ### NextAuth (Auth.js v5)
@@ -155,6 +185,8 @@ PAYMENT_PROVIDER="stripe"   # Options: "stripe", "paystack", "paddle", "razorpay
 
 All providers share a common checkout → webhook → subscription lifecycle. The app routes new transactions to the active provider; existing transactions are handled by the provider recorded in their `paymentProvider` field.
 
+> **Note:** A Lemon Squeezy provider implementation exists in `lib/payment/providers/lemonsqueezy.ts` but is **archived** and not wired into the active provider registry. It is kept for reference only.
+
 ### Plan Price IDs
 
 Plans reference provider price IDs via environment variables:
@@ -162,6 +194,18 @@ Plans reference provider price IDs via environment variables:
 - **One-time plans:** `PAYMENT_PRICE_<key>` (e.g. `PAYMENT_PRICE_24H`, `PAYMENT_PRICE_1M`)
 - **Recurring/subscription plans:** `SUBSCRIPTION_PRICE_<key>` (e.g. `SUBSCRIPTION_PRICE_1M`, `SUBSCRIPTION_PRICE_1Y`)
 - **Legacy fallback:** `PRICE_*` keys still work but will log a warning — rename them when you can.
+
+### Multi-Currency Pricing
+
+Plans support **per-provider localized pricing** via the `PlanPrice` model. This allows different prices in different currencies for each payment provider:
+
+```
+PlanPrice {
+  planId, provider, currency, amountCents, externalPriceId
+}
+```
+
+For example, a plan can have a $10 USD price on Stripe and a ₦15,000 NGN price on Paystack simultaneously.
 
 ### Auto-creating Price IDs (Stripe only)
 
@@ -171,7 +215,7 @@ STRIPE_AUTO_CREATE="1"   # Auto-creates Stripe products/prices when saving plans
 
 When enabled, saving a plan without a `stripePriceId` will create the product/price in Stripe and write the generated ID back into the matching env entry automatically.
 
-### Plan recurring interval
+### Plan Recurring Interval
 
 Admin plans support `recurringInterval` (`day`, `week`, `month`, `year`) and `recurringIntervalCount` (cadence multiplier, e.g. `month` + `2` = billed every 2 months) when `autoRenew` is enabled.
 
@@ -187,7 +231,7 @@ STRIPE_WEBHOOK_SECRET="whsec_..."       # Supports comma-separated for rotation
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."
 ```
 
-**Webhook endpoint:** `/api/stripe/webhook` (preferred) or `/api/webhooks/stripe`
+**Webhook endpoint:** `/api/webhooks/payments` (centralized, preferred) or `/api/stripe/webhook`
 
 **Local testing:**
 ```bash
@@ -224,6 +268,8 @@ NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY="pk_live_..."
 **Webhook endpoint:** `/api/webhooks/payments` (centralized ingress, preferred) or `/api/webhooks/paystack`
 
 **Pricing model:** Paystack uses `plan_code` as the price ID. One-time payments pass the raw amount; subscriptions pass the `plan_code` to `/transaction/initialize`.
+
+**Default currency:** NGN. Supported currencies: `NGN`, `GHS`, `ZAR`, `KES`, `USD` (USD requires merchant approval; set `PAYSTACK_CURRENCY=USD` to use it as default).
 
 **Cancel at period end (workaround):** Paystack has no native cancel-at-period-end. The app implements a workaround:
 1. Sets `cancelAtPeriodEnd = true` in the DB on cancel.
@@ -287,7 +333,7 @@ RAZORPAY_KEY_ID=""
 RAZORPAY_KEY_SECRET=""
 RAZORPAY_WEBHOOK_SECRET=""
 NEXT_PUBLIC_RAZORPAY_KEY_ID=""
-RAZORPAY_CURRENCY="USD"                 # Optional; affects catalog sync and redirect checkouts
+RAZORPAY_CURRENCY="USD"                 # Optional; affects catalog sync and redirect checkouts (default: INR)
 RAZORPAY_ENABLE_OFFERS="true"           # Optional; attach offer_id to one-time Payment Links
 ```
 
@@ -330,10 +376,26 @@ If Razorpay rejects the `offer_id`, the server retries without it.
 | Cancel at period end | ✅ | ✅ (workaround) | ✅ | ✅ |
 | Customer portal | ✅ | Subscriptions only | ✅ | Subscriptions only |
 | Invoices / Receipts | ✅ | ❌ | ❌ | ❌ |
+| PDF Invoices (in-app) | ✅ | ✅ | ✅ | ✅ |
 | Refunds | ✅ | ✅ | ✅ | ✅ |
 | Disputes | ✅ | ❌ | ❌ | ❌ |
 | Inline elements | ✅ | ✅ | ❌ | ❌ |
 | Trial periods | ✅ | ❌ | ❌ | ❌ |
+| Default currency | USD | NGN | USD | INR |
+
+> **PDF invoices/receipts** are generated in-app via `pdf-lib` for all providers, regardless of native invoicing support. See [Invoice & Refund Receipts](#invoice--refund-receipts).
+
+### Currency System
+
+The app has a multi-layer currency resolution system:
+
+| Priority | Variable | Scope |
+|---|---|---|
+| 1 | `PAYMENTS_CURRENCY` | Global override (recommended) |
+| 2 | `NEXT_PUBLIC_CURRENCY` | Display currency (existing) |
+| 3 | Provider-specific: `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider override |
+| 4 | Provider default | NGN for Paystack, INR for Razorpay, USD for Stripe/Paddle |
+| 5 | Admin setting: `DEFAULT_CURRENCY` | DB-backed, set in admin settings |
 
 ### Database Schema for Multi-Provider
 
@@ -369,11 +431,40 @@ The app ships with a dual token balance system for metering usage:
 | **Paid tokens** | `tokenBalance` | Granted by plan purchases/top-ups. Configurable expiry behavior. |
 | **Free tokens** | `freeTokenBalance` | Granted by the free plan; reset monthly based on settings. |
 
-**Internal API endpoints (protected by `INTERNAL_API_TOKEN`):**
-- `POST /api/internal/spend-tokens` — Deducts from `auto` / `paid` / `free` / `shared` bucket.
-- `POST /api/internal/track-visit` — Records a visit log entry.
+### Token Spending
 
-**Settings that drive the token system:**
+**Internal API endpoint (protected by `INTERNAL_API_TOKEN`):**
+
+`POST /api/internal/spend-tokens` — Deducts tokens. Accepts a `bucket` parameter:
+
+| Bucket | Behavior |
+|---|---|
+| `auto` | Deducts from paid first, then free (default) |
+| `paid` | Only deducts from paid tokens |
+| `free` | Only deducts from free tokens |
+| `shared` | Deducts from the user's organization shared token pool |
+
+### Organization Token Pools
+
+When a user belongs to a team plan, the organization has its own token system:
+
+| Field | Purpose |
+|---|---|
+| `Organization.tokenBalance` | Shared token pool for the team |
+| `Organization.tokenPoolStrategy` | Strategy for pool management (default: `SHARED_FOR_ORG`) |
+| `Organization.memberTokenCap` | Maximum tokens any single member can consume |
+| `Organization.memberCapStrategy` | `SOFT` (warn) or `HARD` (block) enforcement |
+| `Organization.memberCapResetIntervalHours` | How often member usage windows reset |
+| `OrganizationMembership.memberTokenUsage` | Per-member usage tracking within the window |
+| `OrganizationMembership.memberTokenCapOverride` | Per-member cap exception |
+
+### Other Internal Endpoints
+
+- `POST /api/internal/track-visit` — Records a visit log entry.
+- `POST /api/internal/payment-scripts` — Payment-related script operations.
+
+### Settings That Drive the Token System
+
 - `initializeNewUserTokens` — allocates starter tokens on first user creation.
 - `resetUserTokensIfNeeded` — resets free tokens monthly (checked on every dashboard visit).
 - `shouldResetPaidTokensOnExpiry` / `shouldResetPaidTokensOnRenewal` — configurable in admin settings.
@@ -387,8 +478,21 @@ Team subscriptions provision managed organizations and keep them in sync with bi
 - **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to Clerk (if using Clerk).
 - **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses, the helper dismantles the organization and clears member access.
 - **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, and provisioning refresh.
-- **API routes:** `/api/team/invite`, `/api/team/invite/revoke`, `/api/team/members/remove`, `/api/team/summary`, `/api/team/provision`.
+- **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
+- **API routes:** `/api/team/invite`, `/api/team/invite/revoke`, `/api/team/members/remove`, `/api/team/summary`, `/api/team/provision`, `/api/team/settings`.
 - **Clerk webhook sync:** `organization.*`, `organizationMembership.*`, and `organizationInvitation.*` events are handled in `/api/webhooks/clerk` to keep Prisma and Clerk in sync.
+
+### Plan Schema for Teams
+
+```prisma
+Plan {
+  scope              String  @default("INDIVIDUAL") // "INDIVIDUAL" or "TEAM"
+  supportsOrganizations  Boolean @default(false)
+  organizationSeatLimit  Int?
+  organizationTokenPoolStrategy String? @default("SHARED_FOR_ORG")
+  minSeats / maxSeats / seatPriceCents  // Seat-based pricing
+}
+```
 
 ---
 
@@ -405,7 +509,30 @@ import { FeatureId } from '@/lib/features';
 </FeatureGate>
 ```
 
+The gate checks **both** personal subscriptions **and** organization access — if the user is an owner or member of an organization with an active team subscription, access is granted even without a personal subscription.
+
 `PRO_FEATURES` in `lib/features.ts` lists all gated features (e.g. `OFFSET_SETTINGS`, `EXPORT_SCALE_*`, `WATERMARK_REMOVAL`, `SUPPORT_PRIORITY`, `USAGE_LIMIT_ELEVATED`, etc.).
+
+---
+
+## Coupon System
+
+The app includes a full-featured coupon engine with provider-aware discount handling.
+
+### Features
+
+- **Percent-off** and **amount-off** discounts
+- **Duration control:** `once`, `repeating` (N months), or `forever`
+- **Plan restrictions** via `CouponPlan` join table — limit coupons to specific plans
+- **Currency-aware:** Amount-off coupons can be restricted to a specific currency
+- **Minimum purchase thresholds** (`minimumPurchaseCents`)
+- **Max redemptions** and time-bound availability (`startsAt` / `endsAt`)
+- **Multi-provider coupon sync:** Coupons are auto-synced to providers that support native coupons (Stripe, Paddle); for others (Paystack, Razorpay), discounts are applied in-app
+
+### Admin & User Pages
+
+- **Admin:** `/admin/coupons` — create, edit, activate/deactivate coupons, set plan restrictions
+- **User:** `/dashboard/coupons` — view redeemed coupons and pending redemptions
 
 ---
 
@@ -418,8 +545,23 @@ A full-featured blog is built into the app:
 - **API routes:** `/api/admin/blog/route.ts` (bulk), `/api/admin/blog/[id]`, `/api/admin/blog/categories`
 - **Lib:** `lib/blog.ts` — paginated queries, category management, slug normalization, and rich-text sanitization via `lib/htmlSanitizer.ts`.
 - **Components:** `components/blog/BlogSidebar.tsx`, `RelatedPosts.tsx`, `BlogListingStyles.tsx`
+- **Rich text editing:** TipTap editor with images, links, colors, text alignment, YouTube embeds, horizontal rules, and more.
 
-Blog posts are stored using the `SitePage` model (shared with editable site pages) and differentiated by type/category.
+### Blog Categories
+
+Blog posts use a many-to-many category system:
+
+```
+SitePage ←→ BlogPostCategory ←→ BlogCategory
+```
+
+### SEO Support
+
+Every blog post and site page includes dedicated SEO fields:
+- `metaTitle`, `metaDescription`, `canonicalUrl`, `noIndex`
+- Open Graph: `ogTitle`, `ogDescription`, `ogImage`
+
+Blog posts are stored using the `SitePage` model (shared with editable site pages) and differentiated by `collection` (`page` vs `blog`).
 
 ---
 
@@ -433,6 +575,162 @@ Editable public pages (Terms, Privacy, Refund Policy, etc.) are managed in the a
 - **Core pages** (Terms, Privacy, Refund Policy) are seeded automatically if they don't exist.
 
 Template variables (e.g. `{{siteName}}`) are interpolated at render time from admin settings.
+
+---
+
+## Theming & Branding
+
+The admin theme designer (`/admin/theme`) provides comprehensive branding control without touching code.
+
+### Color Palette System
+
+Full light/dark mode color palettes with CSS custom properties generated server-side in `app/layout.tsx`:
+
+- **Core surfaces:** `bgPrimary`, `bgSecondary`, `bgTertiary`, `bgQuaternary`
+- **Text:** `textPrimary`, `textSecondary`, `textTertiary`
+- **Borders:** `borderPrimary`, `borderSecondary`
+- **Accents:** `accentPrimary`, `accentHover`
+- **Gradients:** Page, hero, card, and tabs gradients (each with `from`/`via`/`to`)
+- **Special surfaces:** `headerBg`, `stickyHeaderBg`, `sidebarBg`, `heroBg`, `panelBg`, `pageGlow`
+- **Preset palettes:** Saved color schemes for quick application
+
+### Header & Navigation
+
+- **Header links** and **footer links** — configurable link lists
+- **Footer text** with `{{year}}` and `{{siteName}}` interpolation
+- **Header layout:** Blur radius, border width, shadow, font size/weight (for both default and sticky states)
+
+### Custom Code Injection
+
+- **Custom CSS** — injected globally via `<style>` tag
+- **Custom `<head>` snippet** — scripts, meta tags, third-party integrations
+- **Custom `<body>` snippet** — bottom-of-page scripts (analytics, chat widgets)
+
+### Blog Theming
+
+- **Listing style** and **page size** configuration
+- **Sidebar settings** and related posts toggle
+- **Blog HTML snippets** — inject HTML before/after/between blog posts (ads, CTAs)
+
+### Pricing Page
+
+- **Pricing layout settings** — configured through the theme admin
+
+---
+
+## Email Templates
+
+The app includes a full email template CMS with database-backed, editable templates.
+
+### Admin UI
+
+`/admin/emails` — WYSIWYG editor for all email templates. Each template supports HTML and plain text versions with `{{variable}}` placeholders.
+
+### Built-in Templates
+
+| Template Key | When Sent |
+|---|---|
+| `welcome` | User registers and verifies email |
+| `subscription_extended` | Existing subscription is extended |
+| `subscription_upgraded` | User upgrades from non-recurring to recurring plan |
+| `token_topup` | User purchases additional tokens/credits |
+| `tokens_credited` | Admin credits tokens to a user |
+| `tokens_debited` | Admin debits tokens from a user |
+| `admin_assigned_plan` | Admin assigns a plan to a user |
+| `team_invitation` | User is invited to join an organization |
+| `admin_notification` | Admin billing alert emails |
+
+### Template Variables
+
+All templates support a common set of variables:
+- **User:** `{{firstName}}`, `{{lastName}}`, `{{fullName}}`, `{{userEmail}}`
+- **Billing:** `{{planName}}`, `{{amount}}`, `{{transactionId}}`, `{{tokenAmount}}`
+- **Site:** `{{siteName}}`, `{{supportEmail}}`, `{{siteUrl}}`, `{{siteLogo}}`
+- **Branding:** `{{accentColor}}`, `{{accentHoverColor}}` — resolved from theme palette
+- **Links:** `{{dashboardUrl}}`, `{{billingUrl}}`
+
+### Email Logging
+
+All sent emails are logged in the `EmailLog` model with recipient, subject, template key, and delivery status.
+
+---
+
+## Notifications
+
+The app has a full in-app notification system.
+
+### Types
+
+| Type | Example |
+|---|---|
+| `BILLING` | Subscription renewed, payment failed, refund processed |
+| `SUPPORT` | Admin replied to your ticket |
+| `ACCOUNT` | Profile updated, plan assigned |
+| `TEAM_INVITE` | You've been invited to join a team |
+| `GENERAL` | System announcements |
+
+### Features
+
+- **In-app notifications** with unread badge counts
+- **URL deep-linking** — each notification can link to a specific page
+- **Deduplication** — 5-minute window prevents duplicate notifications
+- **Paired with email:** Billing notifications can optionally trigger an email via the template system
+- **Admin alerts:** Configurable per-event-type admin emails (refund, new purchase, renewal, upgrade, downgrade, payment failure, dispute)
+- **Global notifications:** Admins can send notifications to all users
+
+### Routes
+
+- **User:** `/dashboard/notifications` — view and mark notifications as read
+- **Admin:** `/admin/notifications` — manage system notifications
+- **API:** `/api/notifications` (list), `/api/notifications/[id]` (single), `/api/notifications/mark-all-read`
+
+---
+
+## Support Tickets
+
+A built-in support ticket system for user-admin communication.
+
+### Features
+
+- **Ticket lifecycle:** Open → admin/user replies → resolved
+- **Reply threads** with user and admin messages
+- **Email notifications:** Configurable per-event (`new_ticket_to_admin`, `admin_reply_to_user`, `user_reply_to_admin`)
+- **Dashboard badge:** Users see a "NEW" badge when an admin has replied
+
+### Routes
+
+- **User:** `/dashboard/support` — create tickets, view replies
+- **Admin:** `/admin/support` — view all open tickets, reply, manage status
+- **API:** `/api/support/tickets`
+
+---
+
+## Contact Page
+
+A public contact form at `/contact` backed by the `ContactForm` component and `/api/contact` API route. The page content is managed as a site page (editable from `/admin/pages`).
+
+---
+
+## Invoice & Refund Receipts
+
+The app generates **PDF invoices** and **refund receipts** server-side using `pdf-lib`, available for all payment providers regardless of native invoicing support.
+
+### Invoice PDF (`lib/invoice.tsx`)
+
+Generated A4 documents including:
+- Site branding (name, logo)
+- Invoice number, date, status, payment provider reference
+- Bill-to details (customer name, email)
+- Service details (plan name, description, duration, service period)
+- Coupon/discount breakdown
+- Payment summary with subtotal, discount, and total
+
+### Refund Receipt PDF (`lib/refundReceipt.tsx`)
+
+Similar layout with refund-specific details:
+- Refund ID, date, original transaction reference
+- Refunded amount vs. original amount
+- Coupon applied (if any)
 
 ---
 
@@ -575,10 +873,153 @@ In addition to `ADMIN`, the app supports a **Moderator** role with configurable 
 
 - **Admin config:** `/admin/moderation` — enable/disable which dashboard sections a moderator can access.
 - **Sections available:** `users`, `transactions`, `purchases`, `subscriptions`, `support`, `notifications`, `blog`, `analytics`, `traffic`, `organizations`.
-- **Lib:** `lib/moderator.ts` — `MODERATOR_SECTIONS`, access checking helpers.
+- **Moderator activity log:** `/admin/moderator-activity` — tracks all moderator actions.
+- **Lib:** `lib/moderator.ts` / `lib/moderator-shared.ts` — `MODERATOR_SECTIONS`, access checking helpers.
 - **API:** `/api/admin/moderator-actions/route.ts`
 
 Moderators see only the sections their config allows; they cannot change settings, manage plans, or perform billing operations.
+
+---
+
+## Rate Limiting
+
+The app includes database-backed rate limiting via the `RateLimitBucket` model and `lib/rateLimit.ts`.
+
+### Preconfigured tiers
+
+| Tier | Limit | Window | Use Case |
+|---|---|---|---|
+| `API_GENERAL` | 100 req | 15 min | General API endpoints |
+| `API_SENSITIVE` | 10 req | 15 min | Password changes, account deletion |
+| `CHECKOUT` | 5 req | 1 min | Checkout creation |
+| `WEBHOOK` | 1000 req | 1 min | Inbound webhooks (fail-open) |
+| `EXPORT` | 20 req | 1 min | Data exports |
+| `AUTH` | 20 req | 15 min | Login attempts |
+
+### Features
+
+- **Composite keys** — rate limits by IP + User-Agent combination
+- **Response headers** — `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+- **Automatic cleanup** — expired buckets are pruned probabilistically every ~100 requests
+- **Fail-open option** — `skipOnError: true` prevents rate limiter DB issues from blocking requests
+- **Admin-aware** — `adminRateLimit` helper uses actor ID when available, falls back to IP
+
+---
+
+## Logging & Audit Trail
+
+### Secure Logger (`lib/logger.ts`)
+
+A production-safe logging system that replaces raw `console.log` throughout the app:
+
+- **Auto-redaction** of sensitive keys (passwords, tokens, secrets, API keys)
+- **Persistent storage** — WARN and ERROR logs are saved to the `SystemLog` model (viewable at `/admin/logs`)
+- **Auto-pruning** at 1,000 max entries
+- **Structured logging** with timestamps and sanitized metadata
+
+### Admin Action Audit Log
+
+The `AdminActionLog` model records all admin/moderator actions:
+
+- **Fields:** actor, target user, action type, details, timestamp
+- **Viewable at:** `/admin/moderator-activity`
+
+---
+
+## Security
+
+### HTTP Security Headers
+
+`next.config.mjs` sets comprehensive security headers on all routes:
+
+- `X-Frame-Options: DENY` — prevents clickjacking
+- `X-Content-Type-Options: nosniff` — prevents MIME sniffing
+- `Strict-Transport-Security` — enforces HTTPS (1 year, includeSubDomains)
+- `Referrer-Policy: origin-when-cross-origin`
+- `X-XSS-Protection: 1; mode=block`
+- `Permissions-Policy` — disables camera, microphone, geolocation, payment
+- API routes: `Cache-Control: no-store, max-age=0`
+
+### Error Sanitization
+
+`lib/secure-errors.ts` provides structured error classes (`AppError`, `ValidationError`, `AuthenticationError`, `AuthorizationError`, etc.) that:
+
+- Expose safe, operational error messages to clients
+- Hide internal error details in production
+- Include `X-Request-ID` headers for support/debugging
+
+### Other Security Features
+
+- **`ENCRYPTION_SECRET`** — encrypts sensitive DB fields (e.g. card last4)
+- **Webhook signature verification** with rotation support (comma-separated secrets)
+- **Price validation** on webhook events
+- **Password policy** enforcement (`lib/password-policy.ts`)
+- **Token version** tracking — incremented on password change to invalidate existing sessions
+
+---
+
+## Dark Mode
+
+The app supports system-preference and manual dark mode:
+
+- **Detection:** Reads `localStorage.themePreference`, falls back to `prefers-color-scheme` media query
+- **Flash prevention:** An inline `<script>` runs before React hydration to set the theme class on `<html>`, preventing light → dark flash
+- **Toggle:** `ThemeToggle` component available in the header
+- **CSS classes:** `html.light` and `html.dark` — all theme color variables are generated for both modes
+- **Persistence:** User preference saved to `localStorage.themePreference`
+
+---
+
+## Testing
+
+The app includes comprehensive testing infrastructure:
+
+### Unit Tests (Vitest)
+
+```bash
+npm test              # Run all unit tests
+npm test -- --watch   # Watch mode
+```
+
+58+ test files covering:
+- Payment provider flows (Stripe, Paystack, Paddle, Razorpay, Lemon Squeezy)
+- Webhook handling and event normalization
+- Subscription lifecycle (checkout, proration, cancellation, resurrection)
+- Team/organization operations
+- Token spending and organization scoping
+- Auth flows and route guards
+- Admin operations and sorting/filtering
+
+### E2E Tests (Playwright)
+
+```bash
+npm run test:e2e          # Run all E2E tests
+npm run test:e2e:headed   # Run with browser visible
+```
+
+Configuration in `playwright.config.ts`.
+
+---
+
+## Admin Dashboard Overview
+
+The admin dashboard (`/admin`) is organized into logical groups:
+
+| Group | Sections |
+|---|---|
+| **Overview** | Dashboard home with quick stats |
+| **Users & Access** | Users, Organizations, Moderation |
+| **Finances** | Transactions, One-Time Sales, Subscriptions, Coupons |
+| **Platform** | Theme, Pages, Blog, Plans, Email Templates, Settings |
+| **Support & Analytics** | Support Tickets, Notifications, Analytics (GA4), Traffic |
+| **Developer** | API Docs, System Logs, Maintenance |
+
+### Notable Admin Features
+
+- **Admin API Docs** (`/admin/api`) — auto-generated API inventory from `lib/admin-api.inventory.ts`
+- **Maintenance Tools** (`/admin/maintenance`) — cleanup and repair utilities
+- **System Logs** (`/admin/logs`) — persisted WARN/ERROR logs with filtering
+- **Onboarding** (`/dashboard/onboarding`) — guided setup for new users
 
 ---
 
@@ -598,6 +1039,9 @@ AUTH_PROVIDER="clerk"   # or "nextauth"
 
 # Payment (pick one)
 PAYMENT_PROVIDER="stripe"
+
+# Currency (optional, defaults to provider default)
+PAYMENTS_CURRENCY="USD"
 
 # Security
 ENCRYPTION_SECRET=""           # Encrypt sensitive DB fields
@@ -634,7 +1078,7 @@ Returns database connectivity, environment validation (Stripe, Clerk), and runti
 ### Stripe webhook (production)
 
 1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint.
-2. URL: `https://yourproductiondomain.com/api/stripe/webhook`
+2. URL: `https://yourproductiondomain.com/api/webhooks/payments` (or `/api/stripe/webhook`)
 3. Enable the recommended events listed in the [Stripe](#stripe) section above.
 4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
@@ -696,10 +1140,12 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET` | Choose Clerk or NextAuth |
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
+| Currency | `PAYMENTS_CURRENCY`, `NEXT_PUBLIC_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
 | Email | `SMTP_*`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Nodemailer config |
 | Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs or S3 |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN` | Server-side secrets |
+| Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_SANDBOX`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
 | Dev helpers | `DEV_ADMIN_ID`, `DEV_ADMIN_EMAIL`, `ALLOW_ADMIN_SCRIPT` | Local dev only |
 
 ---

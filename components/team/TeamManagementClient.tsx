@@ -178,6 +178,23 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
     [callEndpoint]
   );
 
+  const handleSetCapOverride = useCallback(
+    async (userId: string, cap: number | null) => {
+      setBusyAction(`cap:${userId}`);
+      await callEndpoint(
+        '/api/team/members/cap-override',
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, capOverride: cap }),
+        },
+        cap == null ? 'Member cap override cleared.' : `Member cap set to ${cap.toLocaleString()}.`
+      );
+      setBusyAction(null);
+    },
+    [callEndpoint]
+  );
+
   const handleRevokeInvite = useCallback(
     async (token: string) => {
       setBusyAction(`revoke:${token}`);
@@ -468,6 +485,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
             busyAction={busyAction}
             canManageMembers={canManageMembers}
             onRemove={handleRemoveMember}
+            onSetCapOverride={handleSetCapOverride}
             tokenLabel={tokenLabelTitle}
           />
         </section>

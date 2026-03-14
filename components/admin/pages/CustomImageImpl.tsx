@@ -99,7 +99,8 @@ function ResizableImageComponent(props: NodeViewProps) {
       // inline styles.
       if (imgRef.current) {
         imgRef.current.style.setProperty('width', `${newWidth}px`, 'important');
-        imgRef.current.style.setProperty('height', `${newHeight}px`, 'important');
+        imgRef.current.style.setProperty('aspect-ratio', `${newWidth} / ${newHeight}`, 'important');
+        imgRef.current.style.setProperty('height', 'auto', 'important');
         imgRef.current.style.setProperty('max-width', '100%', 'important');
       }
     };
@@ -117,7 +118,7 @@ function ResizableImageComponent(props: NodeViewProps) {
       updateAttributes({
         width: finalWidth,
         height: finalHeight,
-        style: `width: ${finalWidth}px !important; height: ${finalHeight}px !important; max-width: 100% !important;`,
+        style: `width: ${finalWidth}px !important; height: auto !important; aspect-ratio: ${finalWidth} / ${finalHeight} !important; max-width: 100% !important;`,
       });
 
       setIsResizing(false);
@@ -149,17 +150,19 @@ function ResizableImageComponent(props: NodeViewProps) {
     // override the inline sizing.
     if (width) {
       imgRef.current.style.setProperty('width', `${width}px`, 'important');
+      imgRef.current.style.setProperty('max-width', '100%', 'important');
+      
+      if (height) {
+        imgRef.current.style.setProperty('aspect-ratio', `${width} / ${height}`, 'important');
+        imgRef.current.style.setProperty('height', 'auto', 'important');
+      } else {
+        imgRef.current.style.setProperty('height', 'auto', 'important');
+      }
     } else {
       imgRef.current.style.removeProperty('width');
-    }
-
-    if (height) {
-      imgRef.current.style.setProperty('height', `${height}px`, 'important');
-    } else {
       imgRef.current.style.removeProperty('height');
+      imgRef.current.style.removeProperty('aspect-ratio');
     }
-
-    imgRef.current.style.setProperty('max-width', '100%', 'important');
   }, [width, height]);
 
   React.useEffect(() => {

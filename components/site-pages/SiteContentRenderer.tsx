@@ -65,12 +65,15 @@ export function SiteContentRenderer({ content, className = '' }: SiteContentRend
           // Keep images responsive by default
           style.setProperty('max-width', '100%', 'important');
 
-          // If the editor supplied an explicit display height, use it. Otherwise
-          // let the image keep its aspect ratio by using height: auto.
+          // If the editor supplied an explicit display height, use it to set 
+          // the aspect ratio. This prevents layout shift while allowing the 
+          // image to scale proportionally (height: auto) when constrained by 
+          // max-width (e.g. on mobile), avoiding the "squished" look.
           if (displayHeightAttr) {
             const heightValue = parseFloat(displayHeightAttr as string);
             if (!Number.isNaN(heightValue) && heightValue > 0) {
-              style.setProperty('height', `${heightValue}px`, 'important');
+              style.setProperty('aspect-ratio', `${widthValue} / ${heightValue}`, 'important');
+              style.setProperty('height', 'auto', 'important');
             } else {
               style.setProperty('height', 'auto', 'important');
             }

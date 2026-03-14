@@ -267,7 +267,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
           />
           {/* top-down page-level gradient and soft radial highlight at the top */}
           <main
-            className="flex-1 w-full p-6 relative"
+            className="flex-1 w-full p-3 sm:p-6 relative"
           >
             {/* bluish/purplish top radial glow for 'light from above' */}
             <div

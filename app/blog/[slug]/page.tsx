@@ -31,11 +31,11 @@ export default async function BlogPostPage({ params }: PageParams) {
   const relatedEnabled = await getRelatedPostsEnabled();
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 lg:px-8 py-8 lg:py-16">
-      <div className={`grid gap-12 items-stretch ${singleSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
+    <div className="mx-auto w-full max-w-[1440px] px-0 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-16">
+      <div className={`grid gap-6 lg:gap-12 items-stretch ${singleSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
         <article className={`${singleSidebarEnabled ? 'lg:col-span-2' : 'max-w-4xl mx-auto'} min-h-0`}>
-          <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-8 lg:p-12 h-full flex flex-col">
-            <header className="mb-12">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 lg:p-12 h-full flex flex-col">
+            <header className="mb-6 lg:mb-12">
               <Breadcrumbs
                 items={[
                   { label: 'Home', href: '/' },
@@ -44,7 +44,7 @@ export default async function BlogPostPage({ params }: PageParams) {
                   { label: post.title }
                 ]}
               />
-              <h1 className="mb-6 text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight" style={{ lineHeight: '1.2' }}>{post.title}</h1>
+              <h1 className="mb-4 lg:mb-6 text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight" style={{ lineHeight: '1.2' }}>{post.title}</h1>
               {post.description ? (
                 <p className="text-lg lg:text-xl leading-relaxed text-slate-600 dark:text-neutral-300 mb-6 font-medium">{post.description}</p>
               ) : null}

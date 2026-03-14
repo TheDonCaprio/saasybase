@@ -166,11 +166,6 @@ UPDATE "User" SET role = 'ADMIN' WHERE id = 'user_xxxxxxxxxxxxx';
 node scripts/make-admin.js user_xxxxxxxxxxxxx
 ```
 
-**Option 3 — Upsert script**
-```bash
-node scripts/upsert_admin.js
-```
-
 > 💡 Find your Clerk user ID in the Clerk dashboard, or your DB user ID via `npx prisma studio`.
 
 ---

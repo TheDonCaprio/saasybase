@@ -43,6 +43,10 @@ export type OrganizationRecord = {
   updatedAt: string | Date;
 };
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-US').format(value);
+}
+
 type PageInfo = {
   page: number;
   limit: number;
@@ -213,18 +217,19 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-neutral-50">{org.name}</p>
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-neutral-50">{org.name}</p>
+                      <div className="mt-0.5 flex flex-col gap-0.5 text-xs text-slate-500 dark:text-neutral-400">
+                        <span className="truncate">ID: {org.id}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate">/{org.slug}</span>
+                          <span>•</span>
+                          <span className="truncate">Owner: {org.owner?.name ?? 'Unknown'}</span>
+                        </div>
                         {org.plan && (
-                          <span className="inline-flex flex-shrink-0 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-200">
-                            {org.plan.name}
-                          </span>
+                          <div className="text-indigo-600 dark:text-indigo-400 font-medium text-[10px] mt-0.5">
+                            Plan: {org.plan.name}
+                          </div>
                         )}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
-                        <span className="truncate">/{org.slug}</span>
-                        <span>•</span>
-                        <span className="truncate">Owner: {org.owner?.name ?? 'Unknown'}</span>
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -295,14 +300,15 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                     <tr key={org.id} className="hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-900 dark:text-neutral-50">{org.name}</div>
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-neutral-500 uppercase tracking-tight">ID: {org.id}</div>
                         <div className="text-xs text-slate-500 dark:text-neutral-400">/{org.slug}</div>
-                        {org.plan && (
-                          <div className="text-xs text-slate-500 dark:text-neutral-400">Plan: {org.plan.name}</div>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-slate-900 dark:text-neutral-50">{org.owner?.name ?? '—'}</div>
                         <div className="text-xs text-slate-500 dark:text-neutral-400">{org.owner?.email ?? 'No email'}</div>
+                        {org.plan && (
+                          <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">Plan: {org.plan.name}</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-900 dark:text-neutral-50">{formatNumber(org.activeMembers)}</div>
@@ -406,6 +412,4 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
   );
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('en-US').format(value);
-}
+

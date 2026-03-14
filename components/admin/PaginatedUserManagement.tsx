@@ -288,7 +288,7 @@ export function PaginatedUserManagement({
                             {user.clerkData?.fullName || user.name || 'No name'}
                           </div>
                           <div className="truncate text-xs text-slate-500 dark:text-neutral-400">
-                            {user.email || 'No email'}
+                            {user.id}
                           </div>
                         </div>
                       </div>
@@ -354,7 +354,7 @@ export function PaginatedUserManagement({
 
             <div className="hidden lg:block">
               <div className="bg-slate-50/80 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-neutral-900/60 dark:text-neutral-400">
-                <div className="grid grid-cols-7 gap-4">
+                <div className="grid grid-cols-[1.5fr_1.2fr_0.7fr_1fr_1.2fr_0.7fr_0.7fr] gap-4">
                   <div>Name</div>
                   <div>Email</div>
                   <div>Role</div>
@@ -368,8 +368,8 @@ export function PaginatedUserManagement({
               <div className="divide-y divide-slate-200/70 dark:divide-neutral-800/70">
                 {users.map((user) => (
                   <div key={user.id} className="px-6 py-4 transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
-                    <div className="grid grid-cols-7 items-center gap-4">
-                      <div className="text-sm">
+                    <div className="grid grid-cols-[1.5fr_1.2fr_0.7fr_1fr_1.2fr_0.7fr_0.7fr] items-center gap-4">
+                      <div className="min-w-0 text-sm">
                         <div className="flex items-center gap-3">
                           {user.clerkData?.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -384,12 +384,12 @@ export function PaginatedUserManagement({
                               {user.clerkData?.fullName || user.name || 'No name'}
                             </div>
                             <div className="truncate text-xs text-slate-500 dark:text-neutral-400">
-                              {user.email || 'No email'}
+                              {user.id}
                             </div>
                           </div>
                         </div>
                       </div>
-                      <div className="truncate text-sm text-slate-600 dark:text-neutral-200">
+                      <div className="min-w-0 truncate text-sm text-slate-600 dark:text-neutral-200">
                         {user.email || 'No email'}
                       </div>
                       <div>

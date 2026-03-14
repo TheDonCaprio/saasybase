@@ -349,7 +349,7 @@ export function ListFilters<T extends string = string>({
                   <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
                   <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
                 </svg>
-                <span className="uppercase tracking-wide text-xs">Refresh</span>
+                <span className="tracking-wide text-xs">Refresh</span>
               </button>
             )}
             {/* render trailing content inline on mobile so extra actions (like MarkAllRead) appear on same row */}
@@ -615,7 +615,7 @@ export function ListFilters<T extends string = string>({
                   <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
                   <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
                 </svg>
-                <span className="uppercase">Refresh</span>
+                <span>Refresh</span>
               </button>
             )}
       </div>

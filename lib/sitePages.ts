@@ -288,21 +288,42 @@ export async function buildSitePageMetadata(
   }
 
   const siteName = await getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
-  const description = page.description ?? undefined;
-  const title = `${page.title} | ${siteName}`;
+  
+  // Title logic: custom metaTitle > page.title
+  const baseTitle = page.metaTitle?.trim() || page.title;
+  const title = page.metaTitle?.trim() ? baseTitle : `${baseTitle} | ${siteName}`;
+  
+  // Description logic: custom metaDescription > page.description
+  const description = page.metaDescription?.trim() || page.description || undefined;
+
+  // Open Graph / Twitter defaults
+  const ogTitle = page.ogTitle?.trim() || baseTitle;
+  const ogDescription = page.ogDescription?.trim() || description;
+  const ogImage = page.ogImage?.trim() || undefined;
 
   return {
     title,
     description,
+    alternates: page.canonicalUrl?.trim() ? {
+      canonical: page.canonicalUrl.trim()
+    } : undefined,
+    robots: page.noIndex ? {
+      index: false,
+      follow: true
+    } : undefined,
     openGraph: {
-      title,
-      description
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+      type: options.collection === 'blog' ? 'article' : 'website',
     },
     twitter: {
-      title,
-      description
+      card: ogImage ? 'summary_large_image' : 'summary',
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [ogImage] : undefined,
     }
-  } as const;
+  };
 }
 
 export async function getPageById(

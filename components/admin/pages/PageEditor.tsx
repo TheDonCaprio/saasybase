@@ -173,6 +173,15 @@ export default function PageEditor({
   const [imageEditorState, setImageEditorState] = useState<ImageEditorState | null>(null);
   const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
+
+  // Defer fullscreen state changes to avoid TipTap's internal flushSync
+  // being called while React is already rendering (EditorContent remounts
+  // when moving between the inline view and the fullscreen portal).
+  const toggleEditorFullscreen = useCallback((value?: boolean) => {
+    requestAnimationFrame(() => {
+      setIsEditorFullscreen((prev) => (value !== undefined ? value : !prev));
+    });
+  }, []);
   const [isEditingSlug, setIsEditingSlug] = useState(false);
   const [slugDraft, setSlugDraft] = useState('');
   const [isMounted, setIsMounted] = useState(false);
@@ -186,6 +195,10 @@ export default function PageEditor({
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [toolbarHeight, setToolbarHeight] = useState(0);
+  // Refs used for DOM-teleport fullscreen approach
+  const editorWrapperRef = useRef<HTMLDivElement | null>(null);
+  const editorPlaceholderRef = useRef<HTMLDivElement | null>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Dual draft management
   const [manualDraft, setManualDraft] = useState<FormData | null>(null);
@@ -672,11 +685,33 @@ export default function PageEditor({
     wasFullscreenRef.current = isEditorFullscreen;
   }, [editor, isEditorFullscreen]);
 
+  // DOM-teleport effect: when fullscreen activates, physically move the editor
+  // wrapper out of the React tree into the portal container in document.body.
+  // This avoids both the CSS stacking-context clipping AND the flushSync error
+  // (because EditorContent never remounts). isMounted is a dependency because
+  // the portal container ref is only populated after the first client render.
+  useEffect(() => {
+    const wrapper = editorWrapperRef.current;
+    const placeholder = editorPlaceholderRef.current;
+    const portal = fullscreenContainerRef.current;
+    if (!wrapper || !placeholder || !portal) return;
+
+    if (isEditorFullscreen) {
+      // Move wrapper into portal (document.body level — escapes any CSS stacking context)
+      portal.appendChild(wrapper);
+    } else {
+      // Move wrapper back before the placeholder in its original location
+      if (wrapper.parentNode !== placeholder.parentNode) {
+        placeholder.parentNode?.insertBefore(wrapper, placeholder);
+      }
+    }
+  }, [isEditorFullscreen, isMounted]);
+
   useEffect(() => {
     if (!isEditorFullscreen) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsEditorFullscreen(false);
+        toggleEditorFullscreen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1530,25 +1565,34 @@ export default function PageEditor({
           {/* Categories moved to right panel */}
 
           <div className="space-y-3">
-            <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-0">
-              <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Content</label>
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">Rich text with semantic HTML</span>
-            </div>
+            {!isEditorFullscreen && (
+              <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-0">
+                <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Content</label>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">Rich text with semantic HTML</span>
+              </div>
+            )}
+
+            {/* Placeholder keeps layout space while editor is teleported */}
+            <div ref={editorPlaceholderRef} className={isEditorFullscreen ? 'min-h-[520px]' : ''} />
             <div
+              ref={editorWrapperRef}
               className={clsx(
-                'relative flex flex-col rounded-xl border border-neutral-200 bg-white shadow-sm transition-all dark:border-neutral-700 dark:bg-neutral-900',
-                !isEditorFullscreen && 'min-h-[520px]'
+                'relative flex flex-col bg-white shadow-sm dark:bg-neutral-900',
+                isEditorFullscreen
+                  ? 'flex-col h-full w-full'
+                  : 'rounded-xl border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
               )}
             >
-              {editor && !isEditorFullscreen ? (
+              {editor ? (
                 <>
                   {/* Sticky toolbar inside editor */}
                   <div
                     ref={toolbarRef}
                     className={clsx(
-                      'sticky top-0 z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
-                      isEditorFullscreen ? 'shadow-sm' : ''
+                      'sticky z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
+                      isEditorFullscreen ? 'top-0 shadow-sm' : ''
                     )}
+                    style={!isEditorFullscreen ? { top: 'var(--sticky-header-height, 0px)' } : undefined}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1849,7 +1893,7 @@ export default function PageEditor({
                         <div className="flex items-center gap-1 border-l border-neutral-200 pl-2 dark:border-neutral-700">
                           <button
                             type="button"
-                            onClick={() => setIsEditorFullscreen((prev) => !prev)}
+                            onClick={() => toggleEditorFullscreen()}
                             aria-pressed={isEditorFullscreen}
                             className="inline-flex items-center gap-2 rounded p-2 transition hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:hover:bg-neutral-800 dark:focus:ring-offset-neutral-900"
                             title={isEditorFullscreen ? 'Exit full screen' : 'Enter full screen'}
@@ -1863,6 +1907,21 @@ export default function PageEditor({
                             </svg>
                           </button>
                         </div>
+
+                        {isEditorFullscreen && (
+                          <div className="flex items-center gap-1 border-l border-neutral-200 pl-2 dark:border-neutral-700">
+                            <button
+                              type="button"
+                              onClick={() => toggleEditorFullscreen(false)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:focus:ring-offset-neutral-900"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H5v4M19 9V5h-4M9 19H5v-4M19 15v4h-4" />
+                              </svg>
+                              <span className="text-xs font-medium">Exit full screen</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1871,9 +1930,9 @@ export default function PageEditor({
                   <div
                     className={clsx(
                       'flex-1 overflow-y-auto',
-                      isEditorFullscreen ? 'px-6 pb-8 pt-6' : 'p-4'
+                      isEditorFullscreen ? 'px-8 pb-8 pt-6' : 'p-4'
                     )}
-                    style={{ minHeight: '400px' }}
+                    style={{ minHeight: isEditorFullscreen ? undefined : '400px' }}
                   >
                     <EditorContent
                       editor={editor}
@@ -2580,7 +2639,7 @@ export default function PageEditor({
 
       {/* Link Modal */}
       {isMounted && showLinkModal && createPortal(
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               Add Link
@@ -2635,7 +2694,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showConfirmManualRestore && createPortal(
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Restore manual draft?</h3>
             <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-300">This will overwrite your current editor content with the saved manual draft. This cannot be undone.</p>
@@ -2668,7 +2727,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showConfirmAutoRestore && createPortal(
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Restore auto draft?</h3>
             <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-300">This will overwrite your current editor content with the most recent auto-saved draft. This cannot be undone.</p>
@@ -2701,7 +2760,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showCategoriesModal && createPortal(
-        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="flex h-[min(90vh,900px)] w-[min(1100px,96vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-700">
               <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Manage blog categories</h3>
@@ -2726,7 +2785,7 @@ export default function PageEditor({
 
       {/* Embed Modal */}
       {isMounted && showEmbedModal && createPortal(
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Insert Embed</h3>
             <div className="space-y-4">
@@ -2890,270 +2949,35 @@ export default function PageEditor({
         uploadScope={uploadScope}
       />
 
-      {/* Fullscreen Editor Portal */}
+      {/* Fullscreen backdrop portal - renders at body level to escape CSS stacking contexts */}
       {isMounted && isEditorFullscreen && createPortal(
-        <div className="fixed inset-0 z-[60] flex flex-col bg-neutral-950/50 backdrop-blur-sm">
-          <div
-            className="absolute inset-0"
-            onClick={() => setIsEditorFullscreen(false)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 flex h-full w-full flex-col bg-white dark:bg-neutral-900">
-            {editor ? (
-              <>
-                {/* Fullscreen toolbar */}
-                <div className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-900/95">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleBold().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('bold')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Bold"
-                        >
-                          <span className="text-sm font-bold">B</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleItalic().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('italic')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Italic"
-                        >
-                          <span className="text-sm font-medium italic">I</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleUnderline().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('underline')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Underline"
-                        >
-                          <span className="text-sm font-medium underline">U</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleStrike().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('strike')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Strikethrough"
-                        >
-                          <span className="text-sm font-medium line-through">S</span>
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
-                        {headingLevels.map((level) => (
-                          <button
-                            key={level}
-                            type="button"
-                            onClick={() => {
-                              if (!editor) return;
-                              editor.chain().focus().toggleHeading({ level }).run();
-                            }}
-                            className={`rounded px-3 py-2 text-sm font-medium transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                              editor?.isActive('heading', { level })
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                                : ''
-                            }`}
-                            title={`Heading ${level}`}
-                          >
-                            H{level}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleBulletList().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('bulletList')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Bullet list"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleOrderedList().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('orderedList')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Numbered list"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14l3.5-2 3.5 2z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleBlockquote().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('blockquote')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Quote"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editor) return;
-                            editor.chain().focus().toggleCodeBlock().run();
-                          }}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('codeBlock')
-                              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                              : ''
-                          }`}
-                          title="Code block"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                          </svg>
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
-                        <button
-                          type="button"
-                          onClick={setLink}
-                          className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                            editor?.isActive('link') ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' : ''
-                          }`}
-                          title="Add link"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={addImage}
-                          disabled={isUploading || isPreparingImage}
-                          className="rounded p-2 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-neutral-800"
-                          title="Add image"
-                        >
-                          {isUploading || isPreparingImage ? (
-                            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                          ) : (
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        {textAlignments.map((position) => (
-                          <button
-                            key={position}
-                            type="button"
-                            onClick={() => editor.chain().focus().setTextAlign(position).run()}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                              editor.isActive({ textAlign: position })
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                                : ''
-                            }`}
-                            title={`Align ${position}`}
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              {position === 'left' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />}
-                              {position === 'center' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M8 12h8m-8 6h8" />}
-                              {position === 'right' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M12 12h8M4 18h16" />}
-                            </svg>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsEditorFullscreen(false)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:focus:ring-offset-neutral-900"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H5v4M19 9V5h-4M9 19H5v-4M19 15v4h-4" />
-                      </svg>
-                      <span className="text-xs font-medium">Exit full screen</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Fullscreen content area */}
-                <div className="flex-1 overflow-y-auto px-8 py-6">
-                  <EditorContent
-                    editor={editor}
-                    onClick={(event) => {
-                      if (!editor) return;
-                      const target = event.target as HTMLElement | null;
-                      const linkElement = target?.closest('a');
-                      if (!linkElement) return;
-
-                      try {
-                        editor.chain().focus().extendMarkRange('link').run();
-                      } catch (error) {
-                        console.warn('Failed to select link on click:', error);
-                      }
-                    }}
-                    className="prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto max-w-none focus:outline-none prose-headings:font-semibold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:my-4 prose-p:leading-relaxed prose-img:mx-auto prose-img:rounded-lg prose-img:shadow-sm editor-content"
-                  />
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>,
+        <div
+          className="fixed inset-0 z-[59] bg-neutral-950/50 backdrop-blur-sm"
+          onClick={() => toggleEditorFullscreen(false)}
+          aria-hidden="true"
+        />,
         document.body
       )}
+
+      {/* Fullscreen portal container - editor wrapper is teleported into this */}
+      {isMounted && createPortal(
+        <div
+          ref={fullscreenContainerRef}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 60,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'white',
+            visibility: isEditorFullscreen ? 'visible' : 'hidden',
+            pointerEvents: isEditorFullscreen ? 'auto' : 'none',
+          }}
+          className="dark:bg-neutral-900"
+        />,
+        document.body
+      )}
+
     </div>
   );
 }

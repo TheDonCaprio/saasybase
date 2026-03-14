@@ -278,9 +278,9 @@ export function ImageEditorModal({ open, imageUrl, filename, mimeType, onCancel,
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => (!submitting ? onCancel() : null)} />
-      <div className="relative z-[81] w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="relative z-[121] w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4 dark:border-neutral-800">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Edit image</h2>

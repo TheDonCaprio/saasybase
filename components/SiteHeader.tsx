@@ -80,6 +80,16 @@ export function SiteHeader({
   const normalHeight = clampInt(layout.height, 48, 160, 80);
   const stickyHeight = clampInt(layout.stickyHeight, 40, 160, 64);
   const currentHeight = isSticky ? stickyHeight : normalHeight;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isSticky) {
+      root.style.setProperty('--sticky-header-height', `${currentHeight}px`);
+    } else {
+      root.style.setProperty('--sticky-header-height', '0px');
+    }
+  }, [isSticky, currentHeight]);
+
   const headerPositionClass = isSticky ? 'fixed top-0 left-0 right-0' : 'relative';
 
   const renderNavLink = useMemo(() => {

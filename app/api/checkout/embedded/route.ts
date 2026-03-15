@@ -128,7 +128,6 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
         // Hoist shared state for plan resolution so we can use it later (amount fallback, etc.)
         let resolvedPlanSeed: (typeof PLAN_DEFINITIONS)[number] | undefined;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let dbPlanRecord: Record<string, unknown> | null = null;
         let targetPlanId: string | null = null;
         let targetPlanName: string | null = null;

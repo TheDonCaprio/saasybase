@@ -37,8 +37,11 @@ vi.mock('@/lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: 
 vi.mock('@/lib/settings', () => ({ getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24) }));
 vi.mock('@/lib/rateLimit', () => ({
   RATE_LIMITS: { API_GENERAL: { limit: 9999, windowMs: 60_000 } },
-  withRateLimit: (_identifier: unknown, _config: unknown) =>
-    async (_req: NextRequest, handler: () => Promise<Response>) => handler(),
+  withRateLimit: (identifier: unknown, config: unknown) => {
+    void identifier;
+    void config;
+    return async (_req: NextRequest, handler: () => Promise<Response>) => handler();
+  },
 }));
 
 import { POST } from '../app/api/user/spend-tokens/route';

@@ -81,12 +81,17 @@ export function DashboardHeaderDrawer({
   const router = useRouter();
   const { isSignedIn } = useAuthUser();
   const { orgId } = useAuthSession();
+  const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
-  const [open, setOpen] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [hasAttemptedProfileFetch, setHasAttemptedProfileFetch] = useState(false);
-  const prevOrgIdRef = useRef(orgId);
+  const [openPathname, setOpenPathname] = useState<string | null>(null);
+  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
+  const prevOrgIdRef = useRef(currentOrgId);
+  const profileRequestInFlightRef = useRef(false);
+  const hasAttemptedProfileFetchRef = useRef(false);
+  const open = openPathname === pathname;
+  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
+  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
+  const loading = isSignedIn && open && !profileLoadedForOrg;
 
   const fetchProfile = useCallback(async (retryOnUnauthorized = false) => {
     const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
@@ -148,7 +153,7 @@ export function DashboardHeaderDrawer({
     });
   }, [items, profile?.hasPendingTeamInvites, profile?.planSource]);
 
-  const activeItem = useMemo(() => {
+  const activeItem = (() => {
     if (!pathname) return undefined;
     const matches = displayItems.filter((item) => {
       if (!item.href) return false;
@@ -158,16 +163,27 @@ export function DashboardHeaderDrawer({
     });
     if (!matches.length) return displayItems.find((item) => item.href === pathname);
     return matches.reduce((best, current) => (current.href.length > best.href.length ? current : best));
-  }, [displayItems, pathname]);
+  })();
 
-  const toggle = useCallback(() => setOpen(prev => !prev), []);
-  const close = useCallback(() => setOpen(false), []);
+  const toggle = useCallback(() => {
+    setOpenPathname(prev => (prev === pathname ? null : pathname));
+  }, [pathname]);
+  const close = useCallback(() => {
+    setOpenPathname(null);
+    hasAttemptedProfileFetchRef.current = false;
+    setProfileState((prev) => {
+      if (prev?.orgId === currentOrgId && prev.profile == null) {
+        return null;
+      }
+      return prev;
+    });
+  }, [currentOrgId]);
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        setOpenPathname(null);
       }
     };
 
@@ -185,66 +201,60 @@ export function DashboardHeaderDrawer({
   }, [open]);
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (prevOrgIdRef.current === orgId) return;
-    prevOrgIdRef.current = orgId;
-
-    setProfile(null);
-    setHasAttemptedProfileFetch(false);
-    setLoading(true);
+    if (prevOrgIdRef.current === currentOrgId) return;
+    prevOrgIdRef.current = currentOrgId;
+    hasAttemptedProfileFetchRef.current = false;
 
     const timer = setTimeout(() => {
       router.refresh();
+      profileRequestInFlightRef.current = true;
+      hasAttemptedProfileFetchRef.current = true;
 
       fetchProfile(true)
         .then((nextProfile) => {
-          setProfile(nextProfile);
+          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
         })
         .catch((err) => {
           console.error('Failed to fetch profile after org switch:', err);
-          setProfile(null);
+          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
         })
         .finally(() => {
-          setLoading(false);
-          setHasAttemptedProfileFetch(true);
+          profileRequestInFlightRef.current = false;
         });
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [orgId, router, fetchProfile]);
+  }, [currentOrgId, router, fetchProfile]);
 
   useEffect(() => {
-    if (isSignedIn && open && !profile && !loading && !hasAttemptedProfileFetch) {
-      setHasAttemptedProfileFetch(true);
-      setLoading(true);
+    if (isSignedIn && open && !profile && !hasAttemptedProfileFetchRef.current && !profileRequestInFlightRef.current) {
+      hasAttemptedProfileFetchRef.current = true;
+      profileRequestInFlightRef.current = true;
       fetchProfile(false)
         .then((nextProfile) => {
-          setProfile(nextProfile);
+          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
         })
         .catch((err) => {
           console.error('Failed to fetch profile:', err);
-          setProfile(null);
+          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
         })
         .finally(() => {
-          setLoading(false);
+          profileRequestInFlightRef.current = false;
         });
     }
-  }, [isSignedIn, open, profile, loading, hasAttemptedProfileFetch, fetchProfile]);
+  }, [currentOrgId, fetchProfile, isSignedIn, open, profile]);
 
   useEffect(() => {
     if (!open) {
-      setHasAttemptedProfileFetch(false);
+      hasAttemptedProfileFetchRef.current = false;
     }
   }, [open]);
 
   const handleSignOut = async () => {
     await signOut();
-    setOpen(false);
-    setProfile(null);
-    setHasAttemptedProfileFetch(false);
+    setOpenPathname(null);
+    setProfileState(null);
+    hasAttemptedProfileFetchRef.current = false;
   };
 
   const wrapperClass = className ? `${className}` : '';
@@ -276,23 +286,7 @@ export function DashboardHeaderDrawer({
         <span className="sr-only">Toggle account menu</span>
       </button>
 
-      {open && (() => {
-        const portalEl = (() => {
-          const wrapper = DashboardHeaderDrawer as unknown as { __portalRef?: { current: HTMLDivElement | null } };
-          const ref = wrapper.__portalRef || { current: null };
-          if (!ref.current) {
-            const el = document.createElement('div');
-            el.setAttribute('data-dashboard-drawer-portal', '');
-            document.body.appendChild(el);
-            ref.current = el;
-          }
-          wrapper.__portalRef = ref;
-          return ref.current;
-        })();
-
-        if (!portalEl) return null;
-
-        return createPortal(
+        {open && typeof document !== 'undefined' ? createPortal(
           <div className="fixed inset-0 z-[60000]">
             <button
               type="button"
@@ -518,9 +512,8 @@ export function DashboardHeaderDrawer({
               </div>
             </div>
           </div>,
-          portalEl
-        );
-      })()}
+          document.body,
+        ) : null}
     </>
   );
 }

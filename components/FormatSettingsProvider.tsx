@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { AppFormatMode } from '../lib/settings';
+import { useAuthSession } from '@/lib/auth-provider/client';
 
 type ContextValue = {
   mode: AppFormatMode;
@@ -23,6 +24,7 @@ export function FormatSettingsProvider({
   initialMode = Default.mode,
   initialTimezone
 }: FormatSettingsProviderProps) {
+  const { isLoaded, isSignedIn } = useAuthSession();
   const [mode, setMode] = useState<ContextValue['mode']>(initialMode);
   const [timezone, setTimezone] = useState<string | undefined>(initialTimezone);
   // Prevent double-fetch in React StrictMode
@@ -69,16 +71,9 @@ export function FormatSettingsProvider({
     load();
   }, []);
 
-  // Client-only subcomponent: only rendered when Clerk is enabled. It will
-  // fetch `/api/user/settings` only when the client auth state reports a
-  // signed-in user, preventing 401 noise in the console for anonymous
-  // visitors.
+  // Client-only subcomponent: only rendered when the client auth state reports
+  // a signed-in user, preventing 401 noise for anonymous visitors.
   function UserSettingsFetcher({ onApply }: { onApply: (tz?: string) => void }) {
-    // Dynamically import Clerk hooks so this file remains usable even when
-    // Clerk is not installed or not initialized (DevClerkProvider may skip
-    // providing a Clerk context in some environments).
-    // This component will only be mounted when layout indicates Clerk is
-    // enabled (see layout.tsx changes).
     const { useEffect: useEff } = React;
     useEff(() => {
       let cancelled = false;
@@ -107,8 +102,7 @@ export function FormatSettingsProvider({
   return (
     <FormatSettingsContext.Provider value={{ mode, timezone, refresh: load }}>
       {children}
-      {/** Only mount the user settings fetcher when Clerk is enabled. */}
-      {typeof window !== 'undefined' && (window as Window & { __CLERK_ENABLED?: boolean }).__CLERK_ENABLED && (
+      {isLoaded && isSignedIn && (
         <UserSettingsFetcher onApply={(tz?: string) => {
           if (!tz) return;
           try {

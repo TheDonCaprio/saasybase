@@ -704,7 +704,7 @@ export function ThemeSettingsTabs({
     } finally {
       setResetting(false);
     }
-  }, [resetting]);
+  }, [applyPaletteToDocument, resetting]);
 
   const handleThemeExport = useCallback(async () => {
     if (themeExporting) return;
@@ -1012,6 +1012,7 @@ export function ThemeSettingsTabs({
     setHeaderStyle, setHeaderHeight, setHeaderStickyEnabled, setHeaderStickyScrollY, setHeaderStickyHeight,
     customCss, customHead, customBody, setCustomCss, setCustomHead, setCustomBody,
     blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
+    colorPresets, handleDeleteColorPreset, handleSaveColorPreset,
     lightColors, darkColors, colorMode, setColorMode,
   ]);
 

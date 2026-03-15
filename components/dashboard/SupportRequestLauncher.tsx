@@ -14,10 +14,8 @@ interface SupportRequestLauncherProps {
 const MODAL_TRANSITION_MS = 180;
 
 export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSubmitted }: SupportRequestLauncherProps) {
-  const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const [showCloseDraftConfirm, setShowCloseDraftConfirm] = useState(false);
 
   const [draftSubject, setDraftSubject] = useState('');
@@ -26,25 +24,6 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
   const hasDraft = useMemo(() => {
     return Boolean(draftSubject.trim().length > 0 || draftMessage.trim().length > 0);
   }, [draftSubject, draftMessage]);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  useEffect(() => {
-    let raf = 0;
-    if (isModalOpen) {
-      setHasOpenedOnce(true);
-      setModalVisible(false);
-      raf = requestAnimationFrame(() => setModalVisible(true));
-    } else {
-      setModalVisible(false);
-    }
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [isModalOpen]);
 
   const closeModalImmediate = useCallback(() => {
     setShowCloseDraftConfirm(false);
@@ -62,18 +41,19 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
     closeModalImmediate();
   }, [closeModalImmediate, hasDraft]);
 
-  const openModal = () => {
+  const openModal = useCallback(() => {
     setIsModalOpen(true);
-  };
+    setModalVisible(false);
+    requestAnimationFrame(() => setModalVisible(true));
+  }, []);
 
   useEffect(() => {
-    if (!mounted) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && isModalOpen) requestCloseModal();
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [mounted, isModalOpen, requestCloseModal]);
+  }, [isModalOpen, requestCloseModal]);
 
   const activeTicketMessage = activeTicketsCount > 0
     ? `You currently have ${activeTicketsCount} open ticket${activeTicketsCount === 1 ? '' : 's'}.`
@@ -124,7 +104,7 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
         </button>
       </div>
 
-      {mounted && hasOpenedOnce && typeof document !== 'undefined'
+      {isModalOpen && typeof document !== 'undefined'
         ? createPortal(
           <div
             className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-150 ${isModalOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${modalVisible ? 'opacity-100' : 'opacity-0'}`}

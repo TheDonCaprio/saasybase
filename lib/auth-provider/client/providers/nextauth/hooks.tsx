@@ -95,12 +95,16 @@ export function notifyActiveOrgChanged(activeOrgId?: string | null) {
 /**
  * Hook that returns the current active org ID from the server-backed store.
  */
-export function useActiveOrgId(): string | null {
+export function useActiveOrgId(enabled = true): string | null {
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     if (!_activeOrgState.initialized && !_activeOrgState.loading) {
       void refreshActiveOrgFromServer();
     }
-  }, []);
+  }, [enabled]);
 
   return useSyncExternalStore(subscribeActiveOrg, getActiveOrgSnapshot, getServerActiveOrgSnapshot);
 }
@@ -174,7 +178,7 @@ export function useAuthUser(): UseAuthUserReturn {
 
 export function useAuthSession(): UseAuthSessionReturn {
   const { data: session, status } = useSession();
-  const activeOrgId = useActiveOrgId();
+  const activeOrgId = useActiveOrgId(status === 'authenticated');
 
   useEffect(() => {
     if (status === 'authenticated' && !_activeOrgState.initialized && !_activeOrgState.loading) {

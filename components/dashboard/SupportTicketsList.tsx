@@ -268,30 +268,6 @@ export function SupportTicketsList({
   void nextCursor;
   void refresh;
 
-  const statusCards = [
-    {
-      label: 'Open',
-      value: statusCounts.open,
-      helper: 'Waiting for our response',
-      accent: 'text-amber-500 dark:text-amber-300',
-      badge: 'bg-amber-100/60 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100'
-    },
-    {
-      label: 'In progress',
-      value: statusCounts.inProgress,
-      helper: 'Our team is on it',
-      accent: 'text-sky-500 dark:text-sky-300',
-      badge: 'bg-sky-100/60 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100'
-    },
-    {
-      label: 'Closed',
-      value: statusCounts.closed,
-      helper: 'Resolved conversations',
-      accent: 'text-emerald-500 dark:text-emerald-300',
-      badge: 'bg-emerald-100/60 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-100'
-    }
-  ];
-
   return (
     <div className="space-y-6">
       <div className={dashboardMutedPanelClass('p-4 sm:p-5')}>

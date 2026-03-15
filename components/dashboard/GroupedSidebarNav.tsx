@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -26,9 +26,10 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
   const pathname = usePathname();
   const { isSignedIn } = useAuthUser();
   const { orgId } = useAuthSession();
+  const currentOrgId = orgId ?? null;
 
-  const [profile, setProfile] = useState<SidebarProfile | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
+  const profileRequestInFlightRef = useRef(false);
 
   const CLIENT_MODERATOR_SECTIONS = [
     'users',
@@ -60,21 +61,36 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     [pathname]
   );
 
-  // Invalidate cached profile when active organization changes
-  useEffect(() => {
-    setProfile(null);
-  }, [orgId]);
+  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
+  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
 
   useEffect(() => {
-    if (isSignedIn && !profile && !loading) {
-      setLoading(true);
-      fetch('/api/user/profile')
-        .then((r) => r.json())
-        .then((data) => setProfile(data))
-        .catch((err) => console.error('Failed to fetch profile:', err))
-        .finally(() => setLoading(false));
+    if (!isSignedIn || profileLoadedForOrg || profileRequestInFlightRef.current) {
+      return;
     }
-  }, [isSignedIn, profile, loading]);
+
+    profileRequestInFlightRef.current = true;
+    let cancelled = false;
+
+    fetch('/api/user/profile')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setProfileState({ orgId: currentOrgId, profile: data, loaded: true });
+      })
+      .catch((err) => {
+        console.error('Failed to fetch profile:', err);
+        if (cancelled) return;
+        setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
+      })
+      .finally(() => {
+        profileRequestInFlightRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, currentOrgId, profileLoadedForOrg]);
 
   const defaultExpandedGroups = useMemo(() => {
     const s = new Set<string>();
@@ -87,28 +103,22 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
   }, [groups, pathname, isActiveHref]);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(defaultExpandedGroups));
+  const renderedExpandedGroups = useMemo(() => {
+    const next = new Set(expandedGroups);
+    if (!groups) return next;
+
+    const activeGroup = groups.find((group) => group.items.some((item) => isActiveHref(item.href)));
+    if (activeGroup) {
+      next.add(activeGroup.title);
+    }
+
+    return next;
+  }, [expandedGroups, groups, isActiveHref]);
 
   const renderIcon = (icon?: IconProp) => {
     if (!icon) return null;
     return <FontAwesomeIcon icon={icon} className="w-4 h-4" />;
   };
-
-  // Ensure active group's section becomes expanded on navigation
-  useEffect(() => {
-    if (groups) {
-      const activeGroup = groups.find((g) =>
-        g.items.some((item) => isActiveHref(item.href))
-      );
-      if (activeGroup) {
-        setExpandedGroups(prev => {
-          if (prev.has(activeGroup.title)) return prev;
-          const next = new Set(prev);
-          next.add(activeGroup.title);
-          return next;
-        });
-      }
-    }
-  }, [pathname, groups, isActiveHref]);
 
   // Toggle group — allow collapsing even if it contains the active item
   const toggleGroup = useCallback((groupTitle: string) => {
@@ -151,7 +161,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     return (
       <nav className="space-y-3">
         {displayGroups.map((group) => {
-          const isExpanded = expandedGroups.has(group.title);
+          const isExpanded = renderedExpandedGroups.has(group.title);
           const hasActiveItem = group.items.some((item) => isActiveHref(item.href));
 
           return (

@@ -139,7 +139,7 @@ function TypewriterProvider() {
       if (displayed.length < target.length) {
         t = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
       } else {
-        setPhase('hold');
+        t = setTimeout(() => setPhase('hold'), 0);
       }
     }
     return () => clearTimeout(t);

@@ -9,10 +9,7 @@ export function ActiveSessionsSummary() {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isLoaded || !user) {
-      setCount(null);
-      return;
-    }
+    if (!isLoaded || !user) return;
 
     let mounted = true;
 
@@ -37,5 +34,5 @@ export function ActiveSessionsSummary() {
 
   if (!isLoaded) return <>—</>;
 
-  return <>{typeof count === 'number' ? count : '—'}</>;
+  return <>{!user ? '—' : typeof count === 'number' ? count : '—'}</>;
 }

@@ -62,7 +62,6 @@ export default function PaddlePayClient() {
       eventCallback: (evt: unknown) => {
         // Helpful diagnostics for "Something went wrong" overlay.
         // (The overlay is often triggered by domain approval/token mismatch.)
-        // eslint-disable-next-line no-console
         console.log('[Paddle event]', evt);
       },
     });

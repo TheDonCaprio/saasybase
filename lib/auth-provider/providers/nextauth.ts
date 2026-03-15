@@ -345,10 +345,11 @@ export class NextAuthProvider implements AuthProvider {
   // ── Webhooks ───────────────────────────────────────────────────────
   // NextAuth uses callbacks, not inbound webhooks. This is a no-op.
 
-  async verifyWebhook(_request: {
+  async verifyWebhook(request: {
     body: string | Buffer;
     headers: Record<string, string>;
   }): Promise<AuthWebhookEvent | null> {
+    void request;
     Logger.debug('NextAuthProvider.verifyWebhook: webhooks not supported by NextAuth');
     return null;
   }

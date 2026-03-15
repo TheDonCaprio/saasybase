@@ -57,12 +57,13 @@ export default async function AdminLogsPage() {
   await requireAdminAuth('/admin/logs');
 
   const delegate = getSystemLogDelegate();
+  const now = new Date();
   let logs: AdminLogEntry[] = [];
   let total = 0;
   let errorCount = 0;
   let warnCount = 0;
-  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const since1h = new Date(Date.now() - 1 * 60 * 60 * 1000);
+  const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const since1h = new Date(now.getTime() - 1 * 60 * 60 * 1000);
   let recentCount = 0;
   let recentErrorCount = 0;
   let recentWarnCount = 0;

@@ -39,6 +39,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   await enforceTeamWorkspaceProvisioningGuard(userId);
 
   const activeCurrency = await getActiveCurrencyAsync();
+  const now = new Date();
 
   const [
     clerkUser,
@@ -64,7 +65,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
       _count: { id: true }
     }),
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
       include: { plan: true }
     }),
     prisma.visitLog.findMany({
@@ -168,7 +169,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     freePlanSettings,
     defaultTokenLabel,
   });
-  const nowTimeMs = Date.now();
+  const nowTimeMs = now.getTime();
 
   const daysRemaining = activeSubscription
     ? Math.max(0, Math.ceil((new Date(activeSubscription.expiresAt).getTime() - nowTimeMs) / (1000 * 60 * 60 * 24)))

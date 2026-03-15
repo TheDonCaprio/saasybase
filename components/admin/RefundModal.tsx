@@ -33,8 +33,7 @@ const REFUND_REASONS = [
   { value: 'fraudulent', label: 'Fraudulent Payment', description: 'Payment was fraudulent or unauthorized' },
 ];
 
-export function RefundModal({
-  isOpen,
+function RefundModalPanel({
   onClose,
   onConfirm,
   amount,
@@ -45,37 +44,24 @@ export function RefundModal({
   hasActiveSubscription = false,
   subscriptionPlanAutoRenew = null,
   subscriptionExpiresAt = null,
-  hasProviderSubscription = false
-}: RefundModalProps) {
+  hasProviderSubscription = false,
+}: Omit<RefundModalProps, 'isOpen'>) {
   const [selectedReason, setSelectedReason] = useState('requested_by_customer');
   const [customReason, setCustomReason] = useState('');
   const [cancelSubscription, setCancelSubscription] = useState(() => hasProviderSubscription);
   const [cancelMode, setCancelMode] = useState<'immediate' | 'period_end'>('immediate');
   const [localCancelMode, setLocalCancelMode] = useState<'immediate' | 'period_end'>('immediate');
   const [clearPaidTokens, setClearPaidTokens] = useState<boolean>(false);
-  const [mounted, setMounted] = useState(false);
 
   const expiresAtDate = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
   const formattedExpiresAt = expiresAtDate
     ? expiresAtDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
     : null;
 
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedReason('requested_by_customer');
-      setCustomReason('');
-      setCancelSubscription(hasProviderSubscription);
-      setCancelMode('immediate');
-      setLocalCancelMode('immediate');
-    }
-  }, [isOpen, hasProviderSubscription]);
-
   // Initialize clearPaidTokens default from global admin settings when modal opens
   useEffect(() => {
     let mounted = true;
     async function loadDefault() {
-      if (!isOpen) return;
       try {
         const key = subscriptionPlanAutoRenew === true ? 'TOKENS_RESET_ON_EXPIRY_RECURRING' : 'TOKENS_RESET_ON_EXPIRY_ONE_TIME';
         const res = await fetch(`/api/admin/settings?key=${encodeURIComponent(key)}`);
@@ -89,26 +75,19 @@ export function RefundModal({
     }
     void loadDefault();
     return () => { mounted = false; };
-  }, [isOpen, subscriptionPlanAutoRenew]);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+  }, [subscriptionPlanAutoRenew]);
 
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
-    
-    if (!isOpen) return;
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [onClose]);
 
   const handleConfirm = () => {
     onConfirm(
@@ -120,8 +99,6 @@ export function RefundModal({
       , clearPaidTokens
     );
   };
-
-  if (!isOpen || !mounted || typeof document === 'undefined') return null;
 
   const selectedReasonData = REFUND_REASONS.find(r => r.value === selectedReason);
 
@@ -429,4 +406,25 @@ export function RefundModal({
   );
 
   return createPortal(modalContent, document.body);
+}
+
+export function RefundModal(props: RefundModalProps) {
+  if (!props.isOpen || typeof document === 'undefined') return null;
+
+  return (
+    <RefundModalPanel
+      key={`${props.paymentId}:${props.isOpen ? 'open' : 'closed'}:${props.hasProviderSubscription ? 'provider' : 'local'}`}
+      onClose={props.onClose}
+      onConfirm={props.onConfirm}
+      amount={props.amount}
+      displayCurrency={props.displayCurrency}
+      paymentId={props.paymentId}
+      loading={props.loading}
+      error={props.error}
+      hasActiveSubscription={props.hasActiveSubscription}
+      subscriptionPlanAutoRenew={props.subscriptionPlanAutoRenew}
+      subscriptionExpiresAt={props.subscriptionExpiresAt}
+      hasProviderSubscription={props.hasProviderSubscription}
+    />
+  );
 }

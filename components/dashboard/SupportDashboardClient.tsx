@@ -80,19 +80,6 @@ export function SupportDashboardClient({
   const activeCount = stats.open + stats.inProgress;
   const displayActiveCount = Math.max(activeCount, activeTicketsCount);
 
-  const quickStats = [
-    {
-      label: 'Active tickets',
-      value: displayActiveCount,
-      helper: displayActiveCount > 0 ? 'Open + in progress conversations' : 'Everything is resolved',
-    },
-    {
-      label: 'Total tickets logged',
-      value: stats.total,
-      helper: 'All requests since you joined',
-    },
-  ];
-
   const statusCards = [
     {
       label: 'Open',

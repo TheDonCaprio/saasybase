@@ -2,13 +2,20 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdminOrModerator, toAuthGuardErrorResponse } from '@/lib/auth'
+
+function debugRouteDisabled() {
+  return process.env.NODE_ENV === 'production' || process.env.ENABLE_DEBUG_ROUTES !== 'true'
+}
 
 export async function POST() {
-  if (process.env.NODE_ENV === 'production') {
+  if (debugRouteDisabled()) {
     return NextResponse.json({ error: 'Not available in production' }, { status: 404 })
   }
 
   try {
+    await requireAdminOrModerator()
+
     const entry = await prisma.systemLog.create({
       data: {
         level: 'error',
@@ -20,6 +27,8 @@ export async function POST() {
 
     return NextResponse.json({ ok: true, id: entry.id })
   } catch (err) {
+    const authResponse = toAuthGuardErrorResponse(err)
+    if (authResponse) return authResponse
     console.error('debug trigger failed', err)
     return NextResponse.json({ error: 'failed' }, { status: 500 })
   }

@@ -81,7 +81,7 @@ export function SimplePageEditor({ value, onChange, placeholder = 'Start writing
 
 	useEffect(() => {
 		setIsMounted(true);
-	}, []);
+	}, [uploadScope]);
 
 	const editor = useEditor({
 		extensions: [
@@ -174,7 +174,7 @@ export function SimplePageEditor({ value, onChange, placeholder = 'Start writing
 		} finally {
 			setIsUploading(false);
 		}
-	}, []);
+	}, [uploadScope]);
 
 	const setLink = useCallback(() => {
 		const attrs = editor?.getAttributes('link') ?? {};

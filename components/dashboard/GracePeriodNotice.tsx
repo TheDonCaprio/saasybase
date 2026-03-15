@@ -67,9 +67,9 @@ export function GracePeriodNotice() {
     if (!dismissedUntilIso) return false;
     const stored = new Date(dismissedUntilIso);
     if (Number.isNaN(stored.getTime())) return false;
-    // Only suppress if the stored "until" matches or exceeds the current grace end,
-    // and the grace window is still active.
-    return stored.getTime() >= graceEndsAt.getTime() && Date.now() < graceEndsAt.getTime();
+    // Only suppress if the stored "until" matches or exceeds the current grace end.
+    // The API-backed `status.inGrace` check already ensures the grace window is active.
+    return stored.getTime() >= graceEndsAt.getTime();
   }, [status, graceEndsAt, dismissedUntilIso]);
 
   if (!status || !status.inGrace) return null;

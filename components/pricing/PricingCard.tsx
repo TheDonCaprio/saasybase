@@ -131,24 +131,8 @@ function applyProrationFallback(
 }
 
 function ModalPortal({ children }: { children: React.ReactNode }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const el = document.createElement('div');
-    el.className = 'pricing-modal-layer';
-    document.body.appendChild(el);
-    containerRef.current = el;
-    setReady(true);
-    return () => {
-      document.body.removeChild(el);
-      containerRef.current = null;
-    };
-  }, []);
-
-  if (!ready || !containerRef.current) return null;
-  return createPortal(children, containerRef.current);
+  if (typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
 }
 export default function PricingCard({ plan, activeRecurringPlan = null, scheduledPlanId, currency }: { plan: DBPlan; activeRecurringPlan?: ActiveRecurringPlan; scheduledPlanId?: string | null; currency: string }) {
   const router = useRouter();
@@ -233,7 +217,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       setIfMounted(setOneTimeRenewalResetsTokens)(false);
       return false;
     }
-  }, []);
+  }, [setIfMounted]);
 
   function determineReturnPath(): string {
     if (typeof window === 'undefined') {

@@ -11,10 +11,10 @@
  * equivalents that match the same API surface consumers expect.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { SessionProvider, signIn, signOut } from 'next-auth/react';
+import { SessionProvider, signIn, signOut, useSession } from 'next-auth/react';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 
 // ---------------------------------------------------------------------------
@@ -85,6 +85,31 @@ const primaryBtnCx =
 
 type AuthModalMode = 'signin' | 'signup';
 
+function getResetPasswordParams() {
+  if (typeof window === 'undefined') {
+    return {
+      mode: 'sign-in' as SignInMode,
+      token: '',
+      email: '',
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'reset-password') {
+    return {
+      mode: 'reset-password' as SignInMode,
+      token: params.get('token') || '',
+      email: params.get('email') || '',
+    };
+  }
+
+  return {
+    mode: 'sign-in' as SignInMode,
+    token: '',
+    email: '',
+  };
+}
+
 function AuthModalShell({
   open,
   mode,
@@ -96,22 +121,17 @@ function AuthModalShell({
   onClose: () => void;
   onSwitch: (mode: AuthModalMode) => void;
 }) {
-  const [mounted, setMounted] = useState(false);
   const [footerNotice, setFooterNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setFooterNotice(null);
-    }
-  }, [open]);
-
-  useEffect(() => {
+  const handleClose = useCallback(() => {
     setFooterNotice(null);
-  }, [mode]);
+    onClose();
+  }, [onClose]);
+
+  const handleSwitch = useCallback((nextMode: AuthModalMode) => {
+    setFooterNotice(null);
+    onSwitch(nextMode);
+  }, [onSwitch]);
 
   useEffect(() => {
     if (!open) return;
@@ -119,7 +139,7 @@ function AuthModalShell({
     const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
@@ -130,14 +150,14 @@ function AuthModalShell({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, handleClose]);
 
-  if (!open || !mounted) return null;
+  if (!open || typeof document === 'undefined') return null;
 
   const isSignIn = mode === 'signin';
 
   return createPortal(
-    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]" onClick={onClose}>
+    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]" onClick={handleClose}>
       <div
         data-auth-modal-root="true"
         role="dialog"
@@ -157,7 +177,7 @@ function AuthModalShell({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close auth dialog"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
           >
@@ -186,7 +206,7 @@ function AuthModalShell({
               Don&apos;t have an account?{' '}
               <button
                 type="button"
-                onClick={() => onSwitch('signup')}
+                onClick={() => handleSwitch('signup')}
                 className="font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
               >
                 Create one
@@ -197,7 +217,7 @@ function AuthModalShell({
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={() => onSwitch('signin')}
+                onClick={() => handleSwitch('signin')}
                 className="font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
               >
                 Sign in
@@ -242,21 +262,12 @@ export function AuthSignIn(props: {
   [key: string]: unknown;
 }) {
   const redirectUrl = props.forceRedirectUrl || props.fallbackRedirectUrl || '/dashboard';
+  const initialResetParams = getResetPasswordParams();
 
   // Detect reset-password deep-link from URL params (e.g. from email)
-  const [mode, setMode] = useState<SignInMode>('sign-in');
-  const [resetToken, setResetToken] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'reset-password') {
-      setMode('reset-password');
-      setResetToken(params.get('token') || '');
-      setResetEmail(params.get('email') || '');
-    }
-  }, []);
+  const [mode, setMode] = useState<SignInMode>(initialResetParams.mode);
+  const [resetToken] = useState(initialResetParams.token);
+  const [resetEmail] = useState(initialResetParams.email);
 
   if (mode === 'forgot-password') {
     return <ForgotPasswordForm onBack={() => setMode('sign-in')} />;
@@ -1037,6 +1048,7 @@ interface ActiveOrgResponse {
 }
 
 export function AuthOrganizationSwitcher() {
+  const { status } = useSession();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
@@ -1046,6 +1058,17 @@ export function AuthOrganizationSwitcher() {
 
   // Fetch orgs on mount
   useEffect(() => {
+    if (status === 'loading') {
+      return;
+    }
+
+    if (status !== 'authenticated') {
+      setOrgs([]);
+      setActiveOrgId(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
@@ -1063,7 +1086,7 @@ export function AuthOrganizationSwitcher() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [status]);
 
   // Close dropdown on outside click
   useEffect(() => {

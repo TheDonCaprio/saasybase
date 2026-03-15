@@ -21,9 +21,6 @@ import {
 } from '../lib/payment/invoice-payment-recording';
 import type { StandardizedInvoice } from '../lib/payment/types';
 
-type ResolveInvoicePaidInput = Parameters<typeof resolveInvoicePaidProcessingContext>[0];
-type RecordInvoicePaymentInput = Parameters<typeof recordInvoicePaymentAndApplyTokens>[0];
-
 function createInvoice(overrides: Partial<StandardizedInvoice>): StandardizedInvoice {
   return {
     id: 'inv_test',

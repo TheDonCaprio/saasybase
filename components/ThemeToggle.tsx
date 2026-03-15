@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSun, faMoon, faCircleHalfStroke } from '@fortawesome/free-solid-svg-icons';
+import { useAuthSession } from '@/lib/auth-provider/client';
 
 type ThemePreference = 'light' | 'dark' | 'auto';
 
@@ -23,6 +24,7 @@ function readLocalPreference(): ThemePreference {
 }
 
 export function ThemeToggle() {
+  const { isLoaded, isSignedIn } = useAuthSession();
   const [preference, setPreference] = useState<ThemePreference>('auto');
   const [saving, setSaving] = useState(false);
 
@@ -57,9 +59,7 @@ export function ThemeToggle() {
     setPreference(initial);
     applyTheme(initial);
 
-    // Only fetch user settings if Clerk is enabled (avoid 401s for anonymous visitors)
-    const clerkEnabled = typeof window !== 'undefined' && (window as Window & { __CLERK_ENABLED?: boolean }).__CLERK_ENABLED;
-    if (!clerkEnabled) return;
+    if (!isLoaded || !isSignedIn) return;
 
     let cancelled = false;
     (async () => {
@@ -84,11 +84,16 @@ export function ThemeToggle() {
     return () => {
       cancelled = true;
     };
-  }, [applyTheme]);
+  }, [applyTheme, isLoaded, isSignedIn]);
 
   const persistPreference = useCallback(async (nextPreference: ThemePreference) => {
     setPreference(nextPreference);
     applyTheme(nextPreference);
+
+    if (!isSignedIn) {
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -103,7 +108,7 @@ export function ThemeToggle() {
     } finally {
       setSaving(false);
     }
-  }, [applyTheme]);
+  }, [applyTheme, isSignedIn]);
 
   const handleToggle = useCallback(() => {
     const next = preference === 'dark' ? 'light' : 'dark';

@@ -1,12 +1,21 @@
+import { NextResponse } from 'next/server';
+import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+
+function debugRouteDisabled() {
+  return process.env.NODE_ENV === 'production' || process.env.ENABLE_DEBUG_ROUTES !== 'true';
+}
+
 export async function GET() {
-  if (process.env.NODE_ENV === 'production') {
-    return new Response(JSON.stringify({ error: 'Not found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (debugRouteDisabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  return new Response(JSON.stringify({ ok: true, message: 'clerk-client-shape debug route' }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+  try {
+    await requireAdmin();
+    return NextResponse.json({ ok: true, message: 'clerk-client-shape debug route' });
+  } catch (error) {
+    const authResponse = toAuthGuardErrorResponse(error);
+    if (authResponse) return authResponse;
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
 }

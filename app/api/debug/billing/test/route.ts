@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { createBillingNotification } from '../../../../../lib/notifications';
 import { shouldEmailUser, sendEmail, getSupportEmail, getSiteName } from '../../../../../lib/email';
 import { prisma } from '../../../../../lib/prisma';
@@ -6,14 +7,20 @@ import { toError } from '../../../../../lib/runtime-guards';
 
 export const runtime = 'nodejs';
 
+function debugRouteDisabled() {
+  return process.env.NODE_ENV === 'production' || process.env.ENABLE_DEBUG_ROUTES !== 'true';
+}
+
 // Dev-only endpoint to trigger a billing notification + email for testing.
 // POST { userId: string, subject?: string, message?: string, sendAdmin?: boolean }
 export async function POST(req: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not allowed in production' }, { status: 403 });
+  if (debugRouteDisabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   try {
+    await requireAdmin();
+
     const body = await req.json();
     const userId = body.userId as string | undefined;
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
@@ -51,6 +58,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, emailSent, adminResult });
   } catch (err: unknown) {
+    const authResponse = toAuthGuardErrorResponse(err);
+    if (authResponse) return authResponse;
     const e = toError(err);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

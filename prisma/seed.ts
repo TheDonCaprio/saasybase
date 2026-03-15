@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { PLAN_DEFINITIONS, ensurePlansSeeded } from '../lib/plans';
+import { ensurePlansSeeded } from '../lib/plans';
 
 const prisma = new PrismaClient();
 

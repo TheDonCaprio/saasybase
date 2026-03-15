@@ -14,7 +14,7 @@ export function CheckoutReturnClient() {
 
   const [closeAttempted, setCloseAttempted] = useState(false);
   const [closeSucceeded, setCloseSucceeded] = useState(false);
-  const [confirmStatus, setConfirmStatus] = useState<'idle' | 'waiting' | 'confirmed' | 'timeout'>('idle');
+  const [confirmTerminalStatus, setConfirmTerminalStatus] = useState<'idle' | 'confirmed' | 'timeout'>('idle');
 
   const isSuccess = status === 'success' || status === 'paid' || status === 'completed';
   const providerLabel = useMemo(() => {
@@ -42,7 +42,8 @@ export function CheckoutReturnClient() {
       return `No worries — you can return to the app and try again.`;
     }
     return `You can return to the app to continue.`;
-  }, [confirmStatus, isSuccess, provider, status]);
+  }, [isSuccess, status]);
+  const confirmStatus = isSuccess && confirmTerminalStatus === 'idle' ? 'waiting' : confirmTerminalStatus;
 
   useEffect(() => {
     if (!isSuccess) return;
@@ -55,8 +56,6 @@ export function CheckoutReturnClient() {
     const maxMs = 2 * 60 * 1000;
     const intervalMs = 3000;
     const startedAt = Date.now();
-
-    setConfirmStatus('waiting');
 
     const tick = async () => {
       if (cancelled) return;
@@ -84,7 +83,7 @@ export function CheckoutReturnClient() {
             return;
           }
 
-          setConfirmStatus('confirmed');
+          setConfirmTerminalStatus('confirmed');
           const nextParams = new URLSearchParams();
           nextParams.set('purchase', 'success');
           if (provider) nextParams.set('provider', provider);
@@ -97,7 +96,7 @@ export function CheckoutReturnClient() {
       }
 
       if (Date.now() - startedAt > maxMs) {
-        setConfirmStatus('timeout');
+        setConfirmTerminalStatus('timeout');
         return;
       }
 
@@ -109,7 +108,7 @@ export function CheckoutReturnClient() {
     return () => {
       cancelled = true;
     };
-  }, [isSuccess, provider, sessionId, sinceParam]);
+  }, [isSuccess, paymentId, provider, sessionId, sinceParam]);
 
   useEffect(() => {
     if (isSuccess) return;

@@ -143,7 +143,6 @@ export default function SassyAppClient() {
     } catch {
       // ignore
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // If we have no balance yet, initialize it from real tokens.

@@ -23,7 +23,7 @@ interface UserActionsProps {
   currentAdminId?: string;
 }
 
-export function UserActions({ user, onEdit, currentAdminId }: UserActionsProps) {
+export function UserActions({ user, onEdit }: UserActionsProps) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const router = useRouter();

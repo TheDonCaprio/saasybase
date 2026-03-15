@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -23,9 +23,10 @@ export function MobileNavDrawer({
   signOutLabel = 'Sign out'
 }: MobileNavDrawerProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [openPathname, setOpenPathname] = useState<string | null>(null);
+  const open = openPathname === pathname;
 
-  const activeItem = useMemo(() => {
+  const activeItem = (() => {
     if (!pathname) return undefined;
     const matches = items.filter((item) => {
       if (!item.href) return false;
@@ -35,16 +36,18 @@ export function MobileNavDrawer({
     });
     if (!matches.length) return items.find(item => item.href === pathname);
     return matches.reduce((best, current) => (current.href.length > best.href.length ? current : best));
-  }, [items, pathname]);
+  })();
 
-  const toggle = useCallback(() => setOpen(prev => !prev), []);
-  const close = useCallback(() => setOpen(false), []);
+  const toggle = useCallback(() => {
+    setOpenPathname(prev => (prev === pathname ? null : pathname));
+  }, [pathname]);
+  const close = useCallback(() => setOpenPathname(null), []);
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        setOpenPathname(null);
       }
     };
 
@@ -60,10 +63,6 @@ export function MobileNavDrawer({
       document.body.style.overflow = originalOverflow;
     };
   }, [open]);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   const wrapperClass = className ? `w-full ${className}` : 'w-full';
 
@@ -88,33 +87,7 @@ export function MobileNavDrawer({
         </button>
       </header>
 
-      {open && (() => {
-        // create a portal container on first render and render the overlay + panel into it
-        // we lazily create the portal element so it only exists on the client
-        const portalEl = (() => {
-          // local hook-like closure: create element on first call
-          const wrapper = MobileNavDrawer as unknown as { __portalRef?: { current: HTMLDivElement | null }; __portalCleanup?: (() => void) };
-          const ref = wrapper.__portalRef || { current: null };
-          if (!ref.current) {
-            const el = document.createElement('div');
-            el.setAttribute('data-mobile-nav-portal', '');
-            document.body.appendChild(el);
-            ref.current = el;
-            // attach cleanup on unload
-            const cleanup = () => {
-              if (ref.current && ref.current.parentNode) ref.current.parentNode.removeChild(ref.current);
-              ref.current = null;
-            };
-            // store cleanup so it's not garbage collected (best-effort)
-            wrapper.__portalCleanup = cleanup;
-          }
-          wrapper.__portalRef = ref;
-          return ref.current;
-        })();
-
-        if (!portalEl) return null;
-
-        return createPortal(
+        {open && typeof document !== 'undefined' ? createPortal(
           <div className="fixed inset-0 z-[60000]">
             <button
               type="button"
@@ -200,9 +173,8 @@ export function MobileNavDrawer({
               </div>
             </div>
           </div>,
-          portalEl
-        );
-      })()}
+          document.body
+        ) : null}
     </div>
   );
 }

@@ -15,18 +15,6 @@ const AUTH_PROVIDER = process.env.AUTH_PROVIDER || 'clerk';
 // Clerk middleware
 // ---------------------------------------------------------------------------
 
-async function _getClerkMiddleware() {
-  const mod = await import('@clerk/nextjs/server');
-  return {
-    authMiddleware: mod.clerkMiddleware,
-    createAuthRouteMatcher: mod.createRouteMatcher,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// NextAuth middleware
-// ---------------------------------------------------------------------------
-
 async function _getNextAuthMiddleware() {
   const { auth } = await import('../nextauth.config');
 

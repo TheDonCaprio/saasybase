@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
@@ -69,20 +69,21 @@ function delay(ms: number) {
 export default function AccountMenu() {
   const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
+  const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  // pointerPos stores the left (px) where the rotated square should be centered
-  const [pointerPos, setPointerPos] = useState<number | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [hasAttemptedProfileFetch, setHasAttemptedProfileFetch] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const prevOrgIdRef = useRef(orgId);
+  const prevOrgIdRef = useRef(currentOrgId);
+  const profileRequestInFlightRef = useRef(false);
+  const hasAttemptedProfileFetchRef = useRef(false);
   const dropdownTop = '4.45rem';
-  const pointerTop = 'calc(4.45rem - 6px)';
+  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
+  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
+  const loading = isSignedIn && isOpen && !profileLoadedForOrg;
 
   const fetchProfile = async (retryOnUnauthorized = false) => {
     const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
@@ -129,52 +130,60 @@ export default function AccountMenu() {
     throw new Error(`Profile fetch failed: ${response.status}`);
   };
 
+  const closeMenu = useCallback(() => {
+    setIsOpen(false);
+    hasAttemptedProfileFetchRef.current = false;
+    setProfileState((prev) => {
+      if (prev?.orgId === currentOrgId && prev.profile == null) {
+        return null;
+      }
+      return prev;
+    });
+  }, [currentOrgId]);
+
   useEffect(() => {
     // Skip the initial mount — only react to actual org switches
-    if (prevOrgIdRef.current === orgId) return;
-    prevOrgIdRef.current = orgId;
-
-    // Clear stale profile immediately so the dropdown shows a loading state
-    setProfile(null);
-    setHasAttemptedProfileFetch(false);
-    setLoading(true);
+    if (prevOrgIdRef.current === currentOrgId) return;
+    prevOrgIdRef.current = currentOrgId;
+    hasAttemptedProfileFetchRef.current = false;
 
     // Clerk needs a moment to propagate the new session cookie after an org
     // switch.  Give it 600ms then re-fetch profile and refresh RSC data.
     const timer = setTimeout(() => {
       router.refresh(); // re-render any server components on the page
+      profileRequestInFlightRef.current = true;
+      hasAttemptedProfileFetchRef.current = true;
 
       fetchProfile(true)
         .then((nextProfile) => {
-          setProfile(nextProfile);
+          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
         })
         .catch((err) => {
           console.error('Failed to fetch profile after org switch:', err);
-          setProfile(null);
+          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
         })
         .finally(() => {
-          setLoading(false);
-          setHasAttemptedProfileFetch(true);
+          profileRequestInFlightRef.current = false;
         });
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [orgId, router]);
+  }, [currentOrgId, router]);
 
   useEffect(() => {
-    if (isSignedIn && isOpen && !profile && !loading && !hasAttemptedProfileFetch) {
-      setHasAttemptedProfileFetch(true);
-      setLoading(true);
+    if (isSignedIn && isOpen && !profile && !hasAttemptedProfileFetchRef.current && !profileRequestInFlightRef.current) {
+      hasAttemptedProfileFetchRef.current = true;
+      profileRequestInFlightRef.current = true;
       fetchProfile(false)
         .then((nextProfile) => {
-          setProfile(nextProfile);
+          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
         })
         .catch((err) => {
           console.error('Failed to fetch profile:', err);
-          setProfile(null);
+          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
         })
         .finally(() => {
-          setLoading(false);
+          profileRequestInFlightRef.current = false;
         });
     }
 
@@ -189,13 +198,13 @@ export default function AccountMenu() {
           console.error('Failed to fetch site info:', err);
         });
     }
-  }, [isSignedIn, isOpen, profile, loading, siteInfo, hasAttemptedProfileFetch]);
+  }, [currentOrgId, isSignedIn, isOpen, profile, siteInfo]);
 
   useEffect(() => {
     if (!isOpen) {
-      setHasAttemptedProfileFetch(false);
+      hasAttemptedProfileFetchRef.current = false;
     }
-  }, [isOpen]);
+  }, [closeMenu, isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -209,7 +218,7 @@ export default function AccountMenu() {
       }
 
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        closeMenu();
       }
     }
 
@@ -220,38 +229,14 @@ export default function AccountMenu() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) {
-      setPointerPos(null);
-      return;
-    }
-
-    const measure = () => {
-      const btn = buttonRef.current;
-      if (!btn) return setPointerPos(null);
-      const rect = btn.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      // subtract half the pointer width (6px) so the rotated square centers on the icon
-      setPointerPos(Math.round(centerX - 6));
-    };
-
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [isOpen]);
+  }, [closeMenu, isOpen]);
 
   const handleSignOut = async () => {
     await signOut();
     setIsOpen(false);
-    setProfile(null);
+    setProfileState(null);
     setSiteInfo(null);
-    setHasAttemptedProfileFetch(false);
+    hasAttemptedProfileFetchRef.current = false;
   };
 
   if (!isLoaded) {
@@ -280,7 +265,11 @@ export default function AccountMenu() {
       <button
         ref={buttonRef}
         onClick={() => {
-          setIsOpen(!isOpen);
+          if (isOpen) {
+            closeMenu();
+            return;
+          }
+          setIsOpen(true);
         }}
         className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 relative z-50"
         aria-label="Account menu"
@@ -291,13 +280,11 @@ export default function AccountMenu() {
       {/* Dropdown for logged-in users */}
       {isSignedIn && isOpen && (
         <>
-          {pointerPos !== null && (
-            <div
-              aria-hidden
-              style={{ left: pointerPos, top: pointerTop }}
-              className="fixed w-3 h-3 rotate-45 bg-white border-t border-l border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 z-[52]"
-            />
-          )}
+          <div
+            aria-hidden
+            style={{ top: dropdownTop }}
+            className="fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+          />
           <div style={{ top: dropdownTop }} className="fixed right-4 w-72 overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10 z-[51]">
           {loading ? (
             <div className="p-4 space-y-3">
@@ -484,13 +471,11 @@ export default function AccountMenu() {
       {/* Auth Dropdown for logged-out users */}
       {!isSignedIn && isOpen && (
         <>
-          {pointerPos !== null && (
-            <div
-              aria-hidden
-              style={{ left: pointerPos, top: pointerTop }}
-              className="fixed w-3 h-3 rotate-45 bg-white border-t border-l border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 z-[52]"
-            />
-          )}
+          <div
+            aria-hidden
+            style={{ top: dropdownTop }}
+            className="fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+          />
           <div style={{ top: dropdownTop }} className="fixed right-4 z-[51] w-80 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10">
             <div className="px-6 pb-6 pt-7">
               <div className="space-y-5">

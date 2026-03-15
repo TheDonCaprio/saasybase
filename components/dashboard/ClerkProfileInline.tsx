@@ -7,7 +7,6 @@ interface ClerkProfileInlineProps {
 }
 
 export function ClerkProfileInline({ mode = 'profile' }: ClerkProfileInlineProps) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   void mode; // Reserved for future multi-tab support
   
   // Check if document root has .light class for theme detection

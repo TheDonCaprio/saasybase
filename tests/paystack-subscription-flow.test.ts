@@ -9,7 +9,7 @@
  */
 
 import crypto from 'node:crypto';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { PaystackPaymentProvider } from '../lib/payment/providers/paystack';
 import type { StandardizedCheckoutSession, StandardizedInvoice, StandardizedSubscription } from '../lib/payment/types';
 

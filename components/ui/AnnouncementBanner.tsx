@@ -1,27 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 
 interface AnnouncementBannerProps {
   message: string;
 }
 
 export function AnnouncementBanner({ message }: AnnouncementBannerProps) {
-  const [isVisible, setIsVisible] = useState(true);
-  const [isDismissed, setIsDismissed] = useState(false);
-
-  useEffect(() => {
-    // Check if this announcement was already dismissed
-    const dismissedKey = `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`;
-    const dismissed = localStorage.getItem(dismissedKey);
-    if (dismissed) {
-      setIsDismissed(true);
-      setIsVisible(false);
-    }
-  }, [message]);
+  const dismissedKey = useMemo(() => `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`, [message]);
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(localStorage.getItem(`announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`));
+  });
+  const [isVisible, setIsVisible] = useState(() => !isDismissed);
 
   const handleDismiss = () => {
-    const dismissedKey = `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`;
     localStorage.setItem(dismissedKey, 'true');
     setIsVisible(false);
     setIsDismissed(true);

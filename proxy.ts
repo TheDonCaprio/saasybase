@@ -68,7 +68,6 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
       authResult = await (authResult as Promise<unknown>);
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.warn('proxy: auth resolution failed', error);
   }
 

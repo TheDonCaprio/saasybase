@@ -46,9 +46,10 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const viewer = userId
     ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } })
     : null;
+  const now = new Date();
 
   const expiresAt = invite.expiresAt ? new Date(invite.expiresAt) : null;
-  const expired = invite.status === 'EXPIRED' || (expiresAt ? expiresAt.getTime() < Date.now() : false);
+  const expired = invite.status === 'EXPIRED' || (expiresAt ? expiresAt.getTime() < now.getTime() : false);
   const accepted = invite.status === 'ACCEPTED';
 
   const existingMembership = userId

@@ -291,7 +291,7 @@ export function ImagePickerModal({
         setUploading(false);
       }
     },
-    [allowUpload, fetchImages, uploading],
+    [allowUpload, fetchImages, uploadScope, uploading],
   );
 
   const handleDrag = useCallback(

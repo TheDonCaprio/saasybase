@@ -6,8 +6,11 @@ import { prisma } from './prisma'
 const MAX_PERSISTED_LOGS = 1000
 const PERSIST_PRUNE_PROBABILITY = 0.05
 let unmigratedDbHealthWarned = false
+let systemLogAvailability: 'unknown' | 'available' | 'missing' = 'unknown'
+let systemLogAvailabilityPromise: Promise<boolean> | null = null
 
 export function emitUnmigratedDbHealthWarningOnce(missingTable: 'Setting' | 'SystemLog' | 'unknown' = 'unknown'): void {
+  if (process.env.NODE_ENV === 'test') return
   if (unmigratedDbHealthWarned) return
   unmigratedDbHealthWarned = true
   console.warn(`[HEALTH WARNING] Unmigrated database detected (missing ${missingTable} table); running with fallback defaults and reduced persistence.`)
@@ -79,8 +82,51 @@ export class SecureLogger {
     return maybeClient ?? null
   }
 
+  private async ensureSystemLogAvailable(): Promise<boolean> {
+    if (this.systemLogUnavailable || systemLogAvailability === 'missing') {
+      this.systemLogUnavailable = true
+      return false
+    }
+
+    if (systemLogAvailability === 'available') {
+      return true
+    }
+
+    if (!systemLogAvailabilityPromise) {
+      systemLogAvailabilityPromise = (async () => {
+        try {
+          const result = await prisma.$queryRawUnsafe<Array<{ name: string }>>(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'SystemLog' LIMIT 1"
+          )
+          const exists = Array.isArray(result) && result.length > 0
+          systemLogAvailability = exists ? 'available' : 'missing'
+          if (!exists) {
+            emitUnmigratedDbHealthWarningOnce('SystemLog')
+          }
+          return exists
+        } catch {
+          systemLogAvailability = 'unknown'
+          return true
+        } finally {
+          systemLogAvailabilityPromise = null
+        }
+      })()
+    }
+
+    const available = await systemLogAvailabilityPromise
+    if (!available) {
+      this.systemLogUnavailable = true
+    }
+    return available
+  }
+
   private async persistLog(level: 'WARN' | 'ERROR', message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
     if (this.systemLogUnavailable) {
+      return
+    }
+
+    const systemLogAvailable = await this.ensureSystemLogAvailable()
+    if (!systemLogAvailable) {
       return
     }
 
@@ -115,10 +161,12 @@ export class SecureLogger {
         }
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err ?? '')
-      if (message.includes('P2021') || message.includes('main.SystemLog') || message.includes('table `main.SystemLog` does not exist')) {
+      const errorMessage = err instanceof Error ? err.message : String(err ?? '')
+      if (errorMessage.includes('P2021') || errorMessage.includes('main.SystemLog') || errorMessage.includes('table `main.SystemLog` does not exist')) {
         this.systemLogUnavailable = true
+        systemLogAvailability = 'missing'
         emitUnmigratedDbHealthWarningOnce('SystemLog')
+        return
       }
       if (this.isDevelopment) {
         console.warn('[LOGGER] Failed to persist log entry', err)

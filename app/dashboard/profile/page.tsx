@@ -35,6 +35,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
   const returnPath = buildReturnPath('/dashboard/profile', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
+  const now = new Date();
 
   // Ensure user exists in database
   const user = await ensureUserExists();
@@ -93,7 +94,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
   }
   const mostPurchased = Object.entries(planCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'N/A';
   const mostPurchasedCount = Object.entries(planCounts).sort((a, b) => b[1] - a[1])[0]?.[1] ?? 0;
-  const daysRemaining = subscription ? Math.max(0, Math.ceil((new Date(subscription.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+  const daysRemaining = subscription ? Math.max(0, Math.ceil((new Date(subscription.expiresAt).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
   const greetingName = user.name?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'there';
   // roleLabel and nextRenewalLabel removed — profile hero trimmed

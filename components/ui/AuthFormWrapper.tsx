@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuthSession } from '@/lib/auth-provider/client/hooks';
 
 /**
@@ -13,13 +12,7 @@ import { useAuthSession } from '@/lib/auth-provider/client/hooks';
  */
 export function AuthFormWrapper({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuthSession();
-  const [signingIn, setSigningIn] = useState(false);
-
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      setSigningIn(true);
-    }
-  }, [isLoaded, isSignedIn]);
+  const signingIn = isLoaded && isSignedIn;
 
   if (signingIn) {
     return (

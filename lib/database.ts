@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { validateEnv } from './env';
 
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 

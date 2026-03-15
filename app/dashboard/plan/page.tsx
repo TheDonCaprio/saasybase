@@ -36,11 +36,12 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const returnPath = buildReturnPath('/dashboard/plan', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
+  const now = new Date();
 
   // Get all subscriptions (active and pending) to show complete picture
   const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan] = await Promise.all([
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
       include: {
         plan: {
           select: {
@@ -118,7 +119,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
 
   // Calculate next billing date (expires date for one-time, renewal date for auto-renew)
   const nextBillingDate = activeSub?.expiresAt;
-  const nowTimeMs = Date.now();
+  const nowTimeMs = now.getTime();
   const formattedNextBilling = nextBillingDate ? await formatDateServer(nextBillingDate) : null;
   const formattedCanceledAt = activeSub?.canceledAt ? await formatDateServer(activeSub.canceledAt) : null;
   const isCancellationScheduled = !!activeSub?.canceledAt;

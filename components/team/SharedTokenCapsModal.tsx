@@ -36,41 +36,46 @@ export function SharedTokenCapsModal({
     tokenLabel,
     tokenLabelTitle,
 }: SharedTokenCapsModalProps) {
-    const [mounted, setMounted] = useState(false);
-    const [capInput, setCapInput] = useState('');
-    const [capStrategy, setCapStrategy] = useState<CapStrategy>('SOFT');
-    const [resetInput, setResetInput] = useState('');
-    const [ownerExempt, setOwnerExempt] = useState(false);
+    if (!isOpen || typeof document === 'undefined') return null;
+
+    return (
+        <SharedTokenCapsModalPanel
+            key={`${organization.id}:${isOpen ? 'open' : 'closed'}`}
+            onClose={onClose}
+            organization={organization}
+            onUpdateCaps={onUpdateCaps}
+            busyAction={busyAction}
+            tokenLabel={tokenLabel}
+            tokenLabelTitle={tokenLabelTitle}
+        />
+    );
+}
+
+function SharedTokenCapsModalPanel({
+    onClose,
+    organization,
+    onUpdateCaps,
+    busyAction,
+    tokenLabel,
+    tokenLabelTitle,
+}: Omit<SharedTokenCapsModalProps, 'isOpen'>) {
+    const [capInput, setCapInput] = useState(() => (typeof organization.memberTokenCap === 'number' ? String(organization.memberTokenCap) : ''));
+    const [capStrategy, setCapStrategy] = useState<CapStrategy>(() => (organization.memberCapStrategy || 'SOFT').toUpperCase() as CapStrategy);
+    const [resetInput, setResetInput] = useState(() => (
+        typeof organization.memberCapResetIntervalHours === 'number'
+            ? String(organization.memberCapResetIntervalHours)
+            : ''
+    ));
+    const [ownerExempt, setOwnerExempt] = useState(() => organization.ownerExemptFromCaps || false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
-
-    useEffect(() => {
-        if (isOpen && organization) {
-            setCapInput(typeof organization.memberTokenCap === 'number' ? String(organization.memberTokenCap) : '');
-            const strategy = (organization.memberCapStrategy || 'SOFT').toUpperCase() as CapStrategy;
-            setCapStrategy(strategy);
-            setResetInput(
-                typeof organization.memberCapResetIntervalHours === 'number'
-                    ? String(organization.memberCapResetIntervalHours)
-                    : ''
-            );
-            setOwnerExempt(organization.ownerExemptFromCaps || false);
-            setError(null);
-        }
-    }, [isOpen, organization]);
-
-    useEffect(() => {
         function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape' && isOpen) onClose();
+            if (e.key === 'Escape') onClose();
         }
-        if (!isOpen) return;
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [isOpen, onClose]);
+    }, [onClose]);
 
     const handleSave = async () => {
         const normalizedCap = capInput.trim();
@@ -96,8 +101,6 @@ export function SharedTokenCapsModal({
         });
         onClose();
     };
-
-    if (!isOpen || !mounted || typeof document === 'undefined') return null;
 
     const savingCaps = busyAction === 'updateCaps';
 

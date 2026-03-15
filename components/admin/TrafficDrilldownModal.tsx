@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface TrafficDrilldownRow {
@@ -42,13 +42,6 @@ export function TrafficDrilldownModal({
   onPageChange,
   emptyMessage = 'No data available for this period.'
 }: TrafficDrilldownModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -76,7 +69,7 @@ export function TrafficDrilldownModal({
   const disablePrev = loading || page <= 1;
   const disableNext = loading || !hasMore;
 
-  if (!isOpen || !mounted || typeof document === 'undefined') {
+  if (!isOpen || typeof document === 'undefined') {
     return null;
   }
 

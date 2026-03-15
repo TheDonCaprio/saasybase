@@ -122,8 +122,8 @@ export default async function AdminUsersPage() {
             emailAddresses: clerkUser.email ? [{ id: 'primary', emailAddress: clerkUser.email, verification: { status: clerkUser.emailVerified ? 'verified' : 'unknown' } }] : [],
             phoneNumbers: [],
             lastSignInAt: null,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+            createdAt: user.createdAt.getTime(),
+            updatedAt: user.updatedAt.getTime()
           } : null
         };
       } catch (error) {

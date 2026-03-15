@@ -15,10 +15,11 @@ export default async function PricingPage() {
   const { userId } = await authService.getSession();
   const numberFormatter = new Intl.NumberFormat('en-US');
   const activeCurrency = await getActiveCurrencyAsync();
+  const now = new Date();
 
   const [currentSubscription, plansRaw, defaultTokenLabel, userRecord] = await Promise.all([
     userId ? prisma.subscription.findFirst({
-    where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+    where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
     include: { 
       plan: {
         select: {
@@ -124,7 +125,7 @@ export default async function PricingPage() {
           Math.max(
             0,
             Math.round(
-              ((Date.now() - subscriptionStart.getTime()) /
+              ((now.getTime() - subscriptionStart.getTime()) /
                 (nextBillingDate.getTime() - subscriptionStart.getTime())) *
                 100
             )
@@ -132,7 +133,7 @@ export default async function PricingPage() {
         )
       : 0;
   const daysUntilRenewal = nextBillingDate
-    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
     : null;
   const cycleProgressHelper = isActive && daysUntilRenewal != null
     ? `${pluralize(daysUntilRenewal, 'day')} ${planAutoRenew ? 'until renewal' : 'remaining'}`

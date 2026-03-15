@@ -1,7 +1,7 @@
 "use client";
 
 import Script from 'next/script';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface ProviderScript {
@@ -27,18 +27,15 @@ interface PaymentProviderScriptsProps {
  * that need external scripts (like Paystack). Stripe loads its SDK via npm.
  */
 export function PaymentProviderScripts({ provider }: PaymentProviderScriptsProps) {
-    const [scripts, setScripts] = useState<ProviderScript[]>([]);
+    const [fetchedScripts, setFetchedScripts] = useState<ProviderScript[]>([]);
     const pathname = usePathname();
+    const providerScripts = useMemo(() => (provider ? getProviderScripts(provider) : null), [provider]);
 
     // Only load payment scripts on checkout pages
     const isCheckoutPage = pathname?.startsWith('/checkout') || pathname?.startsWith('/pricing');
 
     useEffect(() => {
-        // Don't load scripts if not on checkout page
-        if (!isCheckoutPage) {
-            setScripts([]);
-            return;
-        }
+        if (!isCheckoutPage || providerScripts) return;
 
         // Fetch provider scripts from API endpoint
         async function loadScripts() {
@@ -46,24 +43,19 @@ export function PaymentProviderScripts({ provider }: PaymentProviderScriptsProps
                 const response = await fetch('/api/internal/payment-scripts');
                 if (response.ok) {
                     const data = await response.json();
-                    setScripts(data.scripts || []);
+                    setFetchedScripts(data.scripts || []);
                 }
             } catch {
                 // Silently fail - scripts are optional for some providers
             }
         }
 
-        // Only load if we don't have provider from props
-        if (!provider) {
-            loadScripts();
-        } else {
-            // Use static config for known providers
-            const providerScripts = getProviderScripts(provider);
-            setScripts(providerScripts);
-        }
-    }, [provider, isCheckoutPage]);
+        loadScripts();
+    }, [isCheckoutPage, providerScripts]);
 
-    if (scripts.length === 0) {
+    const scripts = providerScripts ?? fetchedScripts;
+
+    if (!isCheckoutPage || scripts.length === 0) {
         return null;
     }
 

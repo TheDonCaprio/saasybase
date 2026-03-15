@@ -16,13 +16,10 @@ function reloadPage() {
 }
 
 export default function ChunkLoadRecovery({ error, embedded = false, onRetry }: ChunkLoadRecoveryProps) {
-  const [detectedError, setDetectedError] = useState<unknown>(error);
+  const [detectedError, setDetectedError] = useState<unknown>(undefined);
 
   useEffect(() => {
-    if (error) {
-      setDetectedError(error);
-      return;
-    }
+    if (error) return;
 
     const onWindowError = (event: ErrorEvent) => {
       const nextError = event.error ?? event.message;
@@ -46,11 +43,13 @@ export default function ChunkLoadRecovery({ error, embedded = false, onRetry }: 
     };
   }, [error]);
 
-  if (!detectedError || !isChunkLoadError(detectedError)) {
+  const effectiveError = error ?? detectedError;
+
+  if (!effectiveError || !isChunkLoadError(effectiveError)) {
     return null;
   }
 
-  const detail = getErrorMessage(detectedError);
+  const detail = getErrorMessage(effectiveError);
   const containerClass = embedded
     ? 'rounded-2xl border border-amber-300 bg-amber-50 p-6 text-slate-900 shadow-sm dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-neutral-100'
     : 'fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-lg rounded-2xl border border-amber-300 bg-white/95 p-5 text-slate-900 shadow-2xl backdrop-blur dark:border-amber-400/30 dark:bg-neutral-950/95 dark:text-neutral-100';

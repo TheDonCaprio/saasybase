@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -22,8 +22,9 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const { isSignedIn } = useAuthUser();
   const { orgId } = useAuthSession();
-  const [profile, setProfile] = useState<SidebarProfile | null>(null);
-  const [loading, setLoading] = useState(false);
+  const currentOrgId = orgId ?? null;
+  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
+  const profileRequestInFlightRef = useRef(false);
 
   const CLIENT_MODERATOR_SECTIONS = [
     'users',
@@ -46,21 +47,36 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     return m.groups.seg || null;
   }
 
-  // Invalidate cached profile when active organization changes
-  useEffect(() => {
-    setProfile(null);
-  }, [orgId]);
+  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
+  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
 
   useEffect(() => {
-    if (isSignedIn && !profile && !loading) {
-      setLoading(true);
-      fetch('/api/user/profile')
-        .then((r) => r.json())
-        .then((data) => setProfile(data))
-        .catch((err) => console.error('Failed to fetch profile:', err))
-        .finally(() => setLoading(false));
+    if (!isSignedIn || profileLoadedForOrg || profileRequestInFlightRef.current) {
+      return;
     }
-  }, [isSignedIn, profile, loading]);
+
+    profileRequestInFlightRef.current = true;
+    let cancelled = false;
+
+    fetch('/api/user/profile')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setProfileState({ orgId: currentOrgId, profile: data, loaded: true });
+      })
+      .catch((err) => {
+        console.error('Failed to fetch profile:', err);
+        if (cancelled) return;
+        setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
+      })
+      .finally(() => {
+        profileRequestInFlightRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, currentOrgId, profileLoadedForOrg]);
 
   const visibleItems = (() => {
     if (!items) return [] as NavItem[];

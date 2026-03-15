@@ -1,16 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { AuthSignOutButton } from '@/lib/auth-provider/client';
 
 export function AdminSignOutButton() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (typeof document === 'undefined') return null;
 
   return (
     <AuthSignOutButton>

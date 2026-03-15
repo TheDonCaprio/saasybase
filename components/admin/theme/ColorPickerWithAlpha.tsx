@@ -44,14 +44,17 @@ export function ColorPickerWithAlpha({
   const prevValue = useRef(value);
   useEffect(() => {
     if (value !== prevValue.current) {
-      prevValue.current = value;
-      const r2 = hexToRgb(value);
-      const h2 = rgbToHsv(...r2);
-      setLocalH(h2.h);
-      setLocalS(h2.s);
-      setLocalV(h2.v);
-      setLocalA(getHexAlpha01(value));
-      setHexInput(value);
+      const frame = requestAnimationFrame(() => {
+        prevValue.current = value;
+        const r2 = hexToRgb(value);
+        const h2 = rgbToHsv(...r2);
+        setLocalH(h2.h);
+        setLocalS(h2.s);
+        setLocalV(h2.v);
+        setLocalA(getHexAlpha01(value));
+        setHexInput(value);
+      });
+      return () => cancelAnimationFrame(frame);
     }
   }, [value]);
 

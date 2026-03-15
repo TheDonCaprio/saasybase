@@ -308,11 +308,13 @@ export async function POST(req: NextRequest) {
       Logger.warn('Clerk webhook: signature verification attempt failed', { error: toError(e).message });
     }
 
-    // If a signature header was present but we failed to verify, reject. If no signature
-    // header was present and we're in non-production, we continue (verifiedSignature may be false).
-    if (hasAnySignatureHeader && !verifiedSignature) {
+    const allowUnsignedWebhook = process.env.NODE_ENV !== 'production' && process.env.ALLOW_UNSIGNED_CLERK_WEBHOOKS === 'true';
+
+    // Reject unsigned or unverifiable Clerk webhooks by default in all environments.
+    // Local debugging can opt in explicitly with ALLOW_UNSIGNED_CLERK_WEBHOOKS=true.
+    if (!verifiedSignature && !allowUnsignedWebhook) {
       Logger.warn('Clerk webhook: signature could not be verified - rejecting', { header: signatureHeader?.slice?.(0, 80) });
-      return NextResponse.json({ ok: false, error: 'invalid-signature' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: hasAnySignatureHeader ? 'invalid-signature' : 'missing-signature' }, { status: 400 });
     }
 
     const payloadRecord = asRecord(payload) ?? {};

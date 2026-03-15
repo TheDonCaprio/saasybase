@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma';
+import Link from 'next/link';
 import { PaginatedTransactionList } from '../../../components/dashboard/PaginatedTransactionList';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 
@@ -48,12 +49,12 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
       {totalCount === 0 ? (
         <div className="text-center py-12 border border-neutral-700 rounded">
           <div className="text-neutral-500 mb-4">No transactions yet</div>
-          <a 
-            href="/pricing" 
+          <Link
+            href="/pricing"
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
           >
             Get Pro Access
-          </a>
+          </Link>
         </div>
       ) : (
         <PaginatedTransactionList 

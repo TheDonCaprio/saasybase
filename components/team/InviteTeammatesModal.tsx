@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { TeamInviteForm } from './TeamInviteForm';
 
@@ -26,13 +26,6 @@ export function InviteTeammatesModal({
     seatsRemaining,
     notice,
 }: InviteTeammatesModalProps) {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
-
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             if (e.key === 'Escape' && isOpen) onClose();
@@ -42,7 +35,7 @@ export function InviteTeammatesModal({
         return () => document.removeEventListener('keydown', onKey);
     }, [isOpen, onClose]);
 
-    if (!isOpen || !mounted || typeof document === 'undefined') return null;
+    if (!isOpen || typeof document === 'undefined') return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useFormatSettings } from '../../components/FormatSettingsProvider';
 import { CancelSubscriptionModal } from './CancelSubscriptionModal';
@@ -283,12 +284,12 @@ export default function PaymentManagement({
               ))}
             </div>
             <div className="text-center text-xs">
-              <a
+              <Link
                 href="/dashboard/transactions"
                 className="inline-flex items-center gap-1 text-blue-600 underline-offset-4 transition hover:underline dark:text-blue-300"
               >
                 View all transactions
-              </a>
+              </Link>
             </div>
           </div>
         ) : null}

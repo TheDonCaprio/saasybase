@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDate, type FormatMode } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
@@ -71,13 +71,7 @@ export function WarningsModal({
   onClose,
   context,
 }: Props) {
-  const [mounted, setMounted] = useState(false);
   const formatSettings = useFormatSettings();
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -97,7 +91,7 @@ export function WarningsModal({
   const resolvedTitle = title || warningTitle(warnings);
   const resolvedDescription = description || warningDescription(warnings, tokenName);
 
-  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm dark:bg-black/60">

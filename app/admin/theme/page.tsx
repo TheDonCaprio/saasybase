@@ -12,9 +12,6 @@ import {
   getThemeCustomSnippet,
   getThemeColorPalette,
   getThemeColorPresets,
-  getSiteName,
-  SETTING_DEFAULTS,
-  SETTING_KEYS,
   getPricingSettings,
   getHeaderLayoutSettings,
   getBlogListingStyle,
@@ -45,8 +42,7 @@ export default async function AdminThemePage() {
     console.warn('Admin theme: requireAdmin check failed or redirected', e?.message);
   }
 
-  const [siteName, headerLinks, footerLinks, footerText, customCss, customHead, customBody, legacyBody, pricingSettings, headerLayoutSettings, blogListingStyle, blogListingPageSize, blogSidebarSettings, relatedPostsEnabled, blogHtmlSnippets, colorPalette] = await Promise.all([
-    getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+  const [headerLinks, footerLinks, footerText, customCss, customHead, customBody, legacyBody, pricingSettings, headerLayoutSettings, blogListingStyle, blogListingPageSize, blogSidebarSettings, relatedPostsEnabled, blogHtmlSnippets, colorPalette] = await Promise.all([
     getThemeHeaderLinks(),
     getThemeFooterLinks(),
     getThemeFooterTextRaw(),

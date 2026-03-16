@@ -106,7 +106,7 @@ export function PurchaseNotice() {
         const tokenLabel = lookup.tokenName || 'tokens';
         const tokenInfo = typeof lookup.tokenLimit === 'number'
           ? `${lookup.tokenLimit.toLocaleString()} ${tokenLabel}`
-          : 'your tokens';
+          : `unlimited ${tokenLabel}`;
         const planInfo = lookup.planName ? ` for the ${lookup.planName} plan` : '';
         const providerInfo = provider ? ` Paid via ${provider}.` : '';
 

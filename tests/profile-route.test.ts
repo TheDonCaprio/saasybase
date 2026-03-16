@@ -71,7 +71,7 @@ describe('GET /api/user/profile', () => {
 
     const body = await res.json();
     expect(body.subscription).toBe(null);
-    expect(body.paidTokens).toEqual({ tokenName: 'credits', remaining: 123 });
+    expect(body.paidTokens).toEqual({ tokenName: 'credits', remaining: 123, isUnlimited: false, displayRemaining: '123' });
   });
 
   it('uses subscription tokenName for paidTokens when active subscription exists', async () => {
@@ -94,7 +94,36 @@ describe('GET /api/user/profile', () => {
 
     const body = await res.json();
     expect(body.subscription?.tokenName).toBe('Pro Credits');
-    expect(body.paidTokens).toEqual({ tokenName: 'Pro Credits', remaining: 250 });
+    expect(body.paidTokens).toEqual({ tokenName: 'Pro Credits', remaining: 250, isUnlimited: false, displayRemaining: '250' });
+  });
+
+  it('marks paid tokens as unlimited when the active plan has no token limit', async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      email: 'caprio@capriofiles.com',
+      name: 'Caprio',
+      role: 'USER',
+      tokenBalance: 0,
+      freeTokenBalance: 0,
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      plan: { name: 'Unlimited Pro', tokenLimit: null, tokenName: 'Credits', durationHours: 720, supportsOrganizations: false },
+    });
+
+    const res = await GET();
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.paidTokens).toEqual({ tokenName: 'Credits', remaining: 0, isUnlimited: true, displayRemaining: 'Unlimited' });
+    expect(body.subscription.tokens).toMatchObject({
+      total: null,
+      used: null,
+      remaining: 0,
+      isUnlimited: true,
+      displayRemaining: 'Unlimited',
+    });
   });
 
   it('includes organization.expiresAt for workspace members', async () => {

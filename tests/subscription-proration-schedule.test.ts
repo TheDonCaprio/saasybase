@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const prismaMock = vi.hoisted(() => ({
 	user: {
 		findUnique: vi.fn(),
+		update: vi.fn(),
 	},
 	subscription: {
 		findFirst: vi.fn(),
@@ -79,7 +80,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			externalSubscriptionId: 'sub_rzp_1',
 			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
 			paymentProvider: 'razorpay',
-			plan: { id: 'plan_current', name: 'Current', priceCents: 1000, autoRenew: true },
+			plan: { id: 'plan_current', name: 'Current', priceCents: 1000, autoRenew: true, tokenLimit: 100 },
 		});
 
 		prismaMock.plan.findUnique.mockResolvedValue({
@@ -87,8 +88,42 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			name: 'Target',
 			priceCents: 2000,
 			autoRenew: true,
+			tokenLimit: 100,
 			externalPriceId: null,
 			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_target' }),
+		});
+	});
+
+	it('sets the new finite allotment when switching from unlimited to limited recurring access', async () => {
+		prismaMock.subscription.findFirst.mockResolvedValueOnce({
+			id: 'sub_db_1',
+			planId: 'plan_current',
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_1',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
+			paymentProvider: 'razorpay',
+			plan: { id: 'plan_current', name: 'Unlimited Current', priceCents: 1000, autoRenew: true, tokenLimit: null },
+		});
+
+		providerMock.updateSubscriptionPlan.mockResolvedValue({
+			success: true,
+			newPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+			invoiceId: 'in_unlimited_to_limited',
+			amountPaid: 1500,
+		});
+
+		const req = new Request('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ planId: 'plan_target' }),
+		});
+
+		const res = await POST(toNextRequest(req));
+		expect(res.status).toBe(200);
+		expect(prismaMock.user.update).toHaveBeenCalledWith({
+			where: { id: 'user_1' },
+			data: { tokenBalance: 100 },
 		});
 	});
 

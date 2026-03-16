@@ -4,6 +4,7 @@ import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
 import { getPaidTokensNaturalExpiryGraceHours } from '@/lib/settings';
 import type { Prisma } from '@prisma/client';
+import { findActivePaidPersonalSubscription, hasUnlimitedPaidPersonalAccess } from '@/lib/personal-paid-access';
 
 type SpendBucket = 'auto' | 'paid' | 'free' | 'shared';
 
@@ -43,19 +44,6 @@ function isInternalAuthorized(req: NextRequest): boolean {
   // Non-production: allow either the explicit dev header or the bearer token.
   if (req.headers.get('X-Internal-API') === 'true') return true;
   return Boolean(expected && bearer && bearer === expected);
-}
-
-async function resolveActiveSubscription(userId: string, tx: Prisma.TransactionClient): Promise<boolean> {
-  const now = new Date();
-  const sub = await tx.subscription.findFirst({
-    where: {
-      userId,
-      status: 'ACTIVE',
-      expiresAt: { gt: now },
-    },
-    select: { id: true },
-  });
-  return Boolean(sub?.id);
 }
 
 async function resolveSharedContext(params: {
@@ -221,7 +209,9 @@ export async function POST(req: NextRequest) {
       const paidBalance = Math.max(0, Number(user.tokenBalance ?? 0));
       const freeBalance = Math.max(0, Number(user.freeTokenBalance ?? 0));
 
-      const hasActiveSubscription = await resolveActiveSubscription(userId, tx);
+      const activePaidSubscription = await findActivePaidPersonalSubscription(tx, userId);
+      const hasActiveSubscription = Boolean(activePaidSubscription);
+      const hasUnlimitedPaidAccess = hasUnlimitedPaidPersonalAccess(activePaidSubscription);
 
       let effectiveBucket: Exclude<SpendBucket, 'auto'>;
       if (bucket === 'auto') {
@@ -264,21 +254,23 @@ export async function POST(req: NextRequest) {
       }
 
       if (effectiveBucket === 'paid') {
-        const updated = await tx.user.updateMany({
-          where: { id: userId, tokenBalance: { gte: amount } },
-          data: { tokenBalance: { decrement: amount } },
-        });
-        if (!updated.count) {
-          return {
-            status: 409,
-            body: {
-              ok: false,
-              error: 'insufficient_tokens',
-              bucket: 'paid',
-              required: amount,
-              available: paidBalance,
-            },
-          };
+        if (!hasUnlimitedPaidAccess) {
+          const updated = await tx.user.updateMany({
+            where: { id: userId, tokenBalance: { gte: amount } },
+            data: { tokenBalance: { decrement: amount } },
+          });
+          if (!updated.count) {
+            return {
+              status: 409,
+              body: {
+                ok: false,
+                error: 'insufficient_tokens',
+                bucket: 'paid',
+                required: amount,
+                available: paidBalance,
+              },
+            };
+          }
         }
       } else if (effectiveBucket === 'free') {
         const updated = await tx.user.updateMany({

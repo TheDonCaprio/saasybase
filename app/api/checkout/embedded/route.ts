@@ -6,7 +6,7 @@ import { prisma } from '../../../../lib/prisma';
 import { paymentService } from '../../../../lib/payment/service';
 import { Logger } from '../../../../lib/logger';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
-import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../../lib/plans';
+import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../../lib/plans';
 import { getEnv } from '../../../../lib/env';
 import { setIdByProvider, getCurrentProviderKey, getIdByProvider } from '../../../../lib/utils/provider-ids';
 import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
@@ -196,7 +196,15 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             // Resolve Price ID
             const usingPlanSeed = Boolean(resolvedPlanSeed);
             if (usingPlanSeed) {
-                const resolved = resolvedPlanSeed ? resolvePlanPriceEnv(resolvedPlanSeed) : { priceId: undefined };
+                const resolved = resolvedPlanSeed
+                    ? resolveSeededPlanPriceForProvider(resolvedPlanSeed, {
+                        providerKey: getCurrentProviderKey(),
+                        externalPriceIds: dbPlanRecord?.['externalPriceIds'],
+                        legacyExternalPriceId: dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string'
+                            ? String(dbPlanRecord['externalPriceId'])
+                            : null,
+                    })
+                    : { priceId: undefined, envKey: undefined, isLegacy: false, source: 'missing' as const };
                 priceId = resolved.priceId;
                 if (!priceId) {
                     return jsonError(`Price not configured for plan ${planId}`, 500, 'PLAN_PRICE_MISSING');

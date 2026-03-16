@@ -7,6 +7,7 @@ import { getPaidTokensNaturalExpiryGraceHours } from '@/lib/settings';
 import { getAuthSafe } from '@/lib/auth';
 import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getRequestIp } from '@/lib/request-ip';
+import { findActivePaidPersonalSubscription, hasUnlimitedPaidPersonalAccess } from '@/lib/personal-paid-access';
 
 type SpendBucket = 'auto' | 'paid' | 'free' | 'shared';
 
@@ -24,19 +25,6 @@ function parsePositiveInt(value: unknown): number | null {
   const i = Math.trunc(n);
   if (i <= 0) return null;
   return i;
-}
-
-async function resolveActiveSubscription(userId: string, tx: Prisma.TransactionClient): Promise<boolean> {
-  const now = new Date();
-  const sub = await tx.subscription.findFirst({
-    where: {
-      userId,
-      status: 'ACTIVE',
-      expiresAt: { gt: now },
-    },
-    select: { id: true },
-  });
-  return Boolean(sub?.id);
 }
 
 async function resolveSharedContext(params: {
@@ -288,7 +276,9 @@ export async function POST(req: NextRequest) {
         const paidBalance = Math.max(0, Number(user.tokenBalance ?? 0));
         const freeBalance = Math.max(0, Number(user.freeTokenBalance ?? 0));
 
-        const hasActiveSubscription = await resolveActiveSubscription(userId, tx);
+        const activePaidSubscription = await findActivePaidPersonalSubscription(tx, userId);
+        const hasActiveSubscription = Boolean(activePaidSubscription);
+        const hasUnlimitedPaidAccess = hasUnlimitedPaidPersonalAccess(activePaidSubscription);
 
         // Pre-resolve shared context once (used by both auto-selection and shared deduction).
         let sharedContext: Awaited<ReturnType<typeof resolveSharedContext>> | null = null;
@@ -300,7 +290,7 @@ export async function POST(req: NextRequest) {
           const sharedAvail = sharedContext.ok ? getAvailableSharedTokens(sharedContext) : 0;
 
           // 1st pass – pick the first bucket that can fully cover the requested amount.
-          if (hasActiveSubscription && paidBalance >= amount) {
+          if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance >= amount)) {
             effectiveBucket = 'paid';
           } else if (sharedAvail >= amount) {
             effectiveBucket = 'shared';
@@ -308,7 +298,7 @@ export async function POST(req: NextRequest) {
             effectiveBucket = 'free';
           }
           // 2nd pass – any bucket with a positive balance (will surface insufficient_tokens).
-          else if (hasActiveSubscription && paidBalance > 0) {
+          else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance > 0)) {
             effectiveBucket = 'paid';
           } else if (sharedAvail > 0) {
             effectiveBucket = 'shared';
@@ -354,21 +344,23 @@ export async function POST(req: NextRequest) {
         }
 
         if (effectiveBucket === 'paid') {
-          const updated = await tx.user.updateMany({
-            where: { id: userId, tokenBalance: { gte: amount } },
-            data: { tokenBalance: { decrement: amount } },
-          });
-          if (!updated.count) {
-            return {
-              status: 409,
-              body: {
-                ok: false,
-                error: 'insufficient_tokens',
-                bucket: 'paid',
-                required: amount,
-                available: paidBalance,
-              },
-            };
+          if (!hasUnlimitedPaidAccess) {
+            const updated = await tx.user.updateMany({
+              where: { id: userId, tokenBalance: { gte: amount } },
+              data: { tokenBalance: { decrement: amount } },
+            });
+            if (!updated.count) {
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: 'insufficient_tokens',
+                  bucket: 'paid',
+                  required: amount,
+                  available: paidBalance,
+                },
+              };
+            }
           }
         } else if (effectiveBucket === 'free') {
           const updated = await tx.user.updateMany({

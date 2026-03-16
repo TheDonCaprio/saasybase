@@ -32,15 +32,19 @@ interface UserProfile {
   paidTokens?: {
     tokenName: string;
     remaining: number;
+    isUnlimited?: boolean;
+    displayRemaining?: string;
   };
   subscription: {
     planName: string;
     expiresAt: string;
     tokenName: string;
     tokens: {
-      total: number;
-      used: number;
+      total: number | null;
+      used: number | null;
       remaining: number;
+      isUnlimited?: boolean;
+      displayRemaining?: string;
     };
   } | null;
   organization?: {
@@ -258,6 +262,12 @@ export function DashboardHeaderDrawer({
   const wrapperClass = className ? `${className}` : '';
   const personalTokenCount = profile?.subscription?.tokens.remaining ?? profile?.paidTokens?.remaining ?? null;
   const personalTokenName = profile?.subscription?.tokenName ?? profile?.paidTokens?.tokenName ?? null;
+  const hasUnlimitedPersonalTokens = Boolean(profile?.subscription?.tokens.isUnlimited || profile?.paidTokens?.isUnlimited);
+  const personalTokenDisplay = hasUnlimitedPersonalTokens
+    ? 'Unlimited'
+    : personalTokenCount != null
+      ? personalTokenCount.toLocaleString()
+      : null;
   const isOrganizationContext = profile?.planSource === 'ORGANIZATION';
   const isPersonalContext = profile?.planSource === 'PERSONAL';
   const activePlanName = isOrganizationContext
@@ -265,7 +275,7 @@ export function DashboardHeaderDrawer({
     : isPersonalContext
       ? profile?.subscription?.planName || 'Free Plan'
       : 'Free Plan';
-  const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenCount != null && personalTokenName);
+  const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
   const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
   const expiresAt = isOrganizationContext
     ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
@@ -390,11 +400,11 @@ export function DashboardHeaderDrawer({
                           </span>
                         </div>
 
-                        {shouldShowPersonalTokens && personalTokenCount != null && personalTokenName && (
+                        {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
                           <div className="flex items-center gap-2 text-sm">
                             <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-emerald-500" />
                             <span className="text-neutral-300">
-                              {personalTokenCount.toLocaleString()} {personalTokenName} (Personal)
+                              {personalTokenDisplay} {personalTokenName} (Personal)
                             </span>
                           </div>
                         )}

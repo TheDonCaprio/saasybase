@@ -108,11 +108,14 @@ export default async function PricingPage() {
   const tokenLimitRaw = currentSubscription?.plan?.tokenLimit ?? (currentSubscription ? null : (freePlanSettings.renewalType === 'unlimited' ? null : freePlanSettings.tokenLimit));
   const normalizedTokenName = planTokenName || freePlanSettings.tokenName || defaultTokenLabel;
   const tokenLabel = normalizedTokenName.charAt(0).toUpperCase() + normalizedTokenName.slice(1);
-  const formattedPaidBalance = numberFormatter.format(paidTokenBalance);
+  const hasUnlimitedPaidPlan = Boolean(currentSubscription && currentSubscription.plan?.tokenLimit == null);
+  const formattedPaidBalance = hasUnlimitedPaidPlan ? 'Unlimited' : numberFormatter.format(paidTokenBalance);
   const formattedFreeBalance = numberFormatter.format(freeTokenBalanceVal);
   const tokenLimitDisplay = tokenLimitRaw != null ? numberFormatter.format(tokenLimitRaw) : 'Unlimited';
   const tokenStatValue = `${formattedPaidBalance} paid • ${formattedFreeBalance} free`;
-  const tokenStatHelper = tokenLimitRaw != null
+  const tokenStatHelper = hasUnlimitedPaidPlan
+    ? `Unlimited ${normalizedTokenName} while your subscription is active`
+    : tokenLimitRaw != null
     ? `Out of ${tokenLimitDisplay} ${normalizedTokenName}`
     : freePlanSettings.renewalType === 'unlimited'
     ? `Unlimited ${normalizedTokenName} for free users`

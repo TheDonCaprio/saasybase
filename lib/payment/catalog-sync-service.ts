@@ -2,18 +2,48 @@ import { prisma } from '../prisma';
 import { Logger } from '../logger';
 import { PaymentProviderFactory } from './factory';
 import { getProviderCurrency } from './registry';
-import { setIdByProvider, providerSupportsOneTimePrices } from '../utils/provider-ids';
+import {
+  parseProviderIdMap,
+  removeIdByProvider,
+  setIdByProvider,
+  providerSupportsOneTimePrices,
+  isProviderPriceIdCompatible,
+  isProviderProductIdCompatible,
+} from '../utils/provider-ids';
 import { toError } from '../runtime-guards';
 
+function isTruthyEnv(value: string | undefined) {
+  return value === '1' || value === 'true';
+}
+
+function isCatalogSyncEnabledForConfiguredProviders(providerNames: string[]) {
+  if (isTruthyEnv(process.env.PAYMENT_AUTO_CREATE)) {
+    return true;
+  }
+
+  for (const providerName of providerNames) {
+    const providerKey = providerName.toUpperCase();
+    if (isTruthyEnv(process.env[`${providerKey}_AUTO_CREATE`])) {
+      return true;
+    }
+  }
+
+  // Backward compatibility for existing Stripe-based setups.
+  return isTruthyEnv(process.env.STRIPE_AUTO_CREATE);
+}
+
 export async function syncPlansToProviders() {
-  const autoCreate = process.env.STRIPE_AUTO_CREATE === '1' || process.env.STRIPE_AUTO_CREATE === 'true';
-  if (!autoCreate) {
-    Logger.info('Catalog sync skipped: STRIPE_AUTO_CREATE is not enabled');
+  const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
+  const configuredProviderNames = configuredProviders.map(({ name }) => name);
+
+  if (!isCatalogSyncEnabledForConfiguredProviders(configuredProviderNames)) {
+    Logger.info('Catalog sync skipped: enable PAYMENT_AUTO_CREATE or a provider-specific *_AUTO_CREATE flag', {
+      configuredProviders: configuredProviderNames,
+    });
     return;
   }
 
   const plans = await prisma.plan.findMany({ where: { active: true } });
-  const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
 
   if (configuredProviders.length === 0) {
     Logger.info('No payment providers configured for catalog sync.');
@@ -26,9 +56,27 @@ export async function syncPlansToProviders() {
     let updated = false;
 
     for (const { name: providerName, provider } of configuredProviders) {
-      // Check if already synced for this provider
-      const existingPriceId = JSON.parse(externalPriceIds || '{}')[providerName];
-      if (existingPriceId) continue;
+      const existingPriceId = parseProviderIdMap(externalPriceIds)[providerName];
+      const existingProductId = parseProviderIdMap(externalProductIds)[providerName];
+      const recurring = plan.autoRenew === true;
+
+      if (existingPriceId && isProviderPriceIdCompatible(providerName, existingPriceId, { recurring })) {
+        continue;
+      }
+
+      if (existingPriceId || existingProductId) {
+        Logger.warn('Removing stale provider catalog mapping before re-sync', {
+          planName: plan.name,
+          provider: providerName,
+          existingPriceId,
+          existingProductId,
+          priceLooksCompatible: isProviderPriceIdCompatible(providerName, existingPriceId, { recurring }),
+          productLooksCompatible: isProviderProductIdCompatible(providerName, existingProductId),
+        });
+
+        externalPriceIds = removeIdByProvider(externalPriceIds, providerName);
+        externalProductIds = removeIdByProvider(externalProductIds, providerName);
+      }
 
       try {
         // Skip one-time price creation for providers that don't support it

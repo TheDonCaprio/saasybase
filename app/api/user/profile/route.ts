@@ -109,6 +109,7 @@ export async function GET() {
     }
 
     const paidTokenName = subscription?.plan?.tokenName?.trim() || defaultTokenLabel;
+  const hasUnlimitedPaidPlan = Boolean(subscription && subscription.plan?.tokenLimit == null);
 
     return NextResponse.json({
     user: {
@@ -128,6 +129,8 @@ export async function GET() {
     paidTokens: {
       tokenName: paidTokenName,
       remaining: paidTokenBalance,
+      isUnlimited: hasUnlimitedPaidPlan,
+      displayRemaining: hasUnlimitedPaidPlan ? 'Unlimited' : paidTokenBalance.toLocaleString(),
     },
     subscription: subscription
       ? {
@@ -135,10 +138,11 @@ export async function GET() {
           expiresAt: await formatDateServer(subscription.expiresAt),
           tokenName: paidTokenName,
           tokens: {
-            // If tokenLimit is null, it's unlimited (show as high number or handle in UI)
-            total: subscription.plan?.tokenLimit ?? 999999,
-            used: subscription.plan?.tokenLimit ? Math.max(0, subscription.plan.tokenLimit - paidTokenBalance) : 0,
+            total: subscription.plan?.tokenLimit ?? null,
+            used: subscription.plan?.tokenLimit != null ? Math.max(0, subscription.plan.tokenLimit - paidTokenBalance) : null,
             remaining: paidTokenBalance,
+            isUnlimited: hasUnlimitedPaidPlan,
+            displayRemaining: hasUnlimitedPaidPlan ? 'Unlimited' : paidTokenBalance.toLocaleString(),
           },
         }
       : null,

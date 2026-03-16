@@ -287,4 +287,37 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       data: { freeTokenBalance: { decrement: 5 } },
     });
   });
+
+  it('bypasses paid-balance enforcement when the active personal plan is unlimited', async () => {
+    txMock.user.findUnique.mockReset();
+    txMock.user.findUnique
+      .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 0, freeTokenBalance: 8 })
+      .mockResolvedValueOnce({ tokenBalance: 0, freeTokenBalance: 8 });
+
+    txMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_active_unlimited',
+      expiresAt: new Date(Date.now() + 60_000),
+      plan: { tokenLimit: null, tokenName: 'credits' },
+    });
+
+    txMock.organizationMembership.findFirst.mockResolvedValueOnce(null);
+    txMock.organization.findFirst.mockResolvedValueOnce(null);
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 3, bucket: 'auto', feature: 'unlimited-paid' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      bucket: 'paid',
+      amount: 3,
+    });
+    expect(txMock.user.updateMany).not.toHaveBeenCalled();
+  });
 });

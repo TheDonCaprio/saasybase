@@ -1,7 +1,13 @@
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
-import { parseProviderIdMap, getCurrentProviderKey } from './utils/provider-ids';
+import {
+  parseProviderIdMap,
+  getCurrentProviderKey,
+  getIdByProvider,
+  isProviderPriceIdCompatible,
+  providerSupportsOneTimePrices,
+} from './utils/provider-ids';
 import { formatCurrency } from './utils/currency';
 import { getActiveCurrency } from './payment/registry';
 
@@ -28,7 +34,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '24H',
     name: '24 Hour Pro',
     durationHours: 24,
-    priceCents: 299,
+    priceCents: 10000,
     externalPriceEnv: 'PAYMENT_PRICE_24H',
     legacyExternalPriceEnv: 'PRICE_24H',
     priceMode: 'payment',
@@ -39,7 +45,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '7D',
     name: '7 Day Pro',
     durationHours: 24 * 7,
-    priceCents: 799,
+    priceCents: 15000,
     externalPriceEnv: 'PAYMENT_PRICE_7D',
     legacyExternalPriceEnv: 'PRICE_7D',
     priceMode: 'payment',
@@ -50,7 +56,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '1M_OT',
     name: '1 Month Extra',
     durationHours: 24 * 30,
-    priceCents: 1999,
+    priceCents: 20000,
     externalPriceEnv: 'PAYMENT_PRICE_1M_OT',
     legacyExternalPriceEnv: 'PRICE_1M',
     priceMode: 'payment',
@@ -63,7 +69,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '1M_SUB',
     name: 'Monthly Pro',
     durationHours: 24 * 30,
-    priceCents: 1999,
+    priceCents: 20000,
     externalPriceEnv: 'SUBSCRIPTION_PRICE_1M',
     priceMode: 'subscription',
     sortOrder: 3,
@@ -75,7 +81,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '3M_SUB',
     name: 'Quarterly Pro',
     durationHours: 24 * 90,
-    priceCents: 4999,
+    priceCents: 48000,
     externalPriceEnv: 'SUBSCRIPTION_PRICE_3M',
     priceMode: 'subscription',
     sortOrder: 4,
@@ -88,7 +94,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     id: '1Y_SUB',
     name: 'Yearly Pro',
     durationHours: 24 * 365,
-    priceCents: 14999,
+    priceCents: 144000,
     externalPriceEnv: 'SUBSCRIPTION_PRICE_1Y',
     priceMode: 'subscription',
     sortOrder: 5,
@@ -115,6 +121,39 @@ export function resolvePlanPriceEnv(def: PlanSeed): { priceId?: string; envKey?:
     }
   }
   return { priceId: undefined, envKey: undefined, isLegacy: false };
+}
+
+export function resolveSeededPlanPriceForProvider(
+  def: PlanSeed,
+  options?: {
+    providerKey?: string;
+    externalPriceIds?: unknown;
+    legacyExternalPriceId?: string | null;
+  }
+): { priceId?: string; envKey?: string; isLegacy: boolean; source: 'provider-map' | 'legacy-field' | 'env' | 'missing' } {
+  const providerKey = options?.providerKey || getCurrentProviderKey();
+  const recurring = def.priceMode === 'subscription';
+
+  const providerMappedPriceId = getIdByProvider(options?.externalPriceIds, providerKey);
+  if (providerMappedPriceId && isProviderPriceIdCompatible(providerKey, providerMappedPriceId, { recurring })) {
+    return { priceId: providerMappedPriceId, isLegacy: false, source: 'provider-map' };
+  }
+
+  const legacyExternalPriceId = options?.legacyExternalPriceId;
+  if (legacyExternalPriceId && isProviderPriceIdCompatible(providerKey, legacyExternalPriceId, { recurring })) {
+    return { priceId: legacyExternalPriceId, isLegacy: false, source: 'legacy-field' };
+  }
+
+  if (!recurring && !providerSupportsOneTimePrices(providerKey)) {
+    return { priceId: undefined, envKey: undefined, isLegacy: false, source: 'missing' };
+  }
+
+  const resolved = resolvePlanPriceEnv(def);
+  if (resolved.priceId && isProviderPriceIdCompatible(providerKey, resolved.priceId, { recurring })) {
+    return { ...resolved, source: 'env' };
+  }
+
+  return { priceId: undefined, envKey: resolved.envKey, isLegacy: resolved.isLegacy, source: 'missing' };
 }
 
 export async function ensurePlansSeeded() {
@@ -165,6 +204,15 @@ export async function syncPlanExternalPriceIds() {
   for (const def of PLAN_DEFINITIONS) {
     const { priceId, envKey, isLegacy } = resolvePlanPriceEnv(def);
     if (!priceId) continue;
+    if (!isProviderPriceIdCompatible(providerKey, priceId, { recurring: def.priceMode === 'subscription' })) {
+      Logger.info('Skipping plan external price sync because env value does not match the active provider', {
+        planId: def.id,
+        provider: providerKey,
+        envKey,
+        priceMode: def.priceMode,
+      });
+      continue;
+    }
     if (isLegacy) {
       Logger.warn('Using legacy external price env var for plan. Rename to maintain mode safety.', {
         planId: def.id,

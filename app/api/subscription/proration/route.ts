@@ -6,7 +6,7 @@ import { prisma } from '../../../../lib/prisma';
 import { formatCurrency } from '../../../../lib/utils/currency';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
-import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../../lib/plans';
+import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../../lib/plans';
 import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
 import type { Prisma } from '@prisma/client';
@@ -41,7 +41,7 @@ type SubscriptionWithPlan = {
   paymentProvider: string | null;
   prorationPendingSince: Date | null;
   organizationId: string | null;
-  plan: { id: string; name: string; priceCents: number; autoRenew: boolean; recurringInterval: string | null; recurringIntervalCount: number };
+  plan: { id: string; name: string; priceCents: number; autoRenew: boolean; recurringInterval: string | null; recurringIntervalCount: number; tokenLimit: number | null };
 };
 
 type PlanRecord = {
@@ -51,6 +51,7 @@ type PlanRecord = {
   autoRenew: boolean;
   recurringInterval: string | null;
   recurringIntervalCount: number;
+  tokenLimit: number | null;
   externalPriceId: string | null;
   externalPriceIds: string | null;
 };
@@ -96,7 +97,7 @@ async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWit
       prorationPendingSince: true,
       organizationId: true,
       plan: {
-        select: { id: true, name: true, priceCents: true, autoRenew: true, recurringInterval: true, recurringIntervalCount: true },
+        select: { id: true, name: true, priceCents: true, autoRenew: true, recurringInterval: true, recurringIntervalCount: true, tokenLimit: true },
       },
     },
     orderBy: { expiresAt: 'desc' },
@@ -113,6 +114,7 @@ async function fetchPlan(planId: string): Promise<PlanRecord | null> {
       autoRenew: true,
       recurringInterval: true,
       recurringIntervalCount: true,
+      tokenLimit: true,
       externalPriceId: true,
       externalPriceIds: true,
     },
@@ -120,28 +122,32 @@ async function fetchPlan(planId: string): Promise<PlanRecord | null> {
 }
 
 async function resolveExternalPriceId(plan: PlanRecord, providerKey: string): Promise<string | null> {
-  // First try provider-aware lookup from the externalPriceIds map
-  const priceFromMap = getIdByProvider(plan.externalPriceIds, providerKey);
-  if (priceFromMap) return priceFromMap;
-
-  // `externalPriceId` is legacy single-provider; only trust it when it matches the active provider.
-  const activeProviderKey = getCurrentProviderKey();
-  if (providerKey === activeProviderKey && plan.externalPriceId) return plan.externalPriceId;
-
-  // Fall back to environment variables for seeded plans ONLY when the subscription provider is the active provider.
-  // (We don't have provider-keyed env resolution here, so using env when providers differ risks choosing the wrong price.)
-  if (providerKey !== activeProviderKey) return null;
-
   const seed = PLAN_DEFINITIONS.find((entry) => entry.name === plan.name);
-  if (!seed) return null;
-  const resolved = resolvePlanPriceEnv(seed);
-  if (!resolved.priceId) return null;
-  try {
-    await syncPlanExternalPriceIds();
-  } catch (err) {
-    const e = toError(err);
-    Logger.warn('Failed to sync plan external price ids during proration resolution', { error: e.message });
+  if (!seed) {
+    const priceFromMap = getIdByProvider(plan.externalPriceIds, providerKey);
+    if (priceFromMap) return priceFromMap;
+
+    const activeProviderKey = getCurrentProviderKey();
+    if (providerKey === activeProviderKey && plan.externalPriceId) return plan.externalPriceId;
+    return null;
   }
+
+  const resolved = resolveSeededPlanPriceForProvider(seed, {
+    providerKey,
+    externalPriceIds: plan.externalPriceIds,
+    legacyExternalPriceId: plan.externalPriceId,
+  });
+  if (!resolved.priceId) return null;
+
+  if (resolved.source === 'env') {
+    try {
+      await syncPlanExternalPriceIds();
+    } catch (err) {
+      const e = toError(err);
+      Logger.warn('Failed to sync plan external price ids during proration resolution', { error: e.message });
+    }
+  }
+
   return resolved.priceId;
 }
 
@@ -777,12 +783,18 @@ export async function POST(req: NextRequest) {
     // preserve the user's existing token balance.
     try {
       const shouldReset = await shouldResetPaidTokensOnRenewalForPlanAutoRenew(ctx.targetPlan.autoRenew);
-      if (shouldReset) {
-        const planRec = await prisma.plan.findUnique({ where: { id: ctx.targetPlan.id }, select: { tokenLimit: true } });
-        const tokenLimit = planRec && typeof planRec.tokenLimit === 'number' ? planRec.tokenLimit : null;
-        if (tokenLimit !== null) {
-          await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: tokenLimit } });
-          Logger.info('Reset user token balance to new recurring plan allotment per admin setting', { userId: ctx.userId, tokenLimit });
+      const previousTokenLimit = ctx.currentSubscription.plan.tokenLimit;
+      const nextTokenLimit = ctx.targetPlan.tokenLimit;
+      if (previousTokenLimit == null && typeof nextTokenLimit === 'number') {
+        await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
+        Logger.info('Initialized token balance on unlimited-to-limited recurring plan change', {
+          userId: ctx.userId,
+          tokenLimit: nextTokenLimit,
+        });
+      } else if (shouldReset) {
+        if (nextTokenLimit !== null) {
+          await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
+          Logger.info('Reset user token balance to new recurring plan allotment per admin setting', { userId: ctx.userId, tokenLimit: nextTokenLimit });
         }
       } else {
         Logger.info('Preserving user token balance on recurring->recurring plan change per admin setting', { userId: ctx.userId });

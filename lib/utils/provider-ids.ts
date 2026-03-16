@@ -70,6 +70,20 @@ export function setIdByProvider(
 }
 
 /**
+ * Remove an ID from the provider map for a specific provider key.
+ * Returns the updated JSON string or null when the map becomes empty.
+ */
+export function removeIdByProvider(
+  existingMap: unknown,
+  providerKey: string
+): string | null {
+  const merged = parseProviderIdMap(existingMap);
+  if (!(providerKey in merged)) return Object.keys(merged).length > 0 ? JSON.stringify(merged) : null;
+  delete merged[providerKey];
+  return Object.keys(merged).length > 0 ? JSON.stringify(merged) : null;
+}
+
+/**
  * Merge a new provider ID into an existing map.
  * Returns the JSON string to store in the database, or null if no value provided.
  */
@@ -109,6 +123,60 @@ export function findProviderByValue(map: unknown, targetValue: string): string |
  */
 export function getCurrentProviderKey(): string {
   return (process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase();
+}
+
+function isNumericIdentifier(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+export function isProviderPriceIdCompatible(
+  providerName: string,
+  value: string | null | undefined,
+  options?: { recurring?: boolean }
+): boolean {
+  if (!value) return false;
+
+  const providerKey = (providerName || '').toLowerCase();
+  const recurring = options?.recurring === true;
+
+  switch (providerKey) {
+    case 'stripe':
+      return value.startsWith('price_');
+    case 'paddle':
+      return value.startsWith('pri_');
+    case 'paystack':
+      return recurring && value.startsWith('PLN_');
+    case 'razorpay':
+      return recurring && value.startsWith('plan_');
+    case 'lemonsqueezy':
+      return isNumericIdentifier(value);
+    default:
+      return true;
+  }
+}
+
+export function isProviderProductIdCompatible(
+  providerName: string,
+  value: string | null | undefined
+): boolean {
+  if (!value) return false;
+
+  const providerKey = (providerName || '').toLowerCase();
+
+  switch (providerKey) {
+    case 'stripe':
+      return value.startsWith('prod_');
+    case 'paddle':
+      return value.startsWith('pro_');
+    case 'paystack':
+      return value.startsWith('PROD_');
+    case 'razorpay':
+      return value.startsWith('item_');
+    case 'lemonsqueezy':
+      return isNumericIdentifier(value);
+    default:
+      return true;
+  }
 }
 
 /**

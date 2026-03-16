@@ -1,12 +1,49 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 import { ensurePlansSeeded } from '../lib/plans';
+import { getDefaultTemplates } from '../lib/email-templates';
+
+const envLocalPath = path.join(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath, override: true });
+}
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding plans...');
   await ensurePlansSeeded();
+
+  console.log('Seeding email templates...');
+  const defaultTemplates = getDefaultTemplates();
+  for (const template of defaultTemplates) {
+    await prisma.emailTemplate.upsert({
+      where: { key: template.key },
+      update: {
+        name: template.name,
+        description: template.description,
+        subject: template.subject,
+        htmlBody: template.htmlBody,
+        textBody: template.textBody,
+        variables: template.variables,
+        active: template.active,
+      },
+      create: {
+        key: template.key,
+        name: template.name,
+        description: template.description,
+        subject: template.subject,
+        htmlBody: template.htmlBody,
+        textBody: template.textBody,
+        variables: template.variables,
+        active: template.active,
+      },
+    });
+  }
+  console.log(`Email templates seeded: ${defaultTemplates.length}`);
 
   console.log('Creating test admin user...');
   const hashedPassword = await bcrypt.hash('password', 12);
@@ -41,42 +78,10 @@ async function main() {
     console.warn('Failed to sync plans with providers:', err);
   }
 
-  console.log('Creating sample subscription for admin (Monthly Pro plan)...');
-  const plan = await prisma.plan.findFirst({ where: { name: 'Monthly Pro' } });
-  if (plan) {
-    const existingSub = await prisma.subscription.findFirst({
-      where: { userId: admin.id, planId: plan.id, status: 'ACTIVE' }
-    });
-
-    if (!existingSub) {
-      const sub = await prisma.subscription.create({
-        data: {
-          userId: admin.id,
-          planId: plan.id,
-          status: 'ACTIVE',
-          expiresAt: new Date(Date.now() + plan.durationHours * 3600 * 1000),
-        }
-      });
-
-      await prisma.payment.create({
-        data: {
-          userId: admin.id,
-          subscriptionId: sub.id,
-          amountCents: plan.priceCents,
-          status: 'SUCCEEDED',
-        }
-      });
-      console.log('Sample subscription created.');
-    } else {
-      console.log('Sample subscription already exists.');
-    }
-  } else {
-    console.warn('Plan not found; skipping subscription/payment creation');
-  }
-
   const counts = {
     users: await prisma.user.count(),
     plans: await prisma.plan.count(),
+    emailTemplates: await prisma.emailTemplate.count(),
     subscriptions: await prisma.subscription.count(),
     payments: await prisma.payment.count(),
   };

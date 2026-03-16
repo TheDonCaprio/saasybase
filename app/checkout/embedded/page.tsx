@@ -14,7 +14,7 @@ interface RedirectCheckoutData {
     currency?: string;
     planName?: string;
     email?: string;
-    tokenLimit?: number;
+    tokenLimit?: number | null;
     tokenName?: string;
     durationHours?: number;
     shortDescription?: string;
@@ -313,9 +313,8 @@ function EmbeddedCheckoutContent() {
         };
 
         const getTokenDisplay = () => {
-            if (!redirectData.tokenLimit) return null;
             const tokenName = redirectData.tokenName || 'tokens';
-            if (redirectData.tokenLimit === -1) return `Unlimited ${tokenName}`;
+            if (redirectData.tokenLimit == null || redirectData.tokenLimit === -1) return `Unlimited ${tokenName}`;
             return `${redirectData.tokenLimit.toLocaleString()} ${tokenName}`;
         };
 

@@ -7,7 +7,7 @@ import {
 } from '@/lib/payment/discountedSubscriptionPriceCache';
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
-import { PLAN_DEFINITIONS, resolvePlanPriceEnv, syncPlanExternalPriceIds } from '../../../lib/plans';
+import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../lib/plans';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../lib/prisma';
 import { paymentService } from '../../../lib/payment/service';
@@ -312,8 +312,15 @@ export async function POST(req: NextRequest) {
     let priceId: string | undefined;
     const usingPlanSeed = Boolean(resolvedPlanSeed);
     if (usingPlanSeed) {
-      // Predefined plan - get from environment (prefer new contract key, fallback to legacy)
-      const resolved = resolvedPlanSeed ? resolvePlanPriceEnv(resolvedPlanSeed) : { priceId: undefined, envKey: undefined, isLegacy: false };
+      const resolved = resolvedPlanSeed
+        ? resolveSeededPlanPriceForProvider(resolvedPlanSeed, {
+            providerKey: getCurrentProviderKey(),
+            externalPriceIds: dbPlanRecord?.['externalPriceIds'],
+            legacyExternalPriceId: dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string'
+              ? String(dbPlanRecord['externalPriceId'])
+              : null,
+          })
+        : { priceId: undefined, envKey: undefined, isLegacy: false, source: 'missing' as const };
       priceId = resolved.priceId;
       if (!priceId) {
         Logger.error('Checkout error: missing price configuration', { userId, envTried: resolvedPlanSeed?.externalPriceEnv });

@@ -168,6 +168,7 @@ export type PlanDisplay = {
   tokenStatValue: string;
   tokenStatHelper: string;
   tokenLimit: number | null;
+  isUnlimitedPersonalPlan: boolean;
   tokenPoolStrategy: 'SHARED_FOR_ORG' | null;
   sharedTokenBalance: number | null;
   workspace?: {
@@ -218,6 +219,7 @@ export function buildPlanDisplay(params: {
   const tokenNameNormalized = (rawTokenName || defaultTokenLabel || 'tokens').toString().trim() || defaultTokenLabel || 'tokens';
   const tokenLabel = tokenNameNormalized.charAt(0).toUpperCase() + tokenNameNormalized.slice(1);
   const tokenLower = tokenNameNormalized.toLowerCase();
+  const isUnlimitedPersonalPlan = planSource === 'PERSONAL' && subscription?.plan?.tokenLimit == null;
 
   let tokenLimit: number | null;
   if (subscription?.plan?.tokenLimit != null) {
@@ -235,7 +237,9 @@ export function buildPlanDisplay(params: {
   const memberCapStrategy = organizationContext ? getMemberCapStrategy(organizationContext) : null;
   const memberCapLabel = memberCap != null ? numberFormatter.format(memberCap) : 'Unlimited';
 
-  const formattedPaidBalance = numberFormatter.format(Math.max(0, userTokenBalance));
+  const formattedPaidBalance = isUnlimitedPersonalPlan
+    ? 'Unlimited'
+    : numberFormatter.format(Math.max(0, userTokenBalance));
   const formattedFreeBalance = numberFormatter.format(Math.max(0, userFreeTokenBalance));
   // const combinedBalance = Math.max(0, userTokenBalance + userFreeTokenBalance);
   // const formattedCombined = numberFormatter.format(combinedBalance);
@@ -258,7 +262,9 @@ export function buildPlanDisplay(params: {
     tokenStatHelper = `Workspace pool managed by ${organizationContext!.organization.name}. ${capHelper}`;
   } else {
     tokenStatValue = `${formattedPaidBalance} paid • ${formattedFreeBalance} free`;
-    if (tokenLimit != null) {
+    if (isUnlimitedPersonalPlan) {
+      tokenStatHelper = `Unlimited ${tokenLower} while your subscription is active`;
+    } else if (tokenLimit != null) {
       if (planSource === 'FREE') {
         tokenStatHelper = `Free users receive ${tokenLimitDisplay} ${tokenLower}`;
       } else if (planSource === 'ORGANIZATION') {
@@ -312,6 +318,7 @@ export function buildPlanDisplay(params: {
     tokenStatValue,
     tokenStatHelper,
     tokenLimit,
+    isUnlimitedPersonalPlan,
     tokenPoolStrategy: organizationContext ? 'SHARED_FOR_ORG' : null,
     sharedTokenBalance,
     workspace,

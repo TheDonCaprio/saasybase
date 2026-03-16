@@ -13,11 +13,16 @@ import { WarningsModal, type AppWarning, type SharedCapContext } from '@/compone
 type Bucket = 'auto' | 'paid' | 'free' | 'shared';
 
 type ProfilePayload = {
-  paidTokens?: { tokenName?: string; remaining?: number };
+  paidTokens?: { tokenName?: string; remaining?: number; isUnlimited?: boolean };
   freeTokens?: { tokenName?: string; remaining?: number };
   sharedTokens?: { tokenName?: string; remaining?: number } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
 };
+
+function formatBucketDisplay(value: number | undefined, isUnlimited?: boolean) {
+  if (isUnlimited) return 'Unlimited';
+  return Math.max(0, Number(value ?? 0)).toLocaleString();
+}
 
 type Operation = {
   id: string;
@@ -78,11 +83,12 @@ function defaultBucketForProfile(profile: ProfilePayload | null): Bucket {
   if (!profile) return 'auto';
   const sharedRemaining = Math.max(0, Number(profile.sharedTokens?.remaining ?? 0));
   const paidRemaining = Math.max(0, Number(profile.paidTokens?.remaining ?? 0));
+  const paidUnlimited = profile.paidTokens?.isUnlimited === true;
   const freeRemaining = Math.max(0, Number(profile.freeTokens?.remaining ?? 0));
 
   // Prefer buckets with available balance.
   if (sharedRemaining > 0) return 'shared';
-  if (paidRemaining > 0) return 'paid';
+  if (paidUnlimited || paidRemaining > 0) return 'paid';
   if (freeRemaining > 0) return 'free';
 
   // No remaining balance in any bucket: preserve legacy PERSONAL fallback.
@@ -286,17 +292,17 @@ export default function SaaSyAppClient() {
             <div className="grid gap-3 sm:grid-cols-3">
               <div className={dashboardPanelClass('p-4')}>
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Paid</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{paidRemaining}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{formatBucketDisplay(profile.paidTokens?.remaining, profile.paidTokens?.isUnlimited)}</p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.paidTokens?.tokenName ?? 'tokens'}</p>
               </div>
               <div className={dashboardPanelClass('p-4')}>
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Free</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{freeRemaining}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{formatBucketDisplay(freeRemaining)}</p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.freeTokens?.tokenName ?? 'tokens'}</p>
               </div>
               <div className={dashboardPanelClass('p-4')}>
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Shared</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{sharedRemaining}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">{formatBucketDisplay(sharedRemaining)}</p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.sharedTokens?.tokenName ?? 'tokens'}</p>
               </div>
             </div>

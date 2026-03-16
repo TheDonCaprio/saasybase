@@ -8,7 +8,7 @@ import { dashboardMutedPanelClass, dashboardPanelClass, dashboardPillClass } fro
 type Bucket = 'auto' | 'paid' | 'free' | 'shared';
 
 type ProfilePayload = {
-  paidTokens?: { tokenName?: string; remaining?: number };
+  paidTokens?: { tokenName?: string; remaining?: number; isUnlimited?: boolean };
   freeTokens?: { tokenName?: string; remaining?: number };
   sharedTokens?: { tokenName?: string; remaining?: number } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
@@ -28,8 +28,13 @@ type SpendEvent = {
   label: string;
   bucket: Bucket;
   cost: number;
-  remaining: number;
+  remaining: number | null;
 };
+
+function formatBalance(value: number | null | undefined, isUnlimited = false) {
+  if (isUnlimited || value == null) return 'Unlimited';
+  return Math.max(0, Number(value)).toLocaleString();
+}
 
 const STORAGE_KEY = 'sassyapp_simulator_v1';
 
@@ -63,6 +68,10 @@ function resolveBucket(bucket: Bucket, profile: ProfilePayload | null): Exclude<
 }
 
 function getBucketAvailable(resolved: Exclude<Bucket, 'auto'>, profile: ProfilePayload | null) {
+  if (resolved === 'paid' && profile?.paidTokens?.isUnlimited) {
+    return null;
+  }
+
   const value =
     resolved === 'paid'
       ? profile?.paidTokens?.remaining
@@ -90,7 +99,7 @@ export default function SassyAppClient() {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [bucket, setBucket] = useState<Bucket>('auto');
-  const [simulatedBalance, setSimulatedBalance] = useState<number>(0);
+  const [simulatedBalance, setSimulatedBalance] = useState<number | null>(0);
   const [events, setEvents] = useState<SpendEvent[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -138,7 +147,11 @@ export default function SassyAppClient() {
 
       if (parsed.bucket) setBucket(parsed.bucket);
       const loadedBalance = safeInt(parsed.balance);
-      if (loadedBalance != null && loadedBalance >= 0) setSimulatedBalance(loadedBalance);
+      if (parsed.balance === null) {
+        setSimulatedBalance(null);
+      } else if (loadedBalance != null && loadedBalance >= 0) {
+        setSimulatedBalance(loadedBalance);
+      }
       if (Array.isArray(parsed.events)) setEvents(parsed.events.slice(0, 100));
     } catch {
       // ignore
@@ -152,7 +165,7 @@ export default function SassyAppClient() {
     setBucket((prev) => (prev === 'auto' ? defaultBucketForProfile(profile) : prev));
 
     setSimulatedBalance((prev) => {
-      if (prev > 0) return prev;
+      if (prev == null || prev > 0) return prev;
       const initialBucket = resolveBucket(bucket, profile);
       return getBucketAvailable(initialBucket, profile);
     });
@@ -185,6 +198,21 @@ export default function SassyAppClient() {
     }
 
     setSimulatedBalance((current) => {
+      if (current == null) {
+        setEvents((prev) => [
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            at: Date.now(),
+            label,
+            bucket: spendBucket,
+            cost: normalizedCost,
+            remaining: null,
+          },
+          ...prev,
+        ].slice(0, 100));
+        return current;
+      }
+
       if (current < normalizedCost) {
         setMessage(`Insufficient simulated balance. Need ${normalizedCost} ${tokenName}.`);
         return current;
@@ -219,7 +247,7 @@ export default function SassyAppClient() {
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Paid</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
-                  {profile.paidTokens?.remaining ?? 0}
+                  {formatBalance(profile.paidTokens?.remaining, profile.paidTokens?.isUnlimited)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.paidTokens?.tokenName ?? 'tokens'}</p>
               </div>
@@ -227,7 +255,7 @@ export default function SassyAppClient() {
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Free</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
-                  {profile.freeTokens?.remaining ?? 0}
+                  {formatBalance(profile.freeTokens?.remaining)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.freeTokens?.tokenName ?? 'tokens'}</p>
               </div>
@@ -235,7 +263,7 @@ export default function SassyAppClient() {
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Shared</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
-                  {profile.sharedTokens?.remaining ?? 0}
+                  {formatBalance(profile.sharedTokens?.remaining)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.sharedTokens?.tokenName ?? 'tokens'}</p>
               </div>
@@ -272,7 +300,7 @@ export default function SassyAppClient() {
               <option value="shared">Shared</option>
             </select>
             <p className="text-xs text-slate-500 dark:text-neutral-400">
-              Real available for this bucket: <span className="font-semibold">{bucketAvailable}</span>
+              Real available for this bucket: <span className="font-semibold">{formatBalance(bucketAvailable, bucketAvailable == null)}</span>
             </p>
 
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -300,7 +328,7 @@ export default function SassyAppClient() {
           <div className={dashboardPanelClass('p-4 space-y-1')}>
             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Simulated balance</p>
             <p className="text-2xl font-semibold text-slate-900 dark:text-neutral-100">
-              {simulatedBalance} <span className="text-sm font-medium text-slate-500 dark:text-neutral-400">{tokenName}</span>
+              {formatBalance(simulatedBalance, simulatedBalance == null)} <span className="text-sm font-medium text-slate-500 dark:text-neutral-400">{tokenName}</span>
             </p>
             {message ? <p className="text-sm text-rose-600 dark:text-rose-300">{message}</p> : null}
           </div>
@@ -397,7 +425,7 @@ export default function SassyAppClient() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-slate-900 dark:text-neutral-100">-{e.cost}</p>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400">remaining: {e.remaining}</p>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">remaining: {formatBalance(e.remaining, e.remaining == null)}</p>
                 </div>
               </li>
             ))}

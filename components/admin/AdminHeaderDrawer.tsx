@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faUserShield, faChevronDown, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from '../dashboard/SidebarNav';
 import { AuthSignOutButton, useAuthUser, useAuthInstance, useAuthSession, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { createPortal } from 'react-dom';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 const PROFILE_FETCH_RETRY_DELAY_MS = 450;
 
@@ -85,7 +85,6 @@ export function AdminHeaderDrawer({
   signOutLabel = 'Sign out'
 }: AdminHeaderDrawerProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { isSignedIn } = useAuthUser();
   const { orgId } = useAuthSession();
   const currentOrgId = orgId ?? null;
@@ -240,7 +239,6 @@ export function AdminHeaderDrawer({
     hasAttemptedProfileFetchRef.current = false;
 
     const timer = setTimeout(() => {
-      router.refresh();
       profileRequestInFlightRef.current = true;
       hasAttemptedProfileFetchRef.current = true;
 
@@ -258,7 +256,7 @@ export function AdminHeaderDrawer({
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [currentOrgId, router, fetchProfile]);
+  }, [currentOrgId, fetchProfile]);
 
   useEffect(() => {
     if (isSignedIn && open && !profile && !hasAttemptedProfileFetchRef.current && !profileRequestInFlightRef.current) {
@@ -568,7 +566,7 @@ export function AdminHeaderDrawer({
                             {group.items.map((item) => {
                               const active = isActiveHref(item.href);
                               return (
-                                <Link
+                                <TransientNavLink
                                   key={item.href}
                                   href={item.href}
                                   onClick={close}
@@ -596,7 +594,7 @@ export function AdminHeaderDrawer({
                                       {item.badge}
                                     </span>
                                   )}
-                                </Link>
+                                </TransientNavLink>
                               );
                             })}
                           </div>
@@ -620,7 +618,7 @@ export function AdminHeaderDrawer({
                   }) : items).map((item) => {
                     const active = isActiveHref(item.href);
                     return (
-                      <Link
+                      <TransientNavLink
                         key={item.href}
                         href={item.href}
                         onClick={close}
@@ -653,7 +651,7 @@ export function AdminHeaderDrawer({
                             {item.badge}
                           </span>
                         )}
-                      </Link>
+                      </TransientNavLink>
                     );
                   })
                 )}

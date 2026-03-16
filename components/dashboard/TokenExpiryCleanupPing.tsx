@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 
 const LAST_RUN_KEY = 'user:expiry-cleanup:last-run-at';
 const RUN_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -15,6 +16,7 @@ export function TokenExpiryCleanupPing() {
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
     const isAppArea = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
     if (!isAppArea) return;
+    const initialPathname = pathname;
 
     // Only run the check if Clerk is enabled (user could be signed in)
     const clerkEnabled = typeof window !== 'undefined' && (window as Window & { __CLERK_ENABLED?: boolean }).__CLERK_ENABLED;
@@ -62,9 +64,7 @@ export function TokenExpiryCleanupPing() {
 
         // If tokens were cleared, refresh route data without forcing a full-page reload.
         if (data.cleared === true) {
-          if (document.visibilityState === 'visible') {
-            router.refresh();
-          }
+          refreshVisibleRoute(router, 'token-expiry', initialPathname);
         }
       } catch {
         // Silent fail - don't disrupt user experience if check fails

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 
 export function OrgValidityCheck() {
     const router = useRouter();
@@ -12,6 +13,7 @@ export function OrgValidityCheck() {
         const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
         const isAppArea = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
         if (!isAppArea) return;
+        const initialPathname = pathname;
 
         // Only run the check if Clerk is enabled (user could be signed in)
         const clerkEnabled = typeof window !== 'undefined' && (window as Window & { __CLERK_ENABLED?: boolean }).__CLERK_ENABLED;
@@ -59,9 +61,7 @@ export function OrgValidityCheck() {
                         // ignore storage errors; proceed with a single reload attempt
                     }
 
-                    if (document.visibilityState === 'visible') {
-                        router.refresh();
-                    }
+                    refreshVisibleRoute(router, 'org-validity', initialPathname);
                 }
             } catch (err) {
                 // Silent fail - don't disrupt user experience if check fails

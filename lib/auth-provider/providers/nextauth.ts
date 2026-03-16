@@ -101,6 +101,16 @@ export class NextAuthProvider implements AuthProvider {
         return { userId: null, orgId: null, sessionId: null };
       }
 
+      const prisma = await getPrisma();
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true },
+      });
+
+      if (!dbUser?.id) {
+        return { userId: null, orgId: null, sessionId: null };
+      }
+
       // Read the active organization from the cookie
       let orgId: string | null = null;
       try {
@@ -109,11 +119,10 @@ export class NextAuthProvider implements AuthProvider {
         const activeOrg = jar.get(ACTIVE_ORG_COOKIE)?.value;
         if (activeOrg) {
           // Validate the user still has membership in this org
-          const prisma = await getPrisma();
           const membership = await prisma.organizationMembership.findFirst({
             where: {
               organizationId: activeOrg,
-              userId: session.user.id,
+              userId: dbUser.id,
               status: 'ACTIVE',
             },
           });
@@ -126,7 +135,7 @@ export class NextAuthProvider implements AuthProvider {
       }
 
       return {
-        userId: session.user.id,
+        userId: dbUser.id,
         orgId,
         sessionId: null, // session token is httpOnly, not exposed
       };

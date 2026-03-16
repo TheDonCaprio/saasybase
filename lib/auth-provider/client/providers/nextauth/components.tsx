@@ -1014,9 +1014,51 @@ export function AuthSignOutButton({
     signOut({ callbackUrl: '/' });
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick();
+    }
+  };
+
   if (children) {
+    if (React.isValidElement(children)) {
+      const child = children as React.ReactElement<{
+        onClick?: (event: React.MouseEvent<HTMLElement>) => void;
+        onKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
+        type?: string;
+      }>;
+
+      const mergedProps: {
+        onClick: (event: React.MouseEvent<HTMLElement>) => void;
+        onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void;
+        type?: string;
+        [key: string]: unknown;
+      } = {
+        ...rest,
+        onClick: (event: React.MouseEvent<HTMLElement>) => {
+          child.props.onClick?.(event);
+          if (!event.defaultPrevented) {
+            handleClick();
+          }
+        },
+        onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
+          child.props.onKeyDown?.(event);
+          if (!event.defaultPrevented) {
+            handleKeyDown(event);
+          }
+        },
+      };
+
+      if (typeof child.type === 'string' && child.type === 'button' && !child.props.type) {
+        mergedProps.type = 'button';
+      }
+
+      return React.cloneElement(child, mergedProps);
+    }
+
     return (
-      <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleClick()} {...rest}>
+      <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={handleKeyDown} {...rest}>
         {children}
       </span>
     );

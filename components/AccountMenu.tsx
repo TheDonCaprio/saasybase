@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
-import Link from 'next/link';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
+import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 import { useRouter } from 'next/navigation';
 
 interface UserProfile {
@@ -150,7 +151,7 @@ export default function AccountMenu() {
     // Clerk needs a moment to propagate the new session cookie after an org
     // switch.  Give it 600ms then re-fetch profile and refresh RSC data.
     const timer = setTimeout(() => {
-      router.refresh(); // re-render any server components on the page
+      refreshVisibleRoute(router, 'org-validity');
       profileRequestInFlightRef.current = true;
       hasAttemptedProfileFetchRef.current = true;
 
@@ -409,46 +410,46 @@ export default function AccountMenu() {
                 )}
 
                 {profile.planSource === 'FREE' && (
-                  <Link
+                  <TransientNavLink
                     href="/pricing"
                     className="block text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
                     onClick={() => setIsOpen(false)}
                   >
                     Upgrade to Pro →
-                  </Link>
+                  </TransientNavLink>
                 )}
               </div>
 
               <div className="border-t border-neutral-200 dark:border-neutral-800">
-                <Link
+                <TransientNavLink
                   href="/dashboard"
                   className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Dashboard
-                </Link>
-                <Link
+                </TransientNavLink>
+                <TransientNavLink
                   href="/dashboard/account"
                   className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Account Settings
-                </Link>
-                <Link
+                </TransientNavLink>
+                <TransientNavLink
                   href="/dashboard/billing"
                   className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Billing
-                </Link>
+                </TransientNavLink>
                 {profile.user.role === 'ADMIN' && (
-                  <Link
+                  <TransientNavLink
                     href="/admin"
                     className="block px-4 py-3 text-sm text-violet-600 hover:bg-neutral-50 dark:text-violet-400 dark:hover:bg-neutral-800 transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
                     Admin Panel
-                  </Link>
+                  </TransientNavLink>
                 )}
                 <button
                   onClick={handleSignOut}
@@ -518,13 +519,13 @@ export default function AccountMenu() {
             </div>
 
           <div className="border-t border-neutral-200 bg-neutral-50/60 px-6 py-4 dark:border-neutral-800 dark:bg-neutral-950/20">
-            <Link
+            <TransientNavLink
               href="/pricing"
               className="block text-center text-sm font-semibold text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
               onClick={() => setIsOpen(false)}
             >
               View Pricing →
-            </Link>
+            </TransientNavLink>
           </div>
         </div>
         </>

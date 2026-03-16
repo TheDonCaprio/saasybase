@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { activateWorkspaceAndNavigate } from '../../lib/active-workspace.client';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 interface InviteAcceptanceClientProps {
   token: string;
@@ -24,12 +24,12 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
     return (
       <div className="space-y-3 text-sm text-slate-700 dark:text-neutral-300">
         <p>You already have access to {organizationName}. Head to the workspace dashboard to get started.</p>
-        <Link
+        <TransientNavLink
           href="/dashboard/team"
           className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           Go to dashboard
-        </Link>
+        </TransientNavLink>
       </div>
     );
   }
@@ -85,8 +85,7 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
         throw new Error(payload.error || 'Unable to decline invite.');
       }
       router.replace('/dashboard/team?inviteDeclined=1');
-      router.refresh();
-      setStatus('declined');
+      return;
     } catch (err) {
       setStatus('idle');
       setError(err instanceof Error ? err.message : 'Unable to decline invite.');
@@ -99,12 +98,12 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900">
           You now have access to {organizationName}. It may take a few seconds for the workspace to appear.
         </div>
-        <Link
+        <TransientNavLink
           href="/dashboard/team"
           className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           Go to workspace
-        </Link>
+        </TransientNavLink>
       </div>
     );
   }
@@ -115,12 +114,12 @@ export function InviteAcceptanceClient({ token, organizationName, inviteEmail, v
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
           The invitation has been declined. The workspace owner will see this invite as expired.
         </div>
-        <Link
+        <TransientNavLink
           href="/dashboard"
           className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 font-semibold text-slate-700 transition hover:border-indigo-500 hover:text-indigo-600 dark:border-neutral-700 dark:text-neutral-100"
         >
           Back to dashboard
-        </Link>
+        </TransientNavLink>
       </div>
     );
   }

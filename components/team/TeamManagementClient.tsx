@@ -133,7 +133,6 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
         }
 
         router.refresh();
-        window.location.reload();
       }
     } catch (err) {
       console.error(err);
@@ -336,6 +335,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
         </p>
         <Link
           href="/pricing"
+          prefetch={false}
           className="inline-flex w-fit items-center justify-center rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
         >
           Explore team plans
@@ -369,6 +369,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
           </div>
           <Link
             href="/pricing"
+            prefetch={false}
             className="inline-flex w-fit items-center justify-center rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
           >
             Explore team plans
@@ -416,7 +417,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
         </div>
         <p className={dashboardMutedPanelClass('text-xs text-slate-500 dark:text-neutral-400')}>
           Need help?{' '}
-          <Link href="/dashboard/support" className="font-medium text-indigo-600 dark:text-indigo-300">
+          <Link href="/dashboard/support" prefetch={false} className="font-medium text-indigo-600 dark:text-indigo-300">
             Open a support request
           </Link>{' '}
           and we’ll walk you through advanced seat setups.

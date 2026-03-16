@@ -115,8 +115,15 @@ export function useActiveOrgId(enabled = true): string | null {
 
 export function useAuthUser(): UseAuthUserReturn {
   const { data: session, status } = useSession();
+  const sessionUserId = typeof session?.user?.id === 'string' && session.user.id.length > 0
+    ? session.user.id
+    : null;
   const isLoaded = status !== 'loading';
-  const isSignedIn = status === 'authenticated' ? true : status === 'unauthenticated' ? false : undefined;
+  const isSignedIn = status === 'loading'
+    ? undefined
+    : status === 'authenticated' && sessionUserId
+      ? true
+      : false;
 
   const user: AuthClientUser | null = useMemo(() => {
     if (!session?.user) return null;
@@ -178,27 +185,31 @@ export function useAuthUser(): UseAuthUserReturn {
 
 export function useAuthSession(): UseAuthSessionReturn {
   const { data: session, status } = useSession();
-  const activeOrgId = useActiveOrgId(status === 'authenticated');
+  const sessionUserId = typeof session?.user?.id === 'string' && session.user.id.length > 0
+    ? session.user.id
+    : null;
+  const hasValidSession = status === 'authenticated' && Boolean(sessionUserId);
+  const activeOrgId = useActiveOrgId(hasValidSession);
 
   useEffect(() => {
-    if (status === 'authenticated' && !_activeOrgState.initialized && !_activeOrgState.loading) {
+    if (hasValidSession && !_activeOrgState.initialized && !_activeOrgState.loading) {
       void refreshActiveOrgFromServer();
       return;
     }
 
-    if (status === 'unauthenticated' && (_activeOrgState.activeOrgId !== null || _activeOrgState.initialized)) {
+    if (!hasValidSession && status !== 'loading' && (_activeOrgState.activeOrgId !== null || _activeOrgState.initialized)) {
       _activeOrgState = { activeOrgId: null, initialized: true, loading: false };
       emitActiveOrgChange();
     }
-  }, [status]);
+  }, [hasValidSession, status]);
 
   return useMemo(() => ({
     orgId: activeOrgId,
     sessionId: null,
     isLoaded: status !== 'loading',
-    isSignedIn: status === 'authenticated' ? true : status === 'unauthenticated' ? false : undefined,
-    userId: session?.user?.id ?? null,
-  }), [session?.user?.id, status, activeOrgId]);
+    isSignedIn: status === 'loading' ? undefined : hasValidSession,
+    userId: sessionUserId,
+  }), [sessionUserId, status, activeOrgId, hasValidSession]);
 }
 
 // ---------------------------------------------------------------------------

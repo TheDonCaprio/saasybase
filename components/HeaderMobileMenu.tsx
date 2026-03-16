@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { ThemeLink } from '@/lib/settings';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 export function HeaderMobileMenu({ links }: { links: ThemeLink[] }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,14 +47,14 @@ export function HeaderMobileMenu({ links }: { links: ThemeLink[] }) {
           <div style={{ top: '4.1rem' }} className="fixed right-4 w-56 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden z-[999999]">
           <nav className="flex flex-col py-2">
             {links.map((link) => (
-              <Link
+              <TransientNavLink
                 key={link.href}
                 href={link.href}
                 onClick={closeMenu}
                 className="px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
               >
                 {link.label}
-              </Link>
+              </TransientNavLink>
             ))}
           </nav>
         </div>

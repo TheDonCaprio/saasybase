@@ -286,6 +286,7 @@ export default function PaymentManagement({
             <div className="text-center text-xs">
               <Link
                 href="/dashboard/transactions"
+                prefetch={false}
                 className="inline-flex items-center gap-1 text-blue-600 underline-offset-4 transition hover:underline dark:text-blue-300"
               >
                 View all transactions

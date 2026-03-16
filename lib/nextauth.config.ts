@@ -286,6 +286,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!user && token.id && trigger !== 'signIn') {
         const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
         const dbUserRecord = dbUser as (typeof dbUser & { tokenVersion?: number }) | null;
+        if (!dbUserRecord) {
+          return {
+            ...token,
+            id: undefined,
+            role: undefined,
+            tokenVersion: undefined,
+            picture: undefined,
+            sub: undefined,
+            email: undefined,
+            name: undefined,
+          };
+        }
         if (dbUserRecord && dbUserRecord.tokenVersion !== (token.tokenVersion ?? 0)) {
           // Token is stale — force re-authentication
           return { ...token, id: undefined, role: undefined };
@@ -296,6 +308,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       // Propagate JWT claims into the session object returned by auth().
+      if (!token.id) {
+        return {
+          ...session,
+          user: undefined,
+          expires: session.expires,
+        };
+      }
+
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as unknown as Record<string, unknown>).role = token.role ?? 'USER';

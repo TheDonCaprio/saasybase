@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthSession } from '@/lib/auth-provider/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faTicketAlt } from '@fortawesome/free-solid-svg-icons';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 interface CouponRedeemModalProps {
   isOpen: boolean;
@@ -107,12 +107,12 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
               <p className="text-sm text-neutral-300">
                 You need to log in to redeem a coupon code.
               </p>
-              <Link
+              <TransientNavLink
                 href="/sign-in"
                 className="block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-blue-700"
               >
                 Sign In
-              </Link>
+              </TransientNavLink>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

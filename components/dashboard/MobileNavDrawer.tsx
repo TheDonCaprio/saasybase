@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faGrip } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
 import { AuthSignOutButton } from '@/lib/auth-provider/client';
+import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 interface MobileNavDrawerProps {
   items: NavItem[];
@@ -125,7 +125,7 @@ export function MobileNavDrawer({
                       : pathname === item.href || pathname.startsWith(item.href + '/'))
                   );
                   return (
-                    <Link
+                    <TransientNavLink
                       key={item.href}
                       href={item.href}
                       onClick={close}
@@ -159,7 +159,7 @@ export function MobileNavDrawer({
                           {item.badge}
                         </span>
                       )}
-                    </Link>
+                    </TransientNavLink>
                   );
                 })}
               </nav>

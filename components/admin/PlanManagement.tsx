@@ -64,6 +64,7 @@ type Plan = {
 export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[]; currency: string }) {
   // Format cents as currency using the passed currency
   const formatCurrency = useCallback((cents: number) => formatCurrencyUtil(cents, currency), [currency]);
+  const currencyLabel = (currency || 'USD').toUpperCase();
 
   const [plans, setPlans] = useState<Plan[]>(() => sortPlans(initialPlans || []));
   const [loading, setLoading] = useState(false);
@@ -832,7 +833,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                   </div>
 
                   <div>
-                    <label className="block text-sm text-neutral-300 mb-1">Price (USD)</label>
+                    <label className="block text-sm text-neutral-300 mb-1">Price ({currencyLabel})</label>
                     <input
                       className="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-100 placeholder-neutral-500 focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g. 19.99"

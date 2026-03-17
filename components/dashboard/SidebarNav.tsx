@@ -15,6 +15,7 @@ type SidebarProfile = {
   };
   permissions?: Record<string, boolean>;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  planActionLabel?: 'Upgrade' | 'Change Plan';
   hasPendingTeamInvites?: boolean;
 };
 
@@ -24,7 +25,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const { orgId } = useAuthSession();
   const currentOrgId = orgId ?? null;
   const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
-  const profileRequestInFlightRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const CLIENT_MODERATOR_SECTIONS = [
     'users',
@@ -51,30 +52,36 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
 
   useEffect(() => {
-    if (!isSignedIn || profileLoadedForOrg || profileRequestInFlightRef.current) {
+    if (!isSignedIn || profileLoadedForOrg) {
       return;
     }
 
-    profileRequestInFlightRef.current = true;
-    let cancelled = false;
+    // Cancel any in-flight request from a previous org context.
+    // Using AbortController ensures the effect always fires a fresh fetch when
+    // the org changes, even if the previous fetch hadn't completed yet
+    // (avoids the profileRequestInFlightRef race-condition that blocked the
+    // org-workspace fetch when switching orgs mid-flight).
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const capturedOrgId = currentOrgId;
 
-    fetch('/api/user/profile')
-      .then((r) => r.json())
+    fetch('/api/user/profile', { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`profile-fetch-${r.status}`);
+        return r.json() as Promise<SidebarProfile>;
+      })
       .then((data) => {
-        if (cancelled) return;
-        setProfileState({ orgId: currentOrgId, profile: data, loaded: true });
+        setProfileState({ orgId: capturedOrgId, profile: data, loaded: true });
       })
-      .catch((err) => {
+      .catch((err: Error) => {
+        if (err.name === 'AbortError') return; // org changed mid-flight; new effect will fetch
         console.error('Failed to fetch profile:', err);
-        if (cancelled) return;
-        setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-      })
-      .finally(() => {
-        profileRequestInFlightRef.current = false;
+        setProfileState({ orgId: capturedOrgId, profile: null, loaded: true });
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [isSignedIn, currentOrgId, profileLoadedForOrg]);
 
@@ -109,6 +116,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
       {displayItems.map(it => {
         const label = (() => {
           if (it.href !== '/dashboard/plan') return it.label;
+          if (profile?.planActionLabel) return profile.planActionLabel;
           if (!profile?.planSource) return it.label;
           return profile.planSource === 'FREE' ? 'Upgrade' : 'Change Plan';
         })();

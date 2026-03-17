@@ -51,6 +51,7 @@ export async function GET() {
       plan: {
         select: {
           name: true,
+          priceCents: true,
           tokenLimit: true,
           tokenName: true,
           durationHours: true,
@@ -84,6 +85,13 @@ export async function GET() {
   const memberCapStrategy = getMemberCapStrategy(organizationContext);
   const organizationTokenName = organizationPlan?.tokenName?.trim() || defaultTokenLabel;
   const planSource = organizationContext ? 'ORGANIZATION' : subscription ? 'PERSONAL' : 'FREE';
+  const hasPaidOrganizationPlan = organizationContext ? Number(organizationPlan?.priceCents ?? 0) > 0 : false;
+  const hasPaidPersonalPlan = subscription ? Number(subscription.plan?.priceCents ?? 0) > 0 : false;
+  const planActionLabel = planSource === 'FREE'
+    ? 'Upgrade'
+    : planSource === 'ORGANIZATION'
+      ? (hasPaidOrganizationPlan ? 'Change Plan' : 'Upgrade')
+      : (hasPaidPersonalPlan ? 'Change Plan' : 'Upgrade');
   const canCreateOrganization = (subscription?.plan?.supportsOrganizations === true) && ownedOrganizationCount === 0;
 
     // For provisioned workspace members, surface the workspace plan expiry.
@@ -177,6 +185,7 @@ export async function GET() {
       remaining: freeTokenBalance,
     },
     planSource,
+    planActionLabel,
     canCreateOrganization,
     hasPendingTeamInvites: pendingTeamInviteCount > 0,
   });

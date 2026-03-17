@@ -71,6 +71,7 @@ interface UserProfile {
     remaining: number;
   } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  planActionLabel?: 'Upgrade' | 'Change Plan';
   canCreateOrganization?: boolean;
   hasPendingTeamInvites?: boolean;
 }
@@ -143,7 +144,7 @@ export function DashboardHeaderDrawer({
 
   const displayItems = useMemo(() => {
     const planSource = profile?.planSource;
-    const planLabel = planSource === 'FREE' ? 'Upgrade' : 'Change Plan';
+    const planLabel = profile?.planActionLabel ?? (planSource === 'FREE' ? 'Upgrade' : 'Change Plan');
     return items.map((item) => {
       let nextItem = item;
       if (item.href === '/dashboard/plan' && planSource) {
@@ -154,7 +155,7 @@ export function DashboardHeaderDrawer({
       }
       return nextItem;
     });
-  }, [items, profile?.hasPendingTeamInvites, profile?.planSource]);
+  }, [items, profile?.hasPendingTeamInvites, profile?.planSource, profile?.planActionLabel]);
 
   const activeItem = (() => {
     if (!pathname) return undefined;

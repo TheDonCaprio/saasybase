@@ -72,6 +72,7 @@ describe('GET /api/user/profile', () => {
     const body = await res.json();
     expect(body.subscription).toBe(null);
     expect(body.paidTokens).toEqual({ tokenName: 'credits', remaining: 123, isUnlimited: false, displayRemaining: '123' });
+    expect(body.planActionLabel).toBe('Upgrade');
   });
 
   it('uses subscription tokenName for paidTokens when active subscription exists', async () => {
@@ -183,6 +184,7 @@ describe('GET /api/user/profile', () => {
     expect(body.subscription).toBe(null);
     expect(body.organization?.expiresAt).toBe('2031-02-03T04:05:06.000Z');
     expect(body.planSource).toBe('ORGANIZATION');
+    expect(body.planActionLabel).toBe('Upgrade');
   });
 
   it('prefers the effective workspace plan over stale organization metadata', async () => {
@@ -251,6 +253,7 @@ describe('GET /api/user/profile', () => {
     expect(res.status).toBe(200);
     expect(body.organization?.planName).toBe('Team Plus');
     expect(body.organization?.tokenName).toBe('team credits');
+    expect(body.planActionLabel).toBe('Change Plan');
   });
 
   it('keeps the existing email active until a new email is verified', async () => {

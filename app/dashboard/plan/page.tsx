@@ -326,8 +326,8 @@ export default async function PlanPage({ searchParams }: PageProps) {
                   heading: 'Cancellation scheduled',
                   body: (
                     <>
-                      Your subscription will stop renewing after {formattedNextBilling ?? 'this period'}. You retain access until the end of the
-                      cycle.
+                      Auto-renew is disabled for <span className="font-medium">{currentPlan?.name ?? 'your current plan'}</span>. You&apos;ll keep access until{' '}
+                      <span className="font-medium">{formattedNextBilling ?? 'the end of this period'}</span>.
                     </>
                   ),
                 }

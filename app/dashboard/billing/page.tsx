@@ -16,6 +16,7 @@ import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
 import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
+import { buildPendingSubscriptionSectionCopy } from '../../../lib/pending-subscription-display';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -54,6 +55,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
         OR: [
           { startedAt: { gt: now } },
           { payments: { some: { status: 'SUCCEEDED' } } },
+          { prorationPendingSince: { not: null } },
         ],
       },
       include: { plan: true },
@@ -76,8 +78,15 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const upcomingWithFormattedDates = await Promise.all(
     upcomingSubscriptions.map(async (sub) => ({
       ...sub,
+      isAwaitingPaymentConfirmation: sub.prorationPendingSince instanceof Date,
       formattedStartedAt: await formatDateServer(sub.startedAt),
-      formattedExpiresAt: await formatDateServer(sub.expiresAt)
+      formattedExpiresAt: await formatDateServer(sub.expiresAt),
+      formattedPendingSince: sub.prorationPendingSince ? await formatDateServer(sub.prorationPendingSince) : null,
+    }))
+  );
+  const pendingSectionCopy = buildPendingSubscriptionSectionCopy(
+    upcomingWithFormattedDates.map((subscription) => ({
+      isAwaitingPaymentConfirmation: subscription.isAwaitingPaymentConfirmation,
     }))
   );
 
@@ -281,7 +290,8 @@ export default async function BillingPage({ searchParams }: PageProps) {
                     heading: 'Cancellation scheduled',
                     body: (
                       <>
-                        Auto-renew is disabled. You&apos;ll keep access until {formattedNextBillingDate ?? 'the end of this period'}.
+                        Auto-renew is disabled for <span className="font-medium">{subscription?.plan?.name ?? 'your current plan'}</span>. You&apos;ll keep access until{' '}
+                        <span className="font-medium">{formattedNextBillingDate ?? 'the end of this period'}</span>.
                       </>
                     ),
                   }
@@ -351,50 +361,93 @@ export default async function BillingPage({ searchParams }: PageProps) {
             <section className={dashboardPanelClass('space-y-5')}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Upcoming subscriptions</h2>
-                  <p className="text-sm text-slate-500 dark:text-neutral-400">Pending time automatically activates when your current plan ends.</p>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">{pendingSectionCopy.title}</h2>
+                  <p className="text-sm text-slate-500 dark:text-neutral-400">{pendingSectionCopy.subtitle}</p>
                 </div>
                 <span className="text-2xl" aria-hidden="true">📅</span>
               </div>
 
               <div className="space-y-4">
                 {upcomingWithFormattedDates.map((sub) => {
-                  const startsInFuture = sub.startedAt.getTime() > nowTimeMs + 1000;
+                  const startsInFuture = !sub.isAwaitingPaymentConfirmation && sub.startedAt.getTime() > nowTimeMs + 1000;
+                  const price = sub.plan?.priceCents != null ? sub.plan.priceCents : 0;
+                  const durationHours = sub.plan?.durationHours ?? 0;
                   return (
                     <div
                       key={sub.id}
-                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
+                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-purple-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{sub.plan.name}</p>
                           <p className="text-xs text-slate-500 dark:text-neutral-400">{sub.plan.shortDescription || sub.plan.description}</p>
                         </div>
-                        <div className="text-right text-xs text-slate-500 dark:text-neutral-400">
-                          <div className="font-semibold text-slate-900 dark:text-neutral-100">Starts {sub.formattedStartedAt}</div>
-                          <div>Ends {sub.formattedExpiresAt}</div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-slate-900 dark:text-neutral-100">${(price / 100).toFixed(2)}</p>
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">
+                            {sub.plan?.autoRenew
+                              ? sub.plan.recurringInterval === 'year'
+                                ? 'per year'
+                                : sub.plan?.recurringInterval === 'month'
+                                  ? 'per month'
+                                  : sub.plan?.recurringInterval === 'week'
+                                    ? 'per week'
+                                    : 'per period'
+                              : durationHours >= 8760
+                                ? 'annual access'
+                                : durationHours >= 720
+                                  ? 'monthly access'
+                                  : durationHours >= 168
+                                    ? 'weekly access'
+                                    : 'daily access'}
+                          </p>
                         </div>
                       </div>
 
-                      <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/80 p-3 text-xs text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
-                        {startsInFuture
-                          ? 'This subscription is queued and will start automatically once your current plan ends.'
-                          : 'Activate now to switch immediately, or let it begin when the current plan expires.'}
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className={dashboardMutedPanelClass('p-3 text-xs text-slate-600 dark:text-neutral-400')}>
+                          <span className="font-semibold text-slate-700 dark:text-neutral-200">Starts:</span>{' '}
+                          {sub.formattedStartedAt ?? '—'}
+                        </div>
+                        <div className={dashboardMutedPanelClass('p-3 text-xs text-slate-600 dark:text-neutral-400')}>
+                          <span className="font-semibold text-slate-700 dark:text-neutral-200">Expires:</span>{' '}
+                          {sub.formattedExpiresAt ?? '—'}
+                        </div>
                       </div>
 
-                      {!startsInFuture ? (
-                        <div className="mt-3 flex justify-end">
+                      <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/80 p-3 text-xs text-purple-600 dark:border-purple-500/40 dark:bg-purple-500/10 dark:text-purple-200">
+                        {sub.isAwaitingPaymentConfirmation
+                          ? 'Awaiting Paystack payment confirmation. This switch will only activate after the provider confirms the charge.'
+                          : startsInFuture
+                            ? 'This subscription is queued and will start automatically once your current plan ends.'
+                            : 'Activate now to switch immediately, or let it begin when the current plan expires.'}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-neutral-400">
+                        {sub.isAwaitingPaymentConfirmation ? (
+                          <span>
+                            Started {sub.formattedPendingSince ?? sub.formattedStartedAt ?? 'recently'} and waiting for Paystack to confirm payment.
+                          </span>
+                        ) : startsInFuture ? (
+                          <span>Scheduled to start on {sub.formattedStartedAt ?? '—'}.</span>
+                        ) : (
+                          <span>Activate now to switch immediately.</span>
+                        )}
+                        {!sub.isAwaitingPaymentConfirmation && !startsInFuture ? (
                           <ActivatePendingButton subscriptionId={sub.id} label="Activate now" />
-                        </div>
-                      ) : null}
+                        ) : null}
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className={dashboardMutedPanelClass('text-xs text-slate-600 dark:text-neutral-400')}>
-                Buying extra time stacks it behind your current plan. You never lose days you&apos;ve already paid for.
-              </div>
+              {pendingSectionCopy.footerTitle && pendingSectionCopy.footerBody ? (
+                <div className={dashboardMutedPanelClass('text-sm text-slate-600 dark:text-neutral-400')}>
+                  <div className="font-semibold text-slate-800 dark:text-neutral-100">{pendingSectionCopy.footerTitle}</div>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-neutral-400">{pendingSectionCopy.footerBody}</p>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

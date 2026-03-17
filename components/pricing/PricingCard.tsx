@@ -206,6 +206,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const authFlowActiveRef = useRef(false);
   const mountedRef = useRef(false);
   const [oneTimeRenewalResetsTokens, setOneTimeRenewalResetsTokens] = useState<boolean>(false);
+  const [recurringRenewalResetsTokens, setRecurringRenewalResetsTokens] = useState<boolean>(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -226,11 +227,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       if (!res.ok) throw new Error('Failed');
       const j: unknown = await res.json();
       const r = asRecord(j);
-      const value = r?.oneTimeRenewalResetsTokens === true;
-      setIfMounted(setOneTimeRenewalResetsTokens)(value);
-      return value;
+      const oneTimeValue = r?.oneTimeRenewalResetsTokens === true;
+      const recurringValue = r?.recurringRenewalResetsTokens === true;
+      setIfMounted(setOneTimeRenewalResetsTokens)(oneTimeValue);
+      setIfMounted(setRecurringRenewalResetsTokens)(recurringValue);
+      return oneTimeValue;
     } catch {
       setIfMounted(setOneTimeRenewalResetsTokens)(false);
+      setIfMounted(setRecurringRenewalResetsTokens)(false);
       return false;
     }
   }, [setIfMounted]);
@@ -952,6 +956,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         }
 
         // Scenario 4: Active recurring + purchasing recurring
+        await loadOneTimeRenewalTokenPolicy();
         setIfMounted(setCheckingExisting)(false);
         setIfMounted(setRecurringPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
         setIfMounted(setRecurringRenewsAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
@@ -1366,7 +1371,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                         const planTokenName = plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens';
                         return (
                           <div>
-                            Switching recurring plans will reset your remaining <strong>{planTokenName}</strong> balance to the new plan&apos;s allotment.
+                            {recurringRenewalResetsTokens
+                              ? <>Switching recurring plans will reset your remaining <strong>{planTokenName}</strong> balance to the new plan&apos;s allotment.</>
+                              : <>Switching recurring plans keeps your current <strong>{planTokenName}</strong> balance (it is not reset when the new plan starts).</>}
                           </div>
                         );
                       })()}
@@ -1515,7 +1522,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 </div>
 
                 <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
-                  When a new recurring plan starts, your remaining <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is reset to the new plan&apos;s allotment.
+                  {recurringRenewalResetsTokens
+                    ? <>When a new recurring plan starts, your remaining <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is reset to the new plan&apos;s allotment.</>
+                    : <>When a new recurring plan starts, your current <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is preserved (not reset).</>}
                 </div>
 
                 <div className="mt-5 flex justify-end">
@@ -1594,7 +1603,9 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 </div>
 
                 <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-200">
-                  When a new recurring plan starts, your remaining <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is reset to the new plan&apos;s allotment.
+                  {recurringRenewalResetsTokens
+                    ? <>When a new recurring plan starts, your remaining <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is reset to the new plan&apos;s allotment.</>
+                    : <>When a new recurring plan starts, your current <strong>{plan.tokenName && String(plan.tokenName).trim() ? String(plan.tokenName).trim() : 'tokens'}</strong> balance is preserved (not reset).</>}
                 </div>
 
                 <div className="mt-5 flex justify-end gap-2">

@@ -9,6 +9,7 @@ import { showToast } from '../ui/Toast';
 import { formatPrice } from '../../lib/plans-shared';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 import { asRecord } from '../../lib/runtime-guards';
+import { buildProrationSuccessMessage } from './proration-feedback';
 import { AuthSignIn, AuthSignUp, useAuthUser } from '@/lib/auth-provider/client';
 import { useRouter } from 'next/navigation';
 
@@ -134,6 +135,18 @@ function ModalPortal({ children }: { children: React.ReactNode }) {
   if (typeof document === 'undefined') return null;
   return createPortal(children, document.body);
 }
+
+function hasPendingProviderConfirmation(payload: unknown): boolean {
+  const record = asRecord(payload);
+  const pending = asRecord(record?.pending);
+  return pending?.pendingConfirmation === true;
+}
+
+function getPendingProviderConfirmationPlanName(payload: unknown): string | null {
+  const record = asRecord(payload);
+  const pending = asRecord(record?.pending);
+  return typeof pending?.plan === 'string' ? pending.plan : null;
+}
 export default function PricingCard({ plan, activeRecurringPlan = null, scheduledPlanId, currency }: { plan: DBPlan; activeRecurringPlan?: ActiveRecurringPlan; scheduledPlanId?: string | null; currency: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -149,6 +162,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const [planSwitchConfirmVisible, setPlanSwitchConfirmVisible] = useState(false);
   const [planSwitchConfirmChoice, setPlanSwitchConfirmChoice] = useState<'now' | 'cycle_end' | null>(null);
   const [planSwitchSupportsProration, setPlanSwitchSupportsProration] = useState<boolean | null>(null);
+  const [planSwitchProviderKey, setPlanSwitchProviderKey] = useState<string | null>(null);
   const [planSwitchCapabilityLoading, setPlanSwitchCapabilityLoading] = useState(false);
   const [planSwitchProrationPending, setPlanSwitchProrationPending] = useState(false);
   const [existingExpiresAt, setExistingExpiresAt] = useState<string | null>(null);
@@ -184,6 +198,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   const [prorationConfirming, setProrationConfirming] = useState(false);
   const [prorationError, setProrationError] = useState<string | null>(null);
   const [prorationPreview, setProrationPreview] = useState<ProrationPreview | null>(null);
+  const [pendingProviderConfirmation, setPendingProviderConfirmation] = useState(false);
+  const [pendingProviderConfirmationPlanName, setPendingProviderConfirmationPlanName] = useState<string | null>(null);
   const checkoutOverridesRef = useRef<CheckoutOverrides | null>(null);
   const { isSignedIn } = useAuthUser();
   const wasSignedInRef = useRef(isSignedIn);
@@ -386,6 +402,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     const probe = async () => {
       setPlanSwitchCapabilityLoading(true);
       setPlanSwitchSupportsProration(null);
+      setPlanSwitchProviderKey(null);
       setPlanSwitchProrationPending(false);
       try {
         const res = await fetch(`/api/subscription/proration?planId=${encodeURIComponent(plan.id)}`,
@@ -407,12 +424,15 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         const hasProration = Boolean(res.ok && obj?.prorationEnabled === true);
         // Provider supports inline update but can't show a proration preview
         const hasInlineSwitch = Boolean(res.ok && obj?.supportsInlineSwitch === true);
+        const providerKey = typeof obj?.providerKey === 'string' ? obj.providerKey : null;
         if (mounted) {
           setPlanSwitchSupportsProration(hasProration || hasInlineSwitch);
+          setPlanSwitchProviderKey(providerKey);
         }
       } catch {
         if (mounted) {
           setPlanSwitchSupportsProration(false);
+          setPlanSwitchProviderKey(null);
         }
       } finally {
         if (mounted) {
@@ -479,6 +499,44 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     }
     wasSignedInRef.current = isSignedIn;
   }, [isSignedIn, closeAuthModal]);
+
+  useEffect(() => {
+    let active = true;
+
+    const syncPendingProviderConfirmation = async () => {
+      try {
+        const res = await fetch('/api/subscription');
+        const payload = await res.json().catch(() => null);
+        if (!active || !res.ok) return;
+        const hasPending = hasPendingProviderConfirmation(payload);
+        setIfMounted(setPendingProviderConfirmation)(hasPending);
+        setIfMounted(setPendingProviderConfirmationPlanName)(
+          hasPending ? getPendingProviderConfirmationPlanName(payload) : null,
+        );
+      } catch {
+        if (!active) return;
+        setIfMounted(setPendingProviderConfirmation)(false);
+        setIfMounted(setPendingProviderConfirmationPlanName)(null);
+      }
+    };
+
+    void syncPendingProviderConfirmation();
+
+    const handleUpdated = () => {
+      void syncPendingProviderConfirmation();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('subscription:updated', handleUpdated as EventListener);
+    }
+
+    return () => {
+      active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('subscription:updated', handleUpdated as EventListener);
+      }
+    };
+  }, [setIfMounted]);
 
   function confirmCouponSelection(apply: boolean) {
     const chosen = apply ? couponOptions.find((item) => item.id === selectedCouponId) : undefined;
@@ -674,15 +732,23 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       }
 
       // Extract actual amount charged for better user feedback
+      const pendingConfirmation = result?.pendingConfirmation === true;
       const actualAmountCharged = typeof result?.actualAmountCharged === 'number' ? result.actualAmountCharged : null;
       const newPlanName = typeof result?.newPlan === 'object' && result.newPlan ?
         (asRecord(result.newPlan)?.name as string) : plan.name;
 
-      const successMessage = actualAmountCharged !== null
-        ? `Subscription changed to ${newPlanName}. Charged: ${formatPrice(actualAmountCharged, currency)}`
-        : `Subscription changed to ${newPlanName} successfully.`;
+      if (pendingConfirmation) {
+        setPlanSwitchProrationPending(true);
+      }
 
-      showToast(successMessage, 'success');
+      const prorationFeedback = buildProrationSuccessMessage({
+        pendingConfirmation,
+        actualAmountCharged,
+        newPlanName,
+        formatPrice: (amountCents) => formatPrice(amountCents, currency),
+      });
+
+      showToast(prorationFeedback.message, prorationFeedback.tone);
       closeProrationModal();
       router.refresh();
     } catch (error) {
@@ -833,6 +899,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         return;
       }
 
+      if (res.ok && hasPendingProviderConfirmation(sub)) {
+        setIfMounted(setPendingProviderConfirmation)(true);
+        setIfMounted(setPendingProviderConfirmationPlanName)(getPendingProviderConfirmationPlanName(sub));
+        showToast('A plan change is already awaiting Paystack payment confirmation. Please wait for confirmation before starting another subscription change.', 'info');
+        setIfMounted(setCheckingExisting)(false);
+        return;
+      }
+
       // Check if user has an active subscription
       if (res.ok && sub && sub.active === true) {
         const hasRecurring = sub.planAutoRenew === true;
@@ -979,6 +1053,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
   let buttonLabel: string;
   if (pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming) {
     buttonLabel = 'Preparing checkout…';
+  } else if (pendingProviderConfirmation) {
+    buttonLabel = 'Awaiting payment confirmation';
   } else if (isCurrentAutoRenewPlan) {
     buttonLabel = 'Current plan active';
   } else if (isScheduledPlan) {
@@ -997,7 +1073,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     }
   }
 
-  const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || isCurrentAutoRenewPlan || isScheduledPlan;
+  const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || pendingProviderConfirmation || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
     <div className="group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_28px_70px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))]">
@@ -1071,10 +1147,20 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
           onClick={onBuyClick}
           className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(90deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.78)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)))] px-5 py-3 text-sm font-semibold text-white text-actual-white shadow-[0_20px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28))] transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
           aria-disabled={isButtonDisabled}
-          title={isCurrentAutoRenewPlan ? 'You are already subscribed to this plan.' : undefined}
+          title={pendingProviderConfirmation
+            ? `Another plan change${pendingProviderConfirmationPlanName ? ` (${pendingProviderConfirmationPlanName})` : ''} is awaiting Paystack payment confirmation.`
+            : isCurrentAutoRenewPlan
+              ? 'You are already subscribed to this plan.'
+              : undefined}
         >
           {buttonLabel}
         </button>
+
+        {pendingProviderConfirmation ? (
+          <p className="text-center text-xs text-amber-700 dark:text-amber-200">
+            Another plan change{pendingProviderConfirmationPlanName ? ` for ${pendingProviderConfirmationPlanName}` : ''} is awaiting Paystack confirmation.
+          </p>
+        ) : null}
 
         {/* Extend confirmation modal for one-time plans */}
         {showExtendModal && (
@@ -1371,10 +1457,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                     ) : planSwitchSupportsProration ? (
                       <>
                         <p className="mt-1 text-neutral-600 dark:text-neutral-300">
-                          Applies the new plan immediately with proration. You may be charged or credited today.
+                          {planSwitchProviderKey === 'paystack'
+                            ? `Starts your ${plan.name} switch now, but activation can wait for Paystack to confirm the charge.`
+                            : 'Applies the new plan immediately with proration. You may be charged or credited today.'}
                         </p>
                         <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-                          You&apos;ll review the proration breakdown before confirming.
+                          {planSwitchProviderKey === 'paystack'
+                            ? 'If Paystack takes time to debit the saved authorization, your plan will stay in an awaiting-confirmation state until the provider confirms payment.'
+                            : 'You&apos;ll review the proration breakdown before confirming.'}
                         </p>
                       </>
                     ) : (

@@ -185,6 +185,74 @@ describe('GET /api/user/profile', () => {
     expect(body.planSource).toBe('ORGANIZATION');
   });
 
+  it('prefers the effective workspace plan over stale organization metadata', async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      email: 'member@capriofiles.com',
+      name: 'Member',
+      role: 'USER',
+      tokenBalance: 0,
+      freeTokenBalance: 0,
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+
+    userPlanContextMock.getOrganizationPlanContext.mockResolvedValueOnce({
+      role: 'MEMBER',
+      effectivePlan: {
+        id: 'plan_team_plus',
+        name: 'Team Plus',
+        shortDescription: null,
+        description: null,
+        priceCents: 3000,
+        durationHours: 720,
+        autoRenew: true,
+        recurringInterval: 'month',
+        tokenLimit: 3000,
+        tokenName: 'team credits',
+        organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      },
+      organization: {
+        id: 'org_1',
+        name: 'Caprio Workspace',
+        slug: 'caprio',
+        ownerUserId: 'owner_1',
+        seatLimit: 5,
+        tokenBalance: 0,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        memberTokenCap: null,
+        memberCapStrategy: null,
+        memberCapResetIntervalHours: null,
+        planId: 'plan_team',
+        plan: {
+          id: 'plan_team',
+          name: 'Team',
+          shortDescription: null,
+          description: null,
+          priceCents: 0,
+          durationHours: 720,
+          autoRenew: true,
+          recurringInterval: 'month',
+          tokenLimit: 1000,
+          tokenName: 'credits',
+          organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+        },
+      },
+      membership: null,
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      expiresAt: new Date('2031-02-03T04:05:06.000Z'),
+    });
+
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.organization?.planName).toBe('Team Plus');
+    expect(body.organization?.tokenName).toBe('team credits');
+  });
+
   it('keeps the existing email active until a new email is verified', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',

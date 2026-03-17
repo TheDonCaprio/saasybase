@@ -67,6 +67,7 @@ export async function GET() {
         userId,
         status: 'PENDING',
         OR: [
+          { prorationPendingSince: { not: null } },
           { startedAt: { gt: now } },
           { payments: { some: { status: 'SUCCEEDED' } } },
         ],
@@ -105,15 +106,18 @@ export async function GET() {
 
     
     if (pendingSub) {
+      const isAwaitingPaymentConfirmation = pendingSub.prorationPendingSince instanceof Date;
       response.pending = {
         id: pendingSub.id,
         plan: pendingSub.plan?.name,
         // Expose whether pending plan auto-renews (useful for UI decisions)
         planAutoRenew: !!pendingSub.plan?.autoRenew,
         planSupportsOrganizations: pendingSub.plan?.supportsOrganizations === true,
+        pendingConfirmation: isAwaitingPaymentConfirmation,
         // In the new manual-activation flow startedAt may be null
         startsAt: pendingSub.startedAt || null,
-        expiresAt: pendingSub.expiresAt || null
+        expiresAt: pendingSub.expiresAt || null,
+        pendingSince: pendingSub.prorationPendingSince || null,
       };
     }
     

@@ -7,10 +7,12 @@ import { formatCurrency } from '../../../../lib/utils/currency';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
 import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../../lib/plans';
+import { syncOrganizationBillingMetadata } from '../../../../lib/organization-billing-metadata';
 import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
 import type { Prisma } from '@prisma/client';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
+import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { findProviderByValue, getCurrentProviderKey, getIdByProvider } from '../../../../lib/utils/provider-ids';
 
 function jsonError(message: string, status: number, code: string, extra?: Record<string, unknown>) {
@@ -52,6 +54,9 @@ type PlanRecord = {
   recurringInterval: string | null;
   recurringIntervalCount: number;
   tokenLimit: number | null;
+  organizationSeatLimit: number | null;
+  organizationTokenPoolStrategy: string | null;
+  supportsOrganizations: boolean;
   externalPriceId: string | null;
   externalPriceIds: string | null;
 };
@@ -115,6 +120,9 @@ async function fetchPlan(planId: string): Promise<PlanRecord | null> {
       recurringInterval: true,
       recurringIntervalCount: true,
       tokenLimit: true,
+      organizationSeatLimit: true,
+      organizationTokenPoolStrategy: true,
+      supportsOrganizations: true,
       externalPriceId: true,
       externalPriceIds: true,
     },
@@ -306,6 +314,7 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({
             prorationEnabled: false,
             supportsInlineSwitch: true,
+            providerKey: ctx.providerKey,
             isDowngrade,
             downgradeScheduledAtCycleEnd: false,
             reason: 'PROVIDER_PRORATION_UNSUPPORTED',
@@ -360,6 +369,7 @@ export async function GET(req: NextRequest) {
             prorationEnabled: true,
             isEstimate: true,
             supportsInlineSwitch: true,
+            providerKey: ctx.providerKey,
             isDowngrade,
             downgradeScheduledAtCycleEnd: false,
             amountDue,
@@ -387,6 +397,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           prorationEnabled: false,
           supportsInlineSwitch: true,
+          providerKey: ctx.providerKey,
           reason: 'PROVIDER_PRORATION_UNSUPPORTED',
           code: 'PROVIDER_PRORATION_UNSUPPORTED',
           currentPlan: {
@@ -411,6 +422,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ...preview,
+      providerKey: ctx.providerKey,
       currentPlan: {
         id: ctx.currentSubscription.plan.id,
         name: ctx.currentSubscription.plan.name,
@@ -688,6 +700,7 @@ export async function POST(req: NextRequest) {
     }
 
     const newPeriodEnd = result.newPeriodEnd || null;
+    const shouldDeferPaystackActivation = ctx.providerKey === 'paystack' && Boolean(result.newExternalSubscriptionId);
 
     // Immediately replace the existing subscription with the new plan.
     // Set `startedAt` to now to indicate the change is effective immediately.
@@ -744,13 +757,14 @@ export async function POST(req: NextRequest) {
           userId: ctx.userId,
           planId: ctx.targetPlan.id,
           organizationId: ctx.currentSubscription.organizationId ?? undefined,
-          status: 'ACTIVE',
+          status: shouldDeferPaystackActivation ? 'PENDING' : 'ACTIVE',
           startedAt: now,
           expiresAt: paystackExpiresAt,
           externalSubscriptionId: result.newExternalSubscriptionId,
           externalSubscriptionIds: newSubIdMap,
           paymentProvider: ctx.providerKey,
           cancelAtPeriodEnd: false,
+          prorationPendingSince: shouldDeferPaystackActivation ? now : null,
         } satisfies Prisma.SubscriptionUncheckedCreateInput,
       });
     } else {
@@ -777,27 +791,64 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (!shouldDeferPaystackActivation && ctx.currentSubscription.organizationId && ctx.targetPlan.supportsOrganizations) {
+      await syncOrganizationBillingMetadata({
+        organizationId: ctx.currentSubscription.organizationId,
+        planId: ctx.targetPlan.id,
+        seatLimit: ctx.targetPlan.organizationSeatLimit,
+        tokenPoolStrategy: ctx.targetPlan.organizationTokenPoolStrategy,
+      });
+    }
+
     // Adjust token balance according to admin "Paid token operations" setting.
     // If the admin has configured tokens to be reset on renewal for recurring plans,
     // reset the user's paid token balance to the new plan's allotment. Otherwise,
     // preserve the user's existing token balance.
     try {
-      const shouldReset = await shouldResetPaidTokensOnRenewalForPlanAutoRenew(ctx.targetPlan.autoRenew);
-      const previousTokenLimit = ctx.currentSubscription.plan.tokenLimit;
-      const nextTokenLimit = ctx.targetPlan.tokenLimit;
-      if (previousTokenLimit == null && typeof nextTokenLimit === 'number') {
-        await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
-        Logger.info('Initialized token balance on unlimited-to-limited recurring plan change', {
+      if (shouldDeferPaystackActivation) {
+        Logger.info('Deferring Paystack switch-now token mutation until payment confirmation', {
           userId: ctx.userId,
-          tokenLimit: nextTokenLimit,
+          previousSubscriptionId: ctx.currentSubscription.id,
+          newExternalSubscriptionId: result.newExternalSubscriptionId,
+          providerKey: ctx.providerKey,
         });
-      } else if (shouldReset) {
-        if (nextTokenLimit !== null) {
-          await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
-          Logger.info('Reset user token balance to new recurring plan allotment per admin setting', { userId: ctx.userId, tokenLimit: nextTokenLimit });
-        }
       } else {
-        Logger.info('Preserving user token balance on recurring->recurring plan change per admin setting', { userId: ctx.userId });
+        const shouldReset = await shouldResetPaidTokensOnRenewalForPlanAutoRenew(ctx.targetPlan.autoRenew);
+        const previousTokenLimit = ctx.currentSubscription.plan.tokenLimit;
+        const nextTokenLimit = ctx.targetPlan.tokenLimit;
+        const orgId = ctx.currentSubscription.organizationId;
+        const planSupportsOrgs = ctx.targetPlan.supportsOrganizations === true;
+
+        if (orgId && planSupportsOrgs && typeof nextTokenLimit === 'number') {
+          // Org-scoped subscription: credit/reset the organization token bucket.
+          if (previousTokenLimit == null || shouldReset) {
+            await resetOrganizationSharedTokens({ organizationId: orgId });
+            await prisma.organization.update({
+              where: { id: orgId },
+              data: { tokenBalance: nextTokenLimit },
+            });
+            Logger.info('Reset org token balance on recurring plan change', {
+              userId: ctx.userId, organizationId: orgId, tokenLimit: nextTokenLimit,
+            });
+          } else {
+            Logger.info('Preserving org token balance on recurring plan change per admin setting', {
+              userId: ctx.userId, organizationId: orgId,
+            });
+          }
+        } else if (previousTokenLimit == null && typeof nextTokenLimit === 'number') {
+          await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
+          Logger.info('Initialized token balance on unlimited-to-limited recurring plan change', {
+            userId: ctx.userId,
+            tokenLimit: nextTokenLimit,
+          });
+        } else if (shouldReset) {
+          if (nextTokenLimit !== null) {
+            await prisma.user.update({ where: { id: ctx.userId }, data: { tokenBalance: nextTokenLimit } });
+            Logger.info('Reset user token balance to new recurring plan allotment per admin setting', { userId: ctx.userId, tokenLimit: nextTokenLimit });
+          }
+        } else {
+          Logger.info('Preserving user token balance on recurring->recurring plan change per admin setting', { userId: ctx.userId });
+        }
       }
     } catch (err) {
       const e = toError(err);
@@ -811,48 +862,56 @@ export async function POST(req: NextRequest) {
       const isDowngrade = priceDelta < 0;
 
       if (isUpgrade || isDowngrade) {
-        const templateKey = isUpgrade ? 'subscription_upgraded_recurring' : 'subscription_downgraded';
-        const title = isUpgrade ? 'Subscription Upgraded' : 'Subscription Changed';
-        const message = isUpgrade
-          ? `Your subscription has been upgraded to ${ctx.targetPlan.name}.`
-          : `Your subscription has been changed to ${ctx.targetPlan.name}.`;
+        if (shouldDeferPaystackActivation) {
+          Logger.info('Deferring Paystack switch-now plan-change notifications until payment confirmation', {
+            userId: ctx.userId,
+            currentSubscriptionId: ctx.currentSubscription.id,
+            newExternalSubscriptionId: result.newExternalSubscriptionId,
+          });
+        } else {
+          const templateKey = isUpgrade ? 'subscription_upgraded_recurring' : 'subscription_downgraded';
+          const title = isUpgrade ? 'Subscription Upgraded' : 'Subscription Changed';
+          const message = isUpgrade
+            ? `Your subscription has been upgraded to ${ctx.targetPlan.name}.`
+            : `Your subscription has been changed to ${ctx.targetPlan.name}.`;
 
-        const amountCents = typeof result.amountPaid === 'number' && !Number.isNaN(result.amountPaid)
-          ? result.amountPaid
-          : ctx.targetPlan.priceCents;
+          const amountCents = typeof result.amountPaid === 'number' && !Number.isNaN(result.amountPaid)
+            ? result.amountPaid
+            : ctx.targetPlan.priceCents;
 
-        await sendBillingNotification({
-          userId: ctx.userId,
-          title,
-          message,
-          templateKey,
-          variables: {
-            planName: ctx.targetPlan.name,
-            amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
-            startedAt: now.toLocaleDateString(),
-            expiresAt: expiresAtValue ? expiresAtValue.toLocaleDateString() : undefined,
-            transactionId: (result.invoiceId || ctx.currentSubscription.id)
-          },
-        });
+          await sendBillingNotification({
+            userId: ctx.userId,
+            title,
+            message,
+            templateKey,
+            variables: {
+              planName: ctx.targetPlan.name,
+              amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
+              startedAt: now.toLocaleDateString(),
+              expiresAt: expiresAtValue ? expiresAtValue.toLocaleDateString() : undefined,
+              transactionId: (result.invoiceId || ctx.currentSubscription.id)
+            },
+          });
 
-        const adminTitle = isUpgrade ? 'Subscription upgraded' : 'Subscription downgraded';
-        const adminMessage = isUpgrade
-          ? `User ${ctx.userId} upgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`
-          : `User ${ctx.userId} downgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`;
+          const adminTitle = isUpgrade ? 'Subscription upgraded' : 'Subscription downgraded';
+          const adminMessage = isUpgrade
+            ? `User ${ctx.userId} upgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`
+            : `User ${ctx.userId} downgraded to ${ctx.targetPlan.name}. Subscription: ${ctx.currentSubscription.id}`;
 
-        await sendAdminNotificationEmail({
-          userId: ctx.userId,
-          title: adminTitle,
-          alertType: isUpgrade ? 'upgrade' : 'downgrade',
-          message: adminMessage,
-          templateKey: 'admin_notification',
-          variables: {
-            planName: ctx.targetPlan.name,
-            amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
-            transactionId: result.invoiceId || ctx.currentSubscription.id,
-            startedAt: now.toLocaleString(),
-          },
-        });
+          await sendAdminNotificationEmail({
+            userId: ctx.userId,
+            title: adminTitle,
+            alertType: isUpgrade ? 'upgrade' : 'downgrade',
+            message: adminMessage,
+            templateKey: 'admin_notification',
+            variables: {
+              planName: ctx.targetPlan.name,
+              amount: formatCurrency(amountCents, await getActiveCurrencyAsync()),
+              transactionId: result.invoiceId || ctx.currentSubscription.id,
+              startedAt: now.toLocaleString(),
+            },
+          });
+        }
       }
     } catch (err) {
       const e = toError(err);
@@ -861,6 +920,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      ...(shouldDeferPaystackActivation ? { pendingConfirmation: true } : null),
       newPlan: {
         id: ctx.targetPlan.id,
         name: ctx.targetPlan.name,

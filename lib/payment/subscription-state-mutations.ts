@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { Logger } from '../logger';
 import { toError } from '../runtime-guards';
 import { shouldClearPaidTokensOnRenewal } from '../paidTokens';
+import { syncOrganizationBillingMetadata } from '../organization-billing-metadata';
 import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../teams';
 import { resolveSubscriptionWebhookMutationPlan } from './subscription-webhook-state';
 
@@ -18,6 +19,7 @@ type SubscriptionUpdateDbSubShape = {
     userId: string;
     status: string;
     expiresAt: Date;
+    prorationPendingSince?: Date | null;
     canceledAt: Date | null;
     cancelAtPeriodEnd: boolean;
     planId: string;
@@ -36,13 +38,33 @@ export function buildImmediateCancellationData(cancellationTime: Date) {
 }
 
 export async function markSubscriptionActive(dbSubscriptionId: string, expiresAt?: Date): Promise<void> {
-    await prisma.subscription.update({
+    const updatedSub = await prisma.subscription.update({
         where: { id: dbSubscriptionId },
         data: {
             status: 'ACTIVE',
+            prorationPendingSince: null,
             ...(expiresAt ? { expiresAt } : null),
-        }
+        },
+        include: {
+            plan: {
+                select: {
+                    id: true,
+                    supportsOrganizations: true,
+                    organizationSeatLimit: true,
+                    organizationTokenPoolStrategy: true,
+                },
+            },
+        },
     });
+
+    if (updatedSub.organizationId && updatedSub.plan?.supportsOrganizations) {
+        await syncOrganizationBillingMetadata({
+            organizationId: updatedSub.organizationId,
+            planId: updatedSub.plan.id,
+            seatLimit: updatedSub.plan.organizationSeatLimit,
+            tokenPoolStrategy: updatedSub.plan.organizationTokenPoolStrategy,
+        });
+    }
 }
 
 export async function applySubscriptionWebhookUpdate(params: {
@@ -66,6 +88,15 @@ export async function applySubscriptionWebhookUpdate(params: {
         },
         include: { plan: true }
     });
+
+    if (updatedSub.organizationId && updatedSub.plan?.supportsOrganizations && params.effectiveStatus === 'ACTIVE') {
+        await syncOrganizationBillingMetadata({
+            organizationId: updatedSub.organizationId,
+            planId: updatedSub.plan.id,
+            seatLimit: updatedSub.plan.organizationSeatLimit,
+            tokenPoolStrategy: updatedSub.plan.organizationTokenPoolStrategy,
+        });
+    }
 
     if (!params.nextPlanId) return updatedSub;
 
@@ -116,7 +147,7 @@ export async function applySubscriptionCreatedExistingRecordUpdate(params: {
     nextCanceledAt: Date | null;
     isProviderSubscriptionActiveStatus: (status: string) => boolean;
 }): Promise<{ dbSub: SubscriptionWithPlan; wasTransitioningToActive: boolean }> {
-    const wasTransitioningToActive = params.dbSub.status === 'PENDING' && params.isProviderSubscriptionActiveStatus(params.status);
+    const wasTransitioningToActive = params.dbSub.status === 'PENDING' && params.effectiveStatus === 'ACTIVE';
 
     const shouldUpdate =
         params.dbSub.status !== params.effectiveStatus
@@ -138,6 +169,15 @@ export async function applySubscriptionCreatedExistingRecordUpdate(params: {
         },
         include: { plan: true }
     });
+
+    if (updatedSub.organizationId && updatedSub.plan?.supportsOrganizations && params.effectiveStatus === 'ACTIVE') {
+        await syncOrganizationBillingMetadata({
+            organizationId: updatedSub.organizationId,
+            planId: updatedSub.plan.id,
+            seatLimit: updatedSub.plan.organizationSeatLimit,
+            tokenPoolStrategy: updatedSub.plan.organizationTokenPoolStrategy,
+        });
+    }
 
     return { dbSub: updatedSub, wasTransitioningToActive };
 }

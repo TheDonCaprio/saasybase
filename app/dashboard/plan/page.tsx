@@ -10,6 +10,7 @@ import { CurrentPlanStatus } from '../../../components/dashboard/CurrentPlanStat
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../lib/settings';
 import PlanBillingActions from '../../../components/dashboard/PlanBillingActions';
 export const dynamic = 'force-dynamic';
+import { buildPendingSubscriptionSectionCopy } from '../../../lib/pending-subscription-display';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
@@ -131,9 +132,11 @@ export default async function PlanPage({ searchParams }: PageProps) {
       .filter(s => s.status === 'PENDING')
       .map(async (s) => ({
         ...s,
+        isAwaitingPaymentConfirmation: s.prorationPendingSince instanceof Date,
         planForUI: mapPlanForUI(s.plan),
         formattedStartedAt: s.startedAt ? await formatDateServer(s.startedAt) : null,
         formattedExpiresAt: s.expiresAt ? await formatDateServer(s.expiresAt) : null,
+        formattedPendingSince: s.prorationPendingSince ? await formatDateServer(s.prorationPendingSince) : null,
       }))
   );
 
@@ -141,6 +144,11 @@ export default async function PlanPage({ searchParams }: PageProps) {
     ? Math.max(0, Math.ceil((nextBillingDate.getTime() - nowTimeMs) / (1000 * 60 * 60 * 24)))
     : null;
   const pendingCount = pendingSubsWithFormats.length;
+  const pendingSectionCopy = buildPendingSubscriptionSectionCopy(
+    pendingSubsWithFormats.map((subscription) => ({
+      isAwaitingPaymentConfirmation: subscription.isAwaitingPaymentConfirmation,
+    })),
+  );
   const subscriptionStart = activeSub?.startedAt ?? null;
   const accessProgressPercent =
     subscriptionStart && nextBillingDate && nextBillingDate.getTime() !== subscriptionStart.getTime()
@@ -371,8 +379,8 @@ export default async function PlanPage({ searchParams }: PageProps) {
             <section className={dashboardPanelClass('space-y-5')}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Upcoming subscriptions</h2>
-                  <p className="text-sm text-slate-500 dark:text-neutral-400">Pending time will automatically activate when your current plan ends.</p>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">{pendingSectionCopy.title}</h2>
+                  <p className="text-sm text-slate-500 dark:text-neutral-400">{pendingSectionCopy.subtitle}</p>
                 </div>
                 <span className="text-2xl" aria-hidden="true">📅</span>
               </div>
@@ -381,7 +389,9 @@ export default async function PlanPage({ searchParams }: PageProps) {
                   const plan = subscription.planForUI ?? mapPlanForUI(subscription.plan);
                   const price = plan?.priceCents != null ? plan.priceCents : 0;
                   const durationHours = plan?.durationHours ?? 0;
-                  const startsInFuture = subscription.startedAt.getTime() > nowTimeMs + 1000;
+                  const startsInFuture =
+                    !subscription.isAwaitingPaymentConfirmation &&
+                    subscription.startedAt.getTime() > nowTimeMs + 1000;
 
                   return (
                     <div
@@ -429,16 +439,22 @@ export default async function PlanPage({ searchParams }: PageProps) {
                       </div>
 
                       <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/80 p-3 text-xs text-purple-600 dark:border-purple-500/40 dark:bg-purple-500/10 dark:text-purple-200">
-                        ✨ This subscription is pending. It will begin automatically when your current plan ends.
+                        {subscription.isAwaitingPaymentConfirmation
+                          ? 'Awaiting Paystack payment confirmation. This switch will only activate after the provider confirms the charge.'
+                          : 'This subscription is pending. It will begin automatically when your current plan ends.'}
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-neutral-400">
-                        {startsInFuture ? (
+                        {subscription.isAwaitingPaymentConfirmation ? (
+                          <span>
+                            Started {subscription.formattedPendingSince ?? subscription.formattedStartedAt ?? 'recently'} and waiting for Paystack to confirm payment.
+                          </span>
+                        ) : startsInFuture ? (
                           <span>Scheduled to start on {subscription.formattedStartedAt ?? '—'}.</span>
                         ) : (
                           <span>Activate now to switch immediately.</span>
                         )}
-                        {!startsInFuture ? (
+                        {!subscription.isAwaitingPaymentConfirmation && !startsInFuture ? (
                           <ActivatePendingButton subscriptionId={subscription.id} label="Activate now" />
                         ) : null}
                       </div>
@@ -446,12 +462,14 @@ export default async function PlanPage({ searchParams }: PageProps) {
                   );
                 })}
               </div>
-              <div className={dashboardMutedPanelClass('text-sm text-slate-600 dark:text-neutral-400')}>
-                <div className="font-semibold text-slate-800 dark:text-neutral-100">How stacking works</div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-neutral-400">
-                  Purchasing while already subscribed queues the new time so you never lose access. Activate early to swap plans immediately or let it auto-start on your renewal date.
-                </p>
-              </div>
+              {pendingSectionCopy.footerTitle && pendingSectionCopy.footerBody ? (
+                <div className={dashboardMutedPanelClass('text-sm text-slate-600 dark:text-neutral-400')}>
+                  <div className="font-semibold text-slate-800 dark:text-neutral-100">{pendingSectionCopy.footerTitle}</div>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-neutral-400">
+                    {pendingSectionCopy.footerBody}
+                  </p>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

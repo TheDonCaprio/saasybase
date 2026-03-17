@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { getOrganizationAccessSummary } from './organization-access';
+import { getActiveTeamSubscription, getOrganizationAccessSummary } from './organization-access';
 import type { Prisma } from '@prisma/client';
 
 export const PLAN_WITH_BILLING_FIELDS = {
@@ -59,6 +59,7 @@ export type OrganizationPlanContext = {
   role: 'OWNER' | 'MEMBER';
   organization: OrganizationWithPlan;
   membership: OrganizationMembershipWithCaps | null;
+  effectivePlan: PlanWithBillingFields;
 };
 
 export async function getOrganizationPlanContext(userId: string, activeOrganizationId?: string | null): Promise<OrganizationPlanContext | null> {
@@ -84,7 +85,16 @@ export async function getOrganizationPlanContext(userId: string, activeOrganizat
     select: ORGANIZATION_WITH_PLAN_SELECT,
   });
 
-  if (!organization || !organization.plan) {
+  if (!organization) {
+    return null;
+  }
+
+  const effectiveTeamSubscription = access.kind === 'OWNER'
+    ? access.subscription
+    : await getActiveTeamSubscription(organization.ownerUserId, { includeGrace: true });
+  const effectivePlan = effectiveTeamSubscription?.plan ?? organization.plan;
+
+  if (!effectivePlan) {
     return null;
   }
 
@@ -100,6 +110,7 @@ export async function getOrganizationPlanContext(userId: string, activeOrganizat
     role: access.kind,
     organization,
     membership,
+    effectivePlan,
   };
 }
 
@@ -212,6 +223,7 @@ export function buildPlanDisplay(params: {
 
   const rawTokenName =
     subscription?.plan?.tokenName ??
+    organizationContext?.effectivePlan?.tokenName ??
     organizationContext?.organization.plan?.tokenName ??
     freePlanSettings.tokenName ??
     defaultTokenLabel;
@@ -224,6 +236,8 @@ export function buildPlanDisplay(params: {
   let tokenLimit: number | null;
   if (subscription?.plan?.tokenLimit != null) {
     tokenLimit = Number(subscription.plan.tokenLimit);
+  } else if (organizationContext?.effectivePlan?.tokenLimit != null) {
+    tokenLimit = Number(organizationContext.effectivePlan.tokenLimit);
   } else if (organizationContext?.organization.plan?.tokenLimit != null) {
     tokenLimit = Number(organizationContext.organization.plan.tokenLimit);
   } else if (planSource === 'FREE') {
@@ -305,7 +319,7 @@ export function buildPlanDisplay(params: {
 
   const planName =
     subscription?.plan?.name ??
-    (organizationContext ? `${organizationContext.organization.plan?.name ?? 'Team Plan'} (Workspace)` : 'Free Tier');
+    (organizationContext ? `${organizationContext.effectivePlan?.name ?? organizationContext.organization.plan?.name ?? 'Team Plan'} (Workspace)` : 'Free Tier');
 
   const statusValue = subscription ? 'Active subscription' : organizationContext ? 'Workspace access' : 'Free tier';
 

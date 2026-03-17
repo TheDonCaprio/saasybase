@@ -7,10 +7,15 @@ const prismaMock = vi.hoisted(() => ({
 	},
 	subscription: {
 		findFirst: vi.fn(),
+		create: vi.fn(),
 		update: vi.fn(),
 	},
 	plan: {
 		findUnique: vi.fn(),
+	},
+	organization: {
+		findUnique: vi.fn(),
+		update: vi.fn(),
 	},
 }));
 
@@ -36,6 +41,10 @@ vi.mock('../lib/plans', () => ({ PLAN_DEFINITIONS: [], resolvePlanPriceEnv: vi.f
 vi.mock('../lib/payment/registry', () => ({ getActiveCurrency: () => 'usd', getActiveCurrencyAsync: async () => 'usd' }));
 vi.mock('../lib/utils/currency', () => ({ formatCurrency: () => '$0.00' }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('../lib/teams', () => ({
+	creditOrganizationSharedTokens: vi.fn(async () => undefined),
+	resetOrganizationSharedTokens: vi.fn(async () => undefined),
+}));
 vi.mock('../lib/utils/provider-ids', () => ({
 	findProviderByValue: vi.fn(() => null),
 	getCurrentProviderKey: vi.fn(() => 'razorpay'),
@@ -51,6 +60,9 @@ vi.mock('../lib/utils/provider-ids', () => ({
 }));
 
 import { GET, POST } from '../app/api/subscription/proration/route';
+import { sendBillingNotification } from '../lib/notifications';
+import { shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../lib/settings';
+import { resetOrganizationSharedTokens } from '../lib/teams';
 import { NextRequest } from 'next/server';
 
 type RouteProvider = typeof providerMock;
@@ -92,6 +104,8 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 			externalPriceId: null,
 			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_target' }),
 		});
+
+		prismaMock.organization.findUnique.mockResolvedValue(null);
 	});
 
 	it('sets the new finite allotment when switching from unlimited to limited recurring access', async () => {
@@ -295,6 +309,84 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 
 		// DB should be updated immediately
 		expect(prismaMock.subscription.update).toHaveBeenCalled();
+	});
+
+	it('Paystack switch-now creates a provisional pending subscription and defers activation side effects', async () => {
+		prismaMock.user.findUnique.mockResolvedValueOnce({
+			id: 'user_1',
+			externalCustomerId: 'cust_ps_1',
+			externalCustomerIds: JSON.stringify({ paystack: 'cust_ps_1' }),
+		});
+
+		prismaMock.subscription.findFirst.mockResolvedValueOnce({
+			id: 'sub_db_paystack_current',
+			planId: 'plan_current',
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_ps_current',
+			externalSubscriptionIds: JSON.stringify({ paystack: 'sub_ps_current' }),
+			paymentProvider: 'paystack',
+			organizationId: null,
+			plan: { id: 'plan_current', name: 'Current', priceCents: 1000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValueOnce({
+			id: 'plan_target_paystack',
+			name: 'Target Pro',
+			priceCents: 3000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 500,
+			supportsOrganizations: false,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ paystack: 'plan_ps_target' }),
+		});
+
+		providerMock.updateSubscriptionPlan.mockResolvedValueOnce({
+			success: true,
+			newExternalSubscriptionId: 'sub_ps_new',
+			newPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+		});
+
+		const req = new Request('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ planId: 'plan_target_paystack' }),
+		});
+
+		const res = await POST(toNextRequest(req));
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.ok).toBe(true);
+		expect(body.pendingConfirmation).toBe(true);
+
+		expect(prismaMock.subscription.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { id: 'sub_db_paystack_current' },
+				data: expect.objectContaining({ status: 'CANCELLED' }),
+			}),
+		);
+
+		expect(prismaMock.subscription.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					planId: 'plan_target_paystack',
+					status: 'PENDING',
+					externalSubscriptionId: 'sub_ps_new',
+					prorationPendingSince: expect.any(Date),
+				}),
+			}),
+		);
+
+		const tokenBalanceCalls = prismaMock.user.update.mock.calls.filter(
+			(call: unknown[]) => {
+				const arg = call[0] as { data?: { tokenBalance?: unknown } };
+				return arg?.data?.tokenBalance !== undefined;
+			},
+		);
+		expect(tokenBalanceCalls).toHaveLength(0);
+		expect(sendBillingNotification).not.toHaveBeenCalled();
 	});
 
 	it('maps Stripe card_declined error to 402', async () => {
@@ -571,5 +663,80 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		// Should call scheduleSubscriptionPlanChange, NOT updateSubscriptionPlan
 		expect(providerMock.scheduleSubscriptionPlanChange).toHaveBeenCalled();
 		expect(providerMock.updateSubscriptionPlan).not.toHaveBeenCalled();
+	});
+
+	it('immediate org plan switch resets org token bucket instead of user balance', async () => {
+		vi.mocked(shouldResetPaidTokensOnRenewalForPlanAutoRenew).mockResolvedValueOnce(true);
+
+		prismaMock.subscription.findFirst.mockResolvedValueOnce({
+			id: 'sub_db_org',
+			planId: 'plan_current',
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_org',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_org' }),
+			paymentProvider: 'razorpay',
+			organizationId: 'org_team_1',
+			plan: { id: 'plan_current', name: 'Team Basic', priceCents: 2000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValueOnce({
+			id: 'plan_target_org',
+			name: 'Team Pro',
+			priceCents: 5000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 500,
+			organizationSeatLimit: 10,
+			organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+			supportsOrganizations: true,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_team_pro' }),
+		});
+
+		prismaMock.organization.findUnique.mockResolvedValueOnce({
+			id: 'org_team_1',
+			clerkOrganizationId: null,
+			planId: 'plan_current',
+			seatLimit: 5,
+			tokenPoolStrategy: 'SHARED_FOR_ORG',
+		});
+
+		providerMock.updateSubscriptionPlan.mockResolvedValue({
+			success: true,
+			newPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+			invoiceId: 'in_org_switch',
+			amountPaid: 3000,
+		});
+
+		const req = new Request('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ planId: 'plan_target_org' }),
+		});
+
+		const res = await POST(toNextRequest(req));
+		expect(res.status).toBe(200);
+
+		// Org bucket should be reset, NOT user balance.
+		expect(resetOrganizationSharedTokens).toHaveBeenCalledWith(
+			expect.objectContaining({ organizationId: 'org_team_1' }),
+		);
+		expect(prismaMock.organization.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { id: 'org_team_1' },
+				data: { tokenBalance: 500 },
+			}),
+		);
+		// user.update should only be called for paymentsCount, not token balance
+		const userUpdateCalls = prismaMock.user.update.mock.calls;
+		const tokenBalanceCalls = userUpdateCalls.filter(
+			(call: unknown[]) => {
+				const arg = call[0] as { data?: { tokenBalance?: unknown } };
+				return arg?.data?.tokenBalance !== undefined;
+			},
+		);
+		expect(tokenBalanceCalls).toHaveLength(0);
 	});
 });

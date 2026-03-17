@@ -13,6 +13,7 @@ import { cookies } from 'next/headers';
 import { authService } from '@/lib/auth-provider';
 import { prisma } from '@/lib/prisma';
 import { ACTIVE_ORG_COOKIE, getActiveOrgCookieOptions } from '@/lib/active-organization';
+import { getActiveTeamSubscription } from '@/lib/organization-access';
 
 export async function GET() {
   try {
@@ -37,13 +38,24 @@ export async function GET() {
       },
     });
 
+    const effectivePlans = new Map(
+      await Promise.all(
+        memberships.map(async (membership) => {
+          const activeTeamSubscription = await getActiveTeamSubscription(membership.organization.ownerUserId, {
+            includeGrace: true,
+          });
+          return [membership.organization.id, activeTeamSubscription?.plan ?? null] as const;
+        }),
+      ),
+    );
+
     const organizations = memberships.map((m) => ({
       id: m.organization.id,
       name: m.organization.name,
       slug: m.organization.slug,
       role: m.role,
       isOwner: m.organization.ownerUserId === session.userId,
-      planName: m.organization.plan?.name || null,
+      planName: effectivePlans.get(m.organization.id)?.name || m.organization.plan?.name || null,
     }));
 
     // Read active org from cookie

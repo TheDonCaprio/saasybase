@@ -7,7 +7,11 @@ import type { StandardizedInvoice } from './types';
 export async function handleInvoicePaymentFailureEvent(params: {
     invoice: StandardizedInvoice;
     resolveUserByCustomerId: (customerId: string) => Promise<string | null>;
-    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string } | null>;
+    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{
+        id: string;
+        status: string;
+        prorationPendingSince?: Date | null;
+    } | null>;
 }): Promise<void> {
     const { id, subscriptionId, customerId, userEmail } = params.invoice;
 
@@ -35,11 +39,22 @@ export async function handleInvoicePaymentFailureEvent(params: {
         try {
             const dbSub = await params.findSubscriptionByProviderId(subscriptionId);
             if (dbSub) {
+                const isProvisionallyPendingSwitch = dbSub.status === 'PENDING' && dbSub.prorationPendingSince instanceof Date;
                 await prisma.subscription.update({
                     where: { id: dbSub.id },
-                    data: { status: 'PAST_DUE' }
+                    data: isProvisionallyPendingSwitch
+                        ? {
+                            status: 'EXPIRED',
+                            expiresAt: new Date(),
+                            canceledAt: new Date(),
+                            cancelAtPeriodEnd: false,
+                            prorationPendingSince: null,
+                        }
+                        : { status: 'PAST_DUE' }
                 });
-                Logger.info('Subscription marked as PAST_DUE due to invoice payment failure', {
+                Logger.info(isProvisionallyPendingSwitch
+                    ? 'Provisionally pending subscription expired after invoice payment failure'
+                    : 'Subscription marked as PAST_DUE due to invoice payment failure', {
                     subscriptionId: dbSub.id,
                     externalId: subscriptionId,
                     invoiceId: id

@@ -275,23 +275,46 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
     if (providerKey !== 'paystack') return false;
     if (!finalPaymentIntent) return false;
 
-    const candidateSub = await prisma.subscription.findFirst({
-        where: {
-            userId,
-            planId: plan.id,
-            paymentProvider: providerKey,
-            status: { in: ['ACTIVE', 'PENDING', 'EXPIRED'] },
-            expiresAt: { gt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }
-        },
-        orderBy: { expiresAt: 'desc' },
-        select: {
-            id: true,
-            organizationId: true,
-            externalSubscriptionId: true,
-            status: true,
-            expiresAt: true,
-        }
-    });
+    // Prefer PENDING rows (pre-created subs that haven't been paid yet) over
+    // ACTIVE/EXPIRED candidates.  Within each bucket, pick the most recently
+    // created row.  The lookback is kept reasonably tight (14 days) to avoid
+    // accidentally matching stale subscriptions left over from a force-cancel.
+    const candidateLookback = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const candidateSub =
+        await prisma.subscription.findFirst({
+            where: {
+                userId,
+                planId: plan.id,
+                paymentProvider: providerKey,
+                status: 'PENDING',
+                expiresAt: { gt: candidateLookback },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                organizationId: true,
+                externalSubscriptionId: true,
+                status: true,
+                expiresAt: true,
+            },
+        })
+        ?? await prisma.subscription.findFirst({
+            where: {
+                userId,
+                planId: plan.id,
+                paymentProvider: providerKey,
+                status: { in: ['ACTIVE', 'EXPIRED'] },
+                expiresAt: { gt: candidateLookback },
+            },
+            orderBy: { expiresAt: 'desc' },
+            select: {
+                id: true,
+                organizationId: true,
+                externalSubscriptionId: true,
+                status: true,
+                expiresAt: true,
+            },
+        });
 
     let hasSucceededPaymentForSub = false;
     if (candidateSub) {
@@ -467,7 +490,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                     userId,
                     title: renewalTitle,
                     message: renewalMessage,
-                    templateKey: 'subscription_renewed',
+                    templateKey: shouldTreatAsActivationOfPrecreatedSub ? 'subscription_activated' : 'subscription_renewed',
                     variables: {
                         planName: plan.name,
                         amount: formatCurrency(amountCents, activeCurrency),

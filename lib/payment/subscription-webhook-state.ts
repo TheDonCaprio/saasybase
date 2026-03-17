@@ -18,6 +18,7 @@ export function deriveSubscriptionWebhookState(params: {
     cancelAtPeriodEnd?: boolean;
     canceledAt?: Date | null;
     dbStatus: string;
+    dbProrationPendingSince?: Date | null;
     dbCanceledAt: Date | null;
     dbExpiresAt: Date;
     providerKey: string;
@@ -39,9 +40,15 @@ export function deriveSubscriptionWebhookState(params: {
             : (params.canceledAt ?? null);
 
     const isLocallyCancelled = params.dbStatus === 'CANCELLED';
+    const isPaystackProvisionallyPending = params.providerKey === 'paystack'
+        && params.dbStatus === 'PENDING'
+        && params.dbProrationPendingSince instanceof Date
+        && normalizedStatus === 'ACTIVE';
     const effectiveStatus = isLocallyCancelled && normalizedStatus === 'ACTIVE'
         ? params.dbStatus
-        : normalizedStatus;
+        : isPaystackProvisionallyPending
+            ? 'PENDING'
+            : normalizedStatus;
 
     const nowTs = Date.now();
     const shouldPreserveExistingPaystackExpiry = params.providerKey === 'paystack'
@@ -140,6 +147,7 @@ export function shouldApplySubscriptionWebhookUpdate(params: {
 export async function resolveSubscriptionWebhookMutationPlan(params: {
     dbSub: {
         status: string;
+        prorationPendingSince?: Date | null;
         canceledAt: Date | null;
         expiresAt: Date;
         cancelAtPeriodEnd: boolean;
@@ -179,6 +187,7 @@ export async function resolveSubscriptionWebhookMutationPlan(params: {
         cancelAtPeriodEnd: params.cancelAtPeriodEnd,
         canceledAt: params.canceledAt,
         dbStatus: params.dbSub.status,
+        dbProrationPendingSince: params.dbSub.prorationPendingSince,
         dbCanceledAt: params.dbSub.canceledAt,
         dbExpiresAt: params.dbSub.expiresAt,
         providerKey: params.providerKey,

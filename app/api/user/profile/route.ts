@@ -78,10 +78,11 @@ export async function GET() {
   const paidTokenBalance = typeof user.tokenBalance === 'number' ? user.tokenBalance : 0;
   const freeTokenBalance = typeof user.freeTokenBalance === 'number' ? user.freeTokenBalance : 0;
   const organizationContext = await getOrganizationPlanContext(user.id, orgId);
+  const organizationPlan = organizationContext?.effectivePlan ?? organizationContext?.organization.plan ?? null;
   const sharedTokenBalance = getMemberSharedTokenBalance(organizationContext);
   const memberTokenCap = getEffectiveMemberTokenCap(organizationContext);
   const memberCapStrategy = getMemberCapStrategy(organizationContext);
-  const organizationTokenName = organizationContext?.organization.plan?.tokenName?.trim() || defaultTokenLabel;
+  const organizationTokenName = organizationPlan?.tokenName?.trim() || defaultTokenLabel;
   const planSource = organizationContext ? 'ORGANIZATION' : subscription ? 'PERSONAL' : 'FREE';
   const canCreateOrganization = (subscription?.plan?.supportsOrganizations === true) && ownedOrganizationCount === 0;
 
@@ -151,7 +152,7 @@ export async function GET() {
           id: organizationContext.organization.id,
           name: organizationContext.organization.name,
           role: organizationContext.role,
-          planName: organizationContext.organization.plan?.name || 'Workspace Plan',
+          planName: organizationPlan?.name || 'Workspace Plan',
           tokenName: organizationTokenName,
           expiresAt: organizationExpiresAt,
           tokenPoolStrategy: organizationContext.organization.tokenPoolStrategy,

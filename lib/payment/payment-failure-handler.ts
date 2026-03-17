@@ -7,7 +7,11 @@ import type { StandardizedPaymentFailed } from './types';
 export async function handlePaymentFailureEvent(params: {
     payload: StandardizedPaymentFailed;
     resolveUserByCustomerId: (customerId: string) => Promise<string | null>;
-    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string } | null>;
+    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{
+        id: string;
+        status: string;
+        prorationPendingSince?: Date | null;
+    } | null>;
 }): Promise<void> {
     const { id, subscriptionId, customerId, errorMessage, errorCode, metadata } = params.payload;
 
@@ -33,11 +37,22 @@ export async function handlePaymentFailureEvent(params: {
         try {
             const dbSub = await params.findSubscriptionByProviderId(subscriptionId);
             if (dbSub) {
+                const isProvisionallyPendingSwitch = dbSub.status === 'PENDING' && dbSub.prorationPendingSince instanceof Date;
                 await prisma.subscription.update({
                     where: { id: dbSub.id },
-                    data: { status: 'PAST_DUE' }
+                    data: isProvisionallyPendingSwitch
+                        ? {
+                            status: 'EXPIRED',
+                            expiresAt: new Date(),
+                            canceledAt: new Date(),
+                            cancelAtPeriodEnd: false,
+                            prorationPendingSince: null,
+                        }
+                        : { status: 'PAST_DUE' }
                 });
-                Logger.info('Subscription marked as PAST_DUE due to payment failure', {
+                Logger.info(isProvisionallyPendingSwitch
+                    ? 'Provisionally pending subscription expired after payment failure'
+                    : 'Subscription marked as PAST_DUE due to payment failure', {
                     subscriptionId: dbSub.id,
                     externalId: subscriptionId
                 });

@@ -50,7 +50,14 @@ export async function getActiveTeamSubscription(
       select: {
         id: true,
         name: true,
+        shortDescription: true,
+        description: true,
+        priceCents: true,
+        durationHours: true,
+        autoRenew: true,
+        recurringInterval: true,
         tokenLimit: true,
+        tokenName: true,
         organizationSeatLimit: true,
         organizationTokenPoolStrategy: true,
         supportsOrganizations: true,
@@ -65,6 +72,10 @@ export async function getActiveTeamSubscription(
         status: { in: eligibleStatuses as unknown as string[] },
         expiresAt: { gt: now },
         plan: { supportsOrganizations: true },
+        NOT: {
+          status: 'PENDING',
+          prorationPendingSince: { not: null },
+        },
       },
       orderBy: { expiresAt: 'desc' },
       include: baseInclude,
@@ -92,6 +103,10 @@ export async function getActiveTeamSubscription(
     where: {
       userId,
       plan: { supportsOrganizations: true },
+      NOT: {
+        status: 'PENDING',
+        prorationPendingSince: { not: null },
+      },
       OR: [
         unexpiredAccessClause,
         // After wall-clock expiry, keep org access during the grace window.

@@ -13,9 +13,11 @@ type SubscriptionCreatedExistingRecord = {
     id: string;
     userId: string;
     status: string;
+    prorationPendingSince?: Date | null;
     canceledAt: Date | null;
     expiresAt: Date;
     cancelAtPeriodEnd: boolean;
+    createdAt?: Date | null;
     plan: {
         autoRenew: boolean;
     };
@@ -118,6 +120,7 @@ export async function processSubscriptionCreatedExistingRecord<TSubscription ext
             cancelAtPeriodEnd?: boolean;
             canceledAt?: Date | null;
             dbStatus: string;
+            dbProrationPendingSince?: Date | null;
             dbCanceledAt: Date | null;
             dbExpiresAt: Date;
             dbCancelAtPeriodEnd: boolean;
@@ -163,10 +166,12 @@ export async function processSubscriptionCreatedExistingRecord<TSubscription ext
         cancelAtPeriodEnd: params.subscription.cancelAtPeriodEnd,
         canceledAt: params.subscription.canceledAt,
         dbStatus: params.dbSub.status,
+        dbProrationPendingSince: params.dbSub.prorationPendingSince,
         dbCanceledAt: params.dbSub.canceledAt,
         dbExpiresAt: params.dbSub.expiresAt,
         dbCancelAtPeriodEnd: params.dbSub.cancelAtPeriodEnd,
         providerKey: params.providerKey,
+        dbCreatedAt: params.dbSub.createdAt,
     });
 
     const existingRecordUpdate = await deps.applySubscriptionCreatedExistingRecordUpdate({
@@ -182,7 +187,7 @@ export async function processSubscriptionCreatedExistingRecord<TSubscription ext
     let currentSub = existingRecordUpdate.dbSub;
     const wasTransitioningToActive = existingRecordUpdate.wasTransitioningToActive;
 
-    if (params.providerKey === 'paystack' && deps.isProviderSubscriptionActiveStatus(params.subscription.status)) {
+    if (params.providerKey === 'paystack' && effectiveStatus === 'ACTIVE') {
         const linked = await deps.handlePaystackActiveSubscriptionPostProcessing(currentSub, 'subscription.created');
         if (linked) {
             // already logged in helper

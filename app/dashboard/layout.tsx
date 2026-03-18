@@ -12,6 +12,8 @@ import { getPendingEmailChangeForUser } from '../../lib/nextauth-email-verificat
 import { PendingEmailChangeNotice } from '../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../lib/user-helpers';
 
+import { SidebarFooter } from '../../components/dashboard/SidebarFooter';
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Middleware handles authentication protection
   // Only authenticated users will reach this component
@@ -100,20 +102,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="-mx-6 lg:mx-0 lg:flex lg:gap-3 min-h-screen">
       {/* Desktop Sidebar */}
+      {/* Desktop Sidebar Placeholder (to keep layout in place) */}
+      <div className="hidden lg:block w-64 flex-shrink-0" />
+      
+      {/* Desktop Sidebar (Fixed) */}
       <aside
-        className="hidden lg:block w-56 flex-shrink-0 bg-[color:var(--theme-sidebar-bg)] lg:min-h-screen -mt-6 -ml-6 -mb-6"
-        style={{ borderRight: '1px solid var(--theme-sidebar-border)' }}
+        className="hidden lg:flex flex-col w-64 bg-[color:var(--theme-sidebar-bg)] fixed left-0 top-0 h-screen border-r border-[color:var(--theme-sidebar-border)] z-30"
       >
-        <div className="space-y-4 pr-4 pb-4 pt-10 pl-4">
+        {/* Spacer for header (approximating dynamic header height) */}
+        <div className="h-16 flex-shrink-0" />
+        
+        <div className="flex-1 flex flex-col px-4 overflow-y-auto custom-scrollbar space-y-4 pt-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
           <SidebarNav items={nav} />
-          <div className="pt-4 border-t border-neutral-700">
-            <AuthSignOutButton>
-              <button className="text-sm text-neutral-400 hover:text-white">
-                Sign Out
-              </button>
-            </AuthSignOutButton>
-          </div>
+        </div>
+        <div className="p-4 mt-auto">
+          <SidebarFooter />
         </div>
       </aside>
 

@@ -1212,16 +1212,16 @@ thead.bg-neutral-900 {
   }
 
   .light .custom-scrollbar {
-    scrollbar-color: rgba(156, 163, 175, 0.207) transparent;
+    scrollbar-color: rgba(156, 163, 175, 0.15) transparent;
   }
 
   .light .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.207);
+    background: rgba(156, 163, 175, 0.15);
     background-clip: padding-box;
   }
 
   .light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.21);
+    background: rgba(156, 163, 175, 0.15);
     background-clip: padding-box;
   }
 

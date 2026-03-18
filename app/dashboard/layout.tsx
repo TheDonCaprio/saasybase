@@ -112,7 +112,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Spacer for header (approximating dynamic header height) */}
         <div className="h-16 flex-shrink-0" />
         
-        <div className="flex-1 flex flex-col px-4 overflow-y-auto custom-scrollbar space-y-4 pt-4">
+        <div className="flex-1 flex flex-col px-4 overflow-y-scroll custom-scrollbar space-y-4 pt-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
           <SidebarNav items={nav} />
         </div>

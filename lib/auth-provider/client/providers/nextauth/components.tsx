@@ -1242,7 +1242,7 @@ export function AuthOrganizationSwitcher() {
 
       {/* Dropdown popover */}
       {open && (
-        <div className="absolute left-0 z-50 mt-1.5 w-full min-w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10">
+        <div className="absolute bottom-full left-0 z-[70] mb-2 w-full min-w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10">
           {/* Personal workspace option */}
           <button
             type="button"

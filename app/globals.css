@@ -1184,21 +1184,71 @@ thead.bg-neutral-900 {
     background: rgb(82 82 82);
   }
   /* Custom scrollbar for sidebars and other containers */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(17, 24, 39, 0.18) transparent;
+    scrollbar-gutter: stable;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgb(var(--border-primary) / 0.8);
     border-radius: 10px;
   }
   
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(17, 24, 39, 0.076);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--border-primary));
+    background: rgba(17, 24, 39, 0.28);
+    background-clip: padding-box;
+  }
+
+  .light .custom-scrollbar {
+    scrollbar-color: rgba(156, 163, 175, 0.207) transparent;
+  }
+
+  .light .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.207);
+    background-clip: padding-box;
+  }
+
+  .light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.21);
+    background-clip: padding-box;
+  }
+
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(56, 56, 56, 0.9) transparent;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(56, 56, 56, 0.9);
+    background-clip: padding-box;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 74, 74, 0.96);
+    background-clip: padding-box;
+  }
+
+  .sidebar-org-switcher-root {
+    position: relative;
+  }
+
+  .sidebar-org-switcher-popover {
+    z-index: 70;
+  }
+
+  .sidebar-org-switcher-popover [data-radix-popper-content-wrapper] {
+    z-index: 70;
   }
 }
 

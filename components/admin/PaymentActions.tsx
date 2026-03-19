@@ -125,7 +125,7 @@ export function PaymentActions({
         <button
           onClick={() => handleDownloadRefundReceipt(payment.id)}
           disabled={!!downloadingReceipt}
-          className="text-xs rounded px-2 py-1 bg-blue-600 text-white border border-blue-700 hover:bg-blue-700"
+          className="rounded-lg border border-blue-700 bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700"
         >
           {downloadingReceipt === payment.id ? 'Downloading…' : 'Receipt'}
         </button>
@@ -137,12 +137,12 @@ export function PaymentActions({
           aria-label={refundTooltip}
           title={refundTooltip}
           className={iconOnly
-            ? `inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${
+            ? `inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${
                 isRefundDisabled
                   ? 'border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
                   : 'border-transparent bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:hover:bg-red-600'
               }`
-            : `inline-flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${
+            : `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${
                 isRefundDisabled
                   ? 'border-slate-300 bg-slate-200 text-slate-500 hover:bg-slate-200 focus:ring-slate-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:focus:ring-neutral-700'
                   : 'border-red-700 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:border-red-500 dark:bg-red-500 dark:hover:bg-red-600'
@@ -155,7 +155,7 @@ export function PaymentActions({
               'Processing...'
             )
           ) : iconOnly ? (
-            <FontAwesomeIcon icon={faHandHoldingDollar} className="h-4 w-4" />
+            <FontAwesomeIcon icon={faHandHoldingDollar} className="h-3.5 w-3.5" />
           ) : (
             'Refund'
           )}

@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react';
 
+let toastSequence = 0;
+
+function createToastId() {
+  toastSequence += 1;
+  return `${Date.now()}-${toastSequence}`;
+}
+
 interface Toast {
   id: string;
   message: string;
@@ -16,7 +23,7 @@ export const useToast = (): ToastContextType => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now().toString();
+    const id = createToastId();
     const newToast = { id, message, type };
 
     setToasts(prev => [...prev, newToast]);
@@ -65,7 +72,7 @@ export function ToastContainer() {
     // Listen for custom toast events
     const handleToast = (event: CustomEvent) => {
       const { message, type } = event.detail;
-      const id = Date.now().toString();
+      const id = createToastId();
       const newToast = { id, message, type };
 
       setToasts(prev => [...prev, newToast]);

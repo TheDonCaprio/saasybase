@@ -7,6 +7,7 @@ import { useFormatSettings } from '../FormatSettingsProvider';
 import { showToast } from '../ui/Toast';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { RefundModal } from './RefundModal';
+import { SubscriptionEditModal } from './SubscriptionEditModal';
 import { Pagination } from '../ui/Pagination';
 import { CouponBadge } from '../ui/CouponBadge';
 import { PaymentProviderBadge } from '../ui/PaymentProviderBadge';
@@ -23,6 +24,7 @@ import {
   faCalendarXmark,
   faArrowRotateLeft,
   faHandHoldingDollar,
+  faPenToSquare,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -156,6 +158,9 @@ export function PaginatedSubscriptionsManagement({
   const [refundTarget, setRefundTarget] = useState<{ sub: SubRow; payment: NonNullable<SubRow['latestPayment']> } | null>(null);
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<SubRow | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // underscore-prefixed setters from hook are intentionally unused here in some builds
   void _setItems;
@@ -317,7 +322,7 @@ export function PaginatedSubscriptionsManagement({
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs text-red-800 dark:border-red-700 dark:bg-red-900/20 dark:text-red-200">
                 <p className="font-semibold text-red-900 dark:text-red-100 mb-2">What happens next</p>
                 <ul className="list-disc space-y-1 pl-4">
-                  <li>Stripe subscription is cancelled immediately; no further invoices will generate.</li>
+                  <li>The subscription is cancelled immediately locally and with the provider; no further invoices will generate.</li>
                   <li>The subscription status is set to <strong>CANCELLED</strong> and access is revoked instantly.</li>
                   <li>Any scheduled cancellation timestamp is replaced with the current time for audit history.</li>
                 </ul>
@@ -465,6 +470,44 @@ export function PaginatedSubscriptionsManagement({
     }
   }
 
+  async function executeEdit(target: SubRow, payload: {
+    status: 'ACTIVE' | 'EXPIRED';
+    expiresAt: string;
+    clearScheduledCancellation: boolean;
+    allowLocalOverride: boolean;
+  }) {
+    try {
+      setEditLoading(true);
+      setEditError(null);
+      setActionLoading(prev => ({ ...prev, [target.id]: true }));
+
+      const res = await fetch(`/api/admin/subscriptions/${target.id}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setEditError(json?.error || 'Subscription update failed');
+        return;
+      }
+
+      showToast(`Updated ${target.planName}`, 'success');
+      if (json?.warning) {
+        showToast(json.warning, 'info');
+      }
+      await refreshSubscriptions();
+      setEditTarget(null);
+    } catch (e) {
+      void e;
+      setEditError('Subscription update failed');
+    } finally {
+      setEditLoading(false);
+      setActionLoading(prev => ({ ...prev, [target.id]: false }));
+    }
+  }
+
   // status summary cards removed
 
   const pendingActionCopy = pendingAction ? getActionCopy(pendingAction.sub, pendingAction.action) : null;
@@ -527,6 +570,7 @@ export function PaginatedSubscriptionsManagement({
     const isScheduleDisabled = isBusy || sub.status === 'CANCELLED';
     const isUndoDisabled = isBusy || sub.status === 'CANCELLED';
     const isRefundDisabled = isBusy || !canRefundPayment;
+    const isEditDisabled = isBusy;
 
     const busyTooltip = 'Action in progress';
     const alreadyCancelledTooltip = 'Subscription already cancelled';
@@ -538,6 +582,7 @@ export function PaginatedSubscriptionsManagement({
     const undoTooltip = isUndoDisabled
       ? (isBusy ? busyTooltip : 'Cannot undo a fully cancelled subscription')
       : 'Undo scheduled cancellation';
+    const editTooltip = isEditDisabled ? busyTooltip : 'Edit subscription status and billing date';
     const refundTooltip = isRefundDisabled
       ? isBusy
         ? busyTooltip
@@ -554,9 +599,11 @@ export function PaginatedSubscriptionsManagement({
       isScheduleDisabled,
       isUndoDisabled,
       isRefundDisabled,
+      isEditDisabled,
       forceTooltip,
       scheduleTooltip,
       undoTooltip,
+      editTooltip,
       refundTooltip
     };
   };
@@ -588,10 +635,10 @@ export function PaginatedSubscriptionsManagement({
   };
 
   const baseActionButtonClass =
-    'inline-flex items-center justify-center rounded-full p-2.5 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed';
+    'inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed';
   const disabledActionButtonClass =
     'border border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60';
-  const actionButtonVariants: Record<'force-cancel' | 'schedule-cancel' | 'undo' | 'refund', string> = {
+  const actionButtonVariants: Record<'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', string> = {
     'force-cancel':
       'border border-rose-600 bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 dark:border-rose-500 dark:bg-rose-500 dark:hover:bg-rose-600',
     'schedule-cancel':
@@ -599,10 +646,12 @@ export function PaginatedSubscriptionsManagement({
     undo:
       'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
     refund:
-      'border border-purple-600 bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 dark:border-purple-500 dark:bg-purple-500 dark:hover:bg-purple-600'
+      'border border-purple-600 bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 dark:border-purple-500 dark:bg-purple-500 dark:hover:bg-purple-600',
+    edit:
+      'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400 dark:border-neutral-500 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600'
   };
 
-  const getActionButtonClass = (variant: 'force-cancel' | 'schedule-cancel' | 'undo' | 'refund', disabled: boolean) =>
+  const getActionButtonClass = (variant: 'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', disabled: boolean) =>
     `${baseActionButtonClass} ${disabled ? disabledActionButtonClass : actionButtonVariants[variant]}`;
 
   const renderActionButtonContent = (isLoading: boolean, icon: IconDefinition, label: string) => {
@@ -611,7 +660,7 @@ export function PaginatedSubscriptionsManagement({
       <>
         <FontAwesomeIcon
           icon={busy ? faSpinner : icon}
-          className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`.trim()}
+          className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`.trim()}
           aria-hidden="true"
         />
         <span className="sr-only">{busy ? `Processing ${label}` : label}</span>
@@ -797,6 +846,19 @@ export function PaginatedSubscriptionsManagement({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditError(null);
+                          setEditTarget(sub);
+                        }}
+                        className={getActionButtonClass('edit', actionState.isEditDisabled)}
+                        disabled={actionState.isEditDisabled}
+                        title={actionState.editTooltip}
+                        aria-label={actionState.editTooltip}
+                      >
+                        {renderActionButtonContent(actionState.isBusy, faPenToSquare, 'Edit subscription')}
+                      </button>
                       <button
                         type="button"
                         onClick={() => requestAction(sub, 'force-cancel')}
@@ -995,6 +1057,19 @@ export function PaginatedSubscriptionsManagement({
                       <div className="flex flex-wrap gap-2 justify-end">
                         <button
                           type="button"
+                          onClick={() => {
+                            setEditError(null);
+                            setEditTarget(sub);
+                          }}
+                          className={getActionButtonClass('edit', actionState.isEditDisabled)}
+                          disabled={actionState.isEditDisabled}
+                          title={actionState.editTooltip}
+                          aria-label={actionState.editTooltip}
+                        >
+                          {renderActionButtonContent(actionState.isBusy, faPenToSquare, 'Edit subscription')}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => requestAction(sub, 'force-cancel')}
                           className={getActionButtonClass('force-cancel', actionState.isForceDisabled)}
                           disabled={actionState.isForceDisabled}
@@ -1131,6 +1206,22 @@ export function PaginatedSubscriptionsManagement({
           hasProviderSubscription={Boolean(refundTarget.sub.externalSubscriptionId)}
         />
       )}
+
+      <SubscriptionEditModal
+        isOpen={!!editTarget}
+        subscription={editTarget}
+        loading={editLoading}
+        error={editError}
+        onClose={() => {
+          if (editLoading) return;
+          setEditTarget(null);
+          setEditError(null);
+        }}
+        onConfirm={(payload) => {
+          if (!editTarget) return;
+          void executeEdit(editTarget, payload);
+        }}
+      />
     </div>
   );
 }

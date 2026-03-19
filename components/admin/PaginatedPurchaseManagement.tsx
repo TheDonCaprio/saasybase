@@ -16,9 +16,10 @@ import { dashboardMutedPanelClass, dashboardPanelClass } from '../dashboard/dash
 import { PaymentActions } from './PaymentActions';
 import { PaymentActionsPayment } from '@/lib/types/admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleXmark, faCircleNotch, faHourglass } from '@fortawesome/free-solid-svg-icons';
+import { faCircleXmark, faCircleNotch, faHourglass, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
 import PaymentProviderBadge from '../ui/PaymentProviderBadge';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
+import { SubscriptionEditModal } from './SubscriptionEditModal';
 // status icons removed since summary cards are being removed
 
 type PurchaseRow = {
@@ -45,6 +46,7 @@ type PurchaseRow = {
     id: string;
     status: string;
     expiresAt?: string | null;
+    canceledAt?: string | null;
     externalSubscriptionId?: string | null;
   } | null;
 };
@@ -289,6 +291,9 @@ export function PaginatedPurchaseManagement({
   };
 
   const [purchaseToExpire, setPurchaseToExpire] = useState<PurchaseRow | null>(null);
+  const [editTarget, setEditTarget] = useState<PurchaseRow | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const handleExpirePlan = (purchase: PurchaseRow) => {
     if (!purchase.subscription || purchase.subscription.status !== 'ACTIVE') {
@@ -325,6 +330,52 @@ export function PaginatedPurchaseManagement({
       showToast('Unable to expire plan', 'error');
     } finally {
       setExpireLoading(prev => ({ ...prev, [purchase.id]: false }));
+    }
+  };
+
+  const openEditModal = (purchase: PurchaseRow) => {
+    if (!purchase.subscription) {
+      showToast('No subscription attached', 'info');
+      return;
+    }
+    setEditError(null);
+    setEditTarget(purchase);
+  };
+
+  const executeEdit = async (purchase: PurchaseRow, payload: {
+    status: 'ACTIVE' | 'EXPIRED';
+    expiresAt: string;
+    clearScheduledCancellation: boolean;
+    allowLocalOverride: boolean;
+  }) => {
+    if (!purchase.subscription) return;
+
+    try {
+      setEditLoading(true);
+      setEditError(null);
+
+      const response = await fetch(`/api/admin/subscriptions/${purchase.subscription.id}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setEditError(data?.error ?? 'Subscription update failed');
+        return;
+      }
+
+      showToast(`Updated ${purchase.planName}`, 'success');
+      if (data?.warning) {
+        showToast(data.warning, 'info');
+      }
+      refreshPurchases();
+      setEditTarget(null);
+    } catch {
+      setEditError('Subscription update failed');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -431,6 +482,7 @@ export function PaginatedPurchaseManagement({
                 const hasSubscription = Boolean(purchase.subscription);
                 const isActiveSubscription = hasSubscription && purchase.subscription?.status === 'ACTIVE';
                 const isExpiring = !!expireLoading[purchase.id];
+                const isEditing = editLoading && editTarget?.id === purchase.id;
                 const expireDisabled = isExpiring || !isActiveSubscription;
                 const expireTooltip = !hasSubscription
                   ? 'No subscription attached'
@@ -521,6 +573,21 @@ export function PaginatedPurchaseManagement({
                     </div>
 
                     <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                      {hasSubscription ? (
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(purchase)}
+                          disabled={isEditing}
+                          aria-label={isEditing ? 'Edit in progress' : 'Edit subscription'}
+                          title={isEditing ? 'Edit in progress' : 'Edit subscription'}
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${isEditing
+                            ? 'border border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
+                            : 'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400 dark:border-neutral-500 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600'
+                            }`}
+                        >
+                          <FontAwesomeIcon icon={isEditing ? faCircleNotch : faPenToSquare} className={`h-3.5 w-3.5 ${isEditing ? 'animate-spin' : ''}`.trim()} />
+                        </button>
+                      ) : null}
                       <PaymentActions
                         payment={actionsPayment}
                         onPaymentUpdate={handlePaymentUpdate}
@@ -535,15 +602,15 @@ export function PaginatedPurchaseManagement({
                         disabled={expireDisabled}
                         aria-label={expireTooltip}
                         title={expireTooltip}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${expireDisabled
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed ${expireDisabled
                           ? 'border border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
                           : 'border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:border-amber-500/70 dark:bg-amber-500/80 dark:hover:bg-amber-500 dark:focus:ring-amber-400'
                           }`}
                       >
                         {isExpiring ? (
-                          <FontAwesomeIcon icon={faCircleNotch} className="h-4 w-4 animate-spin" />
+                          <FontAwesomeIcon icon={faCircleNotch} className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <FontAwesomeIcon icon={expireIcon} className="h-4 w-4" />
+                          <FontAwesomeIcon icon={expireIcon} className="h-3.5 w-3.5" />
                         )}
                       </button>
                     </div>
@@ -578,6 +645,7 @@ export function PaginatedPurchaseManagement({
                   const hasSubscription = Boolean(purchase.subscription);
                   const isActiveSubscription = hasSubscription && purchase.subscription?.status === 'ACTIVE';
                   const isExpiring = !!expireLoading[purchase.id];
+                  const isEditing = editLoading && editTarget?.id === purchase.id;
                   const expireDisabled = isExpiring || !isActiveSubscription;
                   const expireTooltip = !hasSubscription
                     ? 'No subscription attached'
@@ -707,6 +775,21 @@ export function PaginatedPurchaseManagement({
 
                       {/* Actions Column */}
                       <div className="flex items-center justify-end gap-2 flex-shrink-0">
+                        {hasSubscription ? (
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(purchase)}
+                            disabled={isEditing}
+                            aria-label={isEditing ? 'Edit in progress' : 'Edit subscription'}
+                            title={isEditing ? 'Edit in progress' : 'Edit subscription'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed dark:focus:ring-offset-neutral-900 ${isEditing
+                              ? 'border border-slate-200 bg-slate-100 text-slate-400 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400'
+                              : 'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400 dark:border-neutral-500 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600'
+                              }`}
+                          >
+                            <FontAwesomeIcon icon={isEditing ? faCircleNotch : faPenToSquare} className={`h-3.5 w-3.5 ${isEditing ? 'animate-spin' : ''}`.trim()} />
+                          </button>
+                        ) : null}
                         <PaymentActions
                           payment={actionsPayment}
                           onPaymentUpdate={handlePaymentUpdate}
@@ -721,15 +804,15 @@ export function PaginatedPurchaseManagement({
                           disabled={expireDisabled}
                           aria-label={expireTooltip}
                           title={expireTooltip}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed flex-shrink-0 ${expireDisabled
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed flex-shrink-0 ${expireDisabled
                             ? 'border border-slate-200 bg-slate-100 text-slate-400 focus:ring-slate-200 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-500'
                             : 'border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:border-amber-500/70 dark:bg-amber-500/80 dark:hover:bg-amber-500'
                             }`}
                         >
                           {isExpiring ? (
-                            <FontAwesomeIcon icon={faCircleNotch} className="h-4 w-4 animate-spin" />
+                            <FontAwesomeIcon icon={faCircleNotch} className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <FontAwesomeIcon icon={expireIcon} className="h-4 w-4" />
+                            <FontAwesomeIcon icon={expireIcon} className="h-3.5 w-3.5" />
                           )}
                         </button>
                       </div>
@@ -764,6 +847,32 @@ export function PaginatedPurchaseManagement({
         description="Are you sure you want to immediately expire this plan? The user will lose access immediately. This action cannot be undone."
         confirmLabel="Expire Plan"
         loading={!!(purchaseToExpire && expireLoading[purchaseToExpire.id])}
+      />
+
+      <SubscriptionEditModal
+        isOpen={!!editTarget}
+        subscription={editTarget && editTarget.subscription ? {
+          id: editTarget.subscription.id,
+          planName: editTarget.planName,
+          userEmail: editTarget.userEmail,
+          userId: editTarget.userId,
+          status: editTarget.subscription.status,
+          expiresAt: editTarget.subscription.expiresAt ?? null,
+          canceledAt: editTarget.subscription.canceledAt ?? null,
+          paymentProvider: editTarget.paymentProvider,
+          externalSubscriptionId: editTarget.subscription.externalSubscriptionId ?? null,
+        } : null}
+        loading={editLoading}
+        error={editError}
+        onClose={() => {
+          if (editLoading) return;
+          setEditTarget(null);
+          setEditError(null);
+        }}
+        onConfirm={(payload) => {
+          if (!editTarget) return;
+          void executeEdit(editTarget, payload);
+        }}
       />
     </div>
   );

@@ -12,7 +12,7 @@ import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoR
 import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
 import type { Prisma } from '@prisma/client';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
-import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
+import { resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { findProviderByValue, getCurrentProviderKey, getIdByProvider } from '../../../../lib/utils/provider-ids';
 
 function jsonError(message: string, status: number, code: string, extra?: Record<string, unknown>) {

@@ -13,7 +13,7 @@ import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { formatCurrency } from '../../lib/utils/currency';
 import Link from 'next/link';
 import { buildPendingSubscriptionSectionCopy } from '../../lib/pending-subscription-display';
-import { buildPlanDisplay, getOrganizationPlanContext } from '../../lib/user-plan-context';
+import { PLAN_WITH_BILLING_FIELDS, buildPlanDisplay, getOrganizationPlanContext } from '../../lib/user-plan-context';
 
 export default async function PricingPage() {
   const { userId, orgId } = await authService.getSession();
@@ -26,18 +26,7 @@ export default async function PricingPage() {
     where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
     include: { 
       plan: {
-        select: {
-          id: true,
-          name: true,
-          shortDescription: true,
-          description: true,
-          priceCents: true,
-          durationHours: true,
-          autoRenew: true,
-          recurringInterval: true,
-          tokenLimit: true,
-          tokenName: true
-        }
+        select: PLAN_WITH_BILLING_FIELDS
       },
       scheduledPlan: {
         select: { id: true, name: true, priceCents: true }
@@ -123,7 +112,6 @@ export default async function PricingPage() {
   const formattedNextBilling = nextBillingDate ? await formatDateServer(nextBillingDate) : null;
   const isCancellationScheduled = !!currentSubscription?.canceledAt;
   const formattedCanceledAt = currentSubscription?.canceledAt ? await formatDateServer(currentSubscription.canceledAt) : null;
-  const isActive = !!currentSubscription;
   const scheduledPlan = currentSubscription?.scheduledPlan ?? null;
   const formattedScheduledDate = currentSubscription?.scheduledPlanDate
     ? await formatDateServer(currentSubscription.scheduledPlanDate) : null;
@@ -150,8 +138,6 @@ export default async function PricingPage() {
     if (hours >= 168) return 'Weekly access';
     return 'One-time access';
   })();
-  const planTokenNameRaw = currentSubscription?.plan?.tokenName;
-  const planTokenName = typeof planTokenNameRaw === 'string' ? planTokenNameRaw.trim() : '';
   const paidTokenBalance = typeof userRecord?.tokenBalance === 'number' ? userRecord.tokenBalance : 0;
   const freeTokenBalanceVal = typeof userRecord?.freeTokenBalance === 'number' ? userRecord.freeTokenBalance : 0;
   const freePlanSettings = await getFreePlanSettings();
@@ -168,16 +154,6 @@ export default async function PricingPage() {
   const tokenLabel = planDisplay.tokenLabel;
   const tokenStatValue = planDisplay.tokenStatValue;
   const tokenStatHelper = planDisplay.tokenStatHelper;
-  const combinedBalance = paidTokenBalance + freeTokenBalanceVal;
-  const tokenTone = planDisplay.planSource === 'FREE'
-    ? combinedBalance > 0
-      ? 'purple'
-      : 'slate'
-    : planDisplay.planSource === 'ORGANIZATION'
-      ? 'indigo'
-      : combinedBalance > 0
-        ? 'purple'
-        : 'amber';
   const subscriptionStart = currentSubscription?.startedAt ?? null;
   const accessProgressPercent =
     subscriptionStart && nextBillingDate && nextBillingDate.getTime() !== subscriptionStart.getTime()

@@ -62,17 +62,28 @@ function logAuthGuardFailure(code: AuthGuardCode, meta: AuthGuardFailureMeta): v
     logPayload.extra = extra;
   }
 
-  // Auth guard denials are expected in non-authenticated contexts (static render,
-  // build-time checks, unauthenticated requests). Emit a debug-level message to
-  // avoid spamming warnings during builds while still recording the event in
-  // logs when debug-level is enabled.
-  Logger.debug('Auth guard denied access', logPayload);
+  // Determine if this is a high-signal failure that should be persisted to system logs (Logger.warn)
+  // vs a routine unauthenticated visit (Logger.debug).
+  const isForbidden = code === 'FORBIDDEN';
+  const isUnexpectedUnauth = code === 'UNAUTHENTICATED' && reason !== 'missing-session';
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+
+  if ((isForbidden || isUnexpectedUnauth) && !isBuildPhase) {
+    Logger.warn(`Auth guard denied access (${code})`, logPayload);
+  } else {
+    // Auth guard denials are expected in non-authenticated contexts (static render,
+    // build-time checks, unauthenticated requests). Emit a debug-level message to
+    // avoid spamming warnings during builds while still recording the event in
+    // logs when debug-level is enabled.
+    Logger.debug('Auth guard denied access', logPayload);
+  }
 
   incrementMetric('auth.guard.denied', 1, {
     code,
     source,
     section: section ?? 'none',
-    reason
+    reason,
+    isDevBypass: String(!!process.env.DEV_ADMIN_ID)
   });
 }
 

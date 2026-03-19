@@ -3,7 +3,6 @@ import { SidebarNav } from '../../components/dashboard/SidebarNav';
 import { faPlay, faUser, faUserShield, faFileInvoiceDollar, faHistory, faBell, faLifeRing, faBars, faTicketAlt, faSackDollar, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
-import { AuthSignOutButton } from '@/lib/auth-provider/client/components';
 import { AnnouncementBanner } from '../../components/ui/AnnouncementBanner';
 import { GracePeriodNotice } from '../../components/dashboard/GracePeriodNotice';
 import { PurchaseNotice } from '../../components/dashboard/PurchaseNotice';
@@ -112,7 +111,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Spacer for header (approximating dynamic header height) */}
         <div className="h-16 flex-shrink-0" />
         
-        <div className="flex-1 flex flex-col px-4 overflow-y-scroll custom-scrollbar space-y-4 pt-4">
+        <div className="flex-1 flex flex-col px-4 overflow-y-auto custom-scrollbar space-y-4 pt-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Dashboard</div>
           <SidebarNav items={nav} />
         </div>

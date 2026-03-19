@@ -265,7 +265,6 @@ export default function SaaSyAppClient() {
       }
     : undefined;
 
-  const paidRemaining = profile?.paidTokens?.remaining ?? 0;
   const freeRemaining = profile?.freeTokens?.remaining ?? 0;
   const sharedRemaining = profile?.sharedTokens?.remaining ?? 0;
 

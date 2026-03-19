@@ -6,6 +6,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const nextConfig = {
+  // Allow accessing the dev server from local network devices and the current
+  // ngrok tunnel so HMR and other Next.js dev assets are not blocked.
+  allowedDevOrigins: [
+    '192.168.0.11',
+    'tanisha-nonreputable-corrin.ngrok-free.dev',
+  ],
+
   // Expose AUTH_PROVIDER to client-side code under NEXT_PUBLIC_ prefix.
   // This enables build-time conditional imports in the auth abstraction layer.
   env: {

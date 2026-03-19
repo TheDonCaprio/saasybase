@@ -99,7 +99,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },
   ];
   return (
-    <div className="-mx-6 lg:mx-0 lg:flex lg:gap-3 min-h-screen">
+    <div className="min-h-screen w-full overflow-x-clip lg:flex lg:gap-3">
       {/* Desktop Sidebar */}
       {/* Desktop Sidebar Placeholder (to keep layout in place) */}
       <div className="hidden lg:block w-64 flex-shrink-0" />
@@ -120,14 +120,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 px-3 py-2 sm:px-4 lg:px-4 lg:py-3 max-w-none w-full">
+      <main className="flex-1 min-w-0 w-full max-w-none px-3 py-3 sm:px-4 lg:px-4 lg:py-3">
         <GracePeriodNotice />
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />
         {pendingEmailChange && (
           <PendingEmailChangeNotice pendingEmail={pendingEmailChange.newEmail} expiresAt={pendingEmailChange.expires} />
         )}
-        <div className="space-y-6 w-full">
+        <div className="min-w-0 w-full space-y-6">
           {children}
         </div>
       </main>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faUser, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faUser, faCrown, faCoins, faCalendarDays, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
 import { AuthSignOutButton, useAuthUser, useAuthInstance, useAuthSession, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { createPortal } from 'react-dom';
@@ -88,6 +88,7 @@ export function DashboardHeaderDrawer({
   const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
   const [openPathname, setOpenPathname] = useState<string | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
   const prevOrgIdRef = useRef(currentOrgId);
   const profileRequestInFlightRef = useRef(false);
@@ -174,6 +175,7 @@ export function DashboardHeaderDrawer({
   }, [pathname]);
   const close = useCallback(() => {
     setOpenPathname(null);
+    setDetailsExpanded(false);
     hasAttemptedProfileFetchRef.current = false;
     setProfileState((prev) => {
       if (prev?.orgId === currentOrgId && prev.profile == null) {
@@ -328,27 +330,102 @@ export function DashboardHeaderDrawer({
               {isSignedIn && (
                 <div className="border-b border-[color:rgb(var(--border-primary))] bg-neutral-900/50">
                   {loading ? (
-                    <div className="p-4 space-y-3">
+                    <div className="space-y-2.5 p-3.5">
                       <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
                       <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse w-3/4" />
                     </div>
                   ) : profile ? (
-                    <div className="p-4 space-y-3">
-                      <div>
-                        <p className="font-semibold text-neutral-100 truncate">
-                          {profile.user.name}
-                        </p>
-                        <p className="text-xs text-neutral-400 truncate">
-                          {profile.user.email}
-                        </p>
-                        {profile.organization && (
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 mt-1">
-                            {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
+                    <div className="space-y-2.5 p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsExpanded((prev) => !prev)}
+                        className="flex w-full items-start justify-between gap-3 rounded-xl border border-transparent px-0 py-0 text-left transition hover:border-[color:rgb(var(--border-primary))]"
+                        aria-expanded={detailsExpanded}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-neutral-100">
+                            {profile.user.name}
                           </p>
-                        )}
-                      </div>
+                          <p className="truncate text-xs text-neutral-400">
+                            {profile.user.email}
+                          </p>
+                          {profile.organization && (
+                            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                              {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
+                            </p>
+                          )}
+                        </div>
+                        <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] text-neutral-400">
+                          <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transition-transform ${detailsExpanded ? 'rotate-180' : ''}`} />
+                        </span>
+                      </button>
 
-                      <div className="space-y-2">
+                      {detailsExpanded ? (
+                        <div className="space-y-2 rounded-xl border border-[color:rgb(var(--border-primary))] bg-neutral-900/40 px-3 py-2.5">
+                          <div className="flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faCrown} className="h-4 w-4 text-amber-500" />
+                            <span className="text-neutral-300">
+                              {activePlanName}
+                            </span>
+                          </div>
+
+                          {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-emerald-500" />
+                              <span className="text-neutral-300">
+                                {personalTokenDisplay} {personalTokenName} (Personal)
+                              </span>
+                            </div>
+                          )}
+
+                          {shouldShowSharedTokens && profile.sharedTokens && (
+                            <div className="flex items-start gap-2 text-sm">
+                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-[rgb(var(--accent-primary-rgb))]" />
+                              <div>
+                                <span className="text-neutral-300">
+                                  {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
+                                  {profile.organization ? ` (${profile.organization.name})` : ''}
+                                </span>
+                                <p className="text-[11px] text-neutral-400">
+                                  {profile.sharedTokens.cap != null
+                                    ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
+                                    : profile.sharedTokens.strategy === 'DISABLED'
+                                    ? 'Member caps disabled'
+                                    : 'No per-member cap set'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {profile.freeTokens && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-sky-500" />
+                              <span className="text-neutral-300">
+                                {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
+                              </span>
+                            </div>
+                          )}
+
+                          {expiresAt && (
+                            <div className="flex items-center gap-2 text-xs text-neutral-400">
+                              <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                              <span>Expires: {expiresAt}</span>
+                            </div>
+                          )}
+
+                          {profile.planSource === 'FREE' && (
+                            <TransientNavLink
+                              href="/pricing"
+                              className="block text-sm text-[rgb(var(--accent-primary-rgb))] hover:text-[rgb(var(--accent-hover-rgb))]"
+                              onClick={close}
+                            >
+                              Upgrade to Pro →
+                            </TransientNavLink>
+                          )}
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-1.5">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
                         <AuthOrganizationSwitcher
                           hidePersonal={false}
@@ -356,111 +433,48 @@ export function DashboardHeaderDrawer({
                             elements: {
                               rootBox: 'w-full',
                               organizationSwitcherTrigger:
-                                'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                                'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[13px] text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
                               organizationSwitcherTriggerIcon:
                                 'text-neutral-400 transition-transform group-data-[open=true]:rotate-180 dark:text-neutral-500',
                               organizationSwitcherPopoverRootBox:
-                                '!z-[70010] !w-[18rem] !min-w-[18rem] !max-w-[18rem] pt-1.5',
+                                '!z-[70010] !w-[17rem] !min-w-[17rem] !max-w-[17rem] pt-1',
                               organizationSwitcherPopoverCard:
                                 '!z-[70011] !w-[18rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
                               organizationSwitcherPopoverMain: 'overflow-hidden bg-transparent',
                               organizationSwitcherPopoverActions:
                                 'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
                               organizationSwitcherPopoverActionButton:
-                                'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                                'min-h-9 px-3 py-1.5 text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
                               organizationSwitcherPopoverActionButton__createOrganization:
                                 profile?.canCreateOrganization === false ? 'hidden' : '',
                               organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
                               organizationListPreviewItemActionButton:
-                                'h-8 w-8 min-w-8 max-w-8 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
+                                'h-7 w-7 min-w-7 max-w-7 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
                               organizationSwitcherPopoverFooter:
                                 'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
                               organizationSwitcherPreviewButton:
-                                'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                                'min-h-10 rounded-none px-3 py-2 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
                               organizationListPreviewItems: 'gap-0',
                               organizationListPreviewItem:
                                 'border-b border-neutral-200/80 last:border-b-0 dark:border-neutral-700/80',
                               organizationListPreviewButton:
-                                'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+                                'min-h-10 rounded-none px-3 py-2 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
                               organizationListCreateOrganizationActionButton:
                                 profile?.canCreateOrganization === false
                                   ? 'hidden'
-                                  : 'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+                                  : 'min-h-9 rounded-none px-3 py-2 text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
                               organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
                               organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
                             },
                           }}
                         />
                       </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <FontAwesomeIcon icon={faCrown} className="w-4 h-4 text-amber-500" />
-                          <span className="text-neutral-300">
-                            {activePlanName}
-                          </span>
-                        </div>
-
-                        {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-emerald-500" />
-                            <span className="text-neutral-300">
-                              {personalTokenDisplay} {personalTokenName} (Personal)
-                            </span>
-                          </div>
-                        )}
-
-                        {shouldShowSharedTokens && profile.sharedTokens && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-[rgb(var(--accent-primary-rgb))]" />
-                            <div>
-                              <span className="text-neutral-300">
-                                {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
-                                {profile.organization ? ` (${profile.organization.name})` : ''}
-                              </span>
-                              <p className="text-[11px] text-neutral-400">
-                                {profile.sharedTokens.cap != null
-                                  ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
-                                  : profile.sharedTokens.strategy === 'DISABLED'
-                                  ? 'Member caps disabled'
-                                  : 'No per-member cap set'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {profile.freeTokens && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-sky-500" />
-                            <span className="text-neutral-300">
-                              {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
-                            </span>
-                          </div>
-                        )}
-
-                        {expiresAt && (
-                          <div className="flex items-center gap-2 text-xs text-neutral-400">
-                            <FontAwesomeIcon icon={faCalendarDays} className="w-4 h-4" />
-                            <span>Expires: {expiresAt}</span>
-                          </div>
-                        )}
-
-                        {profile.planSource === 'FREE' && (
-                          <TransientNavLink
-                            href="/pricing"
-                            className="block text-sm text-[rgb(var(--accent-primary-rgb))] hover:text-[rgb(var(--accent-hover-rgb))]"
-                            onClick={close}
-                          >
-                            Upgrade to Pro →
-                          </TransientNavLink>
-                        )}
-                      </div>
                     </div>
                   ) : null}
                 </div>
               )}
 
-              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
                 {displayItems.map((item) => {
                   const active = !!(
                     item.href &&
@@ -473,7 +487,7 @@ export function DashboardHeaderDrawer({
                       key={item.href}
                       href={item.href}
                       onClick={close}
-                      className={`group flex items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
+                      className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
                         active
                           ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
                           : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
@@ -509,11 +523,11 @@ export function DashboardHeaderDrawer({
               </nav>
 
               {/* Sign Out Button */}
-              <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-4">
+              <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-3">
                 <AuthSignOutButton>
                   <button 
                     onClick={handleSignOut}
-                    className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
+                    className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
                   >
                     {signOutLabel}
                   </button>

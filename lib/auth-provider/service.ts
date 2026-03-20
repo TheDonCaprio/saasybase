@@ -193,6 +193,24 @@ class AuthService {
     return provider.listOrganizationMemberships(organizationId);
   }
 
+  async listUserOrganizations(userId: string): Promise<AuthOrganization[]> {
+    const provider = getProvider();
+    if (!provider.listUserOrganizations) return [];
+    return provider.listUserOrganizations(userId);
+  }
+
+  async revokeOrganizationInvitation(opts: {
+    organizationId: string;
+    invitationId: string;
+    requestingUserId: string;
+  }): Promise<void> {
+    const provider = getProvider();
+    if (!provider.revokeOrganizationInvitation) {
+      throw new Error(`Auth provider "${provider.name}" does not support organization invitation revocation`);
+    }
+    return provider.revokeOrganizationInvitation(opts);
+  }
+
   // ── Session Management ───────────────────────────────────────────────
 
   async getUserSessions(userId: string): Promise<AuthSessionInfo[]> {

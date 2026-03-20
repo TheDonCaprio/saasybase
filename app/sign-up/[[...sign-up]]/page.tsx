@@ -1,4 +1,5 @@
-import { AuthSignUp } from '@/lib/auth-provider/client/components';
+import { AuthSignUp } from '@/lib/auth-provider/client';
+import { getAuthFormAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { AuthLoadingSkeleton } from '@/components/ui/AuthLoadingSkeleton';
 import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 import { authService } from '@/lib/auth-provider';
@@ -57,50 +58,13 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             Start your journey with our platform
           </p>
         </div>
-        <AuthFormWrapper>
+        <AuthFormWrapper fallback={<AuthLoadingSkeleton />}>
           <div className="flex justify-center">
             <AuthSignUp 
               routing="path"
               path="/sign-up"
               fallback={<AuthLoadingSkeleton />}
-              appearance={{
-                elements: {
-                  formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-sm normal-case",
-                  cardBox: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-xl",
-                  card: "bg-white dark:bg-neutral-900 border-0",
-                  headerTitle: "hidden",
-                  headerSubtitle: "hidden",
-                  formFieldInput: "bg-neutral-800 border border-neutral-600 text-white",
-                  formFieldLabel: "text-white",
-                  identityPreviewText: "text-white",
-                  identityPreviewEditButton: "text-blue-400 hover:text-blue-300",
-                  footer: "bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700",
-                  footerItem: "text-neutral-600 dark:text-neutral-400",
-                  footerActionText: "text-neutral-600 dark:text-neutral-400",
-                  footerActionLink: "text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300",
-                  dividerText: "text-neutral-400",
-                  dividerLine: "border-neutral-700",
-                  socialButtonsBlockButton: "bg-neutral-800 border border-neutral-700 text-white hover:bg-neutral-700",
-                  socialButtonsBlockButtonText: "text-white",
-                  formResendCodeLink: "text-blue-400 hover:text-blue-300",
-                  formFieldSuccessText: "text-emerald-400",
-                  formFieldErrorText: "text-red-400",
-                  formFieldWarningText: "text-amber-400",
-                  alternativeMethodsBlockButton: "bg-neutral-800 border border-neutral-700 text-white hover:bg-neutral-700",
-                  alternativeMethodsBlockButtonText: "text-white",
-                  alternativeMethodsBlockButtonArrow: "text-white",
-                },
-                variables: {
-                  colorPrimary: '#3b82f6',
-                  colorBackground: '#171717',
-                  colorInputBackground: '#262626',
-                  colorInputText: '#ffffff',
-                  colorText: '#ffffff',
-                  colorTextSecondary: '#a3a3a3',
-                  colorTextOnPrimaryBackground: '#ffffff',
-                  borderRadius: '0.375rem'
-                }
-              }}
+              appearance={getAuthFormAppearance('page')}
               fallbackRedirectUrl={redirectPath}
               forceRedirectUrl={redirectPath}
               signInUrl={signInUrl}

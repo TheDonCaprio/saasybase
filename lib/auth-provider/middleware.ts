@@ -9,6 +9,11 @@
  *               route matcher compatible with the same API.
  */
 
+import {
+  clerkMiddleware as clerkAuthMiddleware,
+  createRouteMatcher as createClerkRouteMatcher,
+} from '@clerk/nextjs/server';
+
 const AUTH_PROVIDER = process.env.AUTH_PROVIDER || 'clerk';
 
 // ---------------------------------------------------------------------------
@@ -73,12 +78,7 @@ export const authMiddleware: any = AUTH_PROVIDER === 'nextauth'
         };
       };
     })()
-  : (() => {
-      // Clerk: synchronous re-export (clerkMiddleware is synchronous to call)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('@clerk/nextjs/server');
-      return mod.clerkMiddleware;
-    })();
+  : clerkAuthMiddleware;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const createAuthRouteMatcher: any = AUTH_PROVIDER === 'nextauth'
@@ -94,8 +94,4 @@ export const createAuthRouteMatcher: any = AUTH_PROVIDER === 'nextauth'
         return regexes.some((rx) => rx.test(req.nextUrl.pathname));
       };
     }
-  : (() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('@clerk/nextjs/server');
-      return mod.createRouteMatcher;
-    })();
+  : createClerkRouteMatcher;

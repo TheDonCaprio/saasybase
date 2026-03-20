@@ -210,6 +210,14 @@ export interface AuthProvider {
 
   listOrganizationMemberships?(organizationId: string): Promise<AuthOrganizationMembership[]>;
 
+  listUserOrganizations?(userId: string): Promise<AuthOrganization[]>;
+
+  revokeOrganizationInvitation?(opts: {
+    organizationId: string;
+    invitationId: string;
+    requestingUserId: string;
+  }): Promise<void>;
+
   // ── Session Management (optional) ────────────────────────────────────
   /** List all sessions for a user. */
   getUserSessions?(userId: string): Promise<AuthSessionInfo[]>;

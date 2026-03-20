@@ -11,55 +11,8 @@ import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 import { asRecord } from '../../lib/runtime-guards';
 import { buildProrationSuccessMessage } from './proration-feedback';
 import { AuthSignIn, AuthSignUp, useAuthUser } from '@/lib/auth-provider/client';
+import { getAuthFormAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { useRouter } from 'next/navigation';
-
-const clerkModalAppearance = {
-  elements: {
-    formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-sm normal-case',
-    cardBox:
-      'bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700',
-    card: 'bg-white border-0 dark:bg-neutral-900',
-    headerTitle: 'hidden',
-    headerSubtitle: 'hidden',
-    formFieldInput: 'bg-white border border-neutral-300 text-neutral-900 dark:bg-neutral-800 dark:border-neutral-600 dark:text-white',
-    formFieldLabel: 'text-neutral-700 dark:text-white',
-    identityPreviewText: 'text-neutral-700 dark:text-white',
-    identityPreviewEditButton: 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300',
-    footer:
-      'bg-white border-t border-neutral-200 dark:bg-neutral-900 dark:border-neutral-700',
-    footerItem: 'text-neutral-600 dark:text-neutral-400',
-    footerActionText: 'text-neutral-600 dark:text-neutral-400',
-    footerActionLink:
-      'text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300',
-    dividerText: 'text-neutral-400',
-    dividerLine: 'border-neutral-200 dark:border-neutral-700',
-    socialButtonsBlockButton:
-      'bg-neutral-100 border border-neutral-200 text-neutral-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700',
-    socialButtonsBlockButtonText: 'text-neutral-800 dark:text-white',
-    alternativeMethodsBlockButton:
-      'bg-neutral-100 border border-neutral-200 text-neutral-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700',
-    alternativeMethodsBlockButtonText: 'text-neutral-800 dark:text-white',
-    alternativeMethodsBlockButtonArrow: 'text-neutral-500 dark:text-white',
-    formResendCodeLink: 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300',
-    formFieldSuccessText: 'text-emerald-500 dark:text-emerald-400',
-    formFieldErrorText: 'text-red-500 dark:text-red-400',
-    formFieldWarningText: 'text-amber-500 dark:text-amber-400',
-    otpCodeFieldInputs:
-      'flex relative justify-center gap-1 overflow-hidden rounded-md bg-neutral-900 isolation-isolate px-3 py-1 focus-within:[box-shadow:inset_0_0_0_3px_rgba(59,130,246,0.15)]',
-    otpCodeFieldInput:
-      'relative block h-14 w-12 min-w-[2.5rem] rounded-xl border border-neutral-600 bg-neutral-800 text-center text-2xl font-mono font-semibold tracking-wide leading-[2.1rem] z-[9999] text-neutral-900 dark:text-white ring-0 focus:ring-0 focus:outline-none shadow-md hover:shadow-lg transition-transform duration-150 transform-gpu appearance-none caret-transparent',
-  },
-  variables: {
-    colorPrimary: '#3b82f6',
-    colorBackground: '#171717',
-    colorInputBackground: '#262626',
-    colorInputText: '#ffffff',
-    colorText: '#ffffff',
-    colorTextSecondary: '#a3a3a3',
-    colorTextOnPrimaryBackground: '#ffffff',
-    borderRadius: '0.375rem',
-  },
-} as const;
 
 type DBPlan = {
   id: string;
@@ -1809,14 +1762,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
                   {authView === 'sign-in' ? (
                     <AuthSignIn
-                      appearance={clerkModalAppearance}
+                      appearance={getAuthFormAppearance('modal')}
                       routing="hash"
                       forceRedirectUrl={authReturnPath}
                       signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(authReturnPath)}`}
                     />
                   ) : (
                     <AuthSignUp
-                      appearance={clerkModalAppearance}
+                      appearance={getAuthFormAppearance('modal')}
                       routing="hash"
                       forceRedirectUrl={authReturnPath}
                       signInUrl={`/sign-in?redirect_url=${encodeURIComponent(authReturnPath)}`}

@@ -416,52 +416,11 @@ function mapRoleToClerk(role?: string | null): ClerkMembershipRole {
 async function attemptCleanupClerkOrgs(userId: string, maxToDelete = 5) {
   let deleted = 0;
   try {
-    // This function is Clerk-specific: it probes various SDK method names to
-    // list and delete organizations for a user. Uses dynamic import so the
-    // module stays loadable without @clerk/nextjs.
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    const orgs: Array<{ id?: string; created_by?: string; createdBy?: string }> = [];
-
-    const tryList = async (fnName: string, args: Record<string, unknown>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fn = (client.organizations as any)[fnName];
-      if (typeof fn !== 'function') return null;
-      try {
-        const res = await fn.call(client.organizations, args || {});
-        return res;
-      } catch {
-        return null;
-      }
-    };
-
-    const candidates = [
-      await tryList('listOrganizations', { created_by: userId }),
-      await tryList('list', { created_by: userId }),
-      await tryList('getOrganizationList', { createdBy: userId }),
-      await tryList('getOrganizations', { createdBy: userId }),
-    ];
-
-    for (const c of candidates) {
-      if (!c) continue;
-      const items = Array.isArray(c) ? c : Array.isArray((c as { data: unknown }).data) ? (c as { data: unknown[] }).data : null;
-      if (items && items.length > 0) {
-        orgs.push(...(items as Array<{ id?: string; created_by?: string; createdBy?: string }>));
-        break;
-      }
+    if (!workspaceService.usesExternalProviderOrganizations) {
+      return 0;
     }
 
-    if (orgs.length === 0) {
-      try {
-        const u = await client.users.getUser(userId);
-        const maybeOrgs = (u as unknown as Record<string, unknown>).organizations || (u as unknown as Record<string, unknown>).organization_memberships || (u as unknown as Record<string, unknown>).orgs;
-        if (Array.isArray(maybeOrgs) && maybeOrgs.length > 0) {
-          orgs.push(...maybeOrgs.map((o: { id?: string; organization_id?: string; organizationId?: string }) => ({ id: o.id || o.organization_id || o.organizationId })));
-        }
-      } catch {
-        // ignore
-      }
-    }
+    const orgs = await workspaceService.listProviderOrganizationsForUser(userId);
 
     if (orgs.length === 0) {
       Logger.info('attemptCleanupClerkOrgs: no org list method available or no orgs found for user', { userId });

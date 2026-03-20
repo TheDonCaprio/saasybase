@@ -123,6 +123,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.cloudfront.net',
       },
+      // Clerk-hosted avatars and profile images
+      {
+        protocol: 'https',
+        hostname: 'img.clerk.com',
+      },
     ],
   },
   

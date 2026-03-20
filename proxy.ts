@@ -1,6 +1,32 @@
 import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
+type ProxyAuthResult = {
+  userId?: unknown;
+  user?: unknown;
+  isAuthenticated?: unknown;
+};
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return Boolean(
+    value
+    && (typeof value === 'object' || typeof value === 'function')
+    && 'then' in (value as Record<string, unknown>)
+    && typeof (value as Record<string, unknown>).then === 'function'
+  );
+}
+
+async function resolveAuthResult(auth: unknown): Promise<ProxyAuthResult | null> {
+  try {
+    const maybeResult = typeof auth === 'function' ? (auth as () => unknown)() : auth;
+    const resolved = isPromiseLike(maybeResult) ? await maybeResult : maybeResult;
+    return resolved && typeof resolved === 'object' ? (resolved as ProxyAuthResult) : null;
+  } catch (error) {
+    console.warn('proxy: auth resolution failed', error);
+    return null;
+  }
+}
+
 function extractAuthenticatedUserId(authResult: unknown): string | null {
   if (!authResult || typeof authResult !== 'object') {
     return null;
@@ -24,6 +50,18 @@ function extractAuthenticatedUserId(authResult: unknown): string | null {
   }
 
   return null;
+}
+
+function isAuthenticated(authResult: ProxyAuthResult | null): boolean {
+  if (!authResult) {
+    return false;
+  }
+
+  if (typeof authResult.isAuthenticated === 'boolean') {
+    return authResult.isAuthenticated;
+  }
+
+  return extractAuthenticatedUserId(authResult) !== null;
 }
 
 const isProtectedRoute = createAuthRouteMatcher([
@@ -52,28 +90,13 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
     return;
   }
 
-  // Clerk's middleware API has changed across major versions:
-  // - Some versions pass `auth` as a function (call it to get { userId, ... })
-  // - Others pass `auth` as an object directly
-  // Treat both as supported to avoid auth/redirect loops.
-  let authResult: unknown = null;
-  try {
-    authResult = typeof auth === 'function' ? (auth as () => unknown)() : auth;
-    if (
-      authResult &&
-      (typeof authResult === 'object' || typeof authResult === 'function') &&
-      'then' in (authResult as Record<string, unknown>) &&
-      typeof (authResult as Record<string, unknown>).then === 'function'
-    ) {
-      authResult = await (authResult as Promise<unknown>);
-    }
-  } catch (error) {
-    console.warn('proxy: auth resolution failed', error);
-  }
+  // Clerk's middleware callback exposes an auth helper that is invoked as
+  // `auth()` in current docs, while older integrations sometimes passed an
+  // object directly. Support both shapes so a package upgrade does not change
+  // how protected routes are recognized.
+  const authResult = await resolveAuthResult(auth);
 
-  const userId = extractAuthenticatedUserId(authResult);
-
-  if (typeof userId === 'string' && userId.length > 0) {
+  if (isAuthenticated(authResult)) {
     // User is authenticated; let them through to the page/API handler.
     // The handler will decide if they have sufficient permissions (admin vs moderator).
     return;

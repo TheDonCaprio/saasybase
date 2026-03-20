@@ -58,6 +58,10 @@ class WorkspaceService {
   async listProviderMemberships(organizationId: string): Promise<AuthOrganizationMembership[]> {
     return authService.listOrganizationMemberships(organizationId);
   }
+
+  async listProviderOrganizationsForUser(userId: string): Promise<AuthOrganization[]> {
+    return authService.listUserOrganizations(userId);
+  }
 }
 
 export const workspaceService = new WorkspaceService();

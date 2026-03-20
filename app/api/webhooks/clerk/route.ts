@@ -17,6 +17,29 @@ import { ensureUserExists } from '../../../../lib/user-helpers';
 
 export const runtime = 'nodejs';
 
+const WEBHOOK_SIGNATURE_HEADER_NAMES = [
+  'clerk-signature',
+  'x-clerk-signature',
+  'svix-signature',
+  'webhook-signature',
+];
+
+function requestHeadersToRecord(headers: Headers): Record<string, string> {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key.toLowerCase()] = value;
+  });
+  return result;
+}
+
+function getWebhookSignatureHeader(headers: Record<string, string>): string | null {
+  for (const name of WEBHOOK_SIGNATURE_HEADER_NAMES) {
+    const value = headers[name];
+    if (value) return value;
+  }
+  return null;
+}
+
 function extractUserId(payload: unknown): string | null {
   const rec = asRecord(payload) ?? {};
   // Try common Clerk payload shapes
@@ -213,6 +236,7 @@ export async function POST(req: NextRequest) {
   const start = Date.now();
   try {
     const raw = await req.text();
+    const headerRecord = requestHeadersToRecord(req.headers);
     let payload: unknown;
     try {
       payload = JSON.parse(raw);
@@ -220,19 +244,8 @@ export async function POST(req: NextRequest) {
       payload = raw;
     }
 
-    // Verify Clerk webhook signature using Clerk's SDK (or Svix) if available.
-    // Accept both Clerk-specific and Svix/webhook header names so we don't
-    // falsely log "missing signature header" when Clerk delivers svix-signed events.
-    const signatureHeader = req.headers.get('clerk-signature') || req.headers.get('Clerk-Signature') || req.headers.get('x-clerk-signature') || req.headers.get('svix-signature') || req.headers.get('Svix-Signature') || req.headers.get('webhook-signature') || req.headers.get('Webhook-Signature');
-    const hasAnySignatureHeader = Boolean(
-      req.headers.get('clerk-signature') ||
-      req.headers.get('Clerk-Signature') ||
-      req.headers.get('x-clerk-signature') ||
-      req.headers.get('svix-signature') ||
-      req.headers.get('Svix-Signature') ||
-      req.headers.get('webhook-signature') ||
-      req.headers.get('Webhook-Signature')
-    );
+    const signatureHeader = getWebhookSignatureHeader(headerRecord);
+    const hasAnySignatureHeader = Boolean(signatureHeader);
     const clerkSecret = process.env.CLERK_WEBHOOK_SECRET;
     if (!clerkSecret) {
       Logger.warn('Clerk webhook: CLERK_WEBHOOK_SECRET not configured');
@@ -250,62 +263,12 @@ export async function POST(req: NextRequest) {
       Logger.warn('Clerk webhook: missing signature header - continuing in non-production (no verification)');
     }
 
-    let verifiedSignature = false;
-    try {
-      // Prefer verifying with Svix (Clerk uses Svix for webhook delivery). Svix will
-      // parse the payload and validate the signature/timestamp. If Svix verification
-      // succeeds it returns the parsed payload; otherwise it throws.
-      try {
-        const { Webhook: SvixWebhook } = await import('svix');
-        const wh = new SvixWebhook(clerkSecret as string);
-        // Build a plain headers object for Svix (it lower-cases internally)
-        const headersObj: Record<string, string> = {};
-        req.headers.forEach((v, k) => {
-          const val = Array.isArray(v) ? (v as string[]).join(',') : String(v);
-          headersObj[k] = val;
-        });
-        try {
-          // svix verifies and returns parsed JSON
-          const parsed = wh.verify(raw, headersObj);
-          verifiedSignature = true;
-          payload = parsed as unknown;
-        } catch (err: unknown) {
-          // verification failed with Svix; log and fall through to any other check
-          Logger.warn('Clerk webhook: svix verification failed', { error: toError(err).message });
-        }
-      } catch (e) {
-        // Svix not available or import failed; attempt to use @clerk/nextjs/server helpers
-        Logger.debug('Clerk webhook: svix import failed', { error: toError(e).message });
-      }
-
-      if (!verifiedSignature) {
-        try {
-          const sdkModule = await import('@clerk/nextjs/server');
-          type ClerkSdkLike = {
-            webhooks?: { verify?: (raw: string, header: string | null, secret: string | undefined) => Promise<unknown>; verifySignature?: (raw: string, header: string | null, secret: string | undefined) => Promise<unknown> };
-            Webhook?: { verify?: (raw: string, header: string | null, secret: string | undefined) => Promise<unknown> };
-            verifyWebhookSignature?: (raw: string, header: string | null, secret: string | undefined) => Promise<unknown>;
-          };
-          const sdk = sdkModule as unknown as ClerkSdkLike;
-          if (sdk.webhooks && typeof sdk.webhooks.verify === 'function') {
-            await sdk.webhooks.verify(raw, signatureHeader, clerkSecret);
-            verifiedSignature = true;
-          } else if (sdk.webhooks && typeof sdk.webhooks.verifySignature === 'function') {
-            await sdk.webhooks.verifySignature(raw, signatureHeader, clerkSecret);
-            verifiedSignature = true;
-          } else if (sdk.Webhook && typeof sdk.Webhook.verify === 'function') {
-            await sdk.Webhook.verify(raw, signatureHeader, clerkSecret);
-            verifiedSignature = true;
-          } else if (typeof sdk.verifyWebhookSignature === 'function') {
-            await sdk.verifyWebhookSignature(raw, signatureHeader, clerkSecret);
-            verifiedSignature = true;
-          }
-        } catch (err: unknown) {
-          Logger.debug('Clerk webhook: clerk-sdk verification attempt failed', { error: toError(err).message });
-        }
-      }
-    } catch (e) {
-      Logger.warn('Clerk webhook: signature verification attempt failed', { error: toError(e).message });
+    const verifiedEvent = hasAnySignatureHeader
+      ? await authService.verifyWebhook({ body: raw, headers: headerRecord })
+      : null;
+    const verifiedSignature = Boolean(verifiedEvent);
+    if (verifiedEvent) {
+      payload = verifiedEvent.payload;
     }
 
     const allowUnsignedWebhook = process.env.NODE_ENV !== 'production' && process.env.ALLOW_UNSIGNED_CLERK_WEBHOOKS === 'true';
@@ -318,7 +281,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payloadRecord = asRecord(payload) ?? {};
-    const eventType = getNestedString(payloadRecord, ['type']) || getNestedString(payloadRecord, ['event']) || null;
+  const eventType = verifiedEvent?.type || getNestedString(payloadRecord, ['type']) || getNestedString(payloadRecord, ['event']) || null;
     const orgHandled = await maybeHandleOrganizationEvent(eventType, payloadRecord);
     if (orgHandled.handled) {
       return NextResponse.json(orgHandled.body ?? { ok: true }, { status: orgHandled.status ?? 200 });

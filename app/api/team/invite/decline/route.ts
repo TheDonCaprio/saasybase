@@ -36,43 +36,32 @@ export async function POST(request: NextRequest) {
     const invite = await prisma.organizationInvite.findUnique({ where: { token } });
     if (!invite) return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
 
-    // attempt to revoke at Clerk if we can resolve a `clerkOrganizationId`.
+    // Attempt provider-side invitation revocation if the active provider supports it.
     // The `OrganizationInvite` stores `organizationId` (local) — load the
-    // organization and read its `clerkOrganizationId` before calling Clerk.
+    // organization and read its provider organization ID before calling the auth provider.
     try {
       if (invite.organizationId) {
         const org = await prisma.organization.findUnique({
           where: { id: invite.organizationId },
           select: { clerkOrganizationId: true, ownerUserId: true },
         });
-        // Clerk requires `requestingUserId` when revoking invitations. Use the
-        // organization's owner user id (local Clerk user id) when available.
-        if (org?.clerkOrganizationId && org.ownerUserId) {
-          // Use authService for org invitation revocation (Clerk-specific, best-effort)
+        // Use the organization's owner user id when available because Clerk
+        // requires `requestingUserId` for invitation revocation.
+        if (org?.clerkOrganizationId && org.ownerUserId && authService.supportsFeature('organization_invites')) {
           try {
-            // For now, org invitation revocation is Clerk-specific.
-            // The authService doesn't have a revokeOrganizationInvitation method yet,
-            // so we use the provider instance escape hatch.
-            const { ClerkAuthProvider } = await import('@/lib/auth-provider/providers/clerk');
-            const provider = authService.getProviderInstance();
-            if (provider instanceof ClerkAuthProvider) {
-              // Access clerkClient through the provider for this Clerk-specific operation
-              const clerkMod = await import('@clerk/nextjs/server');
-              const client = await clerkMod.clerkClient();
-              await client.organizations.revokeOrganizationInvitation({
-                organizationId: org.clerkOrganizationId,
-                invitationId: token,
-                requestingUserId: org.ownerUserId,
-              });
-            }
+            await authService.revokeOrganizationInvitation({
+              organizationId: org.clerkOrganizationId,
+              invitationId: token,
+              requestingUserId: org.ownerUserId,
+            });
           } catch (innerErr: unknown) {
-            Logger.info('invite decline: Clerk revoke failed (continuing)', { token, error: toError(innerErr).message });
+            Logger.info('invite decline: provider revoke failed (continuing)', { token, error: toError(innerErr).message });
           }
         }
       }
     } catch (err: unknown) {
       // log but continue — revocation is best-effort here
-      Logger.info('invite decline: Clerk revoke failed (continuing)', { token, error: toError(err).message });
+      Logger.info('invite decline: provider revoke failed (continuing)', { token, error: toError(err).message });
     }
 
     await expireOrganizationInvite(token);

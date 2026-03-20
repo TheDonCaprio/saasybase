@@ -32,7 +32,7 @@ test.describe('Header org switcher regression', () => {
     const workspaceRow = page.locator('p').filter({ hasText: 'Workspace' }).first();
     await expect(workspaceRow).toBeVisible();
 
-    const switcherTrigger = page.locator('[class*="cl-organizationSwitcherTrigger"]').first();
+    const switcherTrigger = page.locator('[data-auth-org-switcher="account-menu"]').getByRole('button').first();
     await expect(switcherTrigger).toBeVisible();
     await switcherTrigger.click();
 

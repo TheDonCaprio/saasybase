@@ -43,14 +43,10 @@ export async function POST(request: NextRequest) {
 
   const providerOrganizationId = organization.clerkOrganizationId ?? organization.id;
 
-  // Attempt provider-specific invitation revocation (Clerk only).
-  // For NextAuth, skip the Clerk API call and just expire locally.
-  const providerName = authService.providerName;
-  if (providerName === 'clerk') {
+  // Attempt provider-specific invitation revocation when supported.
+  if (authService.supportsFeature('organization_invites')) {
     try {
-      const clerkMod = await import('@clerk/nextjs/server');
-      const client = await clerkMod.clerkClient();
-      await client.organizations.revokeOrganizationInvitation({
+      await authService.revokeOrganizationInvitation({
         organizationId: providerOrganizationId,
         invitationId: token,
         requestingUserId: userId,

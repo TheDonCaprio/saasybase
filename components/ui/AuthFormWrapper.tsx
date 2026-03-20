@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAuthSession } from '@/lib/auth-provider/client/hooks';
 
 /**
@@ -10,9 +11,24 @@ import { useAuthSession } from '@/lib/auth-provider/client/hooks';
  * successful auth and the redirect, it replaces the form with a smooth
  * "Signing you in…" transition screen so the UI never feels broken.
  */
-export function AuthFormWrapper({ children }: { children: React.ReactNode }) {
+export function AuthFormWrapper({
+  children,
+  fallback = null,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
   const { isSignedIn, isLoaded } = useAuthSession();
+  const [isMounted, setIsMounted] = useState(false);
   const signingIn = isLoaded && isSignedIn;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <>{fallback}</>;
+  }
 
   if (signingIn) {
     return (

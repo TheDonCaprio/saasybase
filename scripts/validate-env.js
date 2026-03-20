@@ -37,6 +37,20 @@ try {
     fail(`NEXT_PUBLIC_APP_URL is not a valid URL: ${val}`);
   }
 
+  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
+  if (authProvider === 'clerk' && process.env.NODE_ENV === 'production') {
+    const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
+    const secretKey = process.env.CLERK_SECRET_KEY || '';
+
+    if (publishableKey.startsWith('pk_test_')) {
+      fail('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY uses a Clerk test/development key while NODE_ENV=production. Use a live Clerk publishable key before deploying.');
+    }
+
+    if (secretKey.startsWith('sk_test_')) {
+      fail('CLERK_SECRET_KEY uses a Clerk test/development key while NODE_ENV=production. Use a live Clerk secret key before deploying.');
+    }
+  }
+
   // Optionally check other important NEXT_PUBLIC_* urls here
   console.log('ENV VALIDATION OK');
   process.exit(0);

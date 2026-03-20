@@ -33,6 +33,11 @@ vi.mock('@clerk/nextjs/server', () => ({
       updateOrganization: vi.fn(async () => undefined),
       getOrganization: vi.fn(async () => undefined),
       getOrganizationMembershipList: vi.fn(async () => ({ data: [] })),
+      revokeOrganizationInvitation: vi.fn(async () => undefined),
+      listOrganizations: vi.fn(async () => ({ data: [] })),
+    },
+    users: {
+      getUser: vi.fn(async () => ({ id: 'user_1', organizations: [] })),
     },
   })),
 }));

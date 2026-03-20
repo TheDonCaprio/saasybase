@@ -351,6 +351,12 @@ export class NextAuthProvider implements AuthProvider {
     });
   }
 
+  async listUserOrganizations(userId: string): Promise<AuthOrganization[]> {
+    const prisma = await getPrisma();
+    const organizations = await prisma.organization.findMany({ where: { ownerUserId: userId } });
+    return organizations.map((org) => this._toAuthOrg(org as unknown as Record<string, unknown>));
+  }
+
   // ── Webhooks ───────────────────────────────────────────────────────
   // NextAuth uses callbacks, not inbound webhooks. This is a no-op.
 

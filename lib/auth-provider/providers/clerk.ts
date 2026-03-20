@@ -268,6 +268,89 @@ export class ClerkAuthProvider implements AuthProvider {
     });
   }
 
+  async listUserOrganizations(userId: string): Promise<AuthOrganization[]> {
+    const client = await getClient();
+    const rawOrganizations: Record<string, unknown>[] = [];
+
+    const tryList = async (fnName: string, args: Record<string, unknown>) => {
+      const collection = client.organizations as unknown as Record<string, unknown>;
+      const fn = collection[fnName];
+      if (typeof fn !== 'function') return null;
+      try {
+        return await (fn as (this: unknown, params: Record<string, unknown>) => Promise<unknown>).call(client.organizations, args);
+      } catch {
+        return null;
+      }
+    };
+
+    const candidates = [
+      await tryList('listOrganizations', { created_by: userId }),
+      await tryList('list', { created_by: userId }),
+      await tryList('getOrganizationList', { createdBy: userId }),
+      await tryList('getOrganizations', { createdBy: userId }),
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const items = Array.isArray(candidate)
+        ? candidate
+        : Array.isArray((candidate as { data?: unknown[] }).data)
+          ? (candidate as { data: unknown[] }).data
+          : null;
+      if (items && items.length > 0) {
+        rawOrganizations.push(...(items as Record<string, unknown>[]));
+        break;
+      }
+    }
+
+    if (rawOrganizations.length === 0) {
+      try {
+        const user = await client.users.getUser(userId);
+        const userRecord = user as unknown as Record<string, unknown>;
+        const maybeOrganizations = userRecord.organizations || userRecord.organization_memberships || userRecord.orgs;
+        if (Array.isArray(maybeOrganizations) && maybeOrganizations.length > 0) {
+          rawOrganizations.push(
+            ...maybeOrganizations.map((org) => {
+              const record = org as Record<string, unknown>;
+              return {
+                id: record.id ?? record.organization_id ?? record.organizationId,
+                name: record.name ?? record.organizationName ?? 'Organization',
+                slug: record.slug ?? null,
+                createdBy: record.createdBy ?? record.created_by ?? userId,
+                maxAllowedMemberships: record.maxAllowedMemberships ?? null,
+                publicMetadata: record.publicMetadata ?? {},
+              };
+            })
+          );
+        }
+      } catch {
+        // ignore fallback failures and return what we found above
+      }
+    }
+
+    const seen = new Set<string>();
+    return rawOrganizations
+      .map((org) => this._toAuthOrg(org))
+      .filter((org) => {
+        if (!org.id || seen.has(org.id)) return false;
+        seen.add(org.id);
+        return true;
+      });
+  }
+
+  async revokeOrganizationInvitation(opts: {
+    organizationId: string;
+    invitationId: string;
+    requestingUserId: string;
+  }): Promise<void> {
+    const client = await getClient();
+    await client.organizations.revokeOrganizationInvitation({
+      organizationId: opts.organizationId,
+      invitationId: opts.invitationId,
+      requestingUserId: opts.requestingUserId,
+    });
+  }
+
   // ── Session Management ─────────────────────────────────────────────
   async getUserSessions(userId: string): Promise<AuthSessionInfo[]> {
     try {
@@ -316,11 +399,16 @@ export class ClerkAuthProvider implements AuthProvider {
       // Attempt Svix verification first (Clerk's default delivery mechanism)
       const { Webhook } = await import('svix');
       const wh = new Webhook(secret);
+      const normalizedHeaders = Object.fromEntries(Object.entries(request.headers).map(([key, value]) => [key.toLowerCase(), value]));
       const svixHeaders = {
-        'svix-id': request.headers['svix-id'] ?? '',
-        'svix-timestamp': request.headers['svix-timestamp'] ?? '',
-        'svix-signature': request.headers['svix-signature'] ?? '',
+        'svix-id': normalizedHeaders['svix-id'] ?? normalizedHeaders['webhook-id'] ?? '',
+        'svix-timestamp': normalizedHeaders['svix-timestamp'] ?? normalizedHeaders['webhook-timestamp'] ?? '',
+        'svix-signature': normalizedHeaders['svix-signature'] ?? normalizedHeaders['clerk-signature'] ?? normalizedHeaders['x-clerk-signature'] ?? normalizedHeaders['webhook-signature'] ?? '',
       };
+      if (!svixHeaders['svix-id'] || !svixHeaders['svix-timestamp'] || !svixHeaders['svix-signature']) {
+        Logger.warn('ClerkAuthProvider.verifyWebhook: missing required webhook signature headers');
+        return null;
+      }
       const bodyStr = typeof request.body === 'string' ? request.body : request.body.toString('utf-8');
       const verified = wh.verify(bodyStr, svixHeaders) as Record<string, unknown>;
       const eventType = (verified.type as string) ?? 'other';

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
+import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
@@ -214,7 +215,7 @@ export default function AccountMenu() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Element | null;
-      if (target?.closest('[class*="cl-organizationSwitcher"]')) {
+      if (target?.closest('[data-auth-org-switcher]')) {
         return;
       }
 
@@ -321,47 +322,15 @@ export default function AccountMenu() {
               <div className="p-4 space-y-3">
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-500">Workspace</p>
-                  <AuthOrganizationSwitcher
-                    hidePersonal={false}
-                    appearance={{
-                      elements: {
-                        rootBox: 'w-full',
-                        organizationSwitcherTrigger:
-                          'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
-                        organizationSwitcherTriggerIcon:
-                          'text-neutral-400 transition-transform group-data-[open=true]:rotate-180 dark:text-neutral-500',
-                        organizationSwitcherPopoverRootBox:
-                          '!w-[16rem] !min-w-[16rem] !max-w-[16rem] pt-1.5',
-                        organizationSwitcherPopoverCard:
-                          '!w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
-                        organizationSwitcherPopoverMain: 'overflow-hidden bg-transparent',
-                        organizationSwitcherPopoverActions:
-                          'border-t border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-950/50',
-                        organizationSwitcherPopoverActionButton:
-                          'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
-                        organizationSwitcherPopoverActionButton__createOrganization:
-                          profile?.canCreateOrganization === false ? 'hidden' : '',
-                        organizationSwitcherPopoverActionButtonIconBox: 'text-neutral-500 dark:text-neutral-400',
-                        organizationListPreviewItemActionButton:
-                          'h-8 w-8 min-w-8 max-w-8 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
-                        organizationSwitcherPopoverFooter:
-                          'border-t border-neutral-200 bg-neutral-50/70 dark:border-neutral-700 dark:bg-neutral-950/40',
-                        organizationSwitcherPreviewButton:
-                          'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
-                        organizationListPreviewItems: 'gap-0',
-                        organizationListPreviewItem:
-                          'border-b border-neutral-200/80 last:border-b-0 dark:border-neutral-700/80',
-                        organizationListPreviewButton:
-                          'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
-                        organizationListCreateOrganizationActionButton:
-                          profile?.canCreateOrganization === false
-                            ? 'hidden'
-                            : 'min-h-11 rounded-none px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
-                        organizationPreviewMainIdentifier: 'text-neutral-900 dark:text-neutral-100',
-                        organizationPreviewSecondaryIdentifier: 'text-xs text-neutral-500 dark:text-neutral-400',
-                      },
-                    }}
-                  />
+                  <div data-auth-org-switcher="account-menu">
+                    <AuthOrganizationSwitcher
+                      hidePersonal={false}
+                      appearance={getOrganizationSwitcherAppearance({
+                        variant: 'account-menu',
+                        canCreateOrganization: profile?.canCreateOrganization,
+                      })}
+                    />
+                  </div>
                 </div>
 
                 {/* Plan Info */}

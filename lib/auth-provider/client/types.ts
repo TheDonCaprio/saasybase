@@ -83,7 +83,7 @@ export interface UseAuthInstanceReturn {
   /** Sign the user out, optionally redirecting. */
   signOut: (opts?: { redirectUrl?: string }) => Promise<void>;
   /** Open a profile management UI (Clerk modal, or redirect for other providers). */
-  openUserProfile: (opts?: { appearance?: Record<string, unknown> }) => void;
+  openUserProfile: (opts?: { appearance?: Record<string, unknown>; [key: string]: unknown }) => void;
 }
 
 // ---------------------------------------------------------------------------

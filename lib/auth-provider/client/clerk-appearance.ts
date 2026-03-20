@@ -68,7 +68,9 @@ export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherA
           '!w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
         organizationSwitcherPopoverActionButton:
           'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+        organizationSwitcherPopoverActionButton__createOrganization: 'hidden',
         organizationSwitcherPreviewButton: 'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
+        organizationListCreateOrganizationActionButton: 'hidden',
         organizationListPreviewItemActionButton:
           'h-8 w-8 min-w-8 max-w-8 justify-center rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
       },

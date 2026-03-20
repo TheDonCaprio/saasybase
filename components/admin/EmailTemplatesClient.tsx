@@ -24,7 +24,7 @@ type Props = {
   initialTemplates: EmailTemplate[];
 };
 
-const DEFAULT_TEMPLATE_COUNT = 25;
+const DEFAULT_TEMPLATE_COUNT = 27;
 
 const DEFAULT_TEMPLATE_GROUPS = [
   {

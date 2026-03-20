@@ -1647,6 +1647,174 @@ The {{siteName}} Team`,
       })
     },
     {
+      key: 'subscription_upgrade_scheduled_recurring',
+      name: 'Subscription Upgrade Scheduled (Recurring)',
+      description: 'Sent when a recurring plan upgrade is scheduled for the end of the current billing cycle',
+      subject: '{{siteName}}: Upgrade to {{planName}} scheduled',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
+    .upgrade-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="header">
+      <h1>Upgrade Scheduled</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+      <p>Your subscription is scheduled to upgrade to <strong>{{planName}}</strong> at the end of your current billing cycle.</p>
+      <div class="upgrade-box">
+        <strong>Scheduled Upgrade Details:</strong><br>
+        New Plan: {{planName}}<br>
+        New Price: {{amount}}<br>
+        Effective: {{startedAt}}<br>
+        Next Billing: {{expiresAt}}
+      </div>
+      <p>Your current plan remains active until the scheduled change takes effect.</p>
+      <p><a href="{{dashboardUrl}}" class="button">View Billing</a></p>
+      <p>If you have any questions, reach out to us at {{supportEmail}}.</p>
+      <p>Best regards,<br>The {{siteName}} Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{siteName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Your subscription is scheduled to upgrade to {{planName}} at the end of your current billing cycle.
+
+Scheduled Upgrade Details:
+New Plan: {{planName}}
+New Price: {{amount}}
+Effective: {{startedAt}}
+Next Billing: {{expiresAt}}
+
+Your current plan remains active until the scheduled change takes effect.
+
+View billing: {{dashboardUrl}}
+
+If you have any questions, reach out to us at {{supportEmail}}.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User\'s first name',
+        planName: 'New plan name',
+        amount: 'New plan price',
+        startedAt: 'Scheduled effective date',
+        expiresAt: 'Current billing period end date',
+        dashboardUrl: 'Link to dashboard',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'subscription_change_scheduled_recurring',
+      name: 'Subscription Change Scheduled (Recurring)',
+      description: 'Sent when a recurring plan downgrade or plan change is scheduled for the end of the current billing cycle',
+      subject: '{{siteName}}: Change to {{planName}} scheduled',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
+    .change-box { background: #f3f4f6; border-left: 4px solid #6b7280; padding: 15px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="header">
+      <h1>Plan Change Scheduled</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+      <p>Your subscription is scheduled to change to <strong>{{planName}}</strong> at the end of your current billing cycle.</p>
+      <div class="change-box">
+        <strong>Scheduled Change Details:</strong><br>
+        New Plan: {{planName}}<br>
+        New Price: {{amount}}<br>
+        Effective: {{startedAt}}<br>
+        Next Billing: {{expiresAt}}
+      </div>
+      <p>Your current plan remains active until the scheduled change takes effect.</p>
+      <p><a href="{{dashboardUrl}}" class="button">View Billing</a></p>
+      <p>If you have any questions, contact us at {{supportEmail}}.</p>
+      <p>Best regards,<br>The {{siteName}} Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{siteName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Your subscription is scheduled to change to {{planName}} at the end of your current billing cycle.
+
+Scheduled Change Details:
+New Plan: {{planName}}
+New Price: {{amount}}
+Effective: {{startedAt}}
+Next Billing: {{expiresAt}}
+
+Your current plan remains active until the scheduled change takes effect.
+
+View billing: {{dashboardUrl}}
+
+If you have any questions, contact us at {{supportEmail}}.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User\'s first name',
+        planName: 'New plan name',
+        amount: 'New plan price',
+        startedAt: 'Scheduled effective date',
+        expiresAt: 'Current billing period end date',
+        dashboardUrl: 'Link to dashboard',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
       key: 'password_reset',
       name: 'Password Reset',
       description: 'Sent when a user requests a password reset link',

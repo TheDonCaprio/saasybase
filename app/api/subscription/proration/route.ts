@@ -615,7 +615,7 @@ export async function POST(req: NextRequest) {
         if (isUpgrade || isDowngrade) {
           const scheduledDate = newPeriodEnd ?? ctx.currentSubscription.expiresAt;
           const scheduledDateStr = scheduledDate ? scheduledDate.toLocaleDateString() : 'the end of your current billing cycle';
-          const templateKey = isUpgrade ? 'subscription_upgraded_recurring' : 'subscription_downgraded';
+          const templateKey = isUpgrade ? 'subscription_upgrade_scheduled_recurring' : 'subscription_change_scheduled_recurring';
           const title = isUpgrade ? 'Plan Upgrade Scheduled' : 'Plan Change Scheduled';
           const message = isUpgrade
             ? `Your subscription will be upgraded to ${ctx.targetPlan.name} on ${scheduledDateStr}.`

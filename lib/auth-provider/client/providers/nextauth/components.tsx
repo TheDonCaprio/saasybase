@@ -11,7 +11,7 @@
  * equivalents that match the same API surface consumers expect.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { SessionProvider, signIn, signOut, useSession } from 'next-auth/react';
@@ -1092,11 +1092,32 @@ interface ActiveOrgResponse {
 export function AuthOrganizationSwitcher() {
   const { status } = useSession();
   const [open, setOpen] = useState(false);
+  const [popoverDirection, setPopoverDirection] = useState<'up' | 'down'>('down');
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [orgs, setOrgs] = useState<OrgItem[]>([]);
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+
+  const updatePopoverDirection = useCallback(() => {
+    const container = dropdownRef.current;
+    const popover = popoverRef.current;
+    if (!container || !popover) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    const gutter = 8;
+    const spaceAbove = containerRect.top;
+    const spaceBelow = window.innerHeight - containerRect.bottom;
+
+    if (spaceBelow >= popoverRect.height + gutter || spaceBelow >= spaceAbove) {
+      setPopoverDirection('down');
+      return;
+    }
+
+    setPopoverDirection('up');
+  }, []);
 
   // Fetch orgs on mount
   useEffect(() => {
@@ -1151,6 +1172,21 @@ export function AuthOrganizationSwitcher() {
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updatePopoverDirection();
+
+    const handleViewportChange = () => updatePopoverDirection();
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [open, updatePopoverDirection, orgs.length, activeOrgId]);
 
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? null;
   const displayName = activeOrg ? activeOrg.name : 'Personal workspace';
@@ -1242,7 +1278,10 @@ export function AuthOrganizationSwitcher() {
 
       {/* Dropdown popover */}
       {open && (
-        <div className="absolute bottom-full left-0 z-[70] mb-2 w-full min-w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10">
+        <div
+          ref={popoverRef}
+          className={`absolute left-0 z-[70] w-full min-w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10 ${popoverDirection === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'}`}
+        >
           {/* Personal workspace option */}
           <button
             type="button"

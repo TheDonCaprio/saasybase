@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useAuthSession } from '@/lib/auth-provider/client/hooks';
+
+const subscribe = () => () => {};
 
 /**
  * AuthFormWrapper
@@ -19,12 +21,8 @@ export function AuthFormWrapper({
   fallback?: React.ReactNode;
 }) {
   const { isSignedIn, isLoaded } = useAuthSession();
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(subscribe, () => true, () => false);
   const signingIn = isLoaded && isSignedIn;
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   if (!isMounted) {
     return <>{fallback}</>;

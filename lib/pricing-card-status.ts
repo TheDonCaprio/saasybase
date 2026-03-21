@@ -17,7 +17,7 @@ export type ScheduledPlanIdsByFamily = {
 };
 
 type PricingCardSubscriptionStatusInput = {
-  status: 'ACTIVE' | 'PENDING';
+  status: string;
   plan: {
     id: string;
     priceCents: number | null;

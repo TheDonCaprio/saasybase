@@ -29,6 +29,8 @@ type SubscriptionForPendingPaymentLinking = {
     id: string;
     userId: string;
     planId: string;
+    startedAt?: Date | null;
+    expiresAt?: Date | null;
 };
 
 type SubscriptionForNewlyCreatedActiveUpdate = SubscriptionForPendingPaymentLinking & {
@@ -295,6 +297,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                 organizationId: true,
                 externalSubscriptionId: true,
                 status: true,
+                    startedAt: true,
                 expiresAt: true,
             },
         })
@@ -312,6 +315,7 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                 organizationId: true,
                 externalSubscriptionId: true,
                 status: true,
+                    startedAt: true,
                 expiresAt: true,
             },
         });
@@ -483,8 +487,10 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                 const activeCurrency = await getActiveCurrencyAsync();
                 const refreshedSub = await prisma.subscription.findUnique({
                     where: { id: candidateSub.id },
-                    select: { expiresAt: true },
+                        select: { startedAt: true, expiresAt: true },
                 });
+                    const startedAt = refreshedSub?.startedAt ?? candidateSub.startedAt;
+                    const expiresAt = refreshedSub?.expiresAt ?? candidateSub.expiresAt;
 
                 await sendBillingNotification({
                     userId,
@@ -496,7 +502,8 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
                         amount: formatCurrency(amountCents, activeCurrency),
                         date: new Date().toLocaleDateString(),
                         transactionId: finalPaymentIntent || session.id,
-                        expiresAt: refreshedSub?.expiresAt ? refreshedSub.expiresAt.toLocaleDateString() : undefined,
+                        startedAt: startedAt ? startedAt.toLocaleDateString() : undefined,
+                        expiresAt: expiresAt ? expiresAt.toLocaleDateString() : undefined,
                     },
                 });
 
@@ -559,7 +566,7 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
     ) => Promise<{ id: string } | null>;
     resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
     syncOrganizationEligibilityForUser: (userId: string) => Promise<unknown>;
-    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string; userId: string; planId: string } | null>;
+    findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string; userId: string; planId: string; startedAt?: Date | null; expiresAt?: Date | null } | null>;
     getPendingSubscriptionLookbackDate: () => Date;
 }): Promise<void> {
     const { session, userId, plan, providerKey, finalPaymentIntent, amountCents } = params;
@@ -633,51 +640,7 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
 
         await params.syncOrganizationEligibilityForUser(userId);
 
-        if (!suppressNotifications) {
-            try {
-                const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
-                const tokenName = planTokenName || await getDefaultTokenLabel();
-                const tokenInfo = plan.tokenLimit ? ` with ${plan.tokenLimit} ${tokenName}` : '';
-                const currency = await getActiveCurrencyAsync();
-                const formattedAmount = formatCurrency(amountCents, currency);
-                const transactionId = finalPaymentIntent || session.id;
-
-                await sendBillingNotification({
-                    userId,
-                    title: 'Subscription Activated',
-                    message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
-                    templateKey: 'subscription_activated',
-                    variables: {
-                        planName: plan.name,
-                        amount: formattedAmount,
-                        transactionId,
-                        tokenBalance: String(plan.tokenLimit || 0),
-                        tokenName,
-                        startedAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                        expiresAt: '',
-                    },
-                });
-
-                const user = await prisma.user.findUnique({
-                    where: { id: userId },
-                    select: { email: true, name: true },
-                });
-
-                await sendAdminNotificationEmail({
-                    title: `New Subscription: ${plan.name}`,
-                    alertType: 'new_purchase',
-                    message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}`,
-                    userId,
-                });
-            } catch (notifErr) {
-                Logger.warn('Failed to send notifications for Paystack pending subscription payment', {
-                    userId,
-                    error: toError(notifErr).message,
-                });
-            }
-        }
-
-        let existingSub: { id: string; userId: string; planId: string } | null = null;
+        let existingSub: { id: string; userId: string; planId: string; startedAt?: Date | null; expiresAt?: Date | null } | null = null;
         const providerSubscriptionId = session.subscriptionId || session.metadata?.subscriptionId;
 
         if (providerSubscriptionId) {
@@ -699,9 +662,64 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
                     createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) }
                 },
                 orderBy: { createdAt: 'desc' },
-                select: { id: true, userId: true, planId: true }
+                select: { id: true, userId: true, planId: true, startedAt: true, expiresAt: true }
             });
             existingSub = latestSub;
+        }
+
+        const notificationSubscription = existingSub?.id
+            ? ((existingSub.startedAt || existingSub.expiresAt)
+                ? { startedAt: existingSub.startedAt ?? null, expiresAt: existingSub.expiresAt ?? null }
+                : await prisma.subscription.findUnique({
+                    where: { id: existingSub.id },
+                    select: { startedAt: true, expiresAt: true },
+                }))
+            : null;
+
+        if (!suppressNotifications) {
+            try {
+                const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
+                const tokenName = planTokenName || await getDefaultTokenLabel();
+                const tokenInfo = plan.tokenLimit ? ` with ${plan.tokenLimit} ${tokenName}` : '';
+                const currency = await getActiveCurrencyAsync();
+                const formattedAmount = formatCurrency(amountCents, currency);
+                const transactionId = finalPaymentIntent || session.id;
+
+                await sendBillingNotification({
+                    userId,
+                    title: 'Subscription Activated',
+                    message: `Your subscription to ${plan.name}${tokenInfo} is now active.`,
+                    templateKey: 'subscription_activated',
+                    variables: {
+                        planName: plan.name,
+                        amount: formattedAmount,
+                        transactionId,
+                        tokenBalance: String(plan.tokenLimit || 0),
+                        tokenName,
+                        startedAt: (notificationSubscription?.startedAt ?? new Date()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                        expiresAt: notificationSubscription?.expiresAt
+                            ? notificationSubscription.expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                            : undefined,
+                    },
+                });
+
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { email: true, name: true },
+                });
+
+                await sendAdminNotificationEmail({
+                    title: `New Subscription: ${plan.name}`,
+                    alertType: 'new_purchase',
+                    message: `A new subscription was activated.\n\nPlan: ${plan.name}\nUser: ${user?.name || 'N/A'}\nEmail: ${user?.email || 'N/A'}`,
+                    userId,
+                });
+            } catch (notifErr) {
+                Logger.warn('Failed to send notifications for Paystack pending subscription payment', {
+                    userId,
+                    error: toError(notifErr).message,
+                });
+            }
         }
 
         if (existingSub) {

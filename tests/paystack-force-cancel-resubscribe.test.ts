@@ -59,6 +59,7 @@ describe('Paystack force-cancel → re-subscribe activation email', () => {
 				organizationId: null,
 				externalSubscriptionId: 'SUB_paystack_fresh',
 				status: 'PENDING',
+				startedAt: new Date(now - 5 * 60 * 1000),
 				expiresAt: new Date(now + 10 * 60 * 1000),
 			});
 
@@ -67,6 +68,7 @@ describe('Paystack force-cancel → re-subscribe activation email', () => {
 
 		// The refreshed sub lookup for the notification section.
 		prismaMock.subscription.findUnique.mockResolvedValue({
+			startedAt: new Date(now),
 			expiresAt: new Date(now + 31 * 24 * 60 * 60 * 1000),
 		});
 
@@ -115,6 +117,9 @@ describe('Paystack force-cancel → re-subscribe activation email', () => {
 			expect.objectContaining({
 				title: 'Subscription Activated',
 				templateKey: 'subscription_activated',
+				variables: expect.objectContaining({
+					startedAt: expect.any(String),
+				}),
 			}),
 		);
 
@@ -139,6 +144,7 @@ describe('Paystack force-cancel → re-subscribe activation email', () => {
 				organizationId: null,
 				externalSubscriptionId: 'SUB_paystack_active',
 				status: 'ACTIVE',
+				startedAt: new Date(now - 29 * 24 * 60 * 60 * 1000),
 				expiresAt: new Date(now + 5 * 24 * 60 * 60 * 1000),
 			});
 
@@ -146,6 +152,7 @@ describe('Paystack force-cancel → re-subscribe activation email', () => {
 		prismaMock.payment.findFirst.mockResolvedValue({ id: 'pay_prev' });
 
 		prismaMock.subscription.findUnique.mockResolvedValue({
+			startedAt: new Date(now - 29 * 24 * 60 * 60 * 1000),
 			expiresAt: new Date(now + 31 * 24 * 60 * 60 * 1000),
 		});
 

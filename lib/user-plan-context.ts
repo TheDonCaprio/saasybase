@@ -62,6 +62,33 @@ export type OrganizationPlanContext = {
   effectivePlan: PlanWithBillingFields;
 };
 
+export type PlanScope = 'PERSONAL' | 'WORKSPACE';
+
+export function getPlanScope(activeOrganizationId?: string | null): PlanScope {
+  return typeof activeOrganizationId === 'string' && activeOrganizationId.trim().length > 0
+    ? 'WORKSPACE'
+    : 'PERSONAL';
+}
+
+export function getSubscriptionScopeFilter(scope: PlanScope): Prisma.SubscriptionWhereInput {
+  return scope === 'WORKSPACE'
+    ? { plan: { supportsOrganizations: true } }
+    : { NOT: { plan: { supportsOrganizations: true } } };
+}
+
+export function getPaymentScopeFilter(scope: PlanScope): Prisma.PaymentWhereInput {
+  const workspacePaymentFilter: Prisma.PaymentWhereInput = {
+    OR: [
+      { subscription: { is: { plan: { supportsOrganizations: true } } } },
+      { subscriptionId: null, plan: { is: { supportsOrganizations: true } } },
+    ],
+  };
+
+  return scope === 'WORKSPACE'
+    ? workspacePaymentFilter
+    : { NOT: workspacePaymentFilter };
+}
+
 export async function getOrganizationPlanContext(userId: string, activeOrganizationId?: string | null): Promise<OrganizationPlanContext | null> {
   const hasActiveOrganizationId = typeof activeOrganizationId === 'string' && activeOrganizationId.trim().length > 0;
   if (!hasActiveOrganizationId) {

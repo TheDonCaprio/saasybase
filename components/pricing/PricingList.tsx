@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import PricingCard from './PricingCard';
+import type { ActiveRecurringPlansByFamily, ScheduledPlanIdsByFamily } from '../../lib/pricing-card-status';
 
 type DBPlan = {
   id: string;
@@ -17,16 +18,10 @@ type DBPlan = {
   organizationTokenPoolStrategy?: string | null;
 };
 
-type ActiveRecurringPlan = {
-  planId: string;
-  priceCents: number | null;
-  recurringInterval: string | null;
-} | null;
-
 interface PricingListProps {
   plans: DBPlan[];
-  activeRecurringPlan?: ActiveRecurringPlan;
-  scheduledPlanId?: string | null;
+  activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily;
+  scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily;
   gridClasses?: {
     oneTime?: string;
     recurring?: string;
@@ -35,7 +30,7 @@ interface PricingListProps {
   currency: string;
 }
 
-export default function PricingList({ plans, activeRecurringPlan, scheduledPlanId, gridClasses, currency }: PricingListProps) {
+export default function PricingList({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, gridClasses, currency }: PricingListProps) {
   // Split plans into recurring and one-time (subscriptions first)
   const recurringPlans = plans.filter(p => p.autoRenew).slice().sort((a, b) => (a.priceCents ?? 0) - (b.priceCents ?? 0));
   const oneTimePlans = plans.filter(p => !p.autoRenew).slice().sort((a, b) => (a.priceCents ?? 0) - (b.priceCents ?? 0));
@@ -58,7 +53,7 @@ export default function PricingList({ plans, activeRecurringPlan, scheduledPlanI
       {recurringPlans.length > 0 && (
         <div className={recurringGridClasses}>
           {recurringPlans.map(p => (
-            <PricingCard key={p.id} plan={p} activeRecurringPlan={activeRecurringPlan ?? null} scheduledPlanId={scheduledPlanId} currency={currency} />
+            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} />
           ))}
         </div>
       )}
@@ -74,7 +69,7 @@ export default function PricingList({ plans, activeRecurringPlan, scheduledPlanI
       {oneTimePlans.length > 0 && (
         <div className={oneTimeGridClasses}>
           {oneTimePlans.map(p => (
-            <PricingCard key={p.id} plan={p} activeRecurringPlan={activeRecurringPlan ?? null} scheduledPlanId={scheduledPlanId} currency={currency} />
+            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} />
           ))}
         </div>
       )}

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const prismaMock = vi.hoisted(() => ({
   subscription: {
     updateMany: vi.fn(),
+    findMany: vi.fn(),
     findFirst: vi.fn(),
   },
 }));
@@ -28,23 +29,22 @@ describe('GET /api/subscription pending confirmation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.subscription.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.subscription.findMany.mockResolvedValue([]);
   });
 
   it('keeps provisional Paystack switch-now subscriptions visible after refresh', async () => {
-    prismaMock.subscription.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        id: 'sub_pending_1',
-        status: 'PENDING',
-        startedAt: new Date('2026-03-17T11:45:00.000Z'),
-        expiresAt: new Date('2026-03-18T11:45:00.000Z'),
-        prorationPendingSince: new Date('2026-03-17T11:45:00.000Z'),
-        plan: {
-          name: '24 Hour Team Pro',
-          autoRenew: true,
-          supportsOrganizations: true,
-        },
-      });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_pending_1',
+      status: 'PENDING',
+      startedAt: new Date('2026-03-17T11:45:00.000Z'),
+      expiresAt: new Date('2026-03-18T11:45:00.000Z'),
+      prorationPendingSince: new Date('2026-03-17T11:45:00.000Z'),
+      plan: {
+        name: '24 Hour Team Pro',
+        autoRenew: true,
+        supportsOrganizations: true,
+      },
+    });
 
     const res = await GET();
     const body = await res.json();

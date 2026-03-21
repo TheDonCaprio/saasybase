@@ -11,7 +11,9 @@ import {
   getEffectiveMemberTokenCap,
   getMemberCapStrategy,
   getMemberSharedTokenBalance,
+  getPlanScope,
   getOrganizationPlanContext,
+  getSubscriptionScopeFilter,
 } from '../../../../lib/user-plan-context';
 
 export async function GET() {
@@ -21,6 +23,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const defaultTokenLabel = await getDefaultTokenLabel();
+    const planScope = getPlanScope(orgId);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -43,6 +46,7 @@ export async function GET() {
     where: {
       userId: user.id,
       status: 'ACTIVE',
+      ...getSubscriptionScopeFilter(planScope),
       expiresAt: {
         gt: new Date()
       }

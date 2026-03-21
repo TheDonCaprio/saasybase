@@ -2,6 +2,7 @@ import React from 'react';
 import DashboardPricingListWrapper from './DashboardPricingListWrapper';
 import { getPricingSettings, generatePricingGridClasses } from '../../lib/settings';
 import { getActiveCurrencyAsync } from '../../lib/payment/registry';
+import type { ActiveRecurringPlansByFamily, ScheduledPlanIdsByFamily } from '../../lib/pricing-card-status';
 
 // Server wrapper around client PricingList. This file is a server component
 // that simply returns the client component with props. Next.js allows server
@@ -22,19 +23,13 @@ type DBPlan = {
   tokenName?: string | null;
 };
 
-type ActiveRecurringPlan = {
-  planId: string;
-  priceCents: number | null;
-  recurringInterval: string | null;
-} | null;
-
 interface DashboardPricingListServerWrapperProps {
   plans: unknown[];
-  activeRecurringPlan?: ActiveRecurringPlan;
-  scheduledPlanId?: string | null;
+  activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily;
+  scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily;
 }
 
-export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlan = null, scheduledPlanId }: DashboardPricingListServerWrapperProps) {
+export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily }: DashboardPricingListServerWrapperProps) {
   // Localized cast: callers pass `unknown[]` to this server wrapper (from DB
   // layers); cast here to the client component's expected `DBPlan[]`.
   const typedPlans = plans as DBPlan[];
@@ -51,5 +46,5 @@ export default async function DashboardPricingListServerWrapper({ plans, activeR
   // Resolve currency on server and pass to client for consistent display
   const currency = await getActiveCurrencyAsync();
   
-  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlanId} gridClasses={gridClasses} currency={currency} />;
+  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} />;
 }

@@ -11,6 +11,7 @@ import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
+import { getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -27,15 +28,16 @@ export async function generateMetadata() {
 export default async function OnboardingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const returnPath = buildReturnPath('/dashboard/onboarding', resolvedSearchParams);
-  const { userId } = await requireAuth(returnPath);
+  const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
+  const planScope = getPlanScope(orgId);
 
   // Check user's progress
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
       subscriptions: {
-        where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
+        where: { status: 'ACTIVE', expiresAt: { gt: new Date() }, ...getSubscriptionScopeFilter(planScope) },
         take: 1
       },
       payments: { take: 1 },

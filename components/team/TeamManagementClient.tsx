@@ -1,11 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { TeamDashboardOrganization, TeamDashboardState } from '../../lib/team-dashboard';
+import { getVisiblePendingViewerInvites, type ViewerPendingTeamInvite } from '../../lib/team-invite-utils';
 import type { TeamSubscriptionStatus } from '../../lib/organization-access';
 import { activateWorkspaceAndNavigate } from '../../lib/active-workspace.client';
+import { useAuthSession } from '@/lib/auth-provider/client';
+import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../dashboard/dashboardSurfaces';
 import { ProvisionRefreshButton } from './ProvisionRefreshButton';
 
@@ -35,7 +38,7 @@ type ApiResponse = {
 type TeamManagementClientProps = {
   initialState: TeamDashboardState;
   viewer: Viewer;
-  pendingInvitesForViewer?: Array<{ id: string; token: string; email: string; role: string; organization: { id: string; name: string } }>;
+  pendingInvitesForViewer?: ViewerPendingTeamInvite[];
 };
 
 type CapStrategy = 'SOFT' | 'HARD' | 'DISABLED';
@@ -43,9 +46,12 @@ type CapStrategy = 'SOFT' | 'HARD' | 'DISABLED';
 
 
 const defaultError = 'Something went wrong. Please try again.';
+const ORG_SWITCH_REFRESH_DELAY_MS = 600;
 
 export function TeamManagementClient({ initialState, viewer, pendingInvitesForViewer }: TeamManagementClientProps) {
   const router = useRouter();
+  const { orgId } = useAuthSession();
+  const currentOrgId = orgId ?? null;
   const [state, setState] = useState<TeamDashboardState>(initialState);
   const [status, setStatus] = useState<StatusBanner | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -54,6 +60,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
   const [showCapsModal, setShowCapsModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [orgNameInput, setOrgNameInput] = useState('');
+  const previousOrgIdRef = useRef(currentOrgId);
   const ORG_NAME_MAX = 30;
   const ORG_NAME_RE = /^[A-Za-z0-9\-\.\s,']+$/;
 
@@ -256,10 +263,40 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
     return organization.invites.filter((invite) => invite.status === 'PENDING');
   }, [organization]);
 
+  const viewerPendingInvites = useMemo(
+    () => getVisiblePendingViewerInvites(pendingInvitesForViewer, organization?.id),
+    [organization?.id, pendingInvitesForViewer],
+  );
+
 
 
   const tokenLabel = (organization?.planTokenName?.trim() || 'tokens').toLowerCase();
   const tokenLabelTitle = tokenLabel.charAt(0).toUpperCase() + tokenLabel.slice(1);
+
+  useEffect(() => {
+    setState(initialState);
+    setStatus(null);
+    setBusyAction(null);
+    setShowCapsModal(false);
+    setShowInviteModal(false);
+    setAutoSynced(false);
+  }, [initialState]);
+
+  useEffect(() => {
+    if (previousOrgIdRef.current === currentOrgId) {
+      return;
+    }
+
+    previousOrgIdRef.current = currentOrgId;
+
+    const timer = window.setTimeout(() => {
+      refreshVisibleRoute(router, 'org-validity', '/dashboard/team');
+    }, ORG_SWITCH_REFRESH_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [currentOrgId, router]);
 
 
   useEffect(() => {
@@ -306,7 +343,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
   if (!allowed) {
     // If the user has any pending invites sent to their email, show them an
     // in-dashboard acceptance UI so they don't need to check their email.
-    const viewerInvites = pendingInvitesForViewer ?? [];
+    const viewerInvites = viewerPendingInvites;
     if (viewerInvites && viewerInvites.length > 0) {
       return (
         <div className={dashboardPanelClass('space-y-4')}>
@@ -428,6 +465,40 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
 
   return (
     <div className="space-y-6">
+      {viewerPendingInvites.length > 0 ? (
+        <section className={dashboardPanelClass('space-y-4')}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Additional workspace invites</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Pending invitations for other workspaces</h3>
+              <p className="text-sm text-slate-600 dark:text-neutral-400">
+                You already have access to a workspace. These invitations let you join additional workspaces without going back to the email link.
+              </p>
+            </div>
+            <div className={dashboardMutedPanelClass('px-3 py-2 text-sm text-slate-600 dark:text-neutral-300')}>
+              {viewerPendingInvites.length} pending
+            </div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {viewerPendingInvites.map((invite) => (
+              <div key={invite.id} className={dashboardMutedPanelClass('space-y-3 p-4')}>
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-neutral-100">{invite.organization.name}</h4>
+                  <p className="text-sm text-slate-600 dark:text-neutral-400">Invite for {invite.email} as {invite.role.toLowerCase()}</p>
+                </div>
+                <InviteAcceptanceClient
+                  token={invite.token}
+                  organizationName={invite.organization.name}
+                  inviteEmail={invite.email}
+                  viewerEmail={viewer.email}
+                  alreadyMember={false}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <div className={dashboardPanelClass('space-y-4')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

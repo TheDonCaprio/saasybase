@@ -15,8 +15,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
+import { buildPricingCardRecurringState } from '../../../lib/pricing-card-status';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -38,11 +39,12 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
+  const planScope = getPlanScope(orgId);
 
   // Get all subscriptions (active and pending) to show complete picture
-  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan] = await Promise.all([
+  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, ownedRecurringSubscriptionsForCards] = await Promise.all([
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
       include: {
         plan: {
           select: {
@@ -64,7 +66,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
       }
     }),
     prisma.subscription.findMany({
-      where: { userId, status: { in: ['ACTIVE', 'PENDING'] } },
+      where: { userId, status: { in: ['ACTIVE', 'PENDING'] }, ...getSubscriptionScopeFilter(planScope) },
       include: { plan: true },
       orderBy: [{ status: 'asc' }, { startedAt: 'asc' }]
     }),
@@ -72,7 +74,40 @@ export default async function PlanPage({ searchParams }: PageProps) {
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
     getOrganizationPlanContext(userId, orgId),
+    prisma.subscription.findMany({
+      where: {
+        userId,
+        plan: { autoRenew: true },
+        OR: [
+          { status: 'ACTIVE', expiresAt: { gt: now } },
+          {
+            status: 'PENDING',
+            OR: [
+              { startedAt: { gt: now } },
+              { payments: { some: { status: 'SUCCEEDED' } } },
+              { prorationPendingSince: { not: null } },
+            ],
+          },
+        ],
+      },
+      select: {
+        status: true,
+        plan: {
+          select: {
+            id: true,
+            priceCents: true,
+            recurringInterval: true,
+            supportsOrganizations: true,
+            autoRenew: true,
+          },
+        },
+        scheduledPlan: { select: { id: true } },
+      },
+      orderBy: [{ status: 'asc' }, { expiresAt: 'asc' }, { startedAt: 'asc' }],
+    }),
   ]);
+
+  const { activeRecurringPlansByFamily, scheduledPlanIdsByFamily } = buildPricingCardRecurringState(ownedRecurringSubscriptionsForCards);
 
   const plansForPricing = allPlansRaw.map((plan) => {
     const planTokenName = typeof plan.tokenName === 'string' ? plan.tokenName.trim() : '';
@@ -268,13 +303,6 @@ export default async function PlanPage({ searchParams }: PageProps) {
     }
     : undefined;
 
-  const activeRecurringPlan = activeSub?.plan?.autoRenew
-    ? {
-      planId: activeSub.plan.id,
-      priceCents: typeof activeSub.plan.priceCents === 'number' ? activeSub.plan.priceCents : null,
-      recurringInterval: typeof activeSub.plan.recurringInterval === 'string' ? activeSub.plan.recurringInterval : null,
-    }
-    : null;
   return (
     <div className="space-y-6">
       <DashboardPageHeader
@@ -486,7 +514,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
                 Full pricing page
               </Link>
             </div>
-            <DashboardPricingListServerWrapper plans={plansForPricing} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlan?.id ?? null} />
+            <DashboardPricingListServerWrapper plans={plansForPricing} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} />
           </section>
         </div>
 

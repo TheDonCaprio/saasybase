@@ -16,7 +16,7 @@ import {
 } from '../../../components/dashboard/dashboardSurfaces';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +37,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const returnPath = buildReturnPath('/dashboard/activity', resolvedSearchParams);
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
+  const planScope = getPlanScope(orgId);
 
   const activeCurrency = await getActiveCurrencyAsync();
   const now = new Date();
@@ -54,18 +55,18 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   ] = await Promise.all([
     authService.getUser(userId).catch(() => null),
     prisma.payment.findMany({
-      where: { userId },
+      where: { userId, ...getPaymentScopeFilter(planScope) },
       orderBy: { createdAt: 'desc' },
       include: { subscription: { include: { plan: true } } },
       take: 5
     }),
     prisma.payment.aggregate({
-      where: { userId, status: { not: 'REFUNDED' } },
+      where: { userId, status: { not: 'REFUNDED' }, ...getPaymentScopeFilter(planScope) },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
       include: { plan: true }
     }),
     prisma.visitLog.findMany({

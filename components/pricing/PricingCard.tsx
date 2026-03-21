@@ -9,6 +9,13 @@ import { showToast } from '../ui/Toast';
 import { formatPrice } from '../../lib/plans-shared';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 import { asRecord } from '../../lib/runtime-guards';
+import {
+  createEmptyActiveRecurringPlansByFamily,
+  createEmptyScheduledPlanIdsByFamily,
+  getPricingPlanFamily,
+  type ActiveRecurringPlansByFamily,
+  type ScheduledPlanIdsByFamily,
+} from '../../lib/pricing-card-status';
 import { buildProrationSuccessMessage } from './proration-feedback';
 import { AuthSignIn, AuthSignUp, useAuthUser } from '@/lib/auth-provider/client';
 import { getAuthFormAppearance } from '@/lib/auth-provider/client/clerk-appearance';
@@ -36,12 +43,6 @@ type CouponOption = {
   percentOff: number | null;
   amountOffCents: number | null;
 };
-
-type ActiveRecurringPlan = {
-  planId: string;
-  priceCents: number | null;
-  recurringInterval: string | null;
-} | null;
 
 type ProrationLineItem = {
   id: string | null;
@@ -100,7 +101,61 @@ function getPendingProviderConfirmationPlanName(payload: unknown): string | null
   const pending = asRecord(record?.pending);
   return typeof pending?.plan === 'string' ? pending.plan : null;
 }
-export default function PricingCard({ plan, activeRecurringPlan = null, scheduledPlanId, currency }: { plan: DBPlan; activeRecurringPlan?: ActiveRecurringPlan; scheduledPlanId?: string | null; currency: string }) {
+
+type OwnedActiveSubscriptionSummary = {
+  family: 'personal' | 'team';
+  planId: string;
+  plan: string;
+  planAutoRenew: boolean;
+  planSupportsOrganizations: boolean;
+  expiresAt: string | null;
+};
+
+function getOwnedActiveSubscriptions(payload: unknown): OwnedActiveSubscriptionSummary[] {
+  const record = asRecord(payload);
+  const list = Array.isArray(record?.ownedActiveSubscriptions) ? record.ownedActiveSubscriptions : [];
+  const parsed = list
+    .map((item) => {
+      const value = asRecord(item);
+      if (!value) return null;
+      const family = value.family === 'team' ? 'team' : value.family === 'personal' ? 'personal' : null;
+      if (!family) return null;
+
+      return {
+        family,
+        planId: typeof value.planId === 'string' ? value.planId : '',
+        plan: typeof value.plan === 'string' ? value.plan : '',
+        planAutoRenew: value.planAutoRenew === true,
+        planSupportsOrganizations: value.planSupportsOrganizations === true,
+        expiresAt: typeof value.expiresAt === 'string' ? value.expiresAt : null,
+      } satisfies OwnedActiveSubscriptionSummary;
+    })
+    .filter((item): item is OwnedActiveSubscriptionSummary => item !== null && item.planId.length > 0);
+
+  if (parsed.length > 0) {
+    return parsed;
+  }
+
+  if (record?.active !== true) {
+    return [];
+  }
+
+  const fallbackPlanId = typeof record?.planId === 'string' ? record.planId : '';
+  if (!fallbackPlanId) {
+    return [];
+  }
+
+  return [{
+    family: getPricingPlanFamily(record?.planSupportsOrganizations === true),
+    planId: fallbackPlanId,
+    plan: typeof record?.plan === 'string' ? record.plan : '',
+    planAutoRenew: record?.planAutoRenew === true,
+    planSupportsOrganizations: record?.planSupportsOrganizations === true,
+    expiresAt: typeof record?.expiresAt === 'string' ? record.expiresAt : null,
+  }];
+}
+
+export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -864,10 +919,14 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         return;
       }
 
+      const ownedActiveSubscriptions = getOwnedActiveSubscriptions(sub);
+      const matchingOwnedSubscription = ownedActiveSubscriptions.find((subscription) => subscription.family === planFamily) ?? null;
+      const hasAnyOwnedTeamRecurring = ownedActiveSubscriptions.some((subscription) => subscription.planAutoRenew && subscription.planSupportsOrganizations);
+
       // Check if user has an active subscription
-      if (res.ok && sub && sub.active === true) {
-        const hasRecurring = sub.planAutoRenew === true;
-        const hasTeamRecurring = hasRecurring && sub.planSupportsOrganizations === true;
+      if (res.ok && matchingOwnedSubscription) {
+        const hasRecurring = matchingOwnedSubscription.planAutoRenew === true;
+        const hasTeamRecurring = hasAnyOwnedTeamRecurring;
         const buyingRecurring = plan.autoRenew;
 
         if (hasTeamRecurring && !buyingRecurring && !isTeamPlan) {
@@ -879,8 +938,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         // Scenario 1: Active non-recurring + purchasing recurring
         // Show modal warning that recurring will replace existing access
         if (!hasRecurring && buyingRecurring) {
-          setIfMounted(setExistingExpiresAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-          setIfMounted(setExistingPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
+          setIfMounted(setExistingExpiresAt)(matchingOwnedSubscription.expiresAt);
+          setIfMounted(setExistingPlanName)(matchingOwnedSubscription.plan);
           setIfMounted(setShowReplaceModal)(true);
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -890,8 +949,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         // Tokens are added without extending expiry (handled by backend)
         // Show info modal but proceed
         if (hasRecurring && !buyingRecurring) {
-          setIfMounted(setRecurringPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
-          setIfMounted(setRecurringRenewsAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+          setIfMounted(setRecurringPlanName)(matchingOwnedSubscription.plan);
+          setIfMounted(setRecurringRenewsAt)(matchingOwnedSubscription.expiresAt);
           setIfMounted(setShowRecurringTopupModal)(true);
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -900,8 +959,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         // Scenario 3: Active non-recurring + purchasing non-recurring
         // Extend time + add tokens
         if (!hasRecurring && !buyingRecurring) {
-          setIfMounted(setExistingExpiresAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
-          setIfMounted(setExistingPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
+          setIfMounted(setExistingExpiresAt)(matchingOwnedSubscription.expiresAt);
+          setIfMounted(setExistingPlanName)(matchingOwnedSubscription.plan);
           await loadOneTimeRenewalTokenPolicy();
           setIfMounted(setShowExtendModal)(true);
           setIfMounted(setCheckingExisting)(false);
@@ -911,8 +970,8 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
         // Scenario 4: Active recurring + purchasing recurring
         await loadOneTimeRenewalTokenPolicy();
         setIfMounted(setCheckingExisting)(false);
-        setIfMounted(setRecurringPlanName)(typeof sub.plan === 'string' ? sub.plan : null);
-        setIfMounted(setRecurringRenewsAt)(typeof sub.expiresAt === 'string' ? sub.expiresAt : null);
+        setIfMounted(setRecurringPlanName)(matchingOwnedSubscription.plan);
+        setIfMounted(setRecurringRenewsAt)(matchingOwnedSubscription.expiresAt);
         setIfMounted(setShowPlanSwitchModal)(true);
         return;
       }
@@ -935,6 +994,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
     : null;
   const tokenLabel = plan.tokenName || 'tokens';
   const isTeamPlan = plan.supportsOrganizations === true;
+  const planFamily = getPricingPlanFamily(plan.supportsOrganizations);
   const normalizedSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
   const tokenPoolStrategyLabel = 'Shared workspace token pool';
   const features = [
@@ -983,8 +1043,10 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
       className:
         'border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-300/40 dark:bg-amber-400/10 dark:text-amber-200'
     };
+  const activeRecurringPlan = activeRecurringPlansByFamily[planFamily];
+  const scheduledPlanId = scheduledPlanIdsByFamily[planFamily];
   const isCurrentAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && activeRecurringPlan.planId === plan.id);
-  const isScheduledPlan = Boolean(scheduledPlanId && plan.id === scheduledPlanId);
+  const isScheduledPlan = Boolean(scheduledPlanId && plan.autoRenew && plan.id === scheduledPlanId);
   const isSwitchingAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && !isCurrentAutoRenewPlan && !isScheduledPlan);
   const comparisonPriceCents = activeRecurringPlan?.priceCents ?? null;
 
@@ -1108,7 +1170,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
           title={pendingProviderConfirmation
             ? `Another plan change${pendingProviderConfirmationPlanName ? ` (${pendingProviderConfirmationPlanName})` : ''} is awaiting Paystack payment confirmation.`
             : isCurrentAutoRenewPlan
-              ? 'You are already subscribed to this plan.'
+              ? `You are already subscribed to this ${isTeamPlan ? 'team' : 'personal'} plan.`
               : undefined}
         >
           {buttonLabel}
@@ -1424,7 +1486,7 @@ export default function PricingCard({ plan, activeRecurringPlan = null, schedule
                         <p className="mt-2 text-neutral-500 dark:text-neutral-400">
                           {planSwitchProviderKey === 'paystack'
                             ? 'If Paystack takes time to debit the saved authorization, your plan will stay in an awaiting-confirmation state until the provider confirms payment.'
-                            : 'You&apos;ll review the proration breakdown before confirming.'}
+                            : 'You will review the proration breakdown before confirming.'}
                         </p>
                       </>
                     ) : (

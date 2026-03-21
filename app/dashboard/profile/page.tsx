@@ -11,7 +11,7 @@ import { UserSettingsTabs } from '../../../components/dashboard/UserSettingsTabs
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../lib/settings';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
@@ -36,6 +36,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
+  const planScope = getPlanScope(orgId);
 
   // Ensure user exists in database
   const user = await ensureUserExists();
@@ -53,23 +54,23 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
 
   const [subscription, paymentStats, userSettings, defaultTokenLabel, grossPaymentStats, recentPayments, organizationPlan] = await Promise.all([
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() }, ...getSubscriptionScopeFilter(planScope) },
       include: { plan: true }
     }),
     prisma.payment.aggregate({
-      where: { userId, status: { not: 'REFUNDED' } },
+      where: { userId, status: { not: 'REFUNDED' }, ...getPaymentScopeFilter(planScope) },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
     prisma.userSetting.findMany({ where: { userId } }),
     getDefaultTokenLabel(),
     prisma.payment.aggregate({
-      where: { userId },
+      where: { userId, ...getPaymentScopeFilter(planScope) },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
     prisma.payment.findMany({
-      where: { userId },
+      where: { userId, ...getPaymentScopeFilter(planScope) },
       take: 200,
       select: {
         plan: { select: { name: true } },

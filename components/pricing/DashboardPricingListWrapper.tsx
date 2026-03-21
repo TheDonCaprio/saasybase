@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import PricingList from './PricingList';
+import type { ActiveRecurringPlansByFamily, ScheduledPlanIdsByFamily } from '../../lib/pricing-card-status';
 
 type DBPlan = {
   id: string;
@@ -14,16 +15,10 @@ type DBPlan = {
   tokenName?: string | null;
 };
 
-type ActiveRecurringPlan = {
-  planId: string;
-  priceCents: number | null;
-  recurringInterval: string | null;
-} | null;
-
 interface DashboardPricingListWrapperProps {
   plans: DBPlan[];
-  activeRecurringPlan?: ActiveRecurringPlan;
-  scheduledPlanId?: string | null;
+  activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily;
+  scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily;
   gridClasses?: {
     oneTime?: string;
     recurring?: string;
@@ -31,6 +26,6 @@ interface DashboardPricingListWrapperProps {
   currency: string;
 }
 
-export default function DashboardPricingListWrapper({ plans, activeRecurringPlan = null, scheduledPlanId, gridClasses, currency }: DashboardPricingListWrapperProps) {
-  return <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlanId} gridClasses={gridClasses} currency={currency} />;
+export default function DashboardPricingListWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, gridClasses, currency }: DashboardPricingListWrapperProps) {
+  return <PricingList plans={plans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} />;
 }

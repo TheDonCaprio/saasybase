@@ -35,7 +35,11 @@ const userPlanContextMock = vi.hoisted(() => ({
   getEffectiveMemberTokenCap: vi.fn(() => null),
   getMemberCapStrategy: vi.fn(() => null),
   getMemberSharedTokenBalance: vi.fn(() => null),
+  getPlanScope: vi.fn((orgId?: string | null) => (orgId ? 'WORKSPACE' : 'PERSONAL')),
   getOrganizationPlanContext: vi.fn<[], Promise<unknown>>(async () => null),
+  getSubscriptionScopeFilter: vi.fn((scope: 'PERSONAL' | 'WORKSPACE') => (scope === 'WORKSPACE'
+    ? { plan: { supportsOrganizations: true } }
+    : { NOT: { plan: { supportsOrganizations: true } } })),
 }));
 
 vi.mock('../lib/user-plan-context', () => userPlanContextMock);
@@ -48,6 +52,7 @@ vi.mock('../lib/nextauth-email-verification', () => ({
 vi.mock('../lib/auth-provider', () => ({ authService: { providerName: 'nextauth' } }));
 
 import { GET, PATCH } from '../app/api/user/profile/route';
+import { getAuthSafe } from '../lib/auth';
 
 describe('GET /api/user/profile', () => {
   beforeEach(() => {
@@ -73,6 +78,30 @@ describe('GET /api/user/profile', () => {
     expect(body.subscription).toBe(null);
     expect(body.paidTokens).toEqual({ tokenName: 'credits', remaining: 123, isUnlimited: false, displayRemaining: '123' });
     expect(body.planActionLabel).toBe('Upgrade');
+  });
+
+  it('does not treat a team subscription as a personal plan when no workspace is selected', async () => {
+    vi.mocked(getAuthSafe).mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      email: 'owner@capriofiles.com',
+      name: 'Owner',
+      role: 'USER',
+      tokenBalance: 0,
+      freeTokenBalance: 5,
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+
+    const res = await GET();
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.subscription).toBe(null);
+    expect(body.planSource).toBe('FREE');
+    expect(userPlanContextMock.getPlanScope).toHaveBeenCalledWith(null);
+    expect(userPlanContextMock.getSubscriptionScopeFilter).toHaveBeenCalledWith('PERSONAL');
   });
 
   it('uses subscription tokenName for paidTokens when active subscription exists', async () => {

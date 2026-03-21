@@ -13,17 +13,19 @@ import { getActiveCurrencyAsync } from '../../lib/payment/registry';
 import { formatCurrency } from '../../lib/utils/currency';
 import Link from 'next/link';
 import { buildPendingSubscriptionSectionCopy } from '../../lib/pending-subscription-display';
-import { PLAN_WITH_BILLING_FIELDS, buildPlanDisplay, getOrganizationPlanContext } from '../../lib/user-plan-context';
+import { PLAN_WITH_BILLING_FIELDS, buildPlanDisplay, getOrganizationPlanContext, getPlanScope, getSubscriptionScopeFilter } from '../../lib/user-plan-context';
+import { buildPricingCardRecurringState } from '../../lib/pricing-card-status';
 
 export default async function PricingPage() {
   const { userId, orgId } = await authService.getSession();
   const activeCurrency = await getActiveCurrencyAsync();
   const now = new Date();
   const nowTimeMs = now.getTime();
+  const planScope = getPlanScope(orgId);
 
-  const [currentSubscription, pendingSubscriptionsRaw, plansRaw, defaultTokenLabel, userRecord, organizationPlan] = await Promise.all([
+  const [currentSubscription, pendingSubscriptionsRaw, plansRaw, defaultTokenLabel, userRecord, organizationPlan, ownedRecurringSubscriptionsForCards] = await Promise.all([
     userId ? prisma.subscription.findFirst({
-    where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
+    where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
     include: { 
       plan: {
         select: PLAN_WITH_BILLING_FIELDS
@@ -38,6 +40,7 @@ export default async function PricingPage() {
           where: {
             userId,
             status: 'PENDING',
+            ...getSubscriptionScopeFilter(planScope),
             OR: [
               { startedAt: { gt: now } },
               { payments: { some: { status: 'SUCCEEDED' } } },
@@ -85,7 +88,42 @@ export default async function PricingPage() {
     getDefaultTokenLabel(),
     userId ? prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }) : null,
     userId ? getOrganizationPlanContext(userId, orgId) : null,
+    userId
+      ? prisma.subscription.findMany({
+          where: {
+            userId,
+            plan: { autoRenew: true },
+            OR: [
+              { status: 'ACTIVE', expiresAt: { gt: now } },
+              {
+                status: 'PENDING',
+                OR: [
+                  { startedAt: { gt: now } },
+                  { payments: { some: { status: 'SUCCEEDED' } } },
+                  { prorationPendingSince: { not: null } },
+                ],
+              },
+            ],
+          },
+          select: {
+            status: true,
+            plan: {
+              select: {
+                id: true,
+                priceCents: true,
+                recurringInterval: true,
+                supportsOrganizations: true,
+                autoRenew: true,
+              },
+            },
+            scheduledPlan: { select: { id: true } },
+          },
+          orderBy: [{ status: 'asc' }, { expiresAt: 'asc' }, { startedAt: 'asc' }],
+        })
+      : [],
   ]);
+
+  const { activeRecurringPlansByFamily, scheduledPlanIdsByFamily } = buildPricingCardRecurringState(ownedRecurringSubscriptionsForCards);
 
   const pendingSubscriptions = await Promise.all(
     pendingSubscriptionsRaw.map(async (sub) => ({
@@ -239,18 +277,6 @@ export default async function PricingPage() {
         ],
       }
     : undefined;
-
-  const activeRecurringPlan = currentSubscription?.plan?.autoRenew
-    ? {
-        planId: currentSubscription.plan.id,
-        priceCents: typeof currentSubscription.plan.priceCents === 'number'
-          ? currentSubscription.plan.priceCents
-          : null,
-        recurringInterval: typeof currentSubscription.plan.recurringInterval === 'string'
-          ? currentSubscription.plan.recurringInterval
-          : null,
-      }
-    : null;
 
   // Fetch pricing layout settings and generate grid classes
   const pricingSettings = await getPricingSettings();
@@ -436,7 +462,7 @@ export default async function PricingPage() {
           </section>
         ) : null}
         
-    <PricingList plans={plans} activeRecurringPlan={activeRecurringPlan} scheduledPlanId={scheduledPlan?.id ?? null} gridClasses={gridClasses} currency={activeCurrency} />
+    <PricingList plans={plans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={activeCurrency} />
         <div className="text-xs text-neutral-500 space-y-1">
           <p>• <span className="text-blue-400">●</span> Auto-renewing plans will automatically charge and extend your access</p>
           <p>• <span className="text-yellow-400">●</span> One-time plans require manual renewal when they expire</p>

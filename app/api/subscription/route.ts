@@ -6,6 +6,7 @@ import { syncOrganizationEligibilityForUser } from '../../../lib/organization-ac
 import { Logger } from '../../../lib/logger';
 import { getAuthSafe } from '../../../lib/auth';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
+import { getPricingPlanFamily } from '../../../lib/pricing-card-status';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ ok: false, error: message, code }, { status });
@@ -50,16 +51,16 @@ export async function GET() {
       }
     }
 
-    // Find current active subscription (ACTIVE)
-    const sub = await prisma.subscription.findFirst({ 
+    const ownedActiveSubscriptions = await prisma.subscription.findMany({
       where: { 
         userId, 
         status: 'ACTIVE', 
         expiresAt: { gt: now } 
       }, 
       include: { plan: true },
-      orderBy: { expiresAt: 'asc' } // Get the one expiring soonest
+      orderBy: { expiresAt: 'asc' }
     });
+    const sub = ownedActiveSubscriptions[0] ?? null;
     
     // Also check for any pending subscription (manual-activation flow)
     const pendingSub = await prisma.subscription.findFirst({
@@ -78,10 +79,23 @@ export async function GET() {
     
       const organizationPlan = sub ? null : await getOrganizationPlanContext(userId, orgId);
 
-      const response: Record<string, unknown> = { ok: true };
+      const response: Record<string, unknown> = {
+        ok: true,
+        ownedActiveSubscriptions: ownedActiveSubscriptions.map((subscription) => ({
+          id: subscription.id,
+          planId: subscription.plan.id,
+          plan: subscription.plan.name,
+          family: getPricingPlanFamily(subscription.plan.supportsOrganizations),
+          planAutoRenew: !!subscription.plan.autoRenew,
+          planSupportsOrganizations: subscription.plan.supportsOrganizations === true,
+          expiresAt: subscription.expiresAt,
+          status: subscription.status,
+        })),
+      };
       if (sub) {
         response.active = true;
         response.source = 'personal';
+        response.planId = sub.plan.id;
         response.plan = sub.plan.name;
         // Expose whether the current plan auto-renews so clients can decide
         // whether to treat it as a one-time purchase (autoRenew === false)

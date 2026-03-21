@@ -13,7 +13,7 @@ import type { PlanInfoTile } from '../../../components/dashboard/CurrentPlanStat
 import PlanBillingActions from '../../../components/dashboard/PlanBillingActions';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { getActiveCurrencyAsync } from '../../../lib/payment/registry';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 import { buildPendingSubscriptionSectionCopy } from '../../../lib/pending-subscription-display';
@@ -36,10 +36,11 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
+  const planScope = getPlanScope(orgId);
 
   const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan, activeCurrency] = await Promise.all([
     prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
       include: {
         plan: true,
         scheduledPlan: { select: { id: true, name: true, priceCents: true } }
@@ -49,6 +50,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
       where: {
         userId,
         status: { in: ['PENDING'] },
+        ...getSubscriptionScopeFilter(planScope),
         // Only show upcoming items that are either scheduled for the future
         // or have payment evidence. This prevents abandoned checkout placeholders
         // from appearing as activatable subscriptions.
@@ -62,7 +64,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
       orderBy: { startedAt: 'asc' }
     }),
     prisma.payment.findMany({
-      where: { userId },
+      where: { userId, ...getPaymentScopeFilter(planScope) },
       orderBy: { createdAt: 'desc' },
       include: { subscription: { include: { plan: true } } },
       take: 3

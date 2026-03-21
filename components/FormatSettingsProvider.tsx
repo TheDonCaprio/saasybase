@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { AppFormatMode } from '../lib/settings';
 import { useAuthSession } from '@/lib/auth-provider/client';
+import { fetchUserSettings } from '@/lib/user-settings.client';
 
 type ContextValue = {
   mode: AppFormatMode;
@@ -79,16 +80,10 @@ export function FormatSettingsProvider({
       let cancelled = false;
       (async () => {
         try {
-          const ur = await fetch('/api/user/settings');
-          if (!ur.ok) return;
-          const uj = await ur.json();
-          if (Array.isArray(uj.settings)) {
-            const found = uj.settings.find((s: unknown): s is Record<string, unknown> => {
-              return typeof s === 'object' && s !== null && (s as Record<string, unknown>).key === 'TIMEZONE';
-            });
-            const userTz: string | null = found && typeof found.value === 'string' ? found.value : null;
-            if (userTz && !cancelled) onApply(userTz);
-          }
+          const settings = await fetchUserSettings();
+          const timezoneSetting = settings.find((setting) => setting.key === 'TIMEZONE');
+          const userTz = timezoneSetting?.value ?? null;
+          if (userTz && !cancelled) onApply(userTz);
         } catch {
           // Quietly ignore any errors (network/401 or Clerk missing) to avoid
           // noisy console output for anonymous visitors.

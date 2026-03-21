@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSun, faMoon, faCircleHalfStroke } from '@fortawesome/free-solid-svg-icons';
 import { useAuthSession } from '@/lib/auth-provider/client';
+import { fetchUserSettings, updateCachedUserSetting } from '@/lib/user-settings.client';
 
 type ThemePreference = 'light' | 'dark' | 'auto';
 
@@ -64,12 +65,8 @@ export function ThemeToggle() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/user/settings', { method: 'GET' });
-        if (!res.ok) return;
-        const j = await res.json();
-        const maybeTheme = Array.isArray(j.settings)
-          ? j.settings.find((s: { key?: string; value?: string }) => s?.key === 'THEME_PREFERENCE')
-          : null;
+        const settings = await fetchUserSettings();
+        const maybeTheme = settings.find((setting) => setting.key === 'THEME_PREFERENCE');
         const serverTheme = maybeTheme?.value;
         if (!cancelled && (serverTheme === 'light' || serverTheme === 'dark' || serverTheme === 'auto')) {
           setPreference(serverTheme);
@@ -97,11 +94,17 @@ export function ThemeToggle() {
     setSaving(true);
 
     try {
-      await fetch('/api/user/settings', {
+      const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'THEME_PREFERENCE', value: nextPreference })
       });
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload?.setting) {
+          updateCachedUserSetting(payload.setting);
+        }
+      }
     } catch (e) {
       // Ignore network/auth errors; local preference and theme are already applied.
       void e;

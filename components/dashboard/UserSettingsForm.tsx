@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { showToast } from '../../components/ui/Toast';
 import TIMEZONES from '../../lib/timezones';
+import { updateCachedUserSetting } from '@/lib/user-settings.client';
 
 interface UserSetting {
   id: string;
@@ -95,6 +96,7 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
 
       if (response.ok) {
         const { setting } = await response.json();
+        updateCachedUserSetting(setting);
         setSettings(prev => {
           const existing = prev.find(s => s.key === key);
           if (existing) {

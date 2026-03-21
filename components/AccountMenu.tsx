@@ -72,6 +72,18 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function isWithinAuthOverlay(target: Element | null): boolean {
+  if (!target) return false;
+
+  return Boolean(
+    target.closest('[data-auth-org-switcher]')
+    || target.closest('[data-auth-modal-root="true"]')
+    || target.closest('[class*="cl-organizationSwitcher"]')
+    || target.closest('[class*="cl-organizationList"]')
+    || target.closest('[class*="cl-userPreview__personalWorkspace"]')
+  );
+}
+
 export default function AccountMenu() {
   const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
@@ -215,11 +227,7 @@ export default function AccountMenu() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Element | null;
-      if (target?.closest('[data-auth-org-switcher]')) {
-        return;
-      }
-
-      if (target?.closest('[data-auth-modal-root="true"]')) {
+      if (isWithinAuthOverlay(target)) {
         return;
       }
 

@@ -15,6 +15,7 @@ export type TeamDashboardMember = {
   memberTokenUsage: number;
   memberTokenUsageWindowStart: string | null;
   effectiveMemberCap: number | null;
+  ownerExemptFromCaps: boolean;
 };
 
 export type TeamDashboardInvite = {
@@ -120,7 +121,8 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
 
   const members: TeamDashboardMember[] = record.memberships.map((membership) => {
     const overrideCap = typeof membership.memberTokenCapOverride === 'number' ? membership.memberTokenCapOverride : null;
-    const effectiveCap = capsDisabled ? null : overrideCap ?? orgCap;
+    const ownerExemptFromCaps = record.ownerExemptFromCaps === true && membership.userId === record.ownerUserId;
+    const effectiveCap = ownerExemptFromCaps ? null : (capsDisabled ? null : overrideCap ?? orgCap);
 
     const windowStartMs = membership.memberTokenUsageWindowStart ? membership.memberTokenUsageWindowStart.getTime() : null;
     const windowExpired =
@@ -143,6 +145,7 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
       memberTokenUsage: usage,
       memberTokenUsageWindowStart: windowExpired ? null : (membership.memberTokenUsageWindowStart ? membership.memberTokenUsageWindowStart.toISOString() : null),
       effectiveMemberCap: effectiveCap,
+      ownerExemptFromCaps,
     };
   });
 

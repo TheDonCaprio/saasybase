@@ -69,4 +69,69 @@ describe('fetchTeamDashboardState active organization resolution', () => {
     );
     expect(state.organization?.id).toBe('org_1');
   });
+
+  it('shows the owner as uncapped in dashboard state when owner exemption is enabled', async () => {
+    accessSummaryMock.mockResolvedValue({
+      allowed: true,
+      kind: 'OWNER',
+      subscription: { id: 'sub_1' },
+      plan: { id: 'plan_team' },
+    });
+
+    prismaMock.organization.findFirst.mockResolvedValue({
+      id: 'org_1',
+      clerkOrganizationId: 'provider_org_1',
+      name: 'Acme',
+      slug: 'acme',
+      ownerUserId: 'user_1',
+      planId: 'plan_team',
+      seatLimit: 5,
+      tokenBalance: 500,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+      memberTokenCap: 100,
+      memberCapStrategy: 'HARD',
+      memberCapResetIntervalHours: null,
+      ownerExemptFromCaps: true,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      plan: {
+        id: 'plan_team',
+        name: 'Team',
+        tokenName: 'credits',
+        tokenLimit: 500,
+        organizationSeatLimit: 5,
+        organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+        supportsOrganizations: true,
+      },
+      memberships: [
+        {
+          id: 'membership_owner',
+          userId: 'user_1',
+          role: 'OWNER',
+          status: 'ACTIVE',
+          createdAt: new Date('2024-01-01T00:00:00.000Z'),
+          memberTokenCapOverride: null,
+          memberTokenUsage: 75,
+          memberTokenUsageWindowStart: null,
+          user: {
+            id: 'user_1',
+            name: 'Owner User',
+            email: 'owner@example.com',
+            imageUrl: null,
+          },
+        },
+      ],
+      invites: [],
+    });
+
+    const state = await fetchTeamDashboardState('user_1', { activeOrganizationId: 'org_1' });
+
+    expect(state.organization?.members).toEqual([
+      expect.objectContaining({
+        userId: 'user_1',
+        effectiveMemberCap: null,
+        sharedTokenBalance: 500,
+        ownerExemptFromCaps: true,
+      }),
+    ]);
+  });
 });

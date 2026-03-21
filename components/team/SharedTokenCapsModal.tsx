@@ -186,12 +186,12 @@ function SharedTokenCapsModalPanel({
                                         onChange={(e) => setOwnerExempt(e.target.checked)}
                                         className="peer sr-only"
                                     />
-                                    <div className="h-5 w-9 rounded-full bg-neutral-700 transition peer-checked:bg-indigo-600"></div>
+                                    <div className="h-5 w-9 rounded-full bg-neutral-200 transition peer-checked:bg-indigo-600 dark:bg-neutral-700"></div>
                                     <div className="absolute left-1 h-3 w-3 rounded-full bg-white transition peer-checked:translate-x-4"></div>
                                 </div>
-                                <span className="text-sm text-neutral-200 group-hover:text-white transition-colors">Exclude admin from caps</span>
+                                <span className="text-sm text-slate-600 dark:text-neutral-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Exclude admin from caps</span>
                             </label>
-                            <span className="text-xs text-neutral-400">The workspace owner will have unlimited access to shared pool tokens regardless of caps.</span>
+                            <span className="text-xs text-slate-600 dark:text-neutral-400">The workspace owner will have unlimited access to shared pool tokens regardless of caps.</span>
                         </div>
                     </div>
                 </div>

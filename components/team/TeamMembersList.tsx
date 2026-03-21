@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { TeamDashboardMember } from '../../lib/team-dashboard';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TeamMembersListProps {
   members: TeamDashboardMember[];
@@ -16,6 +17,7 @@ interface TeamMembersListProps {
 export function TeamMembersList({ members, currentUserId, busyAction, canManageMembers, onRemove, onSetCapOverride, tokenLabel }: TeamMembersListProps) {
   const [editingCapFor, setEditingCapFor] = useState<string | null>(null);
   const [capInputValue, setCapInputValue] = useState<string>('');
+  const [memberToRemove, setMemberToRemove] = useState<TeamDashboardMember | null>(null);
 
   if (members.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-neutral-400">No members added yet.</p>;
@@ -40,6 +42,23 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
     await onSetCapOverride(member.userId, cap);
   };
 
+  const handleRequestRemove = (member: TeamDashboardMember) => {
+    if (member.userId === currentUserId) {
+      return;
+    }
+
+    setMemberToRemove(member);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!memberToRemove) {
+      return;
+    }
+
+    await onRemove(memberToRemove.userId);
+    setMemberToRemove(null);
+  };
+
   return (
     <ul className="space-y-3">
       {members.map((member) => {
@@ -48,7 +67,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
         const isRemoving = busyAction === `remove:${member.userId}`;
         const isSavingCap = busyAction === `cap:${member.userId}`;
         const capLabel = member.effectiveMemberCap != null ? `${member.effectiveMemberCap.toLocaleString()} ${label}` : 'Unlimited';
-        const overrideActive = member.memberTokenCapOverride != null;
+        const overrideActive = member.memberTokenCapOverride != null && !member.ownerExemptFromCaps;
         const usageLabel = `${member.memberTokenUsage.toLocaleString()} ${label}`;
         const sharedLabel = `${member.sharedTokenBalance.toLocaleString()} ${label}`;
         const isEditingCap = editingCapFor === member.userId;
@@ -70,6 +89,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
                   </span>
                   <span>
                     Cap: <strong className="text-slate-900 dark:text-neutral-100">{capLabel}</strong>
+                    {member.ownerExemptFromCaps ? <span className="ml-1 rounded bg-emerald-100 px-1 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">owner exempt</span> : null}
                     {overrideActive ? <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">override</span> : null}
                   </span>
                   <span>
@@ -81,7 +101,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
               {canManageMembers ? (
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <button
-                    onClick={() => onRemove(member.userId)}
+                    onClick={() => handleRequestRemove(member)}
                     disabled={disableRemoval || isRemoving}
                     className="text-xs font-semibold text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -131,6 +151,16 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
           </li>
         );
       })}
+
+      <ConfirmModal
+        isOpen={memberToRemove != null}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={handleConfirmRemove}
+        title="Remove member"
+        description={`Are you sure you want to remove ${memberToRemove?.name || memberToRemove?.email || 'this member'} from the workspace? This will revoke their access immediately.`}
+        confirmLabel="Remove"
+        loading={memberToRemove != null && busyAction === `remove:${memberToRemove.userId}`}
+      />
     </ul>
   );
 }

@@ -7,15 +7,11 @@ const path = require('path');
 
 // Map of file paths to correct relative import paths
 const importFixes = {
-  // app/api level (3 levels deep) 
-  // removed: app/api/test/route.ts
+  // app/api level (3 levels deep)
   'app/api/checkout/route.ts': '../../../lib/',
   'app/api/subscription/route.ts': '../../../lib/',
   
   // app/api/[folder] level (4 levels deep)
-  // removed: app/api/dev/whoami/route.ts
-  // removed: app/api/dev/sync-user/route.ts
-  // removed: app/api/debug/subscriptions/route.ts
   'app/api/stripe/webhook/route.ts': '../../../../lib/',
   'app/api/support/tickets/route.ts': '../../../../lib/',
   'app/api/checkout/confirm/route.ts': '../../../../lib/',

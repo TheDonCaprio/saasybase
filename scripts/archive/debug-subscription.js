@@ -2,8 +2,9 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Usage: node scripts/debug-subscription.js --id <subscriptionId>
-//        node scripts/debug-subscription.js --since "2025-10-16T12:20:00" --until "2025-10-16T12:30:00"
+// Archived subscription inspection helper.
+// Usage: node scripts/archive/debug-subscription.js --id <subscriptionId>
+//        node scripts/archive/debug-subscription.js --since "2025-10-16T12:20:00" --until "2025-10-16T12:30:00"
 
 function parseArgs() {
   const args = process.argv.slice(2);

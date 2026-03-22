@@ -681,7 +681,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             : `${base}/dashboard?purchase=success&payment_intent=${encodeURIComponent(dedupeKey)}&provider=${paymentService.provider.name}`;
 
         const cancelUrl = providerName === 'razorpay'
-            ? `${base}/checkout/return?provider=razorpay&status=cancelled`
+            ? `${base}/dashboard?purchase=cancelled&provider=razorpay&status=cancelled`
             : `${base}/pricing?canceled=1`;
 
         const opts = {

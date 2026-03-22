@@ -4,7 +4,7 @@ import { Logger } from '../../../../lib/logger';
 
 function buildRedirectUrl(req: NextRequest, params: Record<string, string | null>) {
   const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-  const url = new URL('/checkout/return', origin);
+  const url = new URL('/dashboard', origin);
   for (const [key, value] of Object.entries(params)) {
     if (value) url.searchParams.set(key, value);
   }
@@ -93,6 +93,7 @@ async function handleCallback(
       Logger.warn('Razorpay subscription callback missing secret', { subscriptionId, paymentId });
       const fallbackUrl = buildRedirectUrl(req, {
         provider,
+        purchase: 'failed',
         status: 'error',
         since,
       });
@@ -107,6 +108,7 @@ async function handleCallback(
       });
       const failUrl = buildRedirectUrl(req, {
         provider,
+        purchase: 'failed',
         status: 'error',
         since,
       });
@@ -115,6 +117,7 @@ async function handleCallback(
 
     const redirectUrl = buildRedirectUrl(req, {
       provider,
+      purchase: 'success',
       status: 'success',
       session_id: subscriptionId,
       payment_id: paymentId,
@@ -130,6 +133,7 @@ async function handleCallback(
       Logger.warn('Razorpay order callback missing secret', { orderId, paymentId });
       const fallbackUrl = buildRedirectUrl(req, {
         provider,
+        purchase: 'failed',
         status: 'error',
         since,
       });
@@ -144,6 +148,7 @@ async function handleCallback(
       });
       const failUrl = buildRedirectUrl(req, {
         provider,
+        purchase: 'failed',
         status: 'error',
         since,
       });
@@ -152,6 +157,7 @@ async function handleCallback(
 
     const redirectUrl = buildRedirectUrl(req, {
       provider,
+      purchase: 'success',
       status: 'success',
       session_id: orderId,
       payment_id: paymentId,
@@ -186,6 +192,7 @@ async function handleCallback(
     if (paymentId && signature) {
       const pendingUrl = buildRedirectUrl(req, {
         provider,
+        purchase: 'success',
         status: 'success',
         payment_id: paymentId,
         since,
@@ -206,6 +213,7 @@ async function handleCallback(
     Logger.warn('Razorpay callback missing secret', { paymentLinkId, paymentId });
     const fallbackUrl = buildRedirectUrl(req, {
       provider,
+      purchase: 'failed',
       status: 'error',
       since,
     });
@@ -222,6 +230,7 @@ async function handleCallback(
     });
     const failUrl = buildRedirectUrl(req, {
       provider,
+      purchase: 'failed',
       status: 'error',
       since,
     });
@@ -230,9 +239,11 @@ async function handleCallback(
 
   const normalizedStatus = linkStatus.toLowerCase();
   const status = normalizedStatus === 'paid' ? 'success' : normalizedStatus;
+  const purchase = status === 'success' ? 'success' : (status === 'cancelled' || status === 'canceled' ? 'cancelled' : 'failed');
 
   const redirectUrl = buildRedirectUrl(req, {
     provider,
+    purchase,
     status,
     session_id: paymentLinkId,
     payment_id: paymentId,

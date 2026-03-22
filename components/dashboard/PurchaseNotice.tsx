@@ -18,13 +18,22 @@ type PaymentLookup = {
   tokenName: string | null;
 };
 
+type CheckoutConfirmResponse = {
+  completed?: boolean;
+  ok?: boolean;
+  active?: boolean;
+  paymentId?: string;
+  requiresOrganizationSetup?: boolean;
+  setupUrl?: string;
+};
+
 const buildToastMessage = (message: PurchaseMessage) => {
   return message.title ? `${message.title} ${message.body}`.trim() : message.body;
 };
 
 const stripPurchaseParams = (params: URLSearchParams) => {
   const next = new URLSearchParams(params);
-  ['purchase', 'payment_id', 'provider', 'status', 'since', 'plan'].forEach((key) => {
+  ['purchase', 'payment_id', 'provider', 'status', 'since', 'plan', 'session_id', 'sessionId'].forEach((key) => {
     next.delete(key);
   });
   return next;
@@ -36,16 +45,23 @@ export function PurchaseNotice() {
   const pathname = usePathname();
   const [message, setMessage] = useState<PurchaseMessage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmStatus, setConfirmStatus] = useState<'idle' | 'confirming' | 'confirmed' | 'timeout'>('idle');
+  const [confirmedPaymentId, setConfirmedPaymentId] = useState<string | null>(null);
   const hasShownRef = useRef(false);
 
   const purchase = (params?.get('purchase') || '').toLowerCase();
   const status = (params?.get('status') || '').toLowerCase();
   const provider = (params?.get('provider') || '').toLowerCase();
   const paymentId = params?.get('payment_id') || null;
+  const sessionId = params?.get('session_id') || params?.get('sessionId') || null;
+  const sinceParam = params?.get('since') || null;
 
   const isSuccess = purchase === 'success' || status === 'success' || status === 'paid' || status === 'completed';
   const isCancelled = purchase === 'cancelled' || purchase === 'canceled' || status === 'cancelled' || status === 'canceled';
   const isFailure = purchase === 'failed' || status === 'failed' || status === 'error';
+  const isRazorpayConfirmation = provider === 'razorpay' && isSuccess && Boolean(paymentId || sessionId || sinceParam);
+  const effectivePaymentId = confirmedPaymentId || paymentId;
 
   const shouldShow = Boolean(purchase || status);
 
@@ -80,18 +96,103 @@ export function PurchaseNotice() {
   }, [shouldShow, isSuccess, isCancelled, isFailure]);
 
   useEffect(() => {
+    if (!isRazorpayConfirmation) {
+      setIsConfirming(false);
+      setConfirmStatus('idle');
+      setConfirmedPaymentId(null);
+      return;
+    }
+
+    let cancelled = false;
+    const sinceMs = Number(sinceParam);
+    const hasSince = Number.isFinite(sinceMs) && sinceMs > 0;
+    const maxMs = 2 * 60 * 1000;
+    const intervalMs = 3000;
+    const startedAt = Date.now();
+
+    const poll = async () => {
+      if (cancelled) return;
+
+      setIsConfirming(true);
+      setConfirmStatus('confirming');
+
+      try {
+        const qp = new URLSearchParams();
+        if (sessionId) qp.set('session_id', sessionId);
+        if (paymentId) qp.set('payment_id', paymentId);
+        if (hasSince) qp.set('since', String(sinceMs));
+        if (!sessionId && !paymentId) qp.set('recent', '1');
+
+        const res = await fetch(`/api/checkout/confirm?${qp.toString()}`);
+        const data = await res.json().catch(() => null) as CheckoutConfirmResponse | null;
+        const completed = Boolean(data?.completed) || (Boolean(data?.ok) && Boolean(data?.active));
+
+        if (res.ok && completed) {
+          if (data?.requiresOrganizationSetup) {
+            window.location.href = data.setupUrl || '/dashboard/team?fromCheckout=1&provision=1';
+            return;
+          }
+
+          if (cancelled) return;
+          setConfirmedPaymentId(data?.paymentId || paymentId);
+          setConfirmStatus('confirmed');
+          setIsConfirming(false);
+          return;
+        }
+      } catch {
+        // ignore transient polling errors and retry until timeout
+      }
+
+      if (Date.now() - startedAt > maxMs) {
+        if (cancelled) return;
+        setConfirmStatus('timeout');
+        setIsConfirming(false);
+        return;
+      }
+
+      setTimeout(poll, intervalMs);
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isRazorpayConfirmation, paymentId, sessionId, sinceParam]);
+
+  useEffect(() => {
     if (!baseMessage || !shouldShow) return;
 
     let cancelled = false;
     const resolveMessage = async () => {
-      if (!isSuccess || !paymentId) {
+      if (isRazorpayConfirmation) {
+        if (confirmStatus === 'confirming' || confirmStatus === 'idle') {
+          if (!cancelled) {
+            setMessage(null);
+          }
+          return;
+        }
+
+        if (confirmStatus === 'timeout') {
+          if (!cancelled) {
+            setMessage({
+              title: 'Payment still processing.',
+              body: 'Razorpay returned successfully, but confirmation is taking longer than usual. Refresh shortly if your balance has not updated yet.',
+              tone: 'warning',
+            });
+          }
+          return;
+        }
+      }
+
+      if (!isSuccess || !effectivePaymentId) {
         if (!cancelled) setMessage(baseMessage);
         return;
       }
 
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/payments?search=${encodeURIComponent(paymentId)}&limit=1&count=false`);
+        const res = await fetch(`/api/dashboard/payments?search=${encodeURIComponent(effectivePaymentId)}&limit=1&count=false`);
         const data = await res.json().catch(() => null) as { payments?: Array<Record<string, unknown>> } | null;
         const payment = Array.isArray(data?.payments) && data?.payments.length > 0 ? data?.payments[0] : null;
         const plan = payment && typeof payment === 'object' ? (payment as { plan?: Record<string, unknown> }).plan : null;
@@ -127,7 +228,7 @@ export function PurchaseNotice() {
     return () => {
       cancelled = true;
     };
-  }, [baseMessage, isSuccess, paymentId, provider, shouldShow]);
+  }, [baseMessage, confirmStatus, effectivePaymentId, isRazorpayConfirmation, isSuccess, provider, shouldShow]);
 
   useEffect(() => {
     if (!message || hasShownRef.current) return;
@@ -143,7 +244,7 @@ export function PurchaseNotice() {
   }, [message, params, pathname, router]);
 
   // Loading state while fetching payment details
-  if (isLoading && shouldShow && !message) {
+  if ((isConfirming || isLoading) && shouldShow && !message) {
     return (
       <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 dark:border-slate-800/70 dark:bg-slate-950/40 px-4 py-3 text-sm shadow-sm mb-4 animate-pulse">
         <div className="flex items-center gap-2">

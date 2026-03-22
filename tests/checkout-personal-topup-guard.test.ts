@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
+let providerName = 'stripe';
+const createPaymentIntentMock = vi.hoisted(() => vi.fn());
+const createSubscriptionIntentMock = vi.hoisted(() => vi.fn());
+
 const authMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'user_1', orgId: null })));
 
 const rateLimitMock = vi.hoisted(() =>
@@ -67,12 +71,18 @@ vi.mock('../lib/payment/registry', () => ({
 }));
 vi.mock('../lib/payment/service', () => ({
   paymentService: {
-    provider: { name: 'stripe' },
+    provider: {
+      get name() {
+        return providerName;
+      },
+    },
     createCheckoutSession: vi.fn(),
+    createPaymentIntent: createPaymentIntentMock,
+    createSubscriptionIntent: createSubscriptionIntentMock,
   },
 }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
-vi.mock('../lib/env', () => ({ getEnv: vi.fn(() => '') }));
+vi.mock('../lib/env', () => ({ getEnv: vi.fn(() => ({ NEXT_PUBLIC_APP_URL: '' })) }));
 vi.mock('../lib/coupons', () => ({
   ensureProviderCoupon: vi.fn(),
   isCouponCurrentlyActive: vi.fn(() => true),
@@ -96,6 +106,9 @@ import { GET as embeddedCheckoutGet } from '../app/api/checkout/embedded/route';
 describe('checkout personal one-time guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    providerName = 'stripe';
+    createPaymentIntentMock.mockResolvedValue({ clientSecret: 'order_mock', paymentIntentId: 'order_mock' });
+    createSubscriptionIntentMock.mockResolvedValue({ clientSecret: 'sub_mock', subscriptionId: 'sub_mock' });
 
     prismaMock.plan.findUnique.mockResolvedValue({
       id: 'plan_personal_ot',
@@ -144,5 +157,27 @@ describe('checkout personal one-time guard', () => {
     expect(body.code).toBe('PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION');
     expect(body.redirectTo).toBe('/dashboard/team');
     expect(body.error).toContain('Personal one-time top-ups are unavailable');
+  });
+
+  it('uses dashboard cancel redirect for Razorpay embedded checkout', async () => {
+    providerName = 'razorpay';
+    prismaMock.subscription.findFirst.mockResolvedValue(null);
+
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { clientSecret?: string; provider?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.clientSecret).toBe('order_mock');
+    expect(body.provider).toBe('razorpay');
+    expect(createPaymentIntentMock).toHaveBeenCalledTimes(1);
+    expect(createPaymentIntentMock).toHaveBeenCalledWith(expect.objectContaining({
+      successUrl: '/checkout/razorpay/callback?provider=razorpay',
+      cancelUrl: '/dashboard?purchase=cancelled&provider=razorpay&status=cancelled',
+      mode: 'payment',
+    }));
   });
 });

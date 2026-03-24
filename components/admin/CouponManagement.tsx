@@ -1266,7 +1266,7 @@ export function CouponManagement({
                     ) : null}
                   </div>
                   <p className="text-xs text-neutral-500">
-                    One-time applies to the first payment only. Forever applies to every recurring renewal. Repeating applies for a fixed number of months (provider support varies).  Razorpay subscriptions in this app require <span className="font-semibold">Forever</span> to apply discounts on renewals.
+                    One-time applies to the first payment only. Forever applies to every recurring renewal. Repeating applies for a fixed number of months (provider support varies). Paystack and Razorpay subscriptions in this app require <span className="font-semibold">Forever</span> to apply discounts on renewals.
                   </p>
 
                   {form.duration === 'repeating' ? (

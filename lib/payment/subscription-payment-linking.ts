@@ -29,6 +29,7 @@ type SubscriptionForPendingPaymentLinking = {
     id: string;
     userId: string;
     planId: string;
+    paymentProvider?: string | null;
     startedAt?: Date | null;
     expiresAt?: Date | null;
 };
@@ -65,6 +66,7 @@ export async function linkPendingPaymentToSubscription(
             where: {
                 userId: dbSub.userId,
                 planId: dbSub.planId,
+                ...(dbSub.paymentProvider ? { paymentProvider: dbSub.paymentProvider } : {}),
                 status: 'PENDING_SUBSCRIPTION',
                 subscriptionId: null,
                 createdAt: { gte: deps.getPendingSubscriptionLookbackDate() }

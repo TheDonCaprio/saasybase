@@ -109,6 +109,7 @@ export async function resolveProviderSubscriptionPlan(params: {
     providerSubscription: SubscriptionDetails;
     invoice?: StandardizedInvoice;
     subscriptionId: string;
+    providerKey: string;
     findPlanByPriceIdentifier: (priceId: string, metadataPlanId?: string | null) => Promise<Plan | null>;
     resolveUserByCustomerId: (customerId: string) => Promise<string | null>;
     getPendingSubscriptionLookbackDate: () => Date;
@@ -138,23 +139,46 @@ export async function resolveProviderSubscriptionPlan(params: {
         }
 
         if (fallbackUserId) {
-            const pendingPayment = await prisma.payment.findFirst({
+            const pendingPaymentLookback = params.getPendingSubscriptionLookbackDate();
+            const pendingPaymentReference = params.invoice?.paymentIntentId ?? null;
+
+            const pendingPayment = pendingPaymentReference
+                ? await prisma.payment.findFirst({
+                    where: {
+                        userId: fallbackUserId,
+                        paymentProvider: params.providerKey,
+                        status: 'PENDING_SUBSCRIPTION',
+                        createdAt: { gte: pendingPaymentLookback },
+                        OR: [
+                            { externalPaymentId: pendingPaymentReference },
+                            { externalSessionId: pendingPaymentReference },
+                        ],
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    select: { planId: true, id: true },
+                })
+                : null;
+
+            const fallbackPendingPayment = pendingPayment ?? await prisma.payment.findFirst({
                 where: {
                     userId: fallbackUserId,
+                    paymentProvider: params.providerKey,
                     status: 'PENDING_SUBSCRIPTION',
-                    createdAt: { gte: params.getPendingSubscriptionLookbackDate() },
+                    createdAt: { gte: pendingPaymentLookback },
                 },
                 orderBy: { createdAt: 'desc' },
-                select: { planId: true },
+                select: { planId: true, id: true },
             });
 
-            if (pendingPayment?.planId) {
-                plan = await prisma.plan.findUnique({ where: { id: pendingPayment.planId } });
+            if (fallbackPendingPayment?.planId) {
+                plan = await prisma.plan.findUnique({ where: { id: fallbackPendingPayment.planId } });
                 if (plan) {
                     Logger.info('Resolved plan via pending payment fallback (discounted subscription price)', {
                         subscriptionId: params.subscriptionId,
                         priceId,
                         planId: plan.id,
+                        paymentId: fallbackPendingPayment.id,
+                        matchMode: pendingPayment ? 'exact-provider-reference' : 'latest-provider-pending',
                     });
                 }
             }
@@ -235,6 +259,7 @@ export async function ensureProviderBackedSubscriptionRecord(params: {
     getPendingSubscriptionLookbackDate: () => Date;
     providerKey: string;
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
+    unresolvedPlanLogLevel?: 'debug' | 'info' | 'warn';
 }): Promise<Prisma.SubscriptionGetPayload<{ include: { plan: true } }> | null> {
     const context = params.context ?? {};
 
@@ -274,6 +299,7 @@ export async function ensureProviderBackedSubscriptionRecord(params: {
         providerSubscription,
         invoice: context.invoice,
         subscriptionId: params.subscriptionId,
+        providerKey: params.providerKey,
         findPlanByPriceIdentifier: params.findPlanByPriceIdentifier,
         resolveUserByCustomerId: params.resolveUserByCustomerId,
         getPendingSubscriptionLookbackDate: params.getPendingSubscriptionLookbackDate,
@@ -287,11 +313,19 @@ export async function ensureProviderBackedSubscriptionRecord(params: {
     }
 
     if (!plan) {
-        Logger.warn('Unable to map provider subscription to plan', {
+        const unresolvedPlanPayload = {
             subscriptionId: params.subscriptionId,
             priceId,
             metadataPlanId: providerSubscription.metadata?.planId,
-        });
+        };
+
+        if (params.unresolvedPlanLogLevel === 'debug') {
+            Logger.debug('Unable to map provider subscription to plan', unresolvedPlanPayload);
+        } else if (params.unresolvedPlanLogLevel === 'info') {
+            Logger.info('Unable to map provider subscription to plan', unresolvedPlanPayload);
+        } else {
+            Logger.warn('Unable to map provider subscription to plan', unresolvedPlanPayload);
+        }
         return null;
     }
 

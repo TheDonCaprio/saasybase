@@ -708,4 +708,213 @@ describe('PaymentService subscription resurrection', () => {
       })
     );
   });
+
+  it('hydrates and links a Paystack subscription.created retry from the pending payment fallback', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const periodStart = new Date('2026-03-24T10:00:00.000Z');
+      const periodEnd = new Date('2026-04-24T10:00:00.000Z');
+      let pendingPlanLookupAttempts = 0;
+
+      prismaMock.plan.findFirst.mockResolvedValue(null);
+      prismaMock.plan.findMany.mockResolvedValue([]);
+      prismaMock.plan.findUnique.mockImplementation(async ({ where }: { where: { id: string } }) => {
+        if (where.id !== 'plan_local') {
+          return null;
+        }
+
+        return {
+          id: 'plan_local',
+          name: 'Discounted Pro',
+          autoRenew: true,
+          supportsOrganizations: false,
+          priceCents: 5000,
+          tokenLimit: 0,
+          tokenName: null,
+          durationHours: 720,
+          recurringInterval: 'month',
+          recurringIntervalCount: 1,
+          externalPriceId: null,
+          externalPriceIds: null,
+        };
+      });
+
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.subscription.findMany.mockResolvedValue([]);
+      prismaMock.subscription.findFirst.mockResolvedValue(null);
+      prismaMock.subscription.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.subscription.upsert.mockResolvedValue({
+        id: 'sub_db_paystack_retry',
+        userId: 'user_1',
+        planId: 'plan_local',
+        organizationId: null,
+        status: 'ACTIVE',
+        startedAt: periodStart,
+        expiresAt: periodEnd,
+        canceledAt: null,
+        cancelAtPeriodEnd: false,
+        paymentProvider: 'paystack',
+        externalSubscriptionId: 'SUB_paystack_retry',
+        externalSubscriptionIds: JSON.stringify({ paystack: 'SUB_paystack_retry' }),
+        plan: {
+          id: 'plan_local',
+          autoRenew: true,
+          priceCents: 5000,
+        },
+      });
+
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'user_1' });
+      prismaMock.user.findMany.mockResolvedValue([]);
+      prismaMock.user.update.mockResolvedValue(undefined);
+
+      prismaMock.payment.findUnique.mockResolvedValue(null);
+      prismaMock.payment.findFirst.mockImplementation(async (args?: {
+        where?: Record<string, unknown>;
+      }) => {
+        const where = args?.where ?? {};
+
+        if (
+          where.userId === 'user_1'
+          && where.paymentProvider === 'paystack'
+          && where.status === 'PENDING_SUBSCRIPTION'
+          && !('subscriptionId' in where)
+        ) {
+          pendingPlanLookupAttempts += 1;
+          if (pendingPlanLookupAttempts === 1) {
+            return null;
+          }
+
+          return {
+            id: 'pay_pending_paystack',
+            planId: 'plan_local',
+          };
+        }
+
+        if (where.subscriptionId === 'sub_db_paystack_retry' && where.status === 'SUCCEEDED') {
+          return null;
+        }
+
+        return null;
+      });
+
+      prismaMock.payment.findMany.mockImplementation(async (args?: {
+        where?: Record<string, unknown>;
+      }) => {
+        const where = args?.where ?? {};
+
+        if (
+          where.userId === 'user_1'
+          && where.planId === 'plan_local'
+          && where.paymentProvider === 'paystack'
+          && where.status === 'PENDING_SUBSCRIPTION'
+        ) {
+          return [{
+            id: 'pay_pending_paystack',
+            userId: 'user_1',
+            planId: 'plan_local',
+            paymentProvider: 'paystack',
+          }];
+        }
+
+        return [];
+      });
+
+      prismaMock.payment.create.mockResolvedValue({ id: 'pay_pending_paystack' });
+      prismaMock.payment.update.mockResolvedValue({ id: 'pay_pending_paystack', status: 'SUCCEEDED' });
+
+      const { PaymentService } = await import('../lib/payment/service');
+      const svc = new PaymentService(makeProvider({ name: 'paystack' }));
+
+      await svc.processWebhookEvent(createWebhookEvent({
+        type: 'checkout.completed',
+        payload: {
+          id: 'cs_paystack_retry',
+          userId: 'user_1',
+          mode: 'subscription',
+          paymentStatus: 'paid',
+          amountTotal: 5000,
+          currency: 'NGN',
+          lineItems: [{ priceId: 'PLN_discounted_retry' }],
+          paymentIntentId: 'pi_paystack_retry',
+          metadata: {
+            userId: 'user_1',
+            planId: 'plan_local',
+            checkoutMode: 'subscription',
+          },
+        },
+      }));
+
+      const processingPromise = svc.processWebhookEvent(createWebhookEvent({
+        type: 'subscription.created',
+        payload: {
+          id: 'SUB_paystack_retry',
+          status: 'active',
+          currentPeriodStart: periodStart,
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
+          canceledAt: null,
+          priceId: 'PLN_discounted_retry',
+          customerId: 'CUS_paystack_retry',
+          metadata: {},
+        },
+      }));
+
+      await vi.advanceTimersByTimeAsync(2000);
+      await processingPromise;
+
+      expect(prismaMock.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            planId: 'plan_local',
+            status: 'PENDING_SUBSCRIPTION',
+            paymentProvider: 'paystack',
+          }),
+        }),
+      );
+
+      expect(prismaMock.payment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user_1',
+            paymentProvider: 'paystack',
+            status: 'PENDING_SUBSCRIPTION',
+          }),
+        }),
+      );
+
+      expect(prismaMock.subscription.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            userId: 'user_1',
+            planId: 'plan_local',
+            paymentProvider: 'paystack',
+          }),
+        }),
+      );
+
+      expect(prismaMock.payment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user_1',
+            planId: 'plan_local',
+            paymentProvider: 'paystack',
+            status: 'PENDING_SUBSCRIPTION',
+          }),
+        }),
+      );
+
+      expect(prismaMock.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'pay_pending_paystack' },
+          data: expect.objectContaining({
+            subscriptionId: 'sub_db_paystack_retry',
+            status: 'SUCCEEDED',
+          }),
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

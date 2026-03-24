@@ -808,7 +808,11 @@ export class PaymentService {
                     subscriptionId,
                     providerKey: this.providerKey,
                     subscription,
-                    ensureProviderBackedSubscription: this.ensureProviderBackedSubscription.bind(this),
+                    ensureProviderBackedSubscription: (id, context) => this.ensureProviderBackedSubscription(
+                        id,
+                        context,
+                        { unresolvedPlanLogLevel: 'info' }
+                    ),
                 });
 
                 if (!dbSub) {
@@ -1132,11 +1136,13 @@ export class PaymentService {
 
     private async ensureProviderBackedSubscription(
         subscriptionId: string,
-        context: { invoice?: StandardizedInvoice; subscription?: StandardizedSubscription } = {}
+        context: { invoice?: StandardizedInvoice; subscription?: StandardizedSubscription } = {},
+        options?: { unresolvedPlanLogLevel?: 'debug' | 'info' | 'warn' }
     ): Promise<SubscriptionWithPlan | null> {
         return ensureProviderBackedSubscriptionRecordExternal({
             subscriptionId,
             context,
+            unresolvedPlanLogLevel: options?.unresolvedPlanLogLevel,
             ...this.getEnsureProviderBackedSubscriptionDeps(),
         });
     }

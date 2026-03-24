@@ -314,7 +314,7 @@ export function PaginatedSubscriptionsManagement({
       case 'force-cancel':
         return {
           title: 'Force cancel subscription',
-          description: 'Cancel this subscription immediately. The customer will lose access right away and Stripe will stop future renewals.',
+          description: 'Cancel this subscription immediately. The customer will lose access right away and the payment provider will stop future renewals.',
           confirmLabel: 'Force cancel now',
           body: (
             <div className="space-y-4 text-sm">

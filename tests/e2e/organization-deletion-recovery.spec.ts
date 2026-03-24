@@ -1,4 +1,4 @@
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const userEmail = process.env.PLAYWRIGHT_E2E_EMAIL;
 const userPassword = process.env.PLAYWRIGHT_E2E_PASSWORD;

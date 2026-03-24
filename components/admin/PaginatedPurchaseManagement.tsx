@@ -65,7 +65,7 @@ interface PaginatedPurchaseManagementProps {
     Expired: number;
   };
   /** Currency code to use for display/formatting (central currency setting). */
-  displayCurrency?: string;
+  displayCurrency: string;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -217,7 +217,7 @@ export function PaginatedPurchaseManagement({
   };
 
   const formatCurrency = (amountCents: number, currency?: string | null) =>
-    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
+    formatCurrencyUtil(amountCents, displayCurrency || currency || '');
 
   const getPricingDetails = (purchase: PurchaseRow) => {
     const subtotal = typeof purchase.subtotalCents === 'number' ? purchase.subtotalCents : purchase.amountCents;

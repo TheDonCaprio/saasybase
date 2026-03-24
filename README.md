@@ -382,15 +382,16 @@ If Razorpay rejects the `offer_id`, the server retries without it.
 
 ### Currency System
 
-The app has a multi-layer currency resolution system:
+The app resolves the active currency in this order:
 
 | Priority | Variable | Scope |
 |---|---|---|
-| 1 | `PAYMENTS_CURRENCY` | Global override (recommended) |
-| 2 | `NEXT_PUBLIC_CURRENCY` | Display currency (existing) |
-| 3 | Provider-specific: `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider override |
+| 1 | Provider-specific: `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider override for multi-provider deployments |
+| 2 | Admin setting: `DEFAULT_CURRENCY` | DB-backed default, set in admin settings |
+| 3 | `PAYMENTS_CURRENCY` | Environment fallback when no admin default is set |
 | 4 | Provider default | NGN for Paystack, INR for Razorpay, USD for Stripe/Paddle |
-| 5 | Admin setting: `DEFAULT_CURRENCY` | DB-backed, set in admin settings |
+
+`NEXT_PUBLIC_CURRENCY` and `STRIPE_CURRENCY` are no longer part of the runtime currency resolver.
 
 ### Database Schema for Multi-Provider
 
@@ -1135,7 +1136,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET` | Choose Clerk or NextAuth |
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
-| Currency | `PAYMENTS_CURRENCY`, `NEXT_PUBLIC_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
+| Currency | `PAYMENTS_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
 | Email | `SMTP_*`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Nodemailer config |
 | Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs or S3 |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |

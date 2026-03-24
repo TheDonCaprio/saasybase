@@ -27,7 +27,7 @@ interface PaginatedPaymentManagementProps {
   initialPage: number;
   statusTotals?: Record<string, number>;
   /** Currency code to use for display/formatting (central currency setting). */
-  displayCurrency?: string;
+  displayCurrency: string;
 }
 
 export function PaginatedPaymentManagement({
@@ -82,7 +82,7 @@ export function PaginatedPaymentManagement({
   void isLoading;
 
   const formatCurrency = (amountCents: number, currency?: string | null) =>
-    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
+    formatCurrencyUtil(amountCents, displayCurrency || currency || '');
 
   const getPricingDetails = (payment: AdminPayment) => {
     const subtotal = typeof payment.subtotalCents === 'number' ? payment.subtotalCents : payment.amountCents;

@@ -60,8 +60,6 @@ type FormState = {
   planIds: string[];
 };
 
-const DEFAULT_CURRENCY = 'usd';
-
 // Combined status type for ListFilters
 type CombinedStatus = 'ALL' | 'ACTIVE' | 'EXPIRED' | 'SCHEDULED' | 'PUBLISHED' | 'UNPUBLISHED';
 type AccessFilter = 'all' | 'active' | 'expired' | 'scheduled';
@@ -75,7 +73,7 @@ const defaultFormState: FormState = {
   discountType: 'percent',
   percentOff: '10',
   amountOff: '5',
-  currency: DEFAULT_CURRENCY,
+  currency: '',
   minimumPurchase: '',
   duration: 'once',
   durationInMonths: '3',
@@ -129,12 +127,6 @@ function normalizeCoupon(input: Record<string, unknown>): CouponRow {
         }))
       : [],
   };
-}
-
-function formatMoney(cents: number | null, currency: string): string {
-  const normalizedCurrency = (currency || DEFAULT_CURRENCY).toLowerCase();
-  if (!cents) return formatCurrency(0, normalizedCurrency);
-  return formatCurrency(cents, normalizedCurrency);
 }
 
 type ProviderResponse = {
@@ -256,7 +248,7 @@ interface CouponManagementProps {
   initialPublishStatus?: PublishStatus;
   statusTotals?: Record<string, number>;
   /** Currency code to use for display/formatting (central currency setting). */
-  displayCurrency?: string;
+  displayCurrency: string;
 }
 
 // Helper to convert combined status to access + publish status
@@ -334,7 +326,7 @@ export function CouponManagement({
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(defaultFormState);
-  const [activeCurrency, setActiveCurrency] = useState<string>((displayCurrency ?? DEFAULT_CURRENCY).toLowerCase());
+  const [activeCurrency, setActiveCurrency] = useState<string>(displayCurrency.toLowerCase());
   const [showPlanLimits, setShowPlanLimits] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncingProviders, setSyncingProviders] = useState(false);
@@ -388,7 +380,7 @@ export function CouponManagement({
   const trimmedSearch = searchValue.trim();
 
   useEffect(() => {
-    const explicit = typeof displayCurrency === 'string' ? displayCurrency.trim().toLowerCase() : '';
+    const explicit = displayCurrency.trim().toLowerCase();
     if (explicit) {
       setActiveCurrency(explicit);
       setForm((prev) => ({ ...prev, currency: prev.currency || explicit }));
@@ -402,12 +394,12 @@ export function CouponManagement({
         const json = (await res.json().catch(() => ({}))) as ProviderResponse;
         const nextCurrency = typeof json.activeCurrency === 'string' && json.activeCurrency.trim()
           ? json.activeCurrency.trim().toLowerCase()
-          : DEFAULT_CURRENCY;
+          : '';
         if (!mounted) return;
         setActiveCurrency(nextCurrency);
         setForm((prev) => ({ ...prev, currency: prev.currency || nextCurrency }));
       } catch {
-        // Ignore; fallback to DEFAULT_CURRENCY.
+        // Ignore; keep the server-provided display currency if one was passed.
       }
     })();
 
@@ -496,7 +488,7 @@ export function CouponManagement({
   );
 
   function resetForm() {
-    setForm(() => ({ ...defaultFormState, currency: activeCurrency || DEFAULT_CURRENCY, planIds: [] }));
+    setForm(() => ({ ...defaultFormState, currency: activeCurrency, planIds: [] }));
     setShowPlanLimits(false);
   }
 
@@ -510,7 +502,7 @@ export function CouponManagement({
     const coupon = coupons.find((item) => item.id === id);
     if (!coupon) return;
     setEditingId(id);
-    const couponCurrency = (coupon.currency || activeCurrency || DEFAULT_CURRENCY).toLowerCase();
+    const couponCurrency = (coupon.currency || activeCurrency).toLowerCase();
     setForm({
       code: coupon.code,
       description: coupon.description ?? '',
@@ -664,7 +656,7 @@ export function CouponManagement({
     }
     setLoading(true);
     try {
-      const currency = (form.currency || activeCurrency || DEFAULT_CURRENCY).trim().toLowerCase();
+      const currency = (form.currency || activeCurrency).trim().toLowerCase();
       if (editingId) {
         const payload: Record<string, unknown> = {
           description: form.description || null,
@@ -847,7 +839,9 @@ export function CouponManagement({
               {coupons.map((coupon) => {
                 const status = getStatusLabel(coupon);
                 const discountLabel =
-                  coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents, activeCurrency);
+                  coupon.percentOff !== null
+                    ? `${coupon.percentOff}% off`
+                    : formatCurrency(coupon.amountOffCents ?? 0, (coupon.currency || activeCurrency).toLowerCase());
                 const durationBadge = getDurationBadge(coupon);
                 const scheduleLabel = formatScheduleRange(coupon);
                 const eligiblePlans =
@@ -944,7 +938,9 @@ export function CouponManagement({
                 {coupons.map((coupon) => {
                   const status = getStatusLabel(coupon);
                   const discountLabel =
-                    coupon.percentOff !== null ? `${coupon.percentOff}% off` : formatMoney(coupon.amountOffCents, activeCurrency);
+                    coupon.percentOff !== null
+                      ? `${coupon.percentOff}% off`
+                      : formatCurrency(coupon.amountOffCents ?? 0, (coupon.currency || activeCurrency).toLowerCase());
                   const durationBadge = getDurationBadge(coupon);
                   const scheduleLabel = formatScheduleRange(coupon);
                   const accessLabel = getAccessLabel(coupon);
@@ -1202,7 +1198,7 @@ export function CouponManagement({
                     <label className="block text-sm text-neutral-300 mb-1">Currency</label>
                     <input
                       className="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-100 focus:ring-2 focus:ring-blue-500 disabled:opacity-70"
-                      value={(form.currency || activeCurrency || DEFAULT_CURRENCY).toUpperCase()}
+                      value={(form.currency || activeCurrency).toUpperCase()}
                       disabled
                       readOnly
                     />

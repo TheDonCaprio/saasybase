@@ -155,7 +155,7 @@ export function PaymentProvidersPanel() {
 
     useEffect(() => {
         fetchProviders();
-        // Fetch current default currency setting (falls back to PAYMENTS_CURRENCY / NEXT_PUBLIC_CURRENCY or 'USD')
+        // Fetch current default currency setting (falls back to PAYMENTS_CURRENCY or the provider default)
         fetch('/api/admin/settings?key=DEFAULT_CURRENCY')
             .then(res => res.ok ? res.json() : null)
             .then(data => {

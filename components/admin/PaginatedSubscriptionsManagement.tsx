@@ -90,7 +90,7 @@ interface PaginatedSubscriptionsManagementProps {
     Refunded?: number;
   };
   /** Currency code to use for display/formatting (central currency setting). */
-  displayCurrency?: string;
+  displayCurrency: string;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -517,7 +517,7 @@ export function PaginatedSubscriptionsManagement({
   // skeleton inside the subscriptions list area below when there are no items.
 
   const formatCurrency = (amountCents: number, currency?: string | null) =>
-    formatCurrencyUtil(amountCents, displayCurrency || currency || 'usd');
+    formatCurrencyUtil(amountCents, displayCurrency || currency || '');
 
   const getLatestPaymentDetails = (sub: SubRow) => {
     const payment = sub.latestPayment;

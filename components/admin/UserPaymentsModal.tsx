@@ -66,7 +66,7 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
   }, [isOpen, userId]);
 
   const formatAmount = (amountCents: number, currency?: string | null) =>
-    formatCurrencyUtil(amountCents, currency || 'usd');
+    formatCurrencyUtil(amountCents, currency || '');
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {

@@ -91,13 +91,11 @@ function normalizeCurrencyCode(raw: unknown, fallback: string): string {
  *
  * Priority:
  * 1) PAYMENTS_CURRENCY (recommended)
- * 2) NEXT_PUBLIC_CURRENCY (existing display currency; works well for single-currency apps)
- * 3) STRIPE_CURRENCY (legacy)
- * 4) USD
+ * 2) USD
  */
 export function getPaymentsDefaultCurrency(): string {
     return normalizeCurrencyCode(
-        process.env.PAYMENTS_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || process.env.STRIPE_CURRENCY,
+        process.env.PAYMENTS_CURRENCY,
         'USD'
     );
 }
@@ -116,8 +114,7 @@ export function getProviderCurrency(providerName: string, requestedCurrency?: st
 	// If the caller doesn't specify a requested currency, use the global payments default.
 	let effectiveRequestedCurrency = requestedCurrency ?? getPaymentsDefaultCurrency();
 
-    // Provider-specific overrides (useful in multi-provider deployments where STRIPE_CURRENCY
-    // may be set for a different provider than the one being called).
+        // Provider-specific overrides are advanced exceptions for multi-provider deployments.
     if (providerName === 'paddle' && process.env.PADDLE_CURRENCY) {
 		effectiveRequestedCurrency = process.env.PADDLE_CURRENCY;
     }

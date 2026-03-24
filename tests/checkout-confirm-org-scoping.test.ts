@@ -102,4 +102,28 @@ describe('GET /api/checkout/confirm org scoping', () => {
       orgId: 'org_meta',
     });
   });
+
+  it('returns pending for metadata-less redirect sessions without exact ownership evidence', async () => {
+    providerMock.getCheckoutSession.mockResolvedValueOnce({
+      id: 'order_unsafe_1',
+      paymentStatus: 'paid',
+      paymentIntentId: 'pay_unsafe_1',
+      metadata: {},
+      lineItems: [],
+    });
+
+    prismaMock.payment.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+
+    const req = new NextRequest('http://localhost/api/checkout/confirm?session_id=order_unsafe_1&payment_id=pay_unsafe_1');
+    const res = await GET(req);
+    const body = await res.json() as { completed?: boolean; pending?: boolean };
+
+    expect(res.status).toBe(200);
+    expect(body.completed).toBe(false);
+    expect(body.pending).toBe(true);
+    expect(paymentServiceMock.processWebhookEvent).not.toHaveBeenCalled();
+  });
 });

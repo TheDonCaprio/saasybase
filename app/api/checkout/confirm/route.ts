@@ -248,16 +248,45 @@ export async function GET(req: NextRequest) {
       sessionUserId = clientRef || metaUser;
 
       // For redirect-only providers, warn when the session doesn't carry a userId marker
-      // but do NOT hard-fail.  The authenticated user (from Clerk) is the source of truth.
-      // Auto-created Razorpay orders/subscriptions often lack app-set notes, so blocking on
-      // this check causes the confirmation page to spin indefinitely.
+      // but only trust the authenticated user if we already have exact DB evidence
+      // tying this provider session/payment back to that user. Otherwise, wait for
+      // webhook fulfillment or a richer provider session to avoid cross-user attribution.
       if (!isStripeProvider && !sessionUserId) {
-        Logger.info('Checkout confirm session has no user marker – using authenticated userId', {
+        const ownershipEvidenceOr: Prisma.PaymentWhereInput[] = [
+          { externalSessionId: sessionIdStr },
+        ];
+        if (paymentId) {
+          ownershipEvidenceOr.push({ externalPaymentId: paymentId });
+        }
+        if (session.paymentIntentId) {
+          ownershipEvidenceOr.push({ externalPaymentId: session.paymentIntentId });
+        }
+
+        const exactOwnershipEvidence = await prisma.payment.findFirst({
+          where: {
+            userId,
+            OR: ownershipEvidenceOr,
+          },
+          select: { id: true },
+        });
+
+        if (!exactOwnershipEvidence) {
+          Logger.warn('Checkout confirm session has no user marker and no exact ownership evidence; returning pending', {
+            provider: providerName,
+            sessionId: sessionIdStr,
+            paymentId,
+            paymentIntentId: session.paymentIntentId,
+            authenticatedUserId: userId,
+          });
+          return NextResponse.json({ ok: true, completed: false, pending: true });
+        }
+
+        Logger.info('Checkout confirm session has no user marker – using authenticated userId with exact DB evidence', {
           provider: providerName,
           sessionId: sessionIdStr,
           authenticatedUserId: userId,
+          evidencePaymentId: exactOwnershipEvidence.id,
         });
-        // Trust the authenticated user for ownership
         sessionUserId = userId;
       }
 

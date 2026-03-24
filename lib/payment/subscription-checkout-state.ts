@@ -23,6 +23,29 @@ export async function persistSubscriptionCheckoutState(params: {
             const user = await prisma.user.findUnique({ where: { id: params.userId }, select: { externalCustomerIds: true } });
             const mergedIds = params.mergeIdMap(user?.externalCustomerIds, params.providerKey, params.subscription.customerId);
 
+            let canMergeCustomerIdMap = true;
+            try {
+                const usersWithMaps = await prisma.user.findMany({
+                    where: { externalCustomerIds: { not: null } },
+                    select: { id: true, externalCustomerIds: true },
+                });
+                for (const existingUser of usersWithMaps) {
+                    if (existingUser.id === params.userId) continue;
+                    const map = (existingUser.externalCustomerIds ?? {}) as Record<string, unknown>;
+                    if (map[params.providerKey] === params.subscription.customerId) {
+                        canMergeCustomerIdMap = false;
+                        Logger.warn('customerId already associated to a different user; skipping externalCustomerIds merge during subscription checkout persistence', {
+                            provider: params.providerKey,
+                            customerId: params.subscription.customerId,
+                            userId: params.userId,
+                            existingOwnerUserId: existingUser.id,
+                        });
+                        break;
+                    }
+                }
+            } catch {
+            }
+
             let canSetLegacyExternalCustomerId = true;
             try {
                 const owner = await prisma.user.findUnique({
@@ -45,7 +68,7 @@ export async function persistSubscriptionCheckoutState(params: {
                 where: { id: params.userId },
                 data: {
                     ...(canSetLegacyExternalCustomerId ? { externalCustomerId: params.subscription.customerId } : null),
-                    externalCustomerIds: mergedIds ?? user?.externalCustomerIds,
+                    externalCustomerIds: canMergeCustomerIdMap ? (mergedIds ?? user?.externalCustomerIds) : user?.externalCustomerIds,
                     paymentProvider: params.providerKey
                 },
             });

@@ -42,6 +42,8 @@ export async function markSubscriptionActive(dbSubscriptionId: string, expiresAt
         where: { id: dbSubscriptionId },
         data: {
             status: 'ACTIVE',
+            canceledAt: null,
+            cancelAtPeriodEnd: false,
             prorationPendingSince: null,
             ...(expiresAt ? { expiresAt } : null),
         },

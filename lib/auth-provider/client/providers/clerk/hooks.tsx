@@ -107,5 +107,8 @@ export function useAuthInstance(): UseAuthInstanceReturn {
     openUserProfile: (opts?: { appearance?: Record<string, unknown> }) => {
       clerk.openUserProfile(opts as Parameters<typeof clerk.openUserProfile>[0]);
     },
+    setActiveOrganization: async (orgId: string | null) => {
+      await clerk.setActive({ organization: orgId } as Parameters<typeof clerk.setActive>[0]);
+    },
   }), [clerk]);
 }

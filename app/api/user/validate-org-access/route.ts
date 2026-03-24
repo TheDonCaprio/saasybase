@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '../../../../lib/auth';
+import { authService } from '../../../../lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { deactivateOrganizationsByIds } from '../../../../lib/organization-access';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 import { getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 
-export async function POST() {
+type ValidateOrgAccessPayload = {
+    activeOrgId?: string | null;
+};
+
+export async function POST(request: Request) {
     try {
         const userId = await requireUser();
+        const payload = await request.json().catch(() => null) as ValidateOrgAccessPayload | null;
+        const requestedActiveOrgId = typeof payload?.activeOrgId === 'string' && payload.activeOrgId.trim().length > 0
+            ? payload.activeOrgId.trim()
+            : null;
 
         const now = new Date();
         const graceHours = await getPaidTokensNaturalExpiryGraceHours();
@@ -25,19 +34,43 @@ export async function POST() {
                 organization: {
                     select: {
                         id: true,
+                        clerkOrganizationId: true,
                         ownerUserId: true,
                     }
                 }
             }
         });
 
+        let clearActiveOrg = false;
+        let activeOrgReason: string | null = null;
+
+        if (requestedActiveOrgId) {
+            const activeMembership = memberships.find(
+                (membership) => membership.organization.id === requestedActiveOrgId
+                    || membership.organization.clerkOrganizationId === requestedActiveOrgId
+            );
+
+            if (!activeMembership) {
+                clearActiveOrg = true;
+                activeOrgReason = 'active_org_membership_missing';
+            } else if (authService.supportsFeature('organizations')) {
+                const providerOrganizationId = activeMembership.organization.clerkOrganizationId ?? requestedActiveOrgId;
+                const providerOrganization = await authService.getOrganization(providerOrganizationId);
+
+                if (!providerOrganization) {
+                    clearActiveOrg = true;
+                    activeOrgReason = 'active_org_provider_missing';
+                }
+            }
+        }
+
         if (memberships.length === 0) {
-            return NextResponse.json({ valid: true, reason: 'no_org' });
+            return NextResponse.json({ valid: true, reason: 'no_org', clearActiveOrg, activeOrgReason });
         }
 
         const ownerIds = Array.from(new Set(memberships.map(m => m.organization.ownerUserId).filter(Boolean)));
         if (ownerIds.length === 0) {
-            return NextResponse.json({ valid: true, reason: 'no_owner' });
+            return NextResponse.json({ valid: true, reason: 'no_owner', clearActiveOrg, activeOrgReason });
         }
 
         const ownersWithValidOrgPlan = await prisma.subscription.findMany({
@@ -56,7 +89,7 @@ export async function POST() {
         });
 
         if (ownersWithValidOrgPlan.length > 0) {
-            return NextResponse.json({ valid: true, reason: 'has_valid_owner' });
+            return NextResponse.json({ valid: true, reason: 'has_valid_owner', clearActiveOrg, activeOrgReason });
         }
 
         // No valid owner subscriptions found for any org the user belongs to.
@@ -93,7 +126,7 @@ export async function POST() {
         );
 
         if (deletableOrgIds.length === 0) {
-            return NextResponse.json({ valid: true, reason: 'grace_period' });
+            return NextResponse.json({ valid: true, reason: 'grace_period', clearActiveOrg, activeOrgReason });
         }
 
         Logger.info('Lazy Check: No valid organization owners; grace window elapsed; triggering scoped cleanup', {
@@ -119,7 +152,9 @@ export async function POST() {
         return NextResponse.json({
             valid: false,
             reason: 'org_expired',
-            message: 'Organization access has expired.'
+            message: 'Organization access has expired.',
+            clearActiveOrg,
+            activeOrgReason,
         });
 
     } catch (error) {

@@ -226,8 +226,31 @@ export function useAuthInstance(): UseAuthInstanceReturn {
     window.location.href = '/dashboard/profile';
   }, []);
 
+  const doSetActiveOrganization = useCallback(async (orgId: string | null) => {
+    const res = await fetch('/api/user/active-org', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orgId }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to set active organization');
+    }
+
+    let nextActiveOrgId: string | null = orgId;
+    try {
+      const data = await res.json() as { activeOrgId?: string | null };
+      nextActiveOrgId = typeof data.activeOrgId === 'string' ? data.activeOrgId : null;
+    } catch {
+      nextActiveOrgId = orgId;
+    }
+
+    notifyActiveOrgChanged(nextActiveOrgId);
+  }, []);
+
   return useMemo(() => ({
     signOut: doSignOut,
     openUserProfile: doOpenProfile,
-  }), [doSignOut, doOpenProfile]);
+    setActiveOrganization: doSetActiveOrganization,
+  }), [doOpenProfile, doSetActiveOrganization, doSignOut]);
 }

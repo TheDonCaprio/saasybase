@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { SessionProvider, signIn, signOut, useSession } from 'next-auth/react';
+import { getProviders, SessionProvider, signIn, signOut, useSession } from 'next-auth/react';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 
 // ---------------------------------------------------------------------------
@@ -74,6 +74,49 @@ function GitHubIcon() {
     <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.41-4.04-1.41-.55-1.38-1.33-1.75-1.33-1.75-1.09-.75.08-.73.08-.73 1.2.09 1.83 1.22 1.83 1.22 1.07 1.83 2.81 1.3 3.49.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.32-5.47-5.87 0-1.3.47-2.37 1.22-3.2-.12-.3-.53-1.52.12-3.16 0 0 1-.32 3.3 1.22a11.5 11.5 0 0 1 6 0c2.3-1.54 3.3-1.22 3.3-1.22.65 1.64.24 2.86.12 3.16.76.83 1.22 1.9 1.22 3.2 0 4.56-2.81 5.56-5.49 5.86.43.37.82 1.1.82 2.23v3.3c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z" />
     </svg>
+  );
+}
+
+function useAvailableOAuthProviders() {
+  const [providers, setProviders] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getProviders()
+      .then((resolvedProviders) => {
+        if (!active) return;
+
+        setProviders(new Set(Object.keys(resolvedProviders ?? {})));
+      })
+      .catch(() => {
+        if (!active) return;
+        setProviders(new Set());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return {
+    github: providers?.has('github') ?? false,
+    google: providers?.has('google') ?? false,
+  };
+}
+
+function OAuthButtons() {
+  const { github, google } = useAvailableOAuthProviders();
+
+  if (!github && !google) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      {github ? <OAuthButton provider="github" label="Continue with GitHub" /> : null}
+      {google ? <OAuthButton provider="google" label="Continue with Google" /> : null}
+    </div>
   );
 }
 
@@ -496,11 +539,7 @@ function SignInForm({
         </button>
       </form>
 
-
-      <div className="space-y-2">
-        <OAuthButton provider="github" label="Continue with GitHub" />
-        <OAuthButton provider="google" label="Continue with Google" />
-      </div>
+      <OAuthButtons />
 
       {signUpUrl && (
         <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
@@ -895,11 +934,7 @@ export function AuthSignUp(props: {
           {loading ? 'Creating account…' : 'Create Account'}
         </button>
       </form>
-
-      <div className="space-y-2">
-        <OAuthButton provider="github" label="Continue with GitHub" />
-        <OAuthButton provider="google" label="Continue with Google" />
-      </div>
+      <OAuthButtons />
 
       {props.signInUrl && (
         <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">

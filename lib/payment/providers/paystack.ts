@@ -30,7 +30,6 @@ import {
 } from '../types';
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
 import { Logger } from '../../logger';
-import { prisma } from '../../prisma';
 import { findReusablePaymentAuthorizationCode } from '../payment-authorization-storage';
 
 // Paystack response envelopes

@@ -136,6 +136,47 @@ GOOGLE_CLIENT_SECRET=""
 
 NextAuth supports **credentials** (email + password), **GitHub OAuth**, **Google OAuth**, and **magic link** (Nodemailer) out of the box — enable the ones you need in `lib/nextauth.config.ts`.
 
+#### GitHub OAuth setup
+
+1. Go to GitHub Developer Settings → OAuth Apps.
+2. Create a new OAuth App.
+3. Set the Homepage URL to your app base URL.
+4. Set the Authorization callback URL to:
+  - Local: `http://localhost:3000/api/auth/callback/github`
+  - Production: `https://your-domain.com/api/auth/callback/github`
+5. Copy the generated Client ID and Client Secret into:
+
+```bash
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+```
+
+#### Google OAuth setup
+
+1. Open Google Cloud Console → APIs & Services.
+2. Configure the OAuth consent screen for your app.
+3. Create credentials → OAuth client ID → Web application.
+4. Add Authorized redirect URIs:
+  - Local: `http://localhost:3000/api/auth/callback/google`
+  - Production: `https://your-domain.com/api/auth/callback/google`
+5. Add Authorized JavaScript origins:
+  - Local: `http://localhost:3000`
+  - Production: `https://your-domain.com`
+6. Copy the generated Client ID and Client Secret into:
+
+```bash
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+```
+
+#### NextAuth OAuth configuration notes
+
+- Keep `AUTH_PROVIDER="nextauth"`.
+- Keep `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` aligned with the exact base URL you registered with GitHub and Google.
+- GitHub and Google are only registered when both env vars for that provider are present.
+- The sign-in and sign-up UI only shows the GitHub and Google buttons when NextAuth reports those providers as configured.
+- Leaving the GitHub or Google env vars blank disables that provider cleanly without breaking credentials or magic-link auth.
+
 Key differences from Clerk:
 - Users are stored entirely in your own DB (Prisma adapter).
 - No built-in organization primitives (teams are managed by the app layer).

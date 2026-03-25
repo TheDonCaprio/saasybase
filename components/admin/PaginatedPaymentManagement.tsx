@@ -379,14 +379,18 @@ export function PaginatedPaymentManagement({
                       </div>
                     </div>
 
-                    {pricing.hasDiscount ? (
+                    {pricing.hasDiscount || payment.couponCode ? (
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-neutral-400">
-                        <span className="line-through text-slate-400 dark:text-neutral-500">
-                          {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
-                        </span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-300">
-                          −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
-                        </span>
+                        {pricing.hasDiscount ? (
+                          <>
+                            <span className="line-through text-slate-400 dark:text-neutral-500">
+                              {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
+                            </span>
+                            <span className="font-medium text-emerald-600 dark:text-emerald-300">
+                              −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
+                            </span>
+                          </>
+                        ) : null}
                         <CouponBadge code={payment.couponCode} />
                       </div>
                     ) : null}
@@ -505,10 +509,14 @@ export function PaginatedPaymentManagement({
                         <div className="truncate font-medium">{payment.subscription?.plan?.name || payment.plan?.name || 'No plan'}</div>
                         <div className="mt-1 text-sm">
                           <div className="font-medium text-slate-800 dark:text-neutral-100">{payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency)}</div>
-                          {pricing.hasDiscount ? (
+                          {pricing.hasDiscount || payment.couponCode ? (
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-neutral-400">
-                              <span className="line-through text-slate-400 dark:text-neutral-500">{payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}</span>
-                              <span className="font-medium text-emerald-600 dark:text-emerald-300">−{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}</span>
+                              {pricing.hasDiscount ? (
+                                <>
+                                  <span className="line-through text-slate-400 dark:text-neutral-500">{payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}</span>
+                                  <span className="font-medium text-emerald-600 dark:text-emerald-300">−{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}</span>
+                                </>
+                              ) : null}
                               <CouponBadge code={payment.couponCode} />
                             </div>
                           ) : null}

@@ -31,6 +31,7 @@ import {
 import { ConfigurationError, PaymentProviderError, WebhookSignatureVerificationError } from '../errors';
 import { Logger } from '../../logger';
 import { prisma } from '../../prisma';
+import { findReusablePaymentAuthorizationCode } from '../payment-authorization-storage';
 
 // Paystack response envelopes
 interface PaystackResponse<T> {
@@ -502,18 +503,13 @@ export class PaystackPaymentProvider implements PaymentProvider {
         }
 
         // Require a reusable authorization so Paystack can debit at the scheduled start_date.
-        const authorization = await prisma.paymentAuthorization.findFirst({
-            where: {
-                userId,
-                provider: 'paystack',
-                reusable: true,
-                OR: [{ customerId: customerCode }, { customerId: null }],
-            },
-            orderBy: { updatedAt: 'desc' },
-            select: { authorizationCode: true },
+        const authorizationCode = await findReusablePaymentAuthorizationCode({
+            provider: 'paystack',
+            userId,
+            customerId: customerCode,
         });
 
-        if (!authorization?.authorizationCode) {
+        if (!authorizationCode) {
             throw new PaymentProviderError('PAYSTACK_AUTHORIZATION_REQUIRED');
         }
 
@@ -529,7 +525,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                     body: JSON.stringify({
                         customer: customerCode,
                         plan: newPriceId,
-                        authorization: authorization.authorizationCode,
+                        authorization: authorizationCode,
                         start_date: startDate.toISOString(),
                     }),
                 },
@@ -1106,18 +1102,13 @@ export class PaystackPaymentProvider implements PaymentProvider {
         }
 
         // Require a reusable authorization
-        const authorization = await prisma.paymentAuthorization.findFirst({
-            where: {
-                userId,
-                provider: 'paystack',
-                reusable: true,
-                OR: [{ customerId: customerCode }, { customerId: null }],
-            },
-            orderBy: { updatedAt: 'desc' },
-            select: { authorizationCode: true },
+        const authorizationCode = await findReusablePaymentAuthorizationCode({
+            provider: 'paystack',
+            userId,
+            customerId: customerCode,
         });
 
-        if (!authorization?.authorizationCode) {
+        if (!authorizationCode) {
             throw new PaymentProviderError('PAYSTACK_AUTHORIZATION_REQUIRED');
         }
 
@@ -1137,7 +1128,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                     body: JSON.stringify({
                         customer: customerCode,
                         plan: newPriceId,
-                        authorization: authorization.authorizationCode,
+                        authorization: authorizationCode,
                         start_date: now.toISOString(),
                     }),
                 },

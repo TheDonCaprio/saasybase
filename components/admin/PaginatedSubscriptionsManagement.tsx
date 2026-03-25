@@ -799,14 +799,18 @@ export function PaginatedSubscriptionsManagement({
 
                     {paymentInfo ? (
                       <div className="space-y-1 text-xs text-slate-500 dark:text-neutral-400">
-                        {paymentInfo.hasDiscount ? (
+                        {paymentInfo.hasDiscount || paymentInfo.couponCode ? (
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="line-through text-slate-400 dark:text-neutral-500">
-                              {paymentInfo.subtotalFormatted ?? formatCurrency(paymentInfo.subtotal, paymentInfo.currency)}
-                            </span>
-                            <span className="font-medium text-emerald-600 dark:text-emerald-300">
-                              −{paymentInfo.discountFormatted ?? formatCurrency(paymentInfo.discount, paymentInfo.currency)}
-                            </span>
+                            {paymentInfo.hasDiscount ? (
+                              <>
+                                <span className="line-through text-slate-400 dark:text-neutral-500">
+                                  {paymentInfo.subtotalFormatted ?? formatCurrency(paymentInfo.subtotal, paymentInfo.currency)}
+                                </span>
+                                <span className="font-medium text-emerald-600 dark:text-emerald-300">
+                                  −{paymentInfo.discountFormatted ?? formatCurrency(paymentInfo.discount, paymentInfo.currency)}
+                                </span>
+                              </>
+                            ) : null}
                             <CouponBadge code={paymentInfo.couponCode} />
                           </div>
                         ) : null}

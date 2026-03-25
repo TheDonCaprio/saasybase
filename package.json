@@ -22,7 +22,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:org-switcher": "playwright test tests/e2e/org-switcher-regression.spec.ts",
     "backfill:pending-subscription-payments": "tsx scripts/backfill-pending-subscription-payments.ts",
-    "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts"
+    "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts",
+    "ops:reencrypt-payment-authorizations": "tsx scripts/reencrypt-payment-authorizations.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

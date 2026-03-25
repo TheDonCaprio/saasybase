@@ -305,21 +305,25 @@ export function PaginatedTransactionList({
                         <div className="text-base font-bold text-slate-900 dark:text-neutral-100">
                           {payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency)}
                         </div>
-                        {pricing.hasDiscount && (
+                        {(pricing.hasDiscount || payment.couponCode) && (
                           <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-neutral-400 leading-tight">
-                            <span className="line-through text-slate-400 dark:text-neutral-500">
-                              {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
-                            </span>
-                            <span className="text-emerald-600 dark:text-emerald-400">
-                              −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
-                            </span>
+                            {pricing.hasDiscount && (
+                              <>
+                                <span className="line-through text-slate-400 dark:text-neutral-500">
+                                  {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
+                                </span>
+                                <span className="text-emerald-600 dark:text-emerald-400">
+                                  −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
+                                </span>
+                              </>
+                            )}
                           {payment.couponCode ? (
                             <CouponBadge code={payment.couponCode} />
-                          ) : (
+                          ) : pricing.hasDiscount ? (
                             <CouponBadge>
                               <span>Discount applied</span>
                             </CouponBadge>
-                          )}
+                          ) : null}
                         </div>
                       )}
                       <div className="flex flex-col items-end space-y-1">
@@ -419,15 +423,25 @@ export function PaginatedTransactionList({
                         <div className="font-medium text-slate-800 dark:text-neutral-100">
                           {payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency)}
                         </div>
-                        {pricing.hasDiscount && (
+                        {(pricing.hasDiscount || payment.couponCode) && (
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-neutral-400">
-                            <span className="line-through text-slate-400 dark:text-neutral-500">
-                              {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
-                            </span>
-                            <span className="font-medium text-emerald-600 dark:text-emerald-300">
-                              −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
-                            </span>
-                            <CouponBadge code={payment.couponCode} />
+                            {pricing.hasDiscount && (
+                              <>
+                                <span className="line-through text-slate-400 dark:text-neutral-500">
+                                  {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
+                                </span>
+                                <span className="font-medium text-emerald-600 dark:text-emerald-300">
+                                  −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
+                                </span>
+                              </>
+                            )}
+                            {payment.couponCode ? (
+                              <CouponBadge code={payment.couponCode} />
+                            ) : pricing.hasDiscount ? (
+                              <CouponBadge>
+                                <span>Discount applied</span>
+                              </CouponBadge>
+                            ) : null}
                           </div>
                         )}
                       </div>

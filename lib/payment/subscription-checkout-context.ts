@@ -11,6 +11,7 @@ import { expirePriorActiveSubscriptionsForCheckout, persistSubscriptionCheckoutS
 import { resolveSubscriptionCheckoutState } from './subscription-checkout-resolution';
 import { recordSubscriptionCheckoutPaymentIfNeeded } from './subscription-checkout-payments';
 import { runPostSubscriptionCheckoutSideEffects } from './subscription-update-notifications';
+import { persistReusablePaymentAuthorization } from './payment-authorization-storage';
 
 export function buildSubscriptionCheckoutPaymentContext(params: {
     session: StandardizedCheckoutSession;
@@ -260,37 +261,18 @@ export async function prepareCheckoutSessionForProcessing(params: {
 
     if (params.session.authorization?.code) {
         try {
-            await prisma.paymentAuthorization.upsert({
-                where: {
-                    provider_authorizationCode: {
-                        provider: params.providerKey,
-                        authorizationCode: params.session.authorization.code,
-                    },
-                },
-                update: {
-                    userId,
-                    customerId: params.session.customerId ?? null,
-                    reusable: params.session.authorization.reusable === true,
-                    channel: params.session.authorization.channel ?? null,
-                    brand: params.session.authorization.brand ?? null,
-                    bank: params.session.authorization.bank ?? null,
-                    last4: params.session.authorization.last4 ?? null,
-                    expMonth: params.session.authorization.expMonth ?? null,
-                    expYear: params.session.authorization.expYear ?? null,
-                },
-                create: {
-                    userId,
-                    provider: params.providerKey,
-                    customerId: params.session.customerId ?? null,
-                    authorizationCode: params.session.authorization.code,
-                    reusable: params.session.authorization.reusable === true,
-                    channel: params.session.authorization.channel ?? null,
-                    brand: params.session.authorization.brand ?? null,
-                    bank: params.session.authorization.bank ?? null,
-                    last4: params.session.authorization.last4 ?? null,
-                    expMonth: params.session.authorization.expMonth ?? null,
-                    expYear: params.session.authorization.expYear ?? null,
-                },
+            await persistReusablePaymentAuthorization({
+                provider: params.providerKey,
+                userId,
+                customerId: params.session.customerId ?? null,
+                authorizationCode: params.session.authorization.code,
+                reusable: params.session.authorization.reusable === true,
+                channel: params.session.authorization.channel ?? null,
+                brand: params.session.authorization.brand ?? null,
+                bank: params.session.authorization.bank ?? null,
+                last4: params.session.authorization.last4 ?? null,
+                expMonth: params.session.authorization.expMonth ?? null,
+                expYear: params.session.authorization.expYear ?? null,
             });
         } catch (err) {
             Logger.warn('Failed to persist payment authorization from checkout', {

@@ -123,11 +123,11 @@ vi.mock('@/lib/payment/errors', () => ({
 import { POST } from '../app/api/admin/plans/route';
 
 describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
-  const originalAutoCreate = process.env.STRIPE_AUTO_CREATE;
+  const originalPaymentAutoCreate = process.env.PAYMENT_AUTO_CREATE;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_AUTO_CREATE = '1';
+    process.env.PAYMENT_AUTO_CREATE = 'true';
 
     providerFactoryMock.getAllConfiguredProviders.mockReturnValue([
       { name: 'stripe', provider: stripeProviderMock },
@@ -191,7 +191,7 @@ describe('POST /api/admin/plans - Razorpay daily skip policy', () => {
   });
 
   afterAll(() => {
-    process.env.STRIPE_AUTO_CREATE = originalAutoCreate;
+    process.env.PAYMENT_AUTO_CREATE = originalPaymentAutoCreate;
   });
 
   it('skips Razorpay price creation and returns warnings[] when daily recurring intervalCount is below 7', async () => {

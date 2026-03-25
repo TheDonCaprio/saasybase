@@ -11,6 +11,7 @@ import { findPlanSeedByName } from '@/lib/plans';
 import { persistEnvValue } from '@/lib/env-files';
 import { providerSupportsOneTimePrices, setIdByProvider, getIdByProvider } from '@/lib/utils/provider-ids';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
+import { isPaymentCatalogAutoCreateEnabled } from '@/lib/payment/auto-create';
 import { getProviderCurrency } from '@/lib/payment/registry';
 import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { PaymentError, PaymentProviderError } from '@/lib/payment/errors';
@@ -190,7 +191,10 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       ? payload.priceCents
       : existingPlan.priceCents;
 
-    const autoCreateEnabled = !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_AUTO_CREATE === '1';
+    const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
+    const autoCreateEnabled = isPaymentCatalogAutoCreateEnabled(
+      configuredProviders.map(({ name: providerName }) => providerName)
+    );
     const finalAutoRenew = autoRenewProvided ? Boolean(payload.autoRenew) : Boolean(existingPlan.autoRenew);
     const toggledAutoRenewOn = finalAutoRenew && !existingPlan.autoRenew;
     const toggledAutoRenewOff = !finalAutoRenew && existingPlan.autoRenew;
@@ -300,8 +304,6 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
         throw currencyErr;
       }
     };
-
-    const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
 
     const nameChanged = nameProvided && payload.name !== existingPlan.name;
     const shortDescriptionChanged = shortDescriptionProvided && payload.shortDescription !== existingPlan.shortDescription;

@@ -10,6 +10,7 @@ import { apiSchemas, withValidation } from '@/lib/validation';
 import { adminRateLimit } from '@/lib/rateLimit';
 import { providerSupportsOneTimePrices, setIdByProvider } from '@/lib/utils/provider-ids';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
+import { isPaymentCatalogAutoCreateEnabled } from '@/lib/payment/auto-create';
 import { getProviderCurrency } from '@/lib/payment/registry';
 import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
@@ -172,7 +173,8 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
     const descriptionValue = typeof rawDescriptionValue === 'string' && rawDescriptionValue.trim().length > 0
       ? await sanitizeRichText(rawDescriptionValue)
       : null;
-    const autoCreate = process.env.STRIPE_AUTO_CREATE === '1';
+    const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
+    const autoCreate = isPaymentCatalogAutoCreateEnabled(configuredProviders.map(({ name: providerName }) => providerName));
     let primaryPriceIdToSave = typeof externalPriceId === 'string'
       ? externalPriceId
       : typeof legacyStripePriceId === 'string'
@@ -184,8 +186,6 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
 
     // Sync plan to ALL configured payment providers (not just the active one)
     if (!primaryPriceIdToSave && autoCreate) {
-      const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
-      
       for (const { name: providerName, provider } of configuredProviders) {
         let providerCurrency: string | null = null;
         try {

@@ -373,7 +373,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: [
           'Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:createPrice (limit 20 / 120s).',
-          'Requires payment provider configuration and auto-create enabled (STRIPE_AUTO_CREATE=1 or PAYMENT_AUTO_CREATE=1).'
+          'Requires payment provider configuration and auto-create enabled (PAYMENT_AUTO_CREATE=true or a provider-specific *_AUTO_CREATE flag).'
         ],
         rateLimitTier: 'admin'
       },

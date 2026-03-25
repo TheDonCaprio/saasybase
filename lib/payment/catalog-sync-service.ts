@@ -1,6 +1,7 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
 import { PaymentProviderFactory } from './factory';
+import { isPaymentCatalogAutoCreateEnabled } from './auto-create';
 import { getProviderCurrency } from './registry';
 import {
   parseProviderIdMap,
@@ -12,31 +13,11 @@ import {
 } from '../utils/provider-ids';
 import { toError } from '../runtime-guards';
 
-function isTruthyEnv(value: string | undefined) {
-  return value === '1' || value === 'true';
-}
-
-function isCatalogSyncEnabledForConfiguredProviders(providerNames: string[]) {
-  if (isTruthyEnv(process.env.PAYMENT_AUTO_CREATE)) {
-    return true;
-  }
-
-  for (const providerName of providerNames) {
-    const providerKey = providerName.toUpperCase();
-    if (isTruthyEnv(process.env[`${providerKey}_AUTO_CREATE`])) {
-      return true;
-    }
-  }
-
-  // Backward compatibility for existing Stripe-based setups.
-  return isTruthyEnv(process.env.STRIPE_AUTO_CREATE);
-}
-
 export async function syncPlansToProviders() {
   const configuredProviders = PaymentProviderFactory.getAllConfiguredProviders();
   const configuredProviderNames = configuredProviders.map(({ name }) => name);
 
-  if (!isCatalogSyncEnabledForConfiguredProviders(configuredProviderNames)) {
+  if (!isPaymentCatalogAutoCreateEnabled(configuredProviderNames)) {
     Logger.info('Catalog sync skipped: enable PAYMENT_AUTO_CREATE or a provider-specific *_AUTO_CREATE flag', {
       configuredProviders: configuredProviderNames,
     });

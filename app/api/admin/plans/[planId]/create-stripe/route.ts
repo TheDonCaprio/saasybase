@@ -8,6 +8,7 @@ import { Logger } from '@/lib/logger';
 import { adminRateLimit } from '@/lib/rateLimit';
 import { persistEnvValue } from '@/lib/env-files';
 import { findPlanSeedByName } from '@/lib/plans';
+import { isPaymentCatalogAutoCreateEnabled } from '@/lib/payment/auto-create';
 import { getProviderCurrency } from '@/lib/payment/registry';
 
 async function getPlanId(context: unknown): Promise<string | null> {
@@ -63,7 +64,8 @@ export async function POST(request: NextRequest, context: unknown) {
       );
     }
 
-    if (process.env.STRIPE_AUTO_CREATE !== '1' && process.env.PAYMENT_AUTO_CREATE !== '1') {
+    const configuredProviders = [paymentService.provider.name];
+    if (!isPaymentCatalogAutoCreateEnabled(configuredProviders)) {
       return NextResponse.json(
         { error: 'Auto-creation is disabled' },
         { status: 400 }

@@ -311,6 +311,24 @@ function DashboardDemo() {
     return () => { clearTimeout(delay); cancelAnimationFrame(raf); };
   }, [demoView, transitioning]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const preventScroll = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    el.addEventListener('wheel', preventScroll, { passive: false });
+    el.addEventListener('touchmove', preventScroll, { passive: false });
+
+    return () => {
+      el.removeEventListener('wheel', preventScroll);
+      el.removeEventListener('touchmove', preventScroll);
+    };
+  }, [demoView]);
+
   // 3D tilt
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = tiltRef.current?.getBoundingClientRect();
@@ -1303,7 +1321,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         /* ── Demo: mobile responsive ── */
         .lp-dd-mobile-hdr { display:none; }
         .lp-dd-tbl-mobile { display:none; }
-        .lp-dd-content { overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
+        .lp-dd-content { overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; touch-action:none; overscroll-behavior:none; }
         .lp-dd-content::-webkit-scrollbar { display:none; }
 
         @media(max-width:768px) {

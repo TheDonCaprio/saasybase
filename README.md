@@ -79,9 +79,14 @@ npm install
 # 3. Run database migrations
 npx prisma migrate dev --name init
 
-# 4. Start dev server
+# 4. Seed the database
+npx prisma db seed
+
+# 5. Start dev server
 npm run dev
 ```
+
+When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. For CI or non-interactive environments, you can predefine `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`; otherwise it falls back to `admin@saasybase.com` / `password`.u
 
 > **Database note:** The default `DATABASE_URL=file:./dev.db` keeps everything local. For deployments on read-only filesystems (Vercel, Netlify previews), point `DATABASE_URL` at a hosted PostgreSQL instance.
 
@@ -243,13 +248,13 @@ PlanPrice {
 
 For example, a plan can have a $10 USD price on Stripe and a ₦15,000 NGN price on Paystack simultaneously.
 
-### Auto-creating Price IDs (Stripe only)
+### Auto-creating Provider Price IDs
 
 ```bash
-STRIPE_AUTO_CREATE="1"   # Auto-creates Stripe products/prices when saving plans without a price ID
+PAYMENT_AUTO_CREATE="true"
 ```
 
-When enabled, saving a plan without a `stripePriceId` will create the product/price in Stripe and write the generated ID back into the matching env entry automatically.
+When enabled, saving a plan without a provider price ID will auto-create catalog objects for configured payment providers where supported.
 
 ### Plan Recurring Interval
 

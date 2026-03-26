@@ -958,7 +958,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         html, body { overflow-x: hidden; }
 
         /* ── CSS vars: dark default ───────────────────────── */
@@ -1004,7 +1004,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-sidebar-border:     rgb(var(--border-primary) / 0.5);
           --lp-dd-border:             rgb(var(--border-primary) / 0.4);
           --lp-dd-border2:            rgb(var(--border-primary) / 0.5);
-          --lp-dd-border-main:        rgb(var(--accent-primary) / 0.4);
+          --lp-dd-border-main:        rgba(var(--accent-primary-rgb), 0.4);
           --lp-dd-url-bg:             rgb(var(--bg-tertiary));
           --lp-dd-url-text:           rgb(var(--text-tertiary));
           --lp-dd-brand:              rgb(var(--accent-primary));
@@ -1025,8 +1025,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-row-text3:          rgb(var(--text-tertiary));
           --lp-dd-row-border:         rgb(var(--border-primary) / 0.3);
           --lp-dd-amount:             #a5f3fc;
-          --lp-dd-live-bg:            rgb(var(--accent-primary) / 0.09);
-          --lp-dd-live-border:        rgb(var(--accent-primary) / 0.22);
+          --lp-dd-live-bg:            rgba(var(--accent-primary-rgb), 0.09);
+          --lp-dd-live-border:        rgba(var(--accent-primary-rgb), 0.22);
           --lp-dd-banner-bg:          linear-gradient(315deg, rgba(80,40,160,0.65) 0%, rgba(60,30,120,0.45) 55%, rgba(18,12,50,0.4) 100%);
           --lp-dd-banner-border:      rgba(139,92,246,0.35);
           --lp-dd-banner-bg-users:    linear-gradient(315deg, rgba(16,185,129,0.78) 0%, rgba(6,182,212,0.32) 55%, rgba(6,20,30,0.32) 100%);
@@ -1177,7 +1177,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           overflow:hidden;
           border:1px solid var(--lp-border2);
           border-radius:26px;
-          background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+          background:linear-gradient(180deg, rgba(18,178,210,0.28), rgba(255,255,255,.01));
           backdrop-filter:blur(18px);
           padding:22px;
           box-shadow:0 30px 70px rgba(2,6,23,.28);
@@ -1194,8 +1194,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:
             linear-gradient(90deg, rgba(99,102,241,.12) 0, rgba(99,102,241,0) 18%),
             linear-gradient(180deg, rgba(6,182,212,.08) 0, rgba(6,182,212,0) 35%),
-            repeating-linear-gradient(90deg, transparent 0 44px, rgba(255,255,255,.03) 44px 45px),
-            repeating-linear-gradient(180deg, transparent 0 44px, rgba(255,255,255,.03) 44px 45px);
+            repeating-linear-gradient(90deg, transparent 0 44px, rgba(255,255,255,.09) 44px 45px),
+            repeating-linear-gradient(180deg, transparent 0 44px, rgba(255,255,255,.09) 44px 45px);
           pointer-events:none;
         }
         .lp-hero-panel > * {
@@ -1274,7 +1274,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           color:#6366f1;
         }
         .light .lp-root .lp-hero-panel {
-          background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+          background:linear-gradient(180deg, rgba(20,178,192,.1), rgba(255,255,255));
           border-color:rgba(0,0,0,.1);
           box-shadow:0 20px 50px rgba(0,0,0,.06);
         }
@@ -1282,8 +1282,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:
             linear-gradient(90deg, rgba(99,102,241,.06) 0, rgba(99,102,241,0) 18%),
             linear-gradient(180deg, rgba(6,182,212,.04) 0, rgba(6,182,212,0) 35%),
-            repeating-linear-gradient(90deg, transparent 0 44px, rgba(0,0,0,.02) 44px 45px),
-            repeating-linear-gradient(180deg, transparent 0 44px, rgba(0,0,0,.02) 44px 45px);
+            repeating-linear-gradient(90deg, transparent 0 44px, rgba(99,102,241,.1) 44px 45px),
+            repeating-linear-gradient(180deg, transparent 0 44px, rgba(99,102,241,.1) 44px 45px);
         }
         .light .lp-root .lp-panel-dot {
           opacity:.6;
@@ -1463,9 +1463,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           opacity:1;
         }
         .lp-proof-kpi {
-          font-size:18px;
+          font-size:16px;
           line-height:1;
-          font-weight:800;
+          font-weight:700;
           letter-spacing:-.6px;
           color:var(--lp-text1);
           margin-bottom:8px;
@@ -2008,6 +2008,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     backgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     textShadow: '0 10px 30px rgba(99,102,241,0.15)',
+                    fontSize: '2.9rem',
                   }}
                 >
                   One codebase you can actually ship.
@@ -2036,13 +2037,13 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-hero-proofs">
                 {[
                   {
-                    value: 'Clerk + NextAuth',
+                    value: 'NextAuth or Clerk',
                     copy: 'Provider-agnostic auth architecture with vendor-specific code kept behind adapters.',
                     meta: 'Auth boundary',
                     tone: 'auth',
                   },
                   {
-                    value: '244 checks / 84 files',
+                    value: 'Over 240 tests',
                     copy: 'Regression coverage for webhooks, resurrection, proration, expiry, org access, and checkout flows.',
                     meta: 'Regression coverage',
                     tone: 'tests',
@@ -2074,12 +2075,12 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 <span className="lp-panel-dot" style={{ background: '#ff5f56' }} />
                 <span className="lp-panel-dot" style={{ background: '#ffbd2e' }} />
                 <span className="lp-panel-dot" style={{ background: '#27c93f' }} />
-                <span className="lp-panel-label">SaasyBase switchboard</span>
+                <span className="lp-panel-label">Next.js 16 Boilerplate</span>
               </div>
 
-              <div className="lp-panel-title">The hard parts already live in one place.</div>
+              <div className="lp-panel-title">The hard parts already work.</div>
               <div className="lp-panel-sub">
-                Auth, billing, safeguards, and product controls are designed together instead of being glued on after launch.
+                Auth, billing, safeguards, and product controls are all in place.
               </div>
 
               <div className="lp-arch-grid">
@@ -2100,9 +2101,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   <div className="lp-env-line">
                     <span className="lp-code-key">AUTH_PROVIDER</span>
                     <span>=</span>
-                    <span className="lp-code-string">"clerk"</span>
+                    <span className="lp-code-string">&quot;clerk&quot;</span>
                     <span className="lp-code-comment">or</span>
-                    <span className="lp-code-string">"nextauth"</span>
+                    <span className="lp-code-string">&quot;nextauth&quot;</span>
                   </div>
                 </div>
 
@@ -2123,7 +2124,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   <div className="lp-env-line">
                     <span className="lp-code-key">PAYMENT_PROVIDER</span>
                     <span>=</span>
-                    <span className="lp-code-string">"stripe"</span>
+                    <span className="lp-code-string">&quot;stripe&quot;</span>
                     <span className="lp-code-comment">→ provider-agnostic routes, webhooks, plans</span>
                   </div>
                 </div>
@@ -2164,15 +2165,32 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   <div className="lp-env-line">
                     <span className="lp-code-key">tokenName</span>
                     <span>=</span>
-                    <span className="lp-code-string">"API calls"</span>
-                    <span className="lp-code-comment">or "HD exports", "credits", "points"</span>
+                    <span className="lp-code-string">&quot;API calls&quot;</span>
+                    <span className="lp-code-comment">or &quot;HD exports&quot;, &quot;credits&quot;, &quot;points&quot;</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="lp-signal-strip" style={{ marginBottom: 48 }}>
+        </section>
+
+        {/* ── DASHBOARD DEMO ──────────────────────────────── */}
+        <section style={{ textAlign: 'center', marginBottom: 0 }}>
+          <div className="lp-section-tag">Live preview</div>
+          <h2 className="lp-section-h2">One dashboard. Every layer wired.</h2>
+          <p className="lp-section-sub" style={{ marginBottom: 40 }}>
+            Finance, users, and operations — all in one place, no assembly required.
+          </p>
+          {mounted && (
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <div className="lp-demo-wrap">
+                <DashboardDemo />
+              </div>
+              <p className="lp-demo-hint">↑ Animated product preview — finance, users, and operations in one flow</p>
+            </div>
+          )}
+          <div className="lp-signal-strip" style={{ marginTop: 40 }}>
             {[
               { icon: faArrowsRotate, label: 'Subscription resurrection covered' },
               { icon: faFileLines, label: 'Centralized webhook ingress' },
@@ -2188,16 +2206,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             ))}
           </div>
         </section>
-
-        {/* ── DASHBOARD DEMO ──────────────────────────────── */}
-        {mounted && (
-          <section style={{ position: 'relative', marginBottom: 8 }}>
-            <div className="lp-demo-wrap">
-              <DashboardDemo />
-            </div>
-            <p className="lp-demo-hint">↑ Animated product preview — finance, users, and operations in one flow</p>
-          </section>
-        )}
 
         {/* ── METRICS ─────────────────────────────────────── */}
         <div className="lp-metrics">
@@ -2281,7 +2289,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
             <div className="lp-switch-card lp-switch-card-auth">
               <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Authentication</div>
-              <div className="lp-switch-title">Keep the same app shell while auth stays replaceable.</div>
+              <div className="lp-switch-title">Self-hosted NextAuth or just Clerk</div>
               <div className="lp-switch-sub">
                 Clerk and NextAuth sit behind the same integration boundary, so account flows can stay stable while your auth provider changes.
               </div>

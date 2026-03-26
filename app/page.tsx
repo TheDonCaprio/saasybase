@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getAuthSafe } from '../lib/auth';
-import LandingClient from '../components/LandingClient';
+import LandingClientAlt from '../components/LandingClientAlt';
 export const dynamic = 'force-dynamic';
 import { getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
 
@@ -21,5 +21,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const auth = await getAuthSafe();
-  return <LandingClient isSignedIn={Boolean(auth?.userId)} />;
+  return <LandingClientAlt isSignedIn={Boolean(auth?.userId)} />;
 }

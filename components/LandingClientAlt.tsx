@@ -83,19 +83,25 @@ type DemoView = 'finance' | 'users' | 'overview';
 const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
 const DEMO_HOLD_MS = [9500, 8500, 6500];
 
-const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string }> = [
-  { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle — all wired up. Switch providers with one env var.' },
-  { icon: faLock,         title: 'Auth & User Management',   desc: 'Clerk-powered authentication out of the box. Magic links, OAuth, MFA — all handled.' },
-  { icon: faBuilding,     title: 'Teams & Organizations',    desc: 'Built-in multi-tenant support with role-based access. Invite members, manage seats.' },
-  { icon: faTag,          title: 'Coupons & Discounts',      desc: 'Create one-time, forever, or repeating discount codes. Native provider mapping included.' },
-  { icon: faGauge,        title: 'Admin Dashboard',          desc: 'Full analytics, user management, revenue overview, and subscription controls.' },
-  { icon: faEnvelope,     title: 'Transactional Emails',     desc: 'Nodemailer-powered email templates for receipts, renewals, and lifecycle events.' },
-  { icon: faArrowsRotate, title: 'Subscriptions & Billing',  desc: 'Recurring plans, proration, upgrades, downgrades, and end-of-cycle reconciliation.' },
-  { icon: faShield,       title: 'Token-based Access',       desc: 'Credit system with per-plan token limits. Control feature access with fine-grained gates.' },
-  { icon: faNewspaper,    title: 'Blog Engine',              desc: 'MDX-powered blog built-in. Write posts, set metadata, publish — no third-party CMS needed.' },
-  { icon: faFileLines,    title: 'Static Pages',             desc: 'Configurable marketing and legal pages (Terms, Privacy, etc.) with CMS-editable content.' },
-  { icon: faHeadset,      title: 'Support System',           desc: 'Built-in ticket system so users can raise issues directly from their dashboard.' },
-  { icon: faUserShield,   title: 'Moderator Tools',          desc: 'Role-based moderation controls. Suspend accounts, manage content, audit activity logs.' },
+type SurfaceTone = 'auth' | 'tests' | 'security' | 'meter';
+
+const NEXTAUTH_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 232" fill="none"><path d="M0 0C1.21752.370087 2.43504.740174 3.68945 1.12148C6.94224 2.11054 10.1879 3.12125 13.4324 4.1372C16.7917 5.18553 20.1567 6.21523 23.5212 7.24658C27.5452 8.48147 31.5684 9.71867 35.5885 10.966C43.281 13.3525 50.9859 15.6874 58.7148 17.9531C61.1946 18.6857 63.674 19.4193 66.1533 20.1532C67.6627 20.5974 69.1734 21.0374 70.6853 21.4731C72.7318 22.0642 74.7724 22.6724 76.8125 23.2852C77.9231 23.6105 79.0337 23.9358 80.178 24.271C83.2028 25.5943 84.3153 26.5613 85.8711 29.4492C86.2434 31.4502 86.2434 31.4502 86.2344 33.5898C86.2354 34.4001 86.2365 35.2104 86.2375 36.0452C86.2197 36.921 86.2019 37.7968 86.1836 38.6992C86.1716 39.626 86.1596 40.5527 86.1472 41.5076C85.2156 88.9591 74.5348 141.488 45.8711 180.449C45.2988 181.232 44.7264 182.014 44.1367 182.82C39.7203 188.665 34.8514 194.083 29.8711 199.449C29.331 200.055 28.7909 200.661 28.2344 201.285C18.5458 211.681 5.7712 218.83-7.12891 224.449C-8.27746 224.952-9.42602 225.455-10.6094 225.973C-17.5139 228.563-22.0601 228.804-28.8984 225.977C-29.9645 225.473-31.0305 224.969-32.1289 224.449C-33.0636 224.03-33.0636 224.03-34.0171 223.602C-70.3465 207.261-93.0817 174.359-106.959 138.156C-112.275 123.906-116.238 109.646-119.379 94.7617C-119.625 93.5988-119.872 92.4359-120.126 91.2378C-123.106 76.5186-124.519 61.9596-124.554 46.9507C-124.567 44.5261-124.616 42.1038-124.666 39.6797C-124.675 38.1263-124.683 36.5729-124.688 35.0195C-124.707 34.3009-124.727 33.5822-124.747 32.8418C-124.728 30.8247-124.728 30.8247-124.129 27.4492C-120.012 24.2722-115.138 23.0204-110.23 21.5383C-109.344 21.2648-108.457 20.9913-107.543 20.7094C-104.615 19.8092-101.685 18.9194-98.7539 18.0312C-96.7071 17.4078-94.6603 16.7844-92.6135 16.1608C-88.3212 14.8554-84.0271 13.5561-79.7319 12.26C-74.2542 10.6058-68.7837 8.9288-63.3146 7.24602C-59.087 5.9495-54.8545 4.66935-50.6205 3.3935C-48.6031 2.78266-46.5875 2.16593-44.5738 1.54301C-28.4029-3.44892-16.471-5.22489 0 0Z" fill="#38E9D5" transform="translate(124.129 3.551)"/><path d="M0 0C.99.495.99.495 2 1C2.96379 52.402-6.8426 109.65-38 152C-38.5723 152.782-39.1447 153.565-39.7344 154.371C-44.1508 160.216-49.0197 165.634-54 171C-54.8102 171.909-54.8102 171.909-55.6367 172.836C-65.3253 183.232-78.0999 190.38-91 196C-92.1486 196.503-93.2971 197.005-94.4805 197.523C-101.385 200.114-105.931 200.355-112.77 197.527C-113.836 197.023-114.902 196.519-116 196C-116.623 195.72-117.246 195.441-117.888 195.153C-142.663 184.009-160.375 165.36-174.83 142.818C-175.87 141.202-176.934 139.6-178 138C-178 137.01-178 136.02-178 135C-176.076 133.425-174.189 132.059-172.125 130.688C-165.14 125.898-158.483 120.758-151.868 115.471C-151.133 114.89-150.398 114.31-149.641 113.711C-148.986 113.188-148.332 112.665-147.657 112.126C-146 111-146 111-144 111C-144 110.34-144 109.68-144 109C-143.34 109-142.68 109-142 109C-140.952 110.146-139.962 111.344-139 112.563C-131.703 121.064-122.117 127.224-110.756 128.191C-94.9376 128.958-83.2727 126.944-70.75 116.688C-61.6685 108.246-57.2343 97.1057-55.5859 84.9453C-55.1772 72.1253-60.0055 61.3676-67 51C-56.6318 42.9978-46.2147 35.0604-35.7935 27.1274C-32.9954 24.9965-30.1986 22.8638-27.4023 20.7305C-18.2953 13.7838-9.18379 6.84506 0 0Z" fill="#8C2AE9" transform="translate(208 32)"/><path d="M0 0C11.0753 8.54932 17.3925 19.7482 19.25 33.4375C20.6166 45.0535 17.0871 56.965 10.4375 66.5C2.74196 76.0728-7.14505 84.0387-19.75 85.4375C-35.6553 86.4931-48.0462 84.7953-60.75 74.4375C-61.7052 73.6873-61.7052 73.6873-62.6797 72.9219C-70.9078 65.6811-76.1899 53.2691-76.9609 42.4883C-77.4453 26.7476-72.4726 14.8564-61.8086 3.40625C-44.988-12.6802-18.4942-12.2697 0 0Z" fill="#E2E0F8" transform="translate(133.75 75.563)"/></svg>`;
+
+const CLERK_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none"><path d="M0 0C.83429-.00807175 1.66858-.0161435 2.52815-.0244598C4.29568-.0382524 6.06324-.048996 7.83081-.0568848C9.6001-.0682912 11.3694-.0885581 13.1384-.118408C40.7056-.582136 70.5893 6.78287 92.8906 23.7773C95.332 26.2383 95.332 26.2383 96.1641 28.6328C96.1274 33.1699 95.7784 36.3082 92.6328 39.6992C91.9998 40.3838 91.3668 41.0684 90.7146 41.7737C86.0265 46.6232 81.3129 51.4434 76.543 56.2126C74.6989 58.0589 72.8631 59.913 71.0273 61.7676C69.8455 62.9523 68.6633 64.1366 67.4805 65.3203C66.9376 65.8703 66.3948 66.4203 65.8355 66.987C58.8524 73.9287 58.8524 73.9287 54.2969 74.4883C49.6983 73.9212 45.8921 72.7322 41.6445 70.8633C23.0504 62.7942 1.13292 62.6616-17.7461 70.0518C-37.473 78.4227-52.7443 92.5632-61.668 112.238C-70.6956 135.222-69.2922 157.666-59.668 180.238C-59.338 180.898-59.008 181.558-58.668 182.238C-58.1144 185.698-57.9003 188.158-59.993 191.102C-60.5715 191.732-61.1499 192.361-61.7458 193.01C-62.3834 193.708-63.0209 194.407-63.6777 195.126C-64.3345 195.823-64.9913 196.52-65.668 197.238C-66.2573 197.864-66.8467 198.49-67.4539 199.135C-71.289 203.149-75.2021 207.089-79.1111 211.031C-80.5312 212.468-81.9458 213.91-83.3552 215.358C-85.4071 217.464-87.4749 219.554-89.5469 221.641C-90.4846 222.612-90.4846 222.612-91.4413 223.604C-95.0019 227.147-97.3902 229.193-102.668 229.238C-108.022 227.465-110.379 224.433-113.043 219.676C-113.422 219.018-113.8 218.36-114.19 217.683C-121.755 204.234-127.271 190.292-130.668 175.238C-130.853 174.478-131.037 173.718-131.228 172.934C-133.218 163.712-133.11 154.379-133.105 144.988C-133.106 144.099-133.106 143.21-133.107 142.294C-133.007 104.031-118.906 70.9955-92.668 43.2383C-91.9216 42.4275-91.1752 41.6166-90.4062 40.7812C-67.8289 17.0844-32.9277.310099 0 0Z" fill="#B9B0FF" transform="translate(178.668 15.762)"/><path d="M0 0C18.1406 7.80364 39.921 8.39355 58.3555 1.08984C60.9287.0491918 63.4606-1.04331 66-2.16797C69.6289-3.46582 71.5807-4.0574 75.375-3.375C81.1185.206237 85.9494 4.91328 90.6836 9.70312C91.6619 10.6821 91.6619 10.6821 92.6599 11.6808C94.0227 13.0466 95.383 14.4147 96.741 15.7852C98.8261 17.8887 100.919 19.9839 103.014 22.0781C104.342 23.411 105.669 24.7443 106.996 26.0781C107.622 26.7052 108.248 27.3323 108.893 27.9783C112.747 31.8755 114.549 33.9207 114.938 39.375C115.021 40.2155 115.105 41.0559 115.191 41.9219C113.325 48.1011 105.366 51.4049 99.9836 54.3533C92.3916 58.3515 84.8257 61.8172 76.6875 64.5625C75.8945 64.8325 75.1015 65.1025 74.2844 65.3806C60.6436 69.7286 47.3499 71.1431 33.1218 71.071C30.5745 71.0625 28.0295 71.0914 25.4824 71.123C-1.98346 71.2404-30.47 62.1187-52.625 45.625C-54.4277 42.0196-54.4513 38.5384-53.625 34.625C-51.4229 31.1719-48.596 28.4982-45.6367 25.6875C-44.8226 24.8814-44.0084 24.0752-43.1696 23.2446C-40.571 20.683-37.9421 18.1548-35.3125 15.625C-33.5534 13.8939-31.7962 12.1608-30.041 10.4258C-28.3663 8.78213-26.6899 7.14014-25.0117 5.5C-24.2179 4.72406-23.424 3.94813-22.6061 3.14868C-21.4953 2.08122-21.4953 2.08122-20.3621.992188C-19.3861.0502856-19.3861.0502856-18.3904-.910645C-12.7819-5.56267-5.872-.602811 0 0Z" fill="#6C47FF" transform="translate(159.625 233.375)"/><path d="M0 0C9.80521 9.19114 14.854 21.549 15.3125 34.875C14.8725 47.6646 10.331 59.1792 1.37109 68.3828C-8.44878 77.0449-20.1332 81.2608-33.1602 81.0859C-45.9416 80.1954-57.3379 74.9011-66.1133 65.5586C-74.5002 54.7078-78.2455 42.2537-76.9805 28.6484C-75.2194 16.7658-68.8584 5.05337-59.1875-2.125C-39.8506-13.7764-18.3305-14.7349 0 0Z" fill="#6C47FF" transform="translate(221.188 125.125)"/></svg>`;
+
+const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone: SurfaceTone }> = [
+  { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle are already wired behind one payment interface.', tone: 'meter' },
+  { icon: faLock,         title: 'Auth & User Management',   desc: 'Clerk or NextAuth sit behind one app boundary, with sessions, OAuth, and magic links already handled.', tone: 'auth' },
+  { icon: faBuilding,     title: 'Teams & Organizations',    desc: 'Built-in multi-tenant support with seats, invites, and role-based access already in place.', tone: 'security' },
+  { icon: faTag,          title: 'Coupons & Discounts',      desc: 'Create one-time, forever, or repeating discount codes with provider mapping already done.', tone: 'meter' },
+  { icon: faGauge,        title: 'Admin Dashboard',          desc: 'Analytics, user management, revenue overview, and subscription controls are already connected.', tone: 'tests' },
+  { icon: faEnvelope,     title: 'Transactional Emails',     desc: 'Nodemailer-powered lifecycle emails for receipts, renewals, and account events.', tone: 'auth' },
+  { icon: faArrowsRotate, title: 'Subscriptions & Billing',  desc: 'Recurring plans, proration, upgrades, downgrades, and end-of-cycle reconciliation.', tone: 'tests' },
+  { icon: faShield,       title: 'Token-based Access',       desc: 'Credit limits, feature gates, and usage-meter semantics live inside the billing model.', tone: 'security' },
+  { icon: faNewspaper,    title: 'Blog Engine',              desc: 'MDX-powered publishing is built in, so content can ship from the same codebase.', tone: 'tests' },
+  { icon: faFileLines,    title: 'Static Pages',             desc: 'Marketing and legal pages are configurable without introducing a separate CMS.', tone: 'auth' },
+  { icon: faHeadset,      title: 'Support System',           desc: 'Users can raise issues directly from the dashboard with a built-in ticket surface.', tone: 'security' },
+  { icon: faUserShield,   title: 'Moderator Tools',          desc: 'Role-based moderation, account controls, and audit-aware admin operations are included.', tone: 'meter' },
 ];
 
 const PROVIDERS = [
@@ -103,6 +109,11 @@ const PROVIDERS = [
   { name: 'Paystack', color: '#00C3F7', logoUrl: '/images/providers/paystack.svg' },
   { name: 'Razorpay', color: '#3293FB', logoUrl: '/images/providers/razorpay.svg' },
   { name: 'Paddle',   color: '#1DCD9F', logoUrl: '/images/providers/paddle.svg' },
+];
+
+const AUTH_PROVIDERS = [
+  { name: 'Clerk', color: '#6366F1', logoSvg: CLERK_LOGO_SVG },
+  { name: 'NextAuth', color: '#0F172A', logoSvg: NEXTAUTH_LOGO_SVG },
 ];
 
 const STATS = [
@@ -113,6 +124,7 @@ const STATS = [
 ];
 
 const PROVIDER_NAMES = ['stripe', 'razorpay', 'paystack', 'paddle'];
+const AUTH_PROVIDER_NAMES = ['clerk', 'nextauth'];
 
 /* ─── Typewriter for provider env section ─── */
 function TypewriterProvider() {
@@ -144,6 +156,41 @@ function TypewriterProvider() {
     }
     return () => clearTimeout(t);
   }, [phase, displayed, providerIdx]);
+
+  return (
+    <span className="lp-code-string">
+      &quot;{displayed}<span className="lp-cursor">|</span>&quot;
+    </span>
+  );
+}
+
+function TypewriterAuthProvider() {
+  const [providerIdx, setProviderIdx] = useState(0);
+  const [displayed, setDisplayed] = useState('clerk');
+  const [phase, setPhase] = useState<'typing' | 'hold' | 'erasing'>('hold');
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const target = AUTH_PROVIDER_NAMES[providerIdx];
+    if (phase === 'hold') {
+      t = setTimeout(() => setPhase('erasing'), 1800);
+    } else if (phase === 'erasing') {
+      if (displayed.length > 0) {
+        t = setTimeout(() => setDisplayed((value) => value.slice(0, -1)), 55);
+      } else {
+        const next = (providerIdx + 1) % AUTH_PROVIDER_NAMES.length;
+        t = setTimeout(() => {
+          setProviderIdx(next);
+          setPhase('typing');
+        }, 0);
+      }
+    } else if (displayed.length < target.length) {
+      t = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
+    } else {
+      t = setTimeout(() => setPhase('hold'), 0);
+    }
+    return () => clearTimeout(t);
+  }, [displayed, phase, providerIdx]);
 
   return (
     <span className="lp-code-string">
@@ -318,7 +365,7 @@ function DashboardDemo() {
       ref={tiltRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ position: 'relative', maxWidth: 1060, margin: '0 auto' }}
+      style={{ position: 'relative', maxWidth: 1220, margin: '0 auto' }}
     >
       {/* outward ambient glow */}
       <div style={{
@@ -350,7 +397,7 @@ function DashboardDemo() {
           </div>
 
           {/* app shell */}
-          <div className="lp-dd-shell" style={{ display: 'flex', height: 520 }}>
+          <div className="lp-dd-shell" style={{ display: 'flex', height: 600 }}>
             {/* mobile header – visible only on small screens */}
             <div className="lp-dd-mobile-hdr">
               <FontAwesomeIcon icon={faBars} style={{ fontSize: 14, color: 'var(--lp-dd-nav-text)' }} />
@@ -358,7 +405,7 @@ function DashboardDemo() {
               <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--lp-dd-muted)', fontWeight: 500 }}>Admin Panel</span>
             </div>
             {/* sidebar */}
-            <nav className="lp-dd-sidebar" style={{ width: 174, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
+            <nav className="lp-dd-sidebar" style={{ width: 190, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden', boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.04)' }}>
               {/* Brand */}
               <div style={{ padding: '0 14px 10px', fontSize: 13, fontWeight: 700, color: 'var(--lp-dd-brand)', letterSpacing: 0.3 }}>SaasyBase</div>
               {/* ADMIN section label */}
@@ -887,9 +934,9 @@ function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?
 }
 
 /* ─── Feature card ─── */
-function FeatureCard({ icon, title, desc, delay }: { icon: IconDefinition; title: string; desc: string; delay: number }) {
+function FeatureCard({ icon, title, desc, tone, delay }: { icon: IconDefinition; title: string; desc: string; tone: SurfaceTone; delay: number }) {
   return (
-    <div className="lp-feature-card" style={{ animationDelay: `${delay}ms` }}>
+    <div className={`lp-feature-card lp-feature-card-${tone}`} style={{ animationDelay: `${delay}ms` }}>
       <div className="lp-feature-icon">
         <FontAwesomeIcon icon={icon} />
       </div>
@@ -902,7 +949,7 @@ function FeatureCard({ icon, title, desc, delay }: { icon: IconDefinition; title
 }
 
 /* ─── Main landing component ─── */
-export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
+export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setMounted(true));
@@ -953,7 +1000,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           /* Dashboard demo — theme-aware */
           --lp-dd-outer-bg:           rgb(var(--bg-primary));
           --lp-dd-chrome-bg:          rgb(var(--bg-secondary));
-          --lp-dd-sidebar-bg:         rgb(var(--bg-primary));
+          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(12,18,34,.92), rgba(9,14,28,.82));
           --lp-dd-sidebar-border:     rgb(var(--border-primary) / 0.5);
           --lp-dd-border:             rgb(var(--border-primary) / 0.4);
           --lp-dd-border2:            rgb(var(--border-primary) / 0.5);
@@ -1016,6 +1063,8 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           --lp-badge-color:  #4338ca;
           --lp-badge-bg:     rgba(99,102,241,.07);
           --lp-badge-border: rgba(99,102,241,.3);
+          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(245,247,255,.98), rgba(238,242,255,.94));
+          --lp-dd-sidebar-border:     rgba(99,102,241,.1);
           --lp-code-bg:      #f5f4ff;
           --lp-code-border:  rgba(0,0,0,.1);
           --lp-code-text:    rgba(0,0,0,.55);
@@ -1080,6 +1129,392 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           max-width:540px; margin:20px auto 0; line-height:1.7;
           animation:lpFadeUp .7s .2s ease both;
         }
+        .lp-hero-shell {
+          position:relative;
+          isolation:isolate;
+        }
+        .lp-hero-grid {
+          display:grid;
+          grid-template-columns:minmax(0, 1.15fr) minmax(340px, 0.85fr);
+          gap:48px;
+          align-items:stretch;
+        }
+        .lp-hero-copy {
+          position:relative;
+          text-align:left;
+          padding:28px 0 0;
+        }
+        .lp-hero-kicker {
+          display:inline-flex;
+          align-items:center;
+          gap:10px;
+          margin-bottom:18px;
+          color:var(--lp-text3);
+          font-size:11px;
+          font-weight:700;
+          letter-spacing:2.2px;
+          text-transform:uppercase;
+        }
+        .lp-hero-kicker::before {
+          content:'';
+          width:34px;
+          height:2px;
+          border-radius:1px;
+          background:linear-gradient(90deg, #6366f1, #06b6d4);
+        }
+        .lp-hero-copy .lp-hero-badge {
+          margin-bottom:18px;
+        }
+        .lp-hero-copy .lp-hero-sub {
+          max-width:680px;
+          margin:18px 0 0;
+        }
+        .lp-hero-copy .lp-cta-row {
+          justify-content:flex-start;
+        }
+        .lp-hero-panel {
+          position:relative;
+          overflow:hidden;
+          border:1px solid var(--lp-border2);
+          border-radius:26px;
+          background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+          backdrop-filter:blur(18px);
+          padding:22px;
+          box-shadow:0 30px 70px rgba(2,6,23,.28);
+          animation:lpFadeUp .8s .25s ease both;
+          height:100%;
+          display:flex;
+          flex-direction:column;
+          justify-content:center;
+        }
+        .lp-hero-panel::before {
+          content:'';
+          position:absolute;
+          inset:0;
+          background:
+            linear-gradient(90deg, rgba(99,102,241,.12) 0, rgba(99,102,241,0) 18%),
+            linear-gradient(180deg, rgba(6,182,212,.08) 0, rgba(6,182,212,0) 35%),
+            repeating-linear-gradient(90deg, transparent 0 44px, rgba(255,255,255,.03) 44px 45px),
+            repeating-linear-gradient(180deg, transparent 0 44px, rgba(255,255,255,.03) 44px 45px);
+          pointer-events:none;
+        }
+        .lp-hero-panel > * {
+          position:relative;
+          z-index:1;
+        }
+        .lp-panel-topbar {
+          display:flex;
+          align-items:center;
+          gap:8px;
+          margin-bottom:16px;
+        }
+        .lp-panel-dot {
+          width:9px;
+          height:9px;
+          border-radius:999px;
+          background:rgba(255,255,255,.2);
+        }
+        .lp-panel-label {
+          margin-left:auto;
+          font-size:10px;
+          letter-spacing:1.8px;
+          text-transform:uppercase;
+          color:var(--lp-text3);
+          font-weight:700;
+        }
+        .lp-panel-title {
+          font-size:20px;
+          line-height:1.12;
+          color:var(--lp-text1);
+          font-weight:800;
+          letter-spacing:-.7px;
+          margin-bottom:8px;
+        }
+        .lp-panel-sub {
+          font-size:13px;
+          line-height:1.55;
+          color:var(--lp-text3);
+          margin-bottom:16px;
+        }
+        .lp-arch-grid {
+          display:grid;
+          gap:12px;
+        }
+        .lp-arch-card {
+          border:1px solid var(--lp-border2);
+          border-radius:18px;
+          background:rgba(12,18,34,.56);
+          padding:14px;
+        }
+        .light .lp-root .lp-arch-card {
+          background:rgba(255,255,255,.72);
+          box-shadow:0 1px 4px rgba(0,0,0,.04);
+        }
+        .light .lp-root .lp-chip-strong {
+          color:#4338ca;
+          background:linear-gradient(135deg, rgba(99,102,241,.12), rgba(6,182,212,.08));
+          border-color:rgba(99,102,241,.28);
+        }
+        .light .lp-root .lp-chip-soft {
+          background:rgba(0,0,0,.035);
+          border-color:rgba(0,0,0,.1);
+          color:rgba(0,0,0,.58);
+        }
+        .light .lp-root .lp-arch-icon {
+          background:linear-gradient(135deg, rgba(99,102,241,.1), rgba(6,182,212,.08));
+          border-color:rgba(99,102,241,.18);
+          color:#6366f1;
+        }
+        .light .lp-root .lp-signal-pill {
+          background:rgba(255,255,255,.7);
+          border-color:rgba(0,0,0,.08);
+          box-shadow:0 1px 3px rgba(0,0,0,.04);
+        }
+        .light .lp-root .lp-signal-pill svg {
+          color:#6366f1;
+        }
+        .light .lp-root .lp-hero-panel {
+          background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+          border-color:rgba(0,0,0,.1);
+          box-shadow:0 20px 50px rgba(0,0,0,.06);
+        }
+        .light .lp-root .lp-hero-panel::before {
+          background:
+            linear-gradient(90deg, rgba(99,102,241,.06) 0, rgba(99,102,241,0) 18%),
+            linear-gradient(180deg, rgba(6,182,212,.04) 0, rgba(6,182,212,0) 35%),
+            repeating-linear-gradient(90deg, transparent 0 44px, rgba(0,0,0,.02) 44px 45px),
+            repeating-linear-gradient(180deg, transparent 0 44px, rgba(0,0,0,.02) 44px 45px);
+        }
+        .light .lp-root .lp-panel-dot {
+          opacity:.6;
+        }
+        .lp-hero-panel .lp-chip-soft {
+          background:rgba(255,255,255,.07);
+          border-color:rgba(255,255,255,.11);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .light .lp-root .lp-hero-panel .lp-chip-soft {
+          background:rgba(99,102,241,.07);
+          border-color:rgba(99,102,241,.12);
+          color:rgba(15,23,42,.68);
+        }
+        .lp-arch-head {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+          margin-bottom:10px;
+        }
+        .lp-arch-title {
+          display:flex;
+          align-items:center;
+          gap:10px;
+          font-size:12px;
+          font-weight:700;
+          letter-spacing:.7px;
+          text-transform:uppercase;
+          color:var(--lp-text1);
+        }
+        .lp-arch-icon {
+          width:34px;
+          height:34px;
+          border-radius:12px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:linear-gradient(135deg, rgba(99,102,241,.22), rgba(6,182,212,.16));
+          border:1px solid rgba(99,102,241,.22);
+          color:#c4b5fd;
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 8px 20px rgba(15,23,42,.16);
+          flex-shrink:0;
+        }
+        .lp-chip-row {
+          display:flex;
+          flex-wrap:wrap;
+          gap:8px;
+        }
+        .lp-chip-strong, .lp-chip-soft {
+          display:inline-flex;
+          align-items:center;
+          border-radius:999px;
+          font-size:11px;
+          font-weight:700;
+          line-height:1;
+          padding:8px 11px;
+        }
+        .lp-chip-strong {
+          color:#eef2ff;
+          background:linear-gradient(135deg, rgba(99,102,241,.55), rgba(6,182,212,.35));
+          border:1px solid rgba(129,140,248,.45);
+        }
+        .lp-chip-soft {
+          color:var(--lp-chip-text);
+          background:var(--lp-chip-bg);
+          border:1px solid var(--lp-chip-border);
+        }
+        .lp-env-line {
+          display:flex;
+          align-items:center;
+          gap:8px;
+          flex-wrap:wrap;
+          font-family:'Fira Code','Cascadia Code',monospace;
+          font-size:12px;
+          color:var(--lp-code-text);
+          background:rgba(8,12,24,.5);
+          border:1px solid rgba(255,255,255,.08);
+          border-radius:14px;
+          padding:10px 12px;
+        }
+        .light .lp-root .lp-env-line {
+          background:rgba(243,244,246,.8);
+          border-color:rgba(0,0,0,.08);
+        }
+        .lp-hero-proofs {
+          display:grid;
+          grid-template-columns:repeat(2, minmax(0, 1fr));
+          gap:14px;
+          margin-top:28px;
+        }
+        .lp-proof-card {
+          padding:18px 20px;
+          border-radius:18px;
+          border:1px solid var(--lp-border2);
+          background:linear-gradient(160deg, rgba(99,102,241,.06) 0%, rgba(255,255,255,.03) 40%, rgba(6,182,212,.04) 100%);
+          animation:lpFadeUp .8s ease both;
+          transition:border-color .2s, transform .2s, box-shadow .2s;
+          position:relative;
+          overflow:hidden;
+        }
+        .lp-proof-card > * {
+          position:relative;
+          z-index:1;
+        }
+        .lp-proof-card::before {
+          content:'';
+          position:absolute;
+          top:0; left:0;
+          width:3px; height:100%;
+          border-radius:3px 0 0 3px;
+          background:linear-gradient(180deg, #6366f1, #06b6d4);
+          opacity:.55;
+          transition:opacity .2s;
+        }
+        .lp-proof-card::after {
+          content:'';
+          position:absolute;
+          inset:auto -40px -50px auto;
+          width:120px;
+          height:120px;
+          border-radius:999px;
+          background:radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,0) 70%);
+          pointer-events:none;
+        }
+        .lp-proof-meta {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          margin-bottom:14px;
+          font-size:10px;
+          font-weight:800;
+          letter-spacing:1.5px;
+          text-transform:uppercase;
+          color:var(--lp-text3);
+        }
+        .lp-proof-dot {
+          width:8px;
+          height:8px;
+          border-radius:999px;
+          flex-shrink:0;
+        }
+        .lp-proof-card-auth {
+          background:linear-gradient(160deg, rgba(99,102,241,.12) 0%, rgba(255,255,255,.03) 44%, rgba(79,70,229,.05) 100%);
+        }
+        .lp-proof-card-auth::before,
+        .lp-proof-card-auth .lp-proof-dot {
+          background:linear-gradient(180deg, #6366f1, #818cf8);
+        }
+        .lp-proof-card-tests {
+          background:linear-gradient(160deg, rgba(14,165,233,.1) 0%, rgba(255,255,255,.03) 44%, rgba(6,182,212,.05) 100%);
+        }
+        .lp-proof-card-tests::before,
+        .lp-proof-card-tests .lp-proof-dot {
+          background:linear-gradient(180deg, #0ea5e9, #06b6d4);
+        }
+        .lp-proof-card-security {
+          background:linear-gradient(160deg, rgba(16,185,129,.09) 0%, rgba(255,255,255,.03) 44%, rgba(52,211,153,.05) 100%);
+        }
+        .lp-proof-card-security::before,
+        .lp-proof-card-security .lp-proof-dot {
+          background:linear-gradient(180deg, #10b981, #34d399);
+        }
+        .lp-proof-card-meter {
+          background:linear-gradient(160deg, rgba(245,158,11,.09) 0%, rgba(255,255,255,.03) 44%, rgba(249,115,22,.05) 100%);
+        }
+        .lp-proof-card-meter::before,
+        .lp-proof-card-meter .lp-proof-dot {
+          background:linear-gradient(180deg, #f59e0b, #f97316);
+        }
+        .lp-proof-card:hover {
+          border-color:var(--lp-card-bdr-h);
+          transform:translateY(-2px);
+          box-shadow:0 8px 24px rgba(99,102,241,.12);
+        }
+        .lp-proof-card:hover::before {
+          opacity:1;
+        }
+        .lp-proof-kpi {
+          font-size:18px;
+          line-height:1;
+          font-weight:800;
+          letter-spacing:-.6px;
+          color:var(--lp-text1);
+          margin-bottom:8px;
+        }
+        .lp-proof-copy {
+          font-size:12px;
+          line-height:1.65;
+          color:var(--lp-text3);
+        }
+        .light .lp-root .lp-proof-card {
+          background:linear-gradient(160deg, rgba(99,102,241,.04) 0%, rgba(255,255,255,.8) 40%, rgba(6,182,212,.03) 100%);
+          box-shadow:0 1px 4px rgba(0,0,0,.04);
+        }
+        .light .lp-root .lp-proof-card-auth {
+          background:linear-gradient(160deg, rgba(99,102,241,.06) 0%, rgba(255,255,255,.92) 44%, rgba(79,70,229,.03) 100%);
+        }
+        .light .lp-root .lp-proof-card-tests {
+          background:linear-gradient(160deg, rgba(14,165,233,.06) 0%, rgba(255,255,255,.92) 44%, rgba(6,182,212,.03) 100%);
+        }
+        .light .lp-root .lp-proof-card-security {
+          background:linear-gradient(160deg, rgba(16,185,129,.05) 0%, rgba(255,255,255,.92) 44%, rgba(52,211,153,.03) 100%);
+        }
+        .light .lp-root .lp-proof-card-meter {
+          background:linear-gradient(160deg, rgba(245,158,11,.05) 0%, rgba(255,255,255,.92) 44%, rgba(249,115,22,.03) 100%);
+        }
+        .light .lp-root .lp-proof-card::before {
+          opacity:.4;
+        }
+        .lp-signal-strip {
+          display:flex;
+          flex-wrap:wrap;
+          gap:10px;
+          margin-top:20px;
+        }
+        .lp-signal-pill {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          padding:9px 12px;
+          border-radius:999px;
+          border:1px solid var(--lp-chip-border);
+          background:rgba(255,255,255,.035);
+          font-size:11px;
+          font-weight:600;
+          color:var(--lp-chip-text);
+        }
+        .lp-signal-pill svg {
+          color:#818cf8;
+        }
         .lp-cta-row {
           display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
           margin-top:32px; animation:lpFadeUp .7s .3s ease both;
@@ -1123,13 +1558,33 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:500px; margin:0 auto; line-height:1.7; }
 
         /* Feature cards */
-        .lp-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:40px; }
+        .lp-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; margin-top:40px; }
         .lp-feature-card {
           display:flex; align-items:flex-start; gap:14px;
           background:var(--lp-card-bg); border:1px solid var(--lp-border2);
           border-radius:14px; padding:18px; text-align:left;
           transition:border-color .2s, background .2s, transform .2s;
           animation:lpFadeUp .7s ease both;
+          position:relative;
+          overflow:hidden;
+        }
+        .lp-feature-card::before {
+          content:'';
+          position:absolute;
+          top:0; left:0;
+          width:3px; height:100%;
+          border-radius:3px 0 0 3px;
+          opacity:.7;
+        }
+        .lp-feature-card::after {
+          content:'';
+          position:absolute;
+          inset:auto -28px -42px auto;
+          width:92px;
+          height:92px;
+          border-radius:999px;
+          background:radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,0) 72%);
+          pointer-events:none;
         }
         .lp-feature-card:hover { border-color:var(--lp-card-bdr-h); background:var(--lp-card-hover); transform:translateY(-2px); }
         .lp-feature-icon {
@@ -1138,6 +1593,62 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           border:1px solid rgba(99,102,241,.16);
           display:flex; align-items:center; justify-content:center;
           color:#818cf8; font-size:16px; flex-shrink:0;
+        }
+        .lp-feature-card-auth {
+          background:linear-gradient(160deg, rgba(99,102,241,.08) 0%, rgba(255,255,255,.03) 44%, rgba(79,70,229,.05) 100%);
+        }
+        .lp-feature-card-auth::before {
+          background:linear-gradient(180deg, #6366f1, #818cf8);
+        }
+        .lp-feature-card-auth .lp-feature-icon {
+          background:linear-gradient(135deg, rgba(99,102,241,.18), rgba(129,140,248,.08));
+          border-color:rgba(99,102,241,.2);
+          color:#a5b4fc;
+        }
+        .lp-feature-card-tests {
+          background:linear-gradient(160deg, rgba(14,165,233,.08) 0%, rgba(255,255,255,.03) 44%, rgba(6,182,212,.05) 100%);
+        }
+        .lp-feature-card-tests::before {
+          background:linear-gradient(180deg, #0ea5e9, #06b6d4);
+        }
+        .lp-feature-card-tests .lp-feature-icon {
+          background:linear-gradient(135deg, rgba(14,165,233,.16), rgba(6,182,212,.08));
+          border-color:rgba(14,165,233,.18);
+          color:#67e8f9;
+        }
+        .lp-feature-card-security {
+          background:linear-gradient(160deg, rgba(16,185,129,.07) 0%, rgba(255,255,255,.03) 44%, rgba(52,211,153,.05) 100%);
+        }
+        .lp-feature-card-security::before {
+          background:linear-gradient(180deg, #10b981, #34d399);
+        }
+        .lp-feature-card-security .lp-feature-icon {
+          background:linear-gradient(135deg, rgba(16,185,129,.16), rgba(52,211,153,.08));
+          border-color:rgba(16,185,129,.18);
+          color:#6ee7b7;
+        }
+        .lp-feature-card-meter {
+          background:linear-gradient(160deg, rgba(245,158,11,.08) 0%, rgba(255,255,255,.03) 44%, rgba(249,115,22,.05) 100%);
+        }
+        .lp-feature-card-meter::before {
+          background:linear-gradient(180deg, #f59e0b, #f97316);
+        }
+        .lp-feature-card-meter .lp-feature-icon {
+          background:linear-gradient(135deg, rgba(245,158,11,.16), rgba(249,115,22,.08));
+          border-color:rgba(245,158,11,.2);
+          color:#fbbf24;
+        }
+        .light .lp-root .lp-feature-card-auth {
+          background:linear-gradient(160deg, rgba(99,102,241,.05) 0%, rgba(255,255,255,.94) 44%, rgba(79,70,229,.03) 100%);
+        }
+        .light .lp-root .lp-feature-card-tests {
+          background:linear-gradient(160deg, rgba(14,165,233,.05) 0%, rgba(255,255,255,.94) 44%, rgba(6,182,212,.03) 100%);
+        }
+        .light .lp-root .lp-feature-card-security {
+          background:linear-gradient(160deg, rgba(16,185,129,.04) 0%, rgba(255,255,255,.94) 44%, rgba(52,211,153,.03) 100%);
+        }
+        .light .lp-root .lp-feature-card-meter {
+          background:linear-gradient(160deg, rgba(245,158,11,.04) 0%, rgba(255,255,255,.94) 44%, rgba(249,115,22,.03) 100%);
         }
         .lp-feature-title { font-size:13.5px; font-weight:700; color:var(--lp-text1); margin-bottom:6px; }
         .lp-feature-desc  { font-size:12px; color:var(--lp-text4); line-height:1.65; }
@@ -1154,6 +1665,180 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         .lp-provider-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
         .lp-provider-logo { width:20px; height:20px; display:inline-block; flex-shrink:0; }
         .lp-provider-logo svg { width:20px; height:20px; display:block; }
+        .lp-auth-provider-logo { width:18px; height:18px; display:inline-block; flex-shrink:0; }
+        .lp-auth-provider-logo svg { width:18px; height:18px; display:block; }
+        .lp-switch-grid {
+          display:grid;
+          grid-template-columns:repeat(2, minmax(0, 1fr));
+          gap:18px;
+          margin-top:30px;
+        }
+        .lp-switch-card {
+          text-align:left;
+          border:1px solid var(--lp-border2);
+          border-radius:22px;
+          background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+          padding:22px;
+          box-shadow:0 16px 40px rgba(2,6,23,.14);
+          position:relative;
+          overflow:hidden;
+        }
+        .lp-switch-card::before {
+          content:'';
+          position:absolute;
+          inset:0;
+          pointer-events:none;
+          opacity:.7;
+        }
+        .light .lp-root .lp-switch-card {
+          background:linear-gradient(160deg, rgba(255,255,255,.92), rgba(248,250,252,.82));
+          box-shadow:0 14px 30px rgba(15,23,42,.06);
+        }
+        .lp-switch-card > * {
+          position:relative;
+          z-index:1;
+        }
+        .lp-switch-card-pay {
+          border-color:rgba(6,182,212,.18);
+          background:linear-gradient(155deg, rgba(8,145,178,.12), rgba(255,255,255,.025) 34%, rgba(99,102,241,.06) 100%);
+        }
+        .lp-switch-card-pay::before {
+          background:
+            radial-gradient(circle at top right, rgba(6,182,212,.22), transparent 36%),
+            linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+        }
+        .lp-switch-card-auth {
+          border-color:rgba(99,102,241,.2);
+          background:linear-gradient(155deg, rgba(99,102,241,.14), rgba(255,255,255,.02) 34%, rgba(16,185,129,.05) 100%);
+        }
+        .lp-switch-card-auth::before {
+          background:
+            radial-gradient(circle at top left, rgba(99,102,241,.24), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+        }
+        .light .lp-root .lp-switch-card-pay {
+          background:linear-gradient(155deg, rgba(6,182,212,.08), rgba(255,255,255,.94) 34%, rgba(99,102,241,.05) 100%);
+          border-color:rgba(6,182,212,.16);
+        }
+        .light .lp-root .lp-switch-card-auth {
+          background:linear-gradient(155deg, rgba(99,102,241,.08), rgba(255,255,255,.94) 34%, rgba(16,185,129,.04) 100%);
+          border-color:rgba(99,102,241,.16);
+        }
+        .lp-switch-kicker {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          font-size:10px;
+          font-weight:800;
+          letter-spacing:1.8px;
+          text-transform:uppercase;
+          color:var(--lp-section-tag);
+          margin-bottom:10px;
+        }
+        .lp-switch-kicker-dot {
+          width:9px;
+          height:9px;
+          border-radius:999px;
+          flex-shrink:0;
+        }
+        .lp-switch-card-pay .lp-switch-kicker-dot {
+          background:#06b6d4;
+          box-shadow:0 0 12px rgba(6,182,212,.45);
+        }
+        .lp-switch-card-auth .lp-switch-kicker-dot {
+          background:#6366f1;
+          box-shadow:0 0 12px rgba(99,102,241,.45);
+        }
+        .lp-switch-title {
+          font-size:22px;
+          line-height:1.15;
+          color:var(--lp-text1);
+          font-weight:800;
+          letter-spacing:-.7px;
+          margin-bottom:10px;
+        }
+        .lp-switch-sub {
+          font-size:14px;
+          line-height:1.7;
+          color:var(--lp-text3);
+          margin-bottom:16px;
+        }
+        .lp-switch-card-pay .lp-provider-chip {
+          background:rgba(6,182,212,.08);
+          border-color:rgba(6,182,212,.15);
+        }
+        .lp-switch-card-auth .lp-provider-chip {
+          background:rgba(99,102,241,.08);
+          border-color:rgba(99,102,241,.15);
+        }
+        .light .lp-root .lp-switch-card-pay .lp-provider-chip {
+          background:rgba(6,182,212,.06);
+        }
+        .light .lp-root .lp-switch-card-auth .lp-provider-chip {
+          background:rgba(99,102,241,.06);
+        }
+        .lp-switch-card-auth .lp-provider-chip .lp-auth-provider-logo {
+          filter:drop-shadow(0 2px 6px rgba(15,23,42,.12));
+        }
+        .lp-switch-card .lp-code-block {
+          max-width:none;
+          margin:18px 0 0;
+          padding:16px 18px;
+        }
+        .lp-switch-bridge {
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:12px;
+          margin:18px 0 0;
+          color:var(--lp-text3);
+          font-size:11px;
+          font-weight:700;
+          letter-spacing:1.4px;
+          text-transform:uppercase;
+        }
+        .lp-switch-bridge::before,
+        .lp-switch-bridge::after {
+          content:'';
+          flex:1;
+          max-width:100px;
+          height:1px;
+          background:linear-gradient(90deg, rgba(99,102,241,0), rgba(99,102,241,.28), rgba(6,182,212,0));
+        }
+        .lp-flow-row {
+          display:flex;
+          align-items:center;
+          gap:10px;
+          flex-wrap:wrap;
+          margin-top:14px;
+        }
+        .lp-flow-node {
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          min-height:34px;
+          padding:8px 12px;
+          border-radius:999px;
+          border:1px solid var(--lp-chip-border);
+          background:rgba(255,255,255,.04);
+          color:var(--lp-chip-text);
+          font-size:11px;
+          font-weight:700;
+        }
+        .lp-flow-arrow {
+          color:var(--lp-text3);
+          font-size:12px;
+          font-weight:800;
+        }
+        .lp-switch-card-auth .lp-flow-node {
+          background:rgba(99,102,241,.08);
+          border-color:rgba(99,102,241,.15);
+        }
+        .light .lp-root .lp-switch-card-auth .lp-flow-node {
+          background:rgba(99,102,241,.06);
+          border-color:rgba(99,102,241,.12);
+          color:rgba(15,23,42,.68);
+        }
 
         /* Code block */
         .lp-code-block {
@@ -1196,15 +1881,15 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           background:var(--lp-pill-bg); white-space:nowrap;
         }
 
-        /* Code block: always dark regardless of theme */
+        /* Code block: theme-aware */
         .light .lp-root .lp-code-block {
-          --lp-code-bg:      #0d0d17;
-          --lp-code-border:  rgba(255,255,255,.08);
-          --lp-code-text:    rgba(255,255,255,.5);
-          --lp-code-comment: rgba(255,255,255,.25);
+          background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,247,255,.9));
+          border-color:rgba(99,102,241,.14);
+          box-shadow:0 10px 28px rgba(15,23,42,.06);
         }
         .light .lp-root .lp-code-block .lp-code-key    { color:#818cf8; }
-        .light .lp-root .lp-code-block .lp-code-string  { color:#34d399; }
+        .light .lp-root .lp-code-block .lp-code-string  { color:#059669; }
+        .light .lp-root .lp-code-block .lp-code-comment { color:rgba(15,23,42,.34); }
         .light .lp-root .lp-code-block .lp-cursor       { color:#818cf8; }
 
         /* Divider */
@@ -1218,6 +1903,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           .lp-metrics { flex-wrap:wrap; }
           .lp-metric-item { flex:0 0 50%; border-bottom:1px solid var(--lp-divider); }
           .lp-cta-section { padding:40px 20px; }
+          .lp-hero-proofs { grid-template-columns:1fr; }
         }
 
         /* ── Demo: mobile responsive ── */
@@ -1228,6 +1914,34 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         .lp-dd-content::-webkit-scrollbar { display:none; }
 
         @media(max-width:768px) {
+          .lp-hero-grid {
+            grid-template-columns:1fr;
+          }
+          .lp-hero-copy {
+            padding:12px 0 0;
+            text-align:center;
+          }
+          .lp-hero-kicker {
+            justify-content:center;
+          }
+          .lp-hero-copy .lp-hero-badge,
+          .lp-hero-copy .lp-hero-sub {
+            margin-left:auto;
+            margin-right:auto;
+          }
+          .lp-hero-copy .lp-cta-row {
+            justify-content:center;
+          }
+          .lp-signal-strip {
+            justify-content:center;
+          }
+          .lp-switch-grid {
+            grid-template-columns:1fr;
+          }
+          .lp-switch-bridge {
+            margin-top:16px;
+          }
+
           /* Hide sidebar, show mobile header bar */
           .lp-dd-sidebar { display:none !important; }
           .lp-dd-mobile-hdr {
@@ -1272,62 +1986,206 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
         }
       `}</style>
 
-      <div className="lp-root" style={{ maxWidth: 1140, margin: '0 auto', padding: '0 20px' }}>
+      <div className="lp-root" style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px' }}>
 
         {/* ── HERO ─────────────────────────────────────────── */}
-        <section style={{ textAlign: 'center', paddingTop: 60, paddingBottom: 0, position: 'relative' }}>
+        <section className="lp-hero-shell" style={{ paddingTop: 60, paddingBottom: 0 }}>
           <div className="lp-blob1" />
           <div className="lp-blob2" />
+          <div className="lp-hero-grid">
+            <div className="lp-hero-copy">
+              <div className="lp-hero-kicker">Architecture-first SaaS foundation</div>
 
-          <div className="lp-hero-badge">
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6ee7b7', display: 'inline-block', boxShadow: '0 0 6px #6ee7b7' }} />
-            The complete SaaS starter kit
-          </div>
 
-          <h1 className="lp-hero-h1">
-            Don&apos;t re-invent the wheel,<br />
-            <span
-              style={{
-                backgroundImage: 'linear-gradient(92deg, rgb(161 29 179) 0%, rgb(251, 113, 133) 18%, rgb(2 167 250) 38%, rgb(16 155 195) 52%, rgb(167 8 230) 68%, rgb(180 153 14) 82%, rgb(139, 92, 246) 100%)',
-                backgroundSize: '140% 140%',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '0 10px 30px rgba(139,92,246,0.12)',
-              }}
-            >
-              launch your SaaS this weekend.
-            </span>
-          </h1>
+              <h1 className="lp-hero-h1">
+                Two auth stacks.<br />
+                Four payment rails.<br />
+                <span
+                  style={{
+                    backgroundImage: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 54%, #10b981 100%)',
+                    backgroundSize: '140% 140%',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: '0 10px 30px rgba(99,102,241,0.15)',
+                  }}
+                >
+                  One codebase you can actually ship.
+                </span>
+              </h1>
 
-          <p className="lp-hero-sub">
-            SaasyBase is a production-ready Next.js boilerplate — auth, multi-provider payments, subscriptions, teams, admin, and more. Everything you need to go from zero to revenue.
-          </p>
+              <p className="lp-hero-sub">
+                SaaSyBase is more than a simple Next.js boilerplate; it is a complete SaaS foundation built to help you scale. Clerk or NextAuth behind one auth interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, regression coverage for billing edge cases, hard security defaults, reusable surfaces, concise docs, and a usage meter you can rename from tokens to API calls, HD exports, credits, or points.
+              </p>
 
-          <div className="lp-cta-row">
-            {isSignedIn ? (
-              <>
-                <Link href="/dashboard" className="lp-btn-primary">Go to Dashboard →</Link>
-                <Link href="/pricing"   className="lp-btn-ghost">View Pricing</Link>
-              </>
-            ) : (
-              <>
-                <Link href="/sign-up"  className="lp-btn-primary">Start Building Free →</Link>
-                <Link href="/sign-in"  className="lp-btn-ghost">Sign In</Link>
-                <Link href="/pricing"  className="lp-btn-ghost">Pricing</Link>
-              </>
-            )}
-          </div>
+              <div className="lp-cta-row">
+                {isSignedIn ? (
+                  <>
+                    <Link href="/dashboard" className="lp-btn-primary">Go to Dashboard →</Link>
+                    <Link href="/pricing" className="lp-btn-ghost">View Pricing</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/sign-up" className="lp-btn-primary">Start Building Free →</Link>
+                    <Link href="/sign-in" className="lp-btn-ghost">Sign In</Link>
+                    <Link href="/pricing" className="lp-btn-ghost">Pricing</Link>
+                  </>
+                )}
+              </div>
 
-          {/* scrolling tech pills */}
-          <div style={{ marginTop: 36, marginBottom: 48 }}>
-            <div className="lp-marquee-outer">
-              <div className="lp-marquee-inner">
-                {(['Next.js 16','TypeScript','Prisma','Tailwind CSS','Clerk Auth','Stripe','Razorpay','Paystack','Paddle','Nodemailer','Vitest','Multi-tenant','Webhooks','Token Credits','Coupons','Admin Panel','Zod','Dark Mode']).concat(['Next.js 16','TypeScript','Prisma','Tailwind CSS','Clerk Auth','Stripe','Razorpay','Paystack','Paddle','Nodemailer','Vitest']).map((t, i) => (
-                  <span key={i} className="lp-tech-pill">{t}</span>
+              <div className="lp-hero-proofs">
+                {[
+                  {
+                    value: 'Clerk + NextAuth',
+                    copy: 'Provider-agnostic auth architecture with vendor-specific code kept behind adapters.',
+                    meta: 'Auth boundary',
+                    tone: 'auth',
+                  },
+                  {
+                    value: '244 checks / 84 files',
+                    copy: 'Regression coverage for webhooks, resurrection, proration, expiry, org access, and checkout flows.',
+                    meta: 'Regression coverage',
+                    tone: 'tests',
+                  },
+                  {
+                    value: 'Security by default',
+                    copy: 'Headers, encrypted fields, secret rotation, sanitized errors, request IDs, rate limits, and redacted logs.',
+                    meta: 'Production posture',
+                    tone: 'security',
+                  },
+                  {
+                    value: 'Rename the meter',
+                    copy: 'Turn tokens into API calls, HD exports, credits, or points without rewriting the billing model.',
+                    meta: 'Billing flexibility',
+                    tone: 'meter',
+                  },
+                ].map((item, index) => (
+                  <div key={item.value} className={`lp-proof-card lp-proof-card-${item.tone}`} style={{ animationDelay: `${180 + index * 70}ms` }}>
+                    <div className="lp-proof-meta"><span className="lp-proof-dot" />{item.meta}</div>
+                    <div className="lp-proof-kpi">{item.value}</div>
+                    <div className="lp-proof-copy">{item.copy}</div>
+                  </div>
                 ))}
               </div>
             </div>
+
+            <div className="lp-hero-panel">
+              <div className="lp-panel-topbar">
+                <span className="lp-panel-dot" style={{ background: '#ff5f56' }} />
+                <span className="lp-panel-dot" style={{ background: '#ffbd2e' }} />
+                <span className="lp-panel-dot" style={{ background: '#27c93f' }} />
+                <span className="lp-panel-label">SaasyBase switchboard</span>
+              </div>
+
+              <div className="lp-panel-title">The hard parts already live in one place.</div>
+              <div className="lp-panel-sub">
+                Auth, billing, safeguards, and product controls are designed together instead of being glued on after launch.
+              </div>
+
+              <div className="lp-arch-grid">
+                <div className="lp-arch-card">
+                  <div className="lp-arch-head">
+                    <div className="lp-arch-title">
+                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faLock} /></span>
+                      Auth Layer
+                    </div>
+                    <span className="lp-chip-soft">Swap providers</span>
+                  </div>
+                  <div className="lp-chip-row" style={{ marginBottom: 10 }}>
+                    <span className="lp-chip-strong">Clerk</span>
+                    <span className="lp-chip-strong">NextAuth</span>
+                    <span className="lp-chip-soft">OAuth</span>
+                    <span className="lp-chip-soft">Magic links</span>
+                  </div>
+                  <div className="lp-env-line">
+                    <span className="lp-code-key">AUTH_PROVIDER</span>
+                    <span>=</span>
+                    <span className="lp-code-string">"clerk"</span>
+                    <span className="lp-code-comment">or</span>
+                    <span className="lp-code-string">"nextauth"</span>
+                  </div>
+                </div>
+
+                <div className="lp-arch-card">
+                  <div className="lp-arch-head">
+                    <div className="lp-arch-title">
+                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faCreditCard} /></span>
+                      Billing Layer
+                    </div>
+                    <span className="lp-chip-soft">One checkout lifecycle</span>
+                  </div>
+                  <div className="lp-chip-row" style={{ marginBottom: 10 }}>
+                    <span className="lp-chip-strong">Stripe</span>
+                    <span className="lp-chip-strong">Paystack</span>
+                    <span className="lp-chip-strong">Razorpay</span>
+                    <span className="lp-chip-strong">Paddle</span>
+                  </div>
+                  <div className="lp-env-line">
+                    <span className="lp-code-key">PAYMENT_PROVIDER</span>
+                    <span>=</span>
+                    <span className="lp-code-string">"stripe"</span>
+                    <span className="lp-code-comment">→ provider-agnostic routes, webhooks, plans</span>
+                  </div>
+                </div>
+
+                <div className="lp-arch-card">
+                  <div className="lp-arch-head">
+                    <div className="lp-arch-title">
+                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faShield} /></span>
+                      Safeguards
+                    </div>
+                    <span className="lp-chip-soft">Production posture</span>
+                  </div>
+                  <div className="lp-chip-row">
+                    <span className="lp-chip-soft">Webhook signature rotation</span>
+                    <span className="lp-chip-soft">Request IDs</span>
+                    <span className="lp-chip-soft">Audit logs</span>
+                    <span className="lp-chip-soft">Encrypted fields</span>
+                    <span className="lp-chip-soft">Rate limits</span>
+                    <span className="lp-chip-soft">Sanitized errors</span>
+                  </div>
+                </div>
+
+                <div className="lp-arch-card">
+                  <div className="lp-arch-head">
+                    <div className="lp-arch-title">
+                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faGear} /></span>
+                      Product Surface
+                    </div>
+                    <span className="lp-chip-soft">Brand without rewrites</span>
+                  </div>
+                  <div className="lp-chip-row" style={{ marginBottom: 10 }}>
+                    <span className="lp-chip-soft">Theme designer</span>
+                    <span className="lp-chip-soft">Custom CSS / head / body</span>
+                    <span className="lp-chip-soft">Light + dark palettes</span>
+                    <span className="lp-chip-soft">Reusable components</span>
+                    <span className="lp-chip-soft">32-section README</span>
+                  </div>
+                  <div className="lp-env-line">
+                    <span className="lp-code-key">tokenName</span>
+                    <span>=</span>
+                    <span className="lp-code-string">"API calls"</span>
+                    <span className="lp-code-comment">or "HD exports", "credits", "points"</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lp-signal-strip" style={{ marginBottom: 48 }}>
+            {[
+              { icon: faArrowsRotate, label: 'Subscription resurrection covered' },
+              { icon: faFileLines, label: 'Centralized webhook ingress' },
+              { icon: faGaugeHigh, label: 'No-flash dark mode + theme controls' },
+              { icon: faUsers, label: 'Teams, invites, org token pools' },
+              { icon: faShield, label: 'Secure logger with secret redaction' },
+              { icon: faBolt, label: 'Edge cases tested before you launch' },
+            ].map((signal) => (
+              <span key={signal.label} className="lp-signal-pill">
+                <FontAwesomeIcon icon={signal.icon} />
+                {signal.label}
+              </span>
+            ))}
           </div>
         </section>
 
@@ -1346,7 +2204,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           {[
             { num: 47, label: 'built-in API routes',   suffix: '+' },
             { num: 4,  label: 'payment providers',      suffix: '' },
-            { num: 100, label: 'TypeScript files',      suffix: '+' },
+            { num: 244, label: 'regression tests',      suffix: '' },
             { num: 0,  label: 'config headaches',       suffix: '' },
           ].map((m, i) => (
             <div key={i} className="lp-metric-item">
@@ -1376,41 +2234,85 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
 
         {/* ── PROVIDERS ─────────────────────────────────────── */}
         <section style={{ textAlign: 'center' }}>
-          <div className="lp-section-tag">Payment Providers</div>
-          <h2 className="lp-section-h2">Four providers. One codebase.</h2>
+          <div className="lp-section-tag">Switchable infrastructure</div>
+          <h2 className="lp-section-h2">Four payment rails. Two auth providers.</h2>
           <p className="lp-section-sub">
-            Switch between payment providers with a single environment variable. No re-wiring.
+            The billing layer and the auth layer are both swappable, so you can change vendors without rewriting your product surface.
           </p>
-          <div className="lp-provider-row">
-            {PROVIDERS.map(p => {
-              const cfg = PAYMENT_PROVIDERS[p.name.toLowerCase()];
-              return (
-                <div key={p.name} className="lp-provider-chip">
-                  {cfg?.logoSvg ? (
-                    <span
-                      className="lp-provider-logo"
-                      aria-hidden
-                      style={{ color: p.color }}
-                      dangerouslySetInnerHTML={{ __html: cfg.logoSvg }}
-                    />
-                  ) : (
-                    <span className="lp-provider-dot" style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }} />
-                  )}
-                  {p.name}
-                </div>
-              );
-            })}
-          </div>
 
-          <div className="lp-code-block">
-            <div><span className="lp-code-comment"># .env — just change this one line</span></div>
-            <div>
-              <span className="lp-code-key">PAYMENT_PROVIDER</span>
-              <span className="lp-code-comment"> = </span>
-              {mounted ? <TypewriterProvider /> : <span className="lp-code-string">&quot;stripe&quot;</span>}
+          <div className="lp-switch-grid">
+            <div className="lp-switch-card lp-switch-card-pay">
+              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Payments</div>
+              <div className="lp-switch-title">One checkout model across four processors.</div>
+              <div className="lp-switch-sub">
+                Stripe, Paystack, Razorpay, and Paddle all plug into the same plans, routes, webhooks, and admin flows.
+              </div>
+              <div className="lp-provider-row" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
+                {PROVIDERS.map(p => {
+                  const cfg = PAYMENT_PROVIDERS[p.name.toLowerCase()];
+                  return (
+                    <div key={p.name} className="lp-provider-chip">
+                      {cfg?.logoSvg ? (
+                        <span
+                          className="lp-provider-logo"
+                          aria-hidden
+                          style={{ color: p.color }}
+                          dangerouslySetInnerHTML={{ __html: cfg.logoSvg }}
+                        />
+                      ) : (
+                        <span className="lp-provider-dot" style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }} />
+                      )}
+                      {p.name}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="lp-code-block">
+                <div><span className="lp-code-comment"># .env — switch the billing rail</span></div>
+                <div>
+                  <span className="lp-code-key">PAYMENT_PROVIDER</span>
+                  <span className="lp-code-comment"> = </span>
+                  {mounted ? <TypewriterProvider /> : <span className="lp-code-string">&quot;stripe&quot;</span>}
+                </div>
+                <div><span className="lp-code-comment"># stripe | razorpay | paystack | paddle</span></div>
+              </div>
             </div>
-            <div><span className="lp-code-comment"># stripe | razorpay | paystack | paddle</span></div>
+
+            <div className="lp-switch-card lp-switch-card-auth">
+              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Authentication</div>
+              <div className="lp-switch-title">Keep the same app shell while auth stays replaceable.</div>
+              <div className="lp-switch-sub">
+                Clerk and NextAuth sit behind the same integration boundary, so account flows can stay stable while your auth provider changes.
+              </div>
+              <div className="lp-provider-row" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
+                {AUTH_PROVIDERS.map((provider) => (
+                  <div key={provider.name} className="lp-provider-chip">
+                    <span
+                      className="lp-auth-provider-logo"
+                      aria-hidden
+                      dangerouslySetInnerHTML={{ __html: provider.logoSvg }}
+                    />
+                    {provider.name}
+                  </div>
+                ))}
+                <div className="lp-provider-chip">OAuth</div>
+                <div className="lp-provider-chip">Magic links</div>
+              </div>
+
+              <div className="lp-code-block">
+                <div><span className="lp-code-comment"># .env — switch the auth layer</span></div>
+                <div>
+                  <span className="lp-code-key">AUTH_PROVIDER</span>
+                  <span className="lp-code-comment"> = </span>
+                  {mounted ? <TypewriterAuthProvider /> : <span className="lp-code-string">&quot;clerk&quot;</span>}
+                </div>
+                <div><span className="lp-code-comment"># clerk | nextauth</span></div>
+              </div>
+
+            </div>
           </div>
+          <div className="lp-switch-bridge">Shared interface above vendor-specific code</div>
         </section>
 
         <hr className="lp-divider" />
@@ -1422,9 +2324,9 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginTop: 36 }}>
             {[
-              { step: '01', title: 'Clone & configure', desc: "Clone the repo, fill in your .env, run prisma migrate and you're live." },
-              { step: '02', title: 'Customize & brand', desc: 'Swap colors, copy, logo. All config lives in one place — no hunting through files.' },
-              { step: '03', title: 'Ship & collect', desc: 'Deploy to Vercel, connect your payment provider, and start collecting revenue from day one.' },
+              { step: '01', title: 'Clone & configure', desc: 'Clone the repo, fill in your .env, pick your auth and payment providers, then run the migrations.' },
+              { step: '02', title: 'Prompt in your product', desc: 'Use the starter as the shell, then scaffold your own app surface into it with prompts, copied modules, or direct component swaps.' },
+              { step: '03', title: 'Brand, deploy & collect', desc: 'Polish the theme, connect your provider, deploy to Vercel, and start charging without rebuilding the infrastructure layer.' },
             ].map(s => (
               <div key={s.step} className="lp-step-card">
                 <div className="lp-step-num">{s.step}</div>

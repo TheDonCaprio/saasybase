@@ -432,7 +432,7 @@ Templates use `{{variable}}` syntax, resolved from a standard variable set:
 {{dashboardUrl}}, {{billingUrl}}
 ```
 
-Templates are editable from `/admin/emails` via the TipTap rich-text editor. Both HTML and plain-text versions are stored.
+Templates are editable from `/admin/emails` via a plain HTML editor. Both HTML and plain-text versions are stored.
 
 ---
 

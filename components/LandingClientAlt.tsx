@@ -9,6 +9,7 @@ import {
   faUsers, faChartLine, faDollarSign, faTicket, faBars,
   faWaveSquare, faGaugeHigh, faLifeRing, faArrowUpRightFromSquare, faBolt, faGear, faTriangleExclamation,
   faPen, faHourglassEnd, faHandHoldingDollar,
+  faPalette, faReceipt, faEye,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { PAYMENT_PROVIDERS } from '../lib/payment/provider-config';
@@ -95,13 +96,17 @@ const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone:
   { icon: faBuilding,     title: 'Teams & Organizations',    desc: 'Built-in multi-tenant support with seats, invites, and role-based access already in place.', tone: 'security' },
   { icon: faTag,          title: 'Coupons & Discounts',      desc: 'Create one-time, forever, or repeating discount codes with provider mapping already done.', tone: 'meter' },
   { icon: faGauge,        title: 'Admin Dashboard',          desc: 'Analytics, user management, revenue overview, and subscription controls are already connected.', tone: 'tests' },
-  { icon: faEnvelope,     title: 'Transactional Emails',     desc: 'Nodemailer-powered lifecycle emails for receipts, renewals, and account events.', tone: 'auth' },
+  { icon: faEnvelope,     title: 'Transactional Emails',     desc: 'HTML email templates with variable interpolation, lifecycle triggers, and send logging — editable from the admin panel.', tone: 'auth' },
   { icon: faArrowsRotate, title: 'Subscriptions & Billing',  desc: 'Recurring plans, proration, upgrades, downgrades, and end-of-cycle reconciliation.', tone: 'tests' },
-  { icon: faShield,       title: 'Token-based Access',       desc: 'Credit limits, feature gates, and usage-meter semantics live inside the billing model.', tone: 'security' },
-  { icon: faNewspaper,    title: 'Blog Engine',              desc: 'MDX-powered publishing is built in, so content can ship from the same codebase.', tone: 'tests' },
+  { icon: faShield,       title: 'Token-based Access',       desc: 'Three-bucket system (paid, free, and shared org pool) with configurable names — call them tokens, credits, API calls, or points.', tone: 'security' },
+  { icon: faNewspaper,    title: 'Blog Engine',              desc: 'Rich-text blog with TipTap editor, categories, SEO metadata, and full CRUD admin — no external CMS needed.', tone: 'tests' },
   { icon: faFileLines,    title: 'Static Pages',             desc: 'Marketing and legal pages are configurable without introducing a separate CMS.', tone: 'auth' },
   { icon: faHeadset,      title: 'Support System',           desc: 'Users can raise issues directly from the dashboard with a built-in ticket surface.', tone: 'security' },
   { icon: faUserShield,   title: 'Moderator Tools',          desc: 'Role-based moderation, account controls, and audit-aware admin operations are included.', tone: 'meter' },
+  { icon: faPalette,      title: 'Dark Mode & Theming',      desc: 'Zero-flash dark mode, live theme designer, custom CSS injection, and brand color controls — all from the admin panel.', tone: 'meter' },
+  { icon: faReceipt,      title: 'PDF Invoices & Receipts',  desc: 'Auto-generated PDF invoices and refund receipts with your branding, delivered by email or downloadable from the dashboard.', tone: 'tests' },
+  { icon: faEye,          title: 'Traffic Analytics',         desc: 'Built-in visit tracking, page-level analytics, referrer breakdown, and admin traffic dashboards — no third-party scripts needed.', tone: 'auth' },
+  { icon: faGaugeHigh,    title: 'Rate Limiting & Security',  desc: 'DB-backed rate limiting, CSP and HSTS headers, encrypted fields, webhook secret rotation, and auto-redacted logging.', tone: 'security' },
 ];
 
 const PROVIDERS = [
@@ -2041,7 +2046,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           <div className="lp-blob2" />
           <div className="lp-hero-grid">
             <div className="lp-hero-copy">
-              <div className="lp-hero-kicker">Architecture-first SaaS foundation</div>
+              <div className="lp-hero-kicker">The AI-ready SaaS foundation</div>
 
 
               <h1 className="lp-hero-h1">
@@ -2063,7 +2068,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </h1>
 
               <p className="lp-hero-sub">
-                SaaSyBase is more than a simple Next.js boilerplate; it is a complete SaaS foundation built to help you scale. Clerk or NextAuth behind one auth interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, regression coverage for billing edge cases, hard security defaults, reusable surfaces, concise docs, and a usage meter you can rename from tokens to API calls, HD exports, credits, or points.
+                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 240+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
               </p>
 
               <div className="lp-cta-row">
@@ -2102,9 +2107,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     tone: 'security',
                   },
                   {
-                    value: 'Rename the meter',
-                    copy: 'Turn tokens into API calls, HD exports, credits, or points without rewriting the billing model.',
-                    meta: 'Billing flexibility',
+                    value: 'LLM-ready docs',
+                    copy: 'CLAUDE.md, AGENTS.md, and PATTERNS.md give any AI coding agent full context \u2014 prompt your way to production.',
+                    meta: 'Vibecoder-friendly',
                     tone: 'meter',
                   },
                 ].map((item, index) => (
@@ -2125,9 +2130,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 <span className="lp-panel-label">Next.js 16 Boilerplate</span>
               </div>
 
-              <div className="lp-panel-title">The hard parts already work.</div>
+              <div className="lp-panel-title">Built for professionals & vibecoders.</div>
               <div className="lp-panel-sub">
-                Auth, billing, safeguards, and product controls are all in place.
+                LLM-ready docs (CLAUDE.md, AGENTS.md, PATTERNS.md) let your AI agent understand the entire codebase — so you can prompt your way to a finished product.
               </div>
 
               <div className="lp-arch-grid">

@@ -1914,8 +1914,55 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-dd-content::-webkit-scrollbar { display:none; }
 
         @media(max-width:768px) {
+          .lp-root {
+            padding:0 16px !important;
+          }
           .lp-hero-grid {
             grid-template-columns:1fr;
+          }
+          .lp-hero-panel {
+            padding:16px;
+            border-radius:22px;
+          }
+          .lp-panel-topbar {
+            margin-bottom:12px;
+          }
+          .lp-panel-sub {
+            margin-bottom:12px;
+          }
+          .lp-arch-grid {
+            gap:10px;
+          }
+          .lp-arch-card {
+            padding:12px;
+            border-radius:16px;
+          }
+          .lp-arch-head {
+            gap:10px;
+            margin-bottom:8px;
+          }
+          .lp-arch-title {
+            gap:8px;
+            font-size:11px;
+          }
+          .lp-arch-icon {
+            width:30px;
+            height:30px;
+            border-radius:10px;
+          }
+          .lp-chip-row {
+            gap:6px;
+          }
+          .lp-chip-strong,
+          .lp-chip-soft {
+            padding:7px 9px;
+            font-size:10px;
+          }
+          .lp-env-line {
+            gap:6px;
+            padding:8px 10px;
+            border-radius:12px;
+            font-size:11px;
           }
           .lp-hero-copy {
             padding:12px 0 0;
@@ -2176,11 +2223,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         </section>
 
         {/* ── DASHBOARD DEMO ──────────────────────────────── */}
-        <section style={{ textAlign: 'center', marginBottom: 0 }}>
-          <div className="lp-section-tag">Live preview</div>
-          <h2 className="lp-section-h2">One dashboard. Every layer wired.</h2>
+        <section style={{ textAlign: 'center', marginBottom: 0, marginTop: 58 }}>
+          <div className="lp-section-tag">What ships on day one</div>
+          <h2 className="lp-section-h2">Launch with billing, users, and ops already working.</h2>
           <p className="lp-section-sub" style={{ marginBottom: 40 }}>
-            Finance, users, and operations — all in one place, no assembly required.
+            Skip months of stitching tools together. SaaSyBase gives you the admin surface, payment visibility, and operational control a real SaaS product needs from the start.
           </p>
           {mounted && (
             <div style={{ position: 'relative', marginBottom: 8 }}>

@@ -13,6 +13,7 @@ interface Toast {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info';
+  createdAt: number;
 }
 
 interface ToastContextType {
@@ -24,9 +25,23 @@ export const useToast = (): ToastContextType => {
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = createToastId();
-    const newToast = { id, message, type };
+    const newToast = { id, message, type, createdAt: Date.now() };
 
-    setToasts(prev => [...prev, newToast]);
+    setToasts(prev => {
+      const now = Date.now();
+      const normalized = message.trim().toLowerCase();
+      const isDemoReadOnly = normalized.includes('demo mode is read-only');
+      const hasRecentDuplicate = prev.some((toast) => {
+        const toastMsg = toast.message.trim().toLowerCase();
+        const ageMs = now - toast.createdAt;
+        if (isDemoReadOnly) {
+          return toastMsg.includes('demo mode is read-only') && ageMs < 2500;
+        }
+        return toastMsg === normalized && ageMs < 1500;
+      });
+      if (hasRecentDuplicate) return prev;
+      return [...prev, newToast];
+    });
 
     // Auto remove after 5 seconds
     setTimeout(() => {
@@ -73,9 +88,23 @@ export function ToastContainer() {
     const handleToast = (event: CustomEvent) => {
       const { message, type } = event.detail;
       const id = createToastId();
-      const newToast = { id, message, type };
+      const newToast = { id, message, type, createdAt: Date.now() };
 
-      setToasts(prev => [...prev, newToast]);
+      setToasts(prev => {
+        const now = Date.now();
+        const normalized = String(message ?? '').trim().toLowerCase();
+        const isDemoReadOnly = normalized.includes('demo mode is read-only');
+        const hasRecentDuplicate = prev.some((toast) => {
+          const toastMsg = toast.message.trim().toLowerCase();
+          const ageMs = now - toast.createdAt;
+          if (isDemoReadOnly) {
+            return toastMsg.includes('demo mode is read-only') && ageMs < 2500;
+          }
+          return toastMsg === normalized && ageMs < 1500;
+        });
+        if (hasRecentDuplicate) return prev;
+        return [...prev, newToast];
+      });
 
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));

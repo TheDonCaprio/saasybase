@@ -1120,7 +1120,7 @@ export default function LandingClient({ isSignedIn }: { isSignedIn: boolean }) {
           text-transform:uppercase; color:var(--lp-section-tag); margin-bottom:12px; }
         .lp-section-h2 { font-size:clamp(1.6rem,3.5vw,2.4rem); font-weight:800; letter-spacing:-.8px;
           color:var(--lp-text1); margin-bottom:12px; }
-        .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:500px; margin:0 auto; line-height:1.7; }
+        .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:650px; margin:0 auto; line-height:1.7; }
 
         /* Feature cards */
         .lp-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:40px; }

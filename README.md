@@ -1192,6 +1192,28 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 
 ---
 
+## Demo Read-Only Mode
+
+If you want to share a safe, explorable demo (including admin UI) without allowing data changes, enable:
+
+```bash
+DEMO_READ_ONLY_MODE="true"
+```
+
+When enabled:
+
+- `POST`, `PUT`, `PATCH`, and `DELETE` requests to `/api/*` are blocked with `403`.
+- Auth and webhook writes remain allowed (`/api/auth/*`, `/api/webhooks/*`, `/api/stripe/webhook`) so sign-in and provider callbacks still work.
+- A read-only modal appears after entering admin or dashboard, and blocked actions trigger an informational toast.
+
+Recommended setup:
+
+1. Run this mode on a dedicated demo deployment/environment.
+2. Use seeded demo accounts only (for example `admin@saasybase.com` / `password`).
+3. Keep production with `DEMO_READ_ONLY_MODE="false"`.
+
+---
+
 ## Disclaimer
 
 This codebase is production-oriented but you should review your environment configuration, authentication posture, and security setup before going live. In particular:

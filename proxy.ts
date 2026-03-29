@@ -1,5 +1,6 @@
 import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
+import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
 
 type ProxyAuthResult = {
   userId?: unknown;
@@ -77,8 +78,27 @@ const isProtectedRoute = createAuthRouteMatcher([
 // the proxy will skip Clerk protection so tests and CLI tools can hit
 // /admin and /api/admin routes. Production behavior is unchanged.
 const devBypass = process.env.NODE_ENV !== 'production' && !!process.env.DEV_ADMIN_ID;
+const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
+  if (shouldBlockDemoReadOnlyMutation({
+    enabled: demoReadOnlyMode,
+    method: req.method,
+    pathname: req.nextUrl.pathname,
+  })) {
+    return NextResponse.json(
+      {
+        error: 'Demo mode is read-only. Editing actions are disabled in this environment.',
+      },
+      {
+        status: 403,
+        headers: {
+          'X-Demo-Read-Only': 'true',
+        },
+      }
+    );
+  }
+
   if (!isProtectedRoute(req)) {
     return;
   }

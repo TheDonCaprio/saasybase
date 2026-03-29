@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faReact, faNodeJs } from '@fortawesome/free-brands-svg-icons';
 import {
   faCreditCard, faLock, faBuilding, faTag, faGauge, faEnvelope,
   faArrowsRotate, faShield, faNewspaper, faFileLines, faHeadset, faUserShield,
@@ -119,6 +120,24 @@ const PROVIDERS = [
 const AUTH_PROVIDERS = [
   { name: 'Clerk', color: '#6366F1', logoSvg: CLERK_LOGO_SVG },
   { name: 'NextAuth', color: '#0F172A', logoSvg: NEXTAUTH_LOGO_SVG },
+];
+
+const TECH_STACK_ICONS: Array<
+  | { label: string; kind: 'fa'; icon: unknown }
+  | { label: string; kind: 'svg'; svg: string }
+> = [
+  { label: 'Next.js', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.4 20 8.1 6.75H6v10.48h1.68V8.89L17.1 21h.98c.65 0 1.17-.52 1.17-1.17V6.77H17.6V20Z"/><path d="M14.77 6.77h1.68v10.46h-1.68z"/></svg>' },
+  { label: 'React', kind: 'fa', icon: faReact },
+  { label: 'TypeScript', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3h18v18H3V3Z" fill="#3178C6"/><path d="M13.3 13.34v1.7c.29.15.63.26 1.02.35.39.08.77.13 1.14.13 1.48 0 2.22-.5 2.22-1.49 0-.28-.08-.52-.23-.71-.15-.2-.36-.38-.62-.54-.26-.16-.56-.31-.91-.46-.34-.15-.71-.3-1.1-.46-.39-.17-.77-.35-1.11-.55a5 5 0 0 1-.91-.68 2.8 2.8 0 0 1-.61-.88 2.9 2.9 0 0 1-.22-1.19c0-1 .37-1.8 1.12-2.4.75-.6 1.74-.9 2.97-.9.92 0 1.71.11 2.36.33v1.64a4.74 4.74 0 0 0-2.14-.47c-.59 0-1.05.1-1.39.31-.34.2-.5.49-.5.84 0 .27.07.5.2.69.13.19.31.36.54.51.23.15.5.29.82.43.31.14.65.29 1.01.45.41.17.8.36 1.17.56.37.2.69.43.97.69.28.26.5.56.66.91.16.35.24.76.24 1.22 0 1.06-.38 1.87-1.13 2.44-.75.57-1.82.85-3.2.85-.48 0-.96-.04-1.45-.13-.49-.09-.88-.2-1.17-.33Zm-2.54-5.89H8.13v7.81H6.46V7.45H3.84V6.03h6.92v1.42Z" fill="white"/></svg>' },
+  { label: 'Tailwind CSS', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 6.5c-2.67 0-4.34 1.3-5 3.9.99-1.3 2.15-1.79 3.49-1.47.76.18 1.3.7 1.9 1.28.97.94 2.1 2.03 4.61 2.03 2.67 0 4.34-1.3 5-3.9-.99 1.3-2.15 1.79-3.49 1.47-.76-.18-1.3-.7-1.9-1.28C15.64 7.59 14.51 6.5 12 6.5Zm-5 5.76c-2.67 0-4.34 1.3-5 3.9.99-1.3 2.15-1.79 3.49-1.47.76.18 1.3.7 1.9 1.28.97.94 2.1 2.03 4.61 2.03 2.67 0 4.34-1.3 5-3.9-.99 1.3-2.15 1.79-3.49 1.47-.76-.18-1.3-.7-1.9-1.28-.97-.94-2.1-2.03-4.61-2.03Z" fill="#38BDF8"/></svg>' },
+  { label: 'Prisma', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.9 18.18 10.3 2.85c-.18-.33-.63-.34-.82-.03L5.22 9.43a1 1 0 0 0-.08.87l3.4 10.14c.14.43.63.61 1 .37l8.95-5.74c.41-.26.53-.81.27-1.21-.03-.05-.07-.09-.1-.14Z" fill="#2D3748"/><path d="m10.1 20.35 7.9-5.05a.54.54 0 0 0 .21-.7L10.08 3.13c-.14-.26-.52-.17-.55.12L8.2 19.72c-.04.46.42.88.85.63Z" fill="#A0AEC0"/></svg>' },
+  { label: 'Node.js', kind: 'fa', icon: faNodeJs },
+  { label: 'Clerk', kind: 'svg', svg: CLERK_LOGO_SVG },
+  { label: 'Auth.js / NextAuth', kind: 'svg', svg: NEXTAUTH_LOGO_SVG },
+  { label: 'Playwright', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.4 5.5c3.35 0 5.47 2.57 5.47 5.66 0 3.28-2.2 5.9-5.18 5.9-1.73 0-3.11-.83-3.97-2.07.63.18 1.49.08 2.08-.39.67-.54 1-1.4.92-2.41-.12-1.64.88-3 2.5-3.27 1.1-.19 2.08.22 2.75.98-.36-2.14-1.92-3.79-4.57-3.79-2.39 0-3.82 1.22-4.59 3.04C4.25 7.15 5.83 5.5 8.4 5.5Z" fill="#2EAD33"/><path d="M15.64 6.01c2.35 0 4.36 1.83 4.36 4.42 0 2.85-2.28 4.62-4.92 4.62-.94 0-1.8-.2-2.48-.55.87-.2 1.67-.74 2.12-1.57.72-1.31 2.1-1.96 3.54-1.63.46.1.88.29 1.24.54-.35-1.75-1.73-3.07-3.86-3.07-1.22 0-2.18.46-2.93 1.25.52-2.34 1.92-4.01 4.93-4.01Z" fill="#45BA4B"/></svg>' },
+  { label: 'Vitest', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.93 4H22l-6.24 16h-3.07L18.93 4Z" fill="#FBBF24"/><path d="M8.24 4h3.07l4.46 16h-3.07L8.24 4Z" fill="#A3E635"/><path d="M2 4h3.07l6.24 16H8.24L2 4Z" fill="#84CC16"/></svg>' },
+  { label: 'Zod', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3068B7"/><path d="M7.5 8.2h9.1v1.8l-6.2 6h6.2v1.8H7.3V16l6.16-6H7.5V8.2Z" fill="white"/></svg>' },
+  { label: 'Nodemailer', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="#10B981"/><path d="m6.5 8.5 5.5 4 5.5-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15h8" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>' },
 ];
 
 const STATS = [
@@ -337,12 +356,16 @@ function DashboardDemo() {
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = tiltRef.current?.getBoundingClientRect();
     if (!rect || !tiltInnerRef.current) return;
-    const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
-    const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
-    tiltInnerRef.current.style.transform = `perspective(450px) rotateX(${dy * -3}deg) rotateY(${dx * 3}deg) scale(1.01)`;
+    const dxRaw = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+    const dyRaw = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+    const dx = Math.max(-1, Math.min(1, dxRaw));
+    const dy = Math.max(-1, Math.min(1, dyRaw));
+    tiltInnerRef.current.style.transition = 'transform 90ms linear';
+    tiltInnerRef.current.style.transform = `perspective(450px) rotateX(${dy * -2.2}deg) rotateY(${dx * 2.2}deg) scale(1)`;
   };
   const handleMouseLeave = () => {
     if (tiltInnerRef.current) {
+      tiltInnerRef.current.style.transition = 'transform 260ms ease-out';
       tiltInnerRef.current.style.transform = 'perspective(450px) rotateX(0deg) rotateY(0deg) scale(1)';
     }
   };
@@ -382,13 +405,20 @@ function DashboardDemo() {
       {/* 3D tilt wrapper */}
       <div ref={tiltInnerRef} className="lp-dd-tilt" style={{
         position: 'relative', zIndex: 1,
-        transition: 'transform 1.15s ease-out',
+        transition: 'transform 260ms ease-out',
+        willChange: 'transform',
+        transformStyle: 'preserve-3d',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
       }}>
         <div style={{
           borderRadius: 16, overflow: 'hidden',
           border: '1px solid var(--lp-dd-border-main)',
           background: 'var(--lp-dd-outer-bg)',
           fontFamily: 'inherit',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}>
           {/* browser chrome */}
           <div style={{ background: 'var(--lp-dd-chrome-bg)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--lp-dd-border)' }}>
@@ -399,6 +429,21 @@ function DashboardDemo() {
               {urlMap[demoView]}
             </div>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(128,128,128,0.3)', marginLeft: 'auto' }} />
+          </div>
+
+          <div className="lp-dd-topbar">
+            <span className="lp-dd-topbar-logo">SaasyBase</span>
+            <div className="lp-dd-topbar-nav" aria-hidden>
+              <span className="lp-dd-topbar-nav-active">Dashboard</span>
+              <span>Billing</span>
+              <span>Docs</span>
+              <span>Support</span>
+            </div>
+            <div className="lp-dd-topbar-actions" aria-hidden>
+              <span className="lp-dd-topbar-icon"><FontAwesomeIcon icon={faChartLine} /></span>
+              <span className="lp-dd-topbar-icon"><FontAwesomeIcon icon={faLifeRing} /></span>
+              <span className="lp-dd-topbar-icon"><FontAwesomeIcon icon={faGear} /></span>
+            </div>
           </div>
 
           {/* app shell */}
@@ -675,11 +720,11 @@ function DashboardDemo() {
                             </div>
                             <div style={{ overflow: 'hidden' }}>
                               <div style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                              <div style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email.split('@')[0]}@...</div>
+                              <div style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{demoUserIdFromEmail(u.email)}</div>
                             </div>
                           </div>
                           {/* Email */}
-                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email.replace('demo.com', 'demo...')}</div>
+                          <div style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', whiteSpace: 'nowrap' }}>{u.email}</div>
                           {/* Role badge */}
                           <RoleBadge role={u.role as 'USER' | 'ADMIN'} />
                           {/* Joined */}
@@ -716,6 +761,7 @@ function DashboardDemo() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 29, gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                               <span style={{ fontSize: 9.5, color: 'var(--lp-dd-row-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                              <span style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)' }}>ID: {demoUserIdFromEmail(u.email)}</span>
                               <span style={{ fontSize: 9, color: 'var(--lp-dd-row-text3)' }}>Plan: {u.plan}</span>
                             </div>
                             <span style={{ fontSize: 9.5, color: '#6366f1', fontWeight: 600, flexShrink: 0 }}>{u.payments} payments</span>
@@ -953,6 +999,14 @@ function FeatureCard({ icon, title, desc, tone, delay }: { icon: IconDefinition;
   );
 }
 
+function demoUserIdFromEmail(email: string) {
+  let hash = 0;
+  for (let i = 0; i < email.length; i += 1) {
+    hash = (hash * 31 + email.charCodeAt(i)) >>> 0;
+  }
+  return `usr_${hash.toString(36).padStart(7, '0').slice(0, 7)}`;
+}
+
 /* ─── Main landing component ─── */
 export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }) {
   const [mounted, setMounted] = useState(false);
@@ -1025,9 +1079,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-hdr-border:         rgb(var(--border-primary) / 0.4);
           --lp-dd-col-hdr:            rgb(var(--text-tertiary));
           --lp-dd-title-text:         rgb(var(--text-primary));
-          --lp-dd-row-text:           rgb(var(--text-primary) / 0.85);
-          --lp-dd-row-text2:          rgb(var(--text-secondary));
-          --lp-dd-row-text3:          rgb(var(--text-tertiary));
+          --lp-dd-row-text:           rgb(var(--text-primary) / 0.94);
+          --lp-dd-row-text2:          rgb(var(--text-secondary) / 0.95);
+          --lp-dd-row-text3:          rgb(var(--text-secondary));
           --lp-dd-row-border:         rgb(var(--border-primary) / 0.3);
           --lp-dd-amount:             #a5f3fc;
           --lp-dd-live-bg:            rgba(var(--accent-primary-rgb), 0.09);
@@ -1042,6 +1096,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-banner-chip-num:    #ffffff;
           --lp-dd-banner-free-num:    #c4b5fd;
           --lp-dd-banner-chip-sub:    rgba(255,255,255,.4);
+          --lp-dd-topbar-bg:          rgb(var(--bg-secondary) / 0.72);
+          --lp-dd-topbar-border:      rgb(var(--border-primary) / 0.45);
+          --lp-dd-topbar-text:        rgb(var(--text-secondary));
+          --lp-dd-topbar-link:        rgb(var(--text-tertiary));
+          --lp-dd-topbar-link-active: rgb(var(--text-primary));
         }
         /* ── CSS vars: light mode ─────────────────────────── */
         .light .lp-root {
@@ -1094,6 +1153,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-banner-chip-num:    #1e1b4b;
           --lp-dd-banner-free-num:    #4338ca;
           --lp-dd-banner-chip-sub:    rgba(0,0,0,.4);
+          --lp-dd-topbar-bg:          rgba(255,255,255,.88);
+          --lp-dd-topbar-border:      rgba(99,102,241,.16);
+          --lp-dd-topbar-text:        rgba(15,23,42,.8);
+          --lp-dd-topbar-link:        rgba(15,23,42,.6);
+          --lp-dd-topbar-link-active: #1e1b4b;
         }
 
         /* Keyframes */
@@ -1504,6 +1568,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           flex-wrap:wrap;
           gap:10px;
           margin-top:20px;
+          justify-content:center;
         }
         .lp-signal-pill {
           display:inline-flex;
@@ -1560,7 +1625,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           text-transform:uppercase; color:var(--lp-section-tag); margin-bottom:12px; }
         .lp-section-h2 { font-size:clamp(1.6rem,3.5vw,2.4rem); font-weight:800; letter-spacing:-.8px;
           color:var(--lp-text1); margin-bottom:12px; }
-        .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:500px; margin:0 auto; line-height:1.7; }
+        .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:650px; margin:0 auto; line-height:1.7; }
 
         /* Feature cards */
         .lp-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; margin-top:40px; }
@@ -1879,11 +1944,55 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
         /* Marquee */
         .lp-marquee-outer { overflow:hidden; mask-image:linear-gradient(to right,transparent,black 10%,black 90%,transparent); -webkit-mask-image:linear-gradient(to right,transparent,black 10%,black 90%,transparent); }
-        .lp-marquee-inner { display:flex; gap:12px; width:max-content; animation:lpMarquee 28s linear infinite; }
+        .lp-marquee-inner { display:flex; gap:12px; width:max-content; animation:lpMarquee 36s linear infinite; }
         .lp-tech-pill {
           padding:6px 14px; border-radius:100px; font-size:11px; font-weight:600;
           border:1px solid var(--lp-pill-border); color:var(--lp-pill-text);
           background:var(--lp-pill-bg); white-space:nowrap;
+        }
+        .lp-tech-icons {
+          margin-top:26px;
+        }
+        .lp-tech-icons:hover .lp-tech-marquee-inner {
+          animation-play-state:paused;
+        }
+        .lp-tech-marquee-inner {
+          gap:16px;
+          padding:8px 0;
+        }
+        .lp-tech-icon {
+          flex:0 0 104px;
+          width:104px;
+          height:104px;
+          border-radius:16px;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          border:1px solid var(--lp-pill-border);
+          background:var(--lp-pill-bg);
+          color:var(--lp-pill-text);
+          transition:transform .18s, border-color .18s, color .18s, background .18s;
+          box-shadow:0 8px 24px rgba(15,23,42,.08);
+        }
+        .lp-tech-icon:hover {
+          transform:translateY(-2px);
+          border-color:var(--lp-card-bdr-h);
+          color:var(--lp-text1);
+          background:var(--lp-card-hover);
+        }
+        .lp-tech-icon > svg,
+        .lp-tech-icon > span {
+          width:82px;
+          height:82px;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+        }
+        .lp-tech-icon > svg,
+        .lp-tech-icon > span svg {
+          width:82px;
+          height:82px;
+          display:block;
         }
 
         /* Code block: theme-aware */
@@ -1917,6 +2026,61 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-tx-row { animation: lpFadeUp 0.3s ease both; }
         .lp-dd-content { overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; overscroll-behavior:auto; touch-action:auto; }
         .lp-dd-content::-webkit-scrollbar { display:none; }
+        .lp-dd-topbar {
+          display:flex;
+          align-items:center;
+          gap:14px;
+          min-height:40px;
+          padding:0 14px;
+          border-bottom:1px solid var(--lp-dd-topbar-border);
+          background:var(--lp-dd-topbar-bg);
+          backdrop-filter:blur(10px);
+        }
+        .lp-dd-topbar-logo {
+          font-size:12px;
+          font-weight:800;
+          letter-spacing:-0.2px;
+          color:var(--lp-dd-brand);
+        }
+        .lp-dd-topbar-nav {
+          display:flex;
+          align-items:center;
+          gap:10px;
+          font-size:10px;
+          font-weight:700;
+          letter-spacing:0.8px;
+          text-transform:uppercase;
+          color:var(--lp-dd-topbar-link);
+        }
+        .lp-dd-topbar-nav span {
+          padding:4px 8px;
+          border-radius:999px;
+          border:1px solid transparent;
+          white-space:nowrap;
+        }
+        .lp-dd-topbar-nav .lp-dd-topbar-nav-active {
+          color:var(--lp-dd-topbar-link-active);
+          border-color:var(--lp-dd-topbar-border);
+          background:rgba(99,102,241,0.1);
+        }
+        .lp-dd-topbar-actions {
+          margin-left:auto;
+          display:flex;
+          align-items:center;
+          gap:6px;
+          color:var(--lp-dd-topbar-text);
+        }
+        .lp-dd-topbar-icon {
+          width:22px;
+          height:22px;
+          border-radius:999px;
+          border:1px solid var(--lp-dd-topbar-border);
+          background:rgba(99,102,241,0.08);
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          font-size:10px;
+        }
 
         @media(max-width:768px) {
           .lp-root {
@@ -1989,6 +2153,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           }
           .lp-switch-grid {
             grid-template-columns:1fr;
+          }
+          .lp-dd-topbar {
+            display:none;
           }
           .lp-switch-bridge {
             margin-top:16px;
@@ -2228,12 +2395,14 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         </section>
 
         {/* ── DASHBOARD DEMO ──────────────────────────────── */}
-        <section style={{ textAlign: 'center', marginBottom: 0, marginTop: 58 }}>
+        <section style={{ marginBottom: 0, marginTop: 58 }}>
+          <div style={{ textAlign: 'center' }}>
           <div className="lp-section-tag">What ships on day one</div>
           <h2 className="lp-section-h2">Launch with billing, users, and ops already working.</h2>
           <p className="lp-section-sub" style={{ marginBottom: 40 }}>
             Skip months of stitching tools together. SaaSyBase gives you the admin surface, payment visibility, and operational control a real SaaS product needs from the start.
           </p>
+          </div>
           {mounted && (
             <div style={{ position: 'relative', marginBottom: 8 }}>
               <div className="lp-demo-wrap">
@@ -2250,6 +2419,12 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               { icon: faUsers, label: 'Teams, invites, org token pools' },
               { icon: faShield, label: 'Secure logger with secret redaction' },
               { icon: faBolt, label: 'Edge cases tested before you launch' },
+              { icon: faLock, label: 'Provider-agnostic auth and billing adapters' },
+              { icon: faChartLine, label: '240+ regression tests across critical flows' },
+              { icon: faTriangleExclamation, label: 'Rate limits, request IDs, sanitized errors' },
+              { icon: faBuilding, label: 'Dual-column compatibility for safe migrations' },
+              { icon: faCreditCard, label: 'Proration, retries, refunds, and lifecycle states' },
+              { icon: faLifeRing, label: 'Admin actions and support workflows already wired' },
             ].map((signal) => (
               <span key={signal.label} className="lp-signal-pill">
                 <FontAwesomeIcon icon={signal.icon} />
@@ -2287,6 +2462,28 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             {FEATURES.map((f, i) => (
               <FeatureCard key={f.title} {...f} delay={i * 60} />
             ))}
+          </div>
+          <div className="lp-tech-icons lp-marquee-outer" aria-label="Technology used in SaaSyBase">
+            <div className="lp-marquee-inner lp-tech-marquee-inner">
+              {TECH_STACK_ICONS.map((tech, index) => (
+                <span key={`tech-primary-${tech.label}-${index}`} className="lp-tech-icon" title={tech.label} aria-label={tech.label}>
+                  {tech.kind === 'fa' ? (
+                    <FontAwesomeIcon icon={tech.icon as never} />
+                  ) : (
+                    <span aria-hidden dangerouslySetInnerHTML={{ __html: tech.svg }} />
+                  )}
+                </span>
+              ))}
+              {TECH_STACK_ICONS.map((tech, index) => (
+                <span key={`tech-loop-${tech.label}-${index}`} className="lp-tech-icon" title={tech.label} aria-hidden="true">
+                  {tech.kind === 'fa' ? (
+                    <FontAwesomeIcon icon={tech.icon as never} />
+                  ) : (
+                    <span aria-hidden dangerouslySetInnerHTML={{ __html: tech.svg }} />
+                  )}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 

@@ -10,10 +10,12 @@ import { getAnnouncementMessage } from '../../lib/settings';
 import { getPendingEmailChangeForUser } from '../../lib/nextauth-email-verification';
 import { PendingEmailChangeNotice } from '../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../lib/user-helpers';
+import { DemoReadOnlyNotice } from '../../components/ui/DemoReadOnlyNotice';
 
 import { SidebarFooter } from '../../components/dashboard/SidebarFooter';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
   // Middleware handles authentication protection
   // Only authenticated users will reach this component
 
@@ -121,6 +123,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <main className="flex-1 min-w-0 w-full max-w-none px-3 py-3 sm:px-4 lg:px-4 lg:py-3">
+        {demoReadOnlyMode && <DemoReadOnlyNotice scope="dashboard" />}
         <GracePeriodNotice />
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />

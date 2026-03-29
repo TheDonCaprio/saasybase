@@ -26,6 +26,24 @@ interface AdminSettingsTabsProps {
   databaseSettings: Setting[];
   environmentSettings: Setting[];
   moderatorPermissions: ModeratorPermissions;
+  runtimeSnapshot: {
+    nodeVersion: string;
+    runtime: string;
+    deploymentTarget: string;
+    authProvider: string;
+    paymentProvider: string;
+    demoMode: string;
+    platform: string;
+    architecture: string;
+    cpuCores: string;
+    totalMemory: string;
+    freeMemory: string;
+    rssMemory: string;
+    heapUsed: string;
+    appUptime: string;
+    hostUptime: string;
+    timezone: string;
+  };
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
@@ -74,7 +92,7 @@ const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; descri
   }
 };
 
-export function AdminSettingsTabs({ databaseSettings, environmentSettings, moderatorPermissions }: AdminSettingsTabsProps) {
+export function AdminSettingsTabs({ databaseSettings, environmentSettings, moderatorPermissions, runtimeSnapshot }: AdminSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('branding');
   const [moderatorAccess, setModeratorAccess] = useState<ModeratorPermissions>(moderatorPermissions);
   const [exporting, setExporting] = useState(false);
@@ -335,17 +353,56 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
         description: 'Runtime environment, integrations, and infrastructure snapshot',
         content: (
           <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm dark:border-neutral-700 dark:from-neutral-900 dark:to-neutral-950">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Operational snapshot</h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
+                    Real-time server diagnostics pulled during page render so admins can quickly confirm runtime posture, capacity, and deployment mode.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <SystemBadge label="Runtime" value={runtimeSnapshot.runtime} tone="slate" />
+                  <SystemBadge label="Node" value={runtimeSnapshot.nodeVersion} tone="blue" />
+                  <SystemBadge label="Demo mode" value={runtimeSnapshot.demoMode} tone={runtimeSnapshot.demoMode === 'Enabled' ? 'amber' : 'emerald'} />
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
               <SystemBadge label="Stripe mode" value={stripeMode} tone={stripeMode === 'LIVE' ? 'emerald' : 'amber'} />
               <SystemBadge label="Database" value={databaseType} tone="blue" />
               <SystemBadge label="Clerk domain" value={clerkDomain} tone="violet" />
               <SystemBadge label="Node env" value={nodeEnv} tone="slate" />
             </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Application runtime</h3>
+                <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-3">
+                  <SystemBadge label="Auth" value={runtimeSnapshot.authProvider} tone="violet" />
+                  <SystemBadge label="Payments" value={runtimeSnapshot.paymentProvider} tone="blue" />
+                  <SystemBadge label="Deploy target" value={runtimeSnapshot.deploymentTarget} tone="slate" />
+                  <SystemBadge label="App uptime" value={runtimeSnapshot.appUptime} tone="emerald" />
+                  <SystemBadge label="Host uptime" value={runtimeSnapshot.hostUptime} tone="amber" />
+                  <SystemBadge label="Timezone" value={runtimeSnapshot.timezone} tone="slate" />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Machine profile</h3>
+                <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-3">
+                  <SystemBadge label="Platform" value={runtimeSnapshot.platform} tone="slate" />
+                  <SystemBadge label="Arch" value={runtimeSnapshot.architecture} tone="slate" />
+                  <SystemBadge label="CPU" value={runtimeSnapshot.cpuCores} tone="blue" />
+                  <SystemBadge label="Total RAM" value={runtimeSnapshot.totalMemory} tone="emerald" />
+                  <SystemBadge label="Free RAM" value={runtimeSnapshot.freeMemory} tone="emerald" />
+                  <SystemBadge label="RSS / Heap" value={`${runtimeSnapshot.rssMemory} / ${runtimeSnapshot.heapUsed}`} tone="amber" />
+                </div>
+              </div>
+            </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
               <EnvironmentSettingsList
                 settings={environmentSettings}
                 title="Platform configuration"
-                description="Live diagnostics pulled from environment variables and runtime flags."
+                description="Read-only environment flags and integration toggles currently active in this deployment."
                 badgeText="Immutable"
               />
             </div>
@@ -361,6 +418,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       clerkDomain,
       nodeEnv,
       moderatorAccess,
+      runtimeSnapshot,
       savingSections,
       updateModeratorAccess
     ]

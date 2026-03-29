@@ -7,8 +7,10 @@ import { SidebarFooter } from '../../components/dashboard/SidebarFooter';
 import { requireAdminAreaActor } from '../../lib/route-guards';
 import { prisma } from '../../lib/prisma';
 import type { ModeratorSection } from '../../lib/moderator';
+import { DemoReadOnlyNotice } from '../../components/ui/DemoReadOnlyNotice';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
   const actor = await requireAdminAreaActor();
   let userCount = 0; let payCount = 0; let ticketCount = 0; let unreadNotifications = 0; let purchasesCount = 0; let subscriptionsCount = 0; let couponCount = 0; let logCount = 0; let moderatorLogCount = 0;
   try {
@@ -138,6 +140,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
       
       <main className="relative flex-1 min-w-0 px-3 py-2 sm:px-4 lg:px-4 lg:py-3 max-w-none w-full">
+  {demoReadOnlyMode && <DemoReadOnlyNotice scope="admin" />}
   {/* background gradients removed here - using root-level gradient in app/layout.tsx instead */}
         <div className="relative space-y-6 w-full">
           {children}

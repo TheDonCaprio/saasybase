@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic';
 
 import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader';
 import SaaSyAppClient from '@/components/dashboard/SaaSyAppClient';
-import { dashboardPanelClass } from '@/components/dashboard/dashboardSurfaces';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '@/lib/route-guards';
 import { enforceTeamWorkspaceProvisioningGuard } from '@/lib/dashboard-workspace-guard';
@@ -33,9 +32,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         title="SaaSyBase Demo App"
       />
 
-      <section className={dashboardPanelClass('space-y-4')}>
-        <SaaSyAppClient />
-      </section>
+      <SaaSyAppClient />
     </div>
   );
 }

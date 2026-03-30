@@ -486,7 +486,7 @@ export function AdminHeaderDrawer({
                                     ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
                                     : profile.sharedTokens.strategy === 'DISABLED'
                                     ? 'Member caps disabled'
-                                    : 'No per-member cap set'}
+                                    : ''}
                                 </p>
                               </div>
                             </div>

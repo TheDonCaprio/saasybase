@@ -259,7 +259,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
       {
         label: 'Access',
         value: durationLabel,
-        helper: currentPlan?.autoRenew ? 'Continues while payments renew' : 'Ends after this cycle',
+        helper: currentPlan?.autoRenew ? 'Recurring payment' : 'Ends after this cycle',
         tone: 'rose' as const,
       },
       {

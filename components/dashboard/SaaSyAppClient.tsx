@@ -339,7 +339,7 @@ export default function SaaSyAppClient() {
               {profileError ? (
                 <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
               ) : profile ? (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:max-w-3xl">
+                <div className="grid grid-cols-3 gap-2 xl:max-w-3xl">
                   {balanceItems.map((item) => (
                     <div
                       key={item.key}

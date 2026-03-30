@@ -29,10 +29,8 @@ const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
 
 const accentStyles: Record<Accent, { wrapper: string; overlay: string; pill: string; dot: string }> = {
 	theme: {
-		wrapper:
-			'border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))] bg-[linear-gradient(135deg,rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.72)),rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.72))),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.30))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.42)),rgb(var(--surface-hero-rgb)_/_calc(var(--surface-hero-a)*0.42))),linear-gradient(135deg,var(--theme-hero-gradient-from),var(--theme-hero-gradient-via),var(--theme-hero-gradient-to))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]',
-		overlay:
-			'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]',
+		wrapper: '',
+		overlay: '',
 		pill:
 			'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.08))] px-3 py-1 text-xs font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.88))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]',
 		dot: 'h-2 w-2 rounded-full bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.9))] animate-pulse dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]'
@@ -160,15 +158,11 @@ export function DashboardPageHeader({
 		<div
 			data-dashboard-page-header="true"
 			className={cx(
-				'relative overflow-hidden rounded-3xl border p-6 transition-shadow',
+				'relative',
 				palette.wrapper,
 				className
 			)}
 		>
-			<div className="pointer-events-none absolute inset-0" aria-hidden="true">
-				<div className={cx('h-full w-full', palette.overlay)} />
-			</div>
-
 			<div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 				<div className="max-w-2xl space-y-3">
 					{eyebrow ? (

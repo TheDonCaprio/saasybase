@@ -133,7 +133,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         title="Transaction history"
         stats={[
           {
-            label: 'Transactions logged',
+            label: 'All transactions',
             value: totalCount,
             helper: totalCount > 0 ? 'Renewals, upgrades, and refunds' : 'No payments recorded yet',
             tone: totalCount > 0 ? 'indigo' : 'slate',

@@ -4,7 +4,6 @@ export type ColorHexKey =
   | 'bgPrimary'
   | 'bgSecondary'
   | 'panelBg'
-  | 'heroBg'
   | 'bgTertiary'
   | 'bgQuaternary'
   | 'textPrimary'
@@ -27,9 +26,6 @@ export type ColorHexKey =
   | 'pageGradientFrom'
   | 'pageGradientVia'
   | 'pageGradientTo'
-  | 'heroGradientFrom'
-  | 'heroGradientVia'
-  | 'heroGradientTo'
   | 'cardGradientFrom'
   | 'cardGradientVia'
   | 'cardGradientTo'
@@ -310,7 +306,6 @@ export const DEFAULT_DARK_COLORS: ColorTokens = {
 export const COLOR_LABELS: Record<ColorHexKey, string> = {
   bgPrimary: 'Base background',
   bgSecondary: 'Stat / info cards',
-  heroBg: 'Top hero',
   panelBg: 'Panels',
   bgTertiary: 'Input fields',
   bgQuaternary: 'Hover fills',
@@ -333,9 +328,6 @@ export const COLOR_LABELS: Record<ColorHexKey, string> = {
   pageGradientFrom: 'Page background (from)',
   pageGradientVia: 'Page background (via)',
   pageGradientTo: 'Page background (to)',
-  heroGradientFrom: 'Top hero gradient (from)',
-  heroGradientVia: 'Top hero gradient (via)',
-  heroGradientTo: 'Top hero gradient (to)',
   cardGradientFrom: 'Stat / info gradient (from)',
   cardGradientVia: 'Stat / info gradient (via)',
   cardGradientTo: 'Stat / info gradient (to)',
@@ -354,11 +346,7 @@ export const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
     title: 'Surfaces',
     keys: [
       'bgSecondary',
-      'heroBg',
       'panelBg',
-      'heroGradientFrom',
-      'heroGradientVia',
-      'heroGradientTo',
       'cardGradientFrom',
       'cardGradientVia',
       'cardGradientTo',

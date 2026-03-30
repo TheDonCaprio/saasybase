@@ -642,28 +642,32 @@ export function ColorTabContent({
 
             {/* Main content */}
             <div className="relative flex-1 overflow-hidden p-4 space-y-3">
-              {/* Hero strip — uses heroGradient */}
-              <div
-                className="rounded-xl px-4 py-3 flex items-center justify-between"
-                style={{
-                  backgroundColor: colors.heroBg,
-                  background: `linear-gradient(135deg, ${colors.heroGradientFrom ?? colors.pageGradientFrom}, ${colors.heroGradientVia ?? colors.pageGradientVia}, ${colors.heroGradientTo ?? colors.pageGradientTo})`,
-                  border: `1px solid ${colors.borderPrimary}`,
-                }}
-              >
-                <div>
-                  <p className="text-xs font-semibold" style={{ color: colors.textPrimary }}>
-                    Welcome back, Alex 👋
+              {/* Flat page heading */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: colors.textTertiary }}>
+                    Workspace overview
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
-                    Here&apos;s what&apos;s happening today.
+                  <p className="mt-1 text-sm font-semibold" style={{ color: colors.textPrimary }}>
+                    Dashboard
+                  </p>
+                  <p className="mt-0.5 text-xs" style={{ color: colors.textSecondary }}>
+                    Billing, activity, and team health at a glance.
                   </p>
                 </div>
-                <div
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium"
-                  style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
-                >
-                  Upgrade
+                <div className="flex items-center gap-2">
+                  <div
+                    className="rounded-lg border px-2.5 py-1 text-[10px] font-medium"
+                    style={{ borderColor: colors.borderPrimary, color: colors.textSecondary }}
+                  >
+                    12 updates
+                  </div>
+                  <div
+                    className="rounded-lg px-2.5 py-1 text-[10px] font-semibold"
+                    style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
+                  >
+                    New report
+                  </div>
                 </div>
               </div>
 

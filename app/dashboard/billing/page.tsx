@@ -210,7 +210,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
         {
           label: 'Access',
           value: planDurationLabel,
-          helper: planAutoRenew ? 'Continues while payments renew' : 'Ends after this cycle',
+          helper: planAutoRenew ? 'Recurring payment' : 'Ends after this cycle',
           tone: 'rose' as const,
         },
         {

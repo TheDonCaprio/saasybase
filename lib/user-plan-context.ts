@@ -298,9 +298,9 @@ export function buildPlanDisplay(params: {
     } else if (memberCapStrategy === 'DISABLED') {
       capHelper = 'Workspace member caps disabled';
     } else {
-      capHelper = 'Workspace plan currently has no per-member cap';
+      capHelper = '';
     }
-    tokenStatHelper = `Workspace pool managed by ${organizationContext!.organization.name}. ${capHelper}`;
+    tokenStatHelper = capHelper ? `Managed by ${organizationContext!.organization.name}. ${capHelper}` : `Managed by ${organizationContext!.organization.name}.`;
   } else {
     tokenStatValue = `${formattedPaidBalance} paid • ${formattedFreeBalance} free`;
     if (isUnlimitedPersonalPlan) {
@@ -320,7 +320,7 @@ export function buildPlanDisplay(params: {
             ? `Unlimited ${tokenLower} for free users`
             : `Free users receive ${numberFormatter.format(freePlanSettings.tokenLimit)} ${tokenLower}`;
       } else if (planSource === 'ORGANIZATION') {
-        tokenStatHelper = 'Workspace plan currently has no per-member cap';
+        tokenStatHelper = '';
       } else {
         tokenStatHelper = `No maximum set for your ${tokenLower}`;
       }
@@ -330,7 +330,7 @@ export function buildPlanDisplay(params: {
   let statusHelper: string;
   if (subscription) {
     statusHelper = subscription.canceledAt
-      ? 'Auto-renew disabled — access ends after this cycle.'
+      ? 'Auto-renew disabled.'
       : subscription.plan?.autoRenew
         ? 'Auto-renew enabled.'
         : 'Renew manually when needed.';
@@ -373,7 +373,7 @@ export function buildPlanDisplay(params: {
             ? `Workspace cap per member: ${memberCapLabel} ${tokenLower} (${(memberCapStrategy ?? 'SOFT').toLowerCase()} mode)`
             : memberCapStrategy === 'DISABLED'
               ? 'Workspace member caps disabled'
-              : 'Workspace has not set a per-member cap',
+              : '',
       }
       : undefined,
   };

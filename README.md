@@ -58,7 +58,7 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
 | Database | Prisma ORM · SQLite (dev) · PostgreSQL / MySQL (prod) |
 | Styling | Tailwind CSS |
 | Rich Text Editor | TipTap (blog posts, site pages, email templates) |
-| Email | Nodemailer (SMTP; dev uses MailHog by default) |
+| Email | Nodemailer (SMTP) or Resend, switchable via `EMAIL_PROVIDER` |
 | Analytics | Google Analytics 4 (via Data API) |
 | PDF Generation | pdf-lib (invoices, refund receipts) |
 | Validation | Zod |
@@ -139,7 +139,7 @@ GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 ```
 
-NextAuth supports **credentials** (email + password), **GitHub OAuth**, **Google OAuth**, and **magic link** (Nodemailer) out of the box — enable the ones you need in `lib/nextauth.config.ts`.
+NextAuth supports **credentials** (email + password), **GitHub OAuth**, **Google OAuth**, and **magic link** out of the box — enable the ones you need in `lib/nextauth.config.ts`. All app email flows, including auth emails, send through the shared mail layer and can use either Nodemailer or Resend via `EMAIL_PROVIDER`.
 
 #### GitHub OAuth setup
 
@@ -1092,14 +1092,21 @@ HEALTHCHECK_TOKEN=""           # Auth for /api/health detailed output
 CRON_PROCESS_EXPIRY_TOKEN=""   # Auth for /api/cron/process-expiry
 
 # Email
+EMAIL_PROVIDER="nodemailer"      # or "resend"
 SMTP_HOST=""
 SMTP_PORT=""
 SMTP_USER=""
 SMTP_PASS=""
+RESEND_API_KEY=""
 EMAIL_FROM=""
 SUPPORT_EMAIL=""
 SEND_ADMIN_BILLING_EMAILS="true"
 ```
+
+Notes:
+
+- Use `EMAIL_PROVIDER="nodemailer"` for SMTP delivery. In local development, the default SMTP values can point at MailHog.
+- Use `EMAIL_PROVIDER="resend"` with `RESEND_API_KEY` set. The `SMTP_*` variables are ignored in that mode.
 
 ### Health check
 
@@ -1133,7 +1140,8 @@ STRIPE_WEBHOOK_SECRET="whsec_primary,whsec_rotating"
 
 - New tickets/user replies → email to `SUPPORT_EMAIL`.
 - Admin replies → email to ticket owner (respects user setting `EMAIL_NOTIFICATIONS`).
-- Configure SMTP above; without it, Nodemailer falls back to an in-memory stream transport (emails won't deliver in production).
+- If `EMAIL_PROVIDER="nodemailer"`, configure SMTP above; without it, Nodemailer falls back to an in-memory stream transport (emails won't deliver in production).
+- If `EMAIL_PROVIDER="resend"`, set `RESEND_API_KEY`; SMTP settings are not used.
 
 ---
 
@@ -1183,7 +1191,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
 | Currency | `PAYMENTS_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
-| Email | `SMTP_*`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Nodemailer config |
+| Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Switch between SMTP/Nodemailer and Resend |
 | Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs or S3 |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN` | Server-side secrets |

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import { Logger } from '@/lib/logger';
 import { randomBytes, createHash } from 'crypto';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const resetUrl = `${baseUrl}/sign-in?mode=reset-password&token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
-    await sendEmail({
+    const result = await sendEmail({
       to: normalizedEmail,
       userId: user.id,
       templateKey: 'password_reset',
@@ -74,6 +75,15 @@ export async function POST(request: NextRequest) {
         dashboardUrl: `${baseUrl}/dashboard`,
       },
     });
+
+    if (!result.success) {
+      await prisma.verificationToken.deleteMany({ where: { identifier } });
+      Logger.warn('Forgot password email failed', {
+        email: normalizedEmail,
+        userId: user.id,
+        error: result.error,
+      });
+    }
 
     return successResponse;
   } catch (err) {

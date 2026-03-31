@@ -32,6 +32,7 @@ interface SessionWithActivity {
   id: string;
   status: string;
   lastActiveAt: string | Date;
+  isCurrent?: boolean;
   latestActivity?: SessionActivity;
   actor?: unknown;
 }
@@ -372,7 +373,8 @@ function getDeviceInfo(deviceType?: string, isMobile?: boolean) {
 
 export function ActiveSessionsList() {
   const { user, isLoaded } = useAuthUser();
-  const { sessionId: currentSessionId } = useAuthSession();
+  const { sessionId: authSessionId } = useAuthSession();
+  const supportsSessionManagement = true;
   const [sessions, setSessions] = useState<SessionWithActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -435,8 +437,12 @@ export function ActiveSessionsList() {
   // If we have an explicit current session id from Clerk, ensure that session
   // is displayed at the top of the list so it doesn't momentarily jump while
   // lastActiveAt updates propagate.
-  if (currentSessionId) {
-    const idx = sortedSessions.findIndex(s => s.id === currentSessionId);
+  const detectedCurrentSessionId = authSessionId
+    || sortedSessions.find((session) => session.isCurrent)?.id
+    || null;
+
+  if (detectedCurrentSessionId) {
+    const idx = sortedSessions.findIndex(s => s.id === detectedCurrentSessionId);
     if (idx > 0) {
       const [curr] = sortedSessions.splice(idx, 1);
       sortedSessions.unshift(curr);
@@ -453,15 +459,17 @@ export function ActiveSessionsList() {
           <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">active session{activeSessions.length !== 1 ? 's' : ''}</div>
         </div>
 
-        <div>
-          <button
-            disabled={bulkRevoking || !currentSessionId || activeSessions.length <= 1}
-            onClick={() => setConfirmBulkOpen(true)}
-            className="text-[13px] text-amber-400 hover:text-white px-2 py-1 rounded border border-neutral-700 disabled:opacity-50"
-          >
-            Sign out other sessions
-          </button>
-        </div>
+        {supportsSessionManagement ? (
+          <div>
+            <button
+              disabled={bulkRevoking || !detectedCurrentSessionId || activeSessions.length <= 1}
+              onClick={() => setConfirmBulkOpen(true)}
+              className="text-[13px] text-amber-400 hover:text-white px-2 py-1 rounded border border-neutral-700 disabled:opacity-50"
+            >
+              Sign out other sessions
+            </button>
+          </div>
+        ) : null}
       </div>
       
       
@@ -487,8 +495,11 @@ export function ActiveSessionsList() {
             // from the browser (more accurate). Fall back to the most-recently-active
             // heuristic if the session id isn't available (older Clerk versions).
             let isCurrentSession = false;
-            if (currentSessionId) {
-              isCurrentSession = session.id === currentSessionId;
+            const currentFlag = session.isCurrent === true;
+            if (detectedCurrentSessionId) {
+              isCurrentSession = session.id === detectedCurrentSessionId;
+            } else if (currentFlag) {
+              isCurrentSession = true;
             } else {
               isCurrentSession = session.id === sortedSessions[0]?.id;
             }
@@ -574,6 +585,8 @@ export function ActiveSessionsList() {
                 <div className="mt-3 flex items-center gap-2">
                   {isCurrentSession ? (
                     <div className="text-sm text-neutral-400">This is your current session</div>
+                  ) : !supportsSessionManagement ? (
+                    <div className="text-sm text-neutral-400">Session revocation is not available with this auth setup</div>
                   ) : (
                     <>
                       <button
@@ -594,98 +607,101 @@ export function ActiveSessionsList() {
         </div>
       )}
   {/* Keep modal declarative and handle confirm externally */}
-      <ConfirmModal
-        isOpen={confirmOpen}
-        loading={revoking}
-        title="Sign out session"
-        description="Are you sure you want to sign this session out? This will revoke access for that device."
-        confirmLabel="Sign out"
-        cancelLabel="Cancel"
-        onClose={() => {
-          if (revoking) return;
-          setConfirmOpen(false);
-          setTargetSessionId(null);
-        }}
-        onConfirm={async () => {
-          if (!targetSessionId) return;
-          setRevoking(true);
-          try {
-            const res = await fetch(`/api/sessions/${targetSessionId}/revoke`, { method: 'POST' });
-            if (!res.ok) {
-              const json = await res.json().catch(() => null);
-              throw new Error(json?.error || 'Failed to revoke session');
-            }
-            setSessions(prev => prev.filter(s => s.id !== targetSessionId));
-            showToast('Session signed out', 'success');
+      {supportsSessionManagement ? (
+        <ConfirmModal
+          isOpen={confirmOpen}
+          loading={revoking}
+          title="Sign out session"
+          description="Are you sure you want to sign this session out? This will revoke access for that device."
+          confirmLabel="Sign out"
+          cancelLabel="Cancel"
+          onClose={() => {
+            if (revoking) return;
             setConfirmOpen(false);
             setTargetSessionId(null);
-          } catch (err) {
-            const msg = safeErrorMessage(err);
-            console.error('Failed to revoke session:', msg);
-            showToast(msg || 'Failed to sign out session', 'error');
-          } finally {
-            setRevoking(false);
-          }
-        }}
-      />
+          }}
+          onConfirm={async () => {
+            if (!targetSessionId) return;
+            setRevoking(true);
+            try {
+              const res = await fetch(`/api/sessions/${targetSessionId}/revoke`, { method: 'POST' });
+              if (!res.ok) {
+                const json = await res.json().catch(() => null);
+                throw new Error(json?.error || 'Failed to revoke session');
+              }
+              setSessions(prev => prev.filter(s => s.id !== targetSessionId));
+              showToast('Session signed out', 'success');
+              setConfirmOpen(false);
+              setTargetSessionId(null);
+            } catch (err) {
+              const msg = safeErrorMessage(err);
+              console.error('Failed to revoke session:', msg);
+              showToast(msg || 'Failed to sign out session', 'error');
+            } finally {
+              setRevoking(false);
+            }
+          }}
+        />
+      ) : null}
 
       {/* Bulk revoke other sessions modal */}
-      <ConfirmModal
-        isOpen={confirmBulkOpen}
-        loading={bulkRevoking}
-        title="Sign out other sessions"
-        description="This will sign out all other devices and browsers except your current session. Are you sure you want to continue?"
-        confirmLabel="Sign out others"
-        cancelLabel="Cancel"
-        onClose={() => {
-          if (bulkRevoking) return;
-          setConfirmBulkOpen(false);
-        }}
-        onConfirm={async () => {
-          if (!currentSessionId) return;
-          setBulkRevoking(true);
-          showToast('Signing out other sessions...', 'info');
-          try {
-            const others = sortedSessions.filter(s => s.id !== currentSessionId).map(s => s.id);
-            if (others.length === 0) {
-              showToast('No other sessions to sign out', 'info');
-              setConfirmBulkOpen(false);
-              setBulkRevoking(false);
-              return;
-            }
-
-            // Revoke each session using the existing per-session revoke endpoint
-            const results: Array<{ id: string; ok: boolean; err?: string }> = await Promise.all(
-              others.map(id =>
-                fetch(`/api/sessions/${id}/revoke`, { method: 'POST' })
-                  .then(r => ({ id, ok: r.ok }))
-                  .catch((e: unknown) => ({ id, ok: false, err: safeErrorMessage(e) }))
-              )
-            );
-
-            const failed = results.filter(r => !r.ok);
-            const succeeded = results.filter(r => r.ok).map(r => r.id);
-
-            if (succeeded.length > 0) {
-              setSessions(prev => prev.filter(s => !succeeded.includes(s.id)));
-            }
-
-            if (failed.length > 0) {
-              showToast(`${succeeded.length} session(s) signed out, ${failed.length} failed`, 'error');
-            } else {
-              showToast(`Signed out ${succeeded.length} other session${succeeded.length !== 1 ? 's' : ''}`, 'success');
-            }
-
+      {supportsSessionManagement ? (
+        <ConfirmModal
+          isOpen={confirmBulkOpen}
+          loading={bulkRevoking}
+          title="Sign out other sessions"
+          description="This will sign out all other devices and browsers except your current session. Are you sure you want to continue?"
+          confirmLabel="Sign out others"
+          cancelLabel="Cancel"
+          onClose={() => {
+            if (bulkRevoking) return;
             setConfirmBulkOpen(false);
+          }}
+          onConfirm={async () => {
+            if (!detectedCurrentSessionId) return;
+            setBulkRevoking(true);
+            showToast('Signing out other sessions...', 'info');
+            try {
+              const others = sortedSessions.filter(s => s.id !== detectedCurrentSessionId).map(s => s.id);
+              if (others.length === 0) {
+                showToast('No other sessions to sign out', 'info');
+                setConfirmBulkOpen(false);
+                setBulkRevoking(false);
+                return;
+              }
+
+              const results: Array<{ id: string; ok: boolean; err?: string }> = await Promise.all(
+                others.map(id =>
+                  fetch(`/api/sessions/${id}/revoke`, { method: 'POST' })
+                    .then(r => ({ id, ok: r.ok }))
+                    .catch((e: unknown) => ({ id, ok: false, err: safeErrorMessage(e) }))
+                )
+              );
+
+              const failed = results.filter(r => !r.ok);
+              const succeeded = results.filter(r => r.ok).map(r => r.id);
+
+              if (succeeded.length > 0) {
+                setSessions(prev => prev.filter(s => !succeeded.includes(s.id)));
+              }
+
+              if (failed.length > 0) {
+                showToast(`${succeeded.length} session(s) signed out, ${failed.length} failed`, 'error');
+              } else {
+                showToast(`Signed out ${succeeded.length} other session${succeeded.length !== 1 ? 's' : ''}`, 'success');
+              }
+
+              setConfirmBulkOpen(false);
             } catch (err) {
               const msg = safeErrorMessage(err);
               console.error('Bulk revoke failed:', msg);
               showToast(msg || 'Failed to sign out other sessions', 'error');
             } finally {
-            setBulkRevoking(false);
-          }
-        }}
-      />
+              setBulkRevoking(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

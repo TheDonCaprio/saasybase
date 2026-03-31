@@ -365,13 +365,20 @@ export async function POST(request: NextRequest) {
           audience: 'ADMIN'
         });
 
-        await sendEmail({
+        const result = await sendEmail({
           to: supportEmail,
           subject: payload.subject,
           text: payload.text,
           html: payload.html,
           userId
         });
+
+        if (!result.success) {
+          Logger.warn('Support ticket creation email delivery failed', {
+            ticketId: ticket.id,
+            error: result.error,
+          });
+        }
       } catch (notifyErr: unknown) {
         Logger.warn('Failed to send support ticket creation email', { error: toError(notifyErr).message, ticketId: ticket.id });
       }

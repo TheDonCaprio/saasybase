@@ -5,6 +5,7 @@ declare module 'next-auth' {
     user: DefaultSession['user'] & {
       id: string;
       role?: string;
+      lastSignInAt?: string | null;
     };
   }
 
@@ -21,5 +22,6 @@ declare module 'next-auth/jwt' {
     id?: string;
     role?: string;
     tokenVersion?: number;
+    lastSignInAt?: string;
   }
 }

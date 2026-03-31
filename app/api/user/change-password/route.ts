@@ -72,11 +72,13 @@ export async function POST(request: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
-    // Bump tokenVersion to invalidate existing JWT sessions
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashed, tokenVersion: { increment: 1 } },
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { password: hashed, tokenVersion: { increment: 1 } },
+      }),
+      prisma.session.deleteMany({ where: { userId } }),
+    ]);
 
     return NextResponse.json({ message: 'Password changed successfully' });
   } catch (error) {

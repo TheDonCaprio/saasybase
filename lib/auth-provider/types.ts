@@ -55,6 +55,7 @@ export interface AuthUser {
   lastName: string | null;
   fullName: string | null;
   imageUrl: string | null;
+  lastSignInAt?: Date | null;
   /** Clerk-style email verification status, if applicable. */
   emailVerified?: boolean;
 }

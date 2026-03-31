@@ -120,7 +120,7 @@ export default async function DashboardCouponsPage({ searchParams }: PageProps) 
   ]);
 
   // filterSummary removed — no longer used after header changes
-  const readyHelper = readyNowCount > 0 ? 'Apply during checkout expiry' : 'Redeem a code to start saving';
+  const readyHelper = readyNowCount > 0 ? 'Apply during checkout expiry' : 'Applicable at checkout';
   const usedHelper = usedCount > 0 ? 'Redeemed and used codes' : 'No coupons used yet';
 
   const activeCurrency = await getActiveCurrencyAsync();

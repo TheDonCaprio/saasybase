@@ -1,9 +1,12 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { prisma } from './prisma';
 import { getSupportEmail as getSupportEmailSetting, getSiteLogo as getSiteLogoSetting, getSiteName as getSiteNameSetting, getThemeColorPalette, SETTING_DEFAULTS, SETTING_KEYS } from './settings';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { getRenderedTemplate, type EmailVariables } from './email-templates';
+
+type EmailProviderName = 'nodemailer' | 'resend';
 
 function escapeHtml(value: string): string {
 	return value
@@ -87,6 +90,11 @@ export type SendEmailOptions = {
 };
 
 let cachedTransport: nodemailer.Transporter | null = null;
+let cachedResend: Resend | null = null;
+
+function getEmailProvider(): EmailProviderName {
+	return process.env.EMAIL_PROVIDER?.trim().toLowerCase() === 'resend' ? 'resend' : 'nodemailer';
+}
 
 function createTransporter(): nodemailer.Transporter {
 	const defaultHost = '127.0.0.1';
@@ -114,6 +122,20 @@ function createTransporter(): nodemailer.Transporter {
 function getTransport(): nodemailer.Transporter {
 	if (!cachedTransport) cachedTransport = createTransporter();
 	return cachedTransport as nodemailer.Transporter;
+}
+
+function createResendClient(): Resend {
+	const apiKey = process.env.RESEND_API_KEY;
+	if (!apiKey) {
+		throw new Error('RESEND_API_KEY is required when EMAIL_PROVIDER=resend');
+	}
+
+	return new Resend(apiKey);
+}
+
+function getResendClient(): Resend {
+	if (!cachedResend) cachedResend = createResendClient();
+	return cachedResend;
 }
 
 export async function getSupportEmail(): Promise<string> {
@@ -272,17 +294,35 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 
 	subject = ensureSiteNameInSubject(subject, templateVariables?.siteName);
 
-	const transporter = getTransport();
+	const provider = getEmailProvider();
 	try {
-		const mailOptions: nodemailer.SendMailOptions = { from, to: opts.to, subject, text, html };
-		if (opts.replyTo) mailOptions.replyTo = opts.replyTo;
-		await transporter.sendMail(mailOptions);
+		if (provider === 'resend') {
+			const resend = getResendClient();
+			const resendOptions = {
+				from,
+				to: opts.to,
+				subject: subject ?? fallbackSubject,
+				text,
+				html,
+				replyTo: opts.replyTo ?? undefined,
+			} as Parameters<typeof resend.emails.send>[0];
+			const result = await resend.emails.send(resendOptions);
+
+			if (result.error) {
+				throw new Error(result.error.message || 'Resend send failed');
+			}
+		} else {
+			const transporter = getTransport();
+			const mailOptions: nodemailer.SendMailOptions = { from, to: opts.to, subject, text, html };
+			if (opts.replyTo) mailOptions.replyTo = opts.replyTo;
+			await transporter.sendMail(mailOptions);
+		}
 		status = 'SENT';
 	} catch (e: unknown) {
 		const e1 = toError(e);
 		errMsg = e1?.message || String(e);
 		status = 'FAILED';
-		Logger.warn('sendEmail failed', { to: opts.to, error: errMsg });
+		Logger.warn('sendEmail failed', { to: opts.to, provider, error: errMsg });
 	}
 
 		try {

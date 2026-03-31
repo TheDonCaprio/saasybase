@@ -43,7 +43,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const now = new Date();
 
   const [
-    clerkUser,
+    authUser,
     recentActivity,
     paymentStats,
     activeSubscription,
@@ -53,7 +53,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     organizationContext,
     freePlanSettings,
   ] = await Promise.all([
-    authService.getUser(userId).catch(() => null),
+    authService.getCurrentUser().catch(() => null),
     prisma.payment.findMany({
       where: { userId, ...getPaymentScopeFilter(planScope) },
       orderBy: { createdAt: 'desc' },
@@ -87,19 +87,6 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     getOrganizationPlanContext(userId, orgId),
     getFreePlanSettings(),
   ]);
-
-
-  // Get current session info with IP address and user agent data from Clerk (handled client-side)
-  const currentSession: unknown = null;
-
-  // Access latestActivity safely (may be present on the session object from Clerk)
-  const sessionActivity = ((): unknown | undefined => {
-    if (!currentSession || typeof currentSession !== 'object') return undefined;
-    const rec = currentSession as Record<string, unknown>;
-    return rec['latestActivity'];
-  })();
-  // `sessionActivity` is intentionally unused on server; reference to silence lint
-  void sessionActivity;
 
   // Coerce recent activity (Prisma) into a safe shape for rendering
   const recentActivityWithFormats = await Promise.all(
@@ -152,8 +139,12 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     return 'Unknown Device';
   }
 
-  // Prepare server-formatted last sign-in string (uses DB-backed user/admin settings)
-  const formattedLastSignIn = null; // lastSignInAt not available on AuthUser; placeholder for activity page
+  const authProviderName = authService.providerName;
+  const supportsSessionManagement = authService.supportsFeature('session_management');
+  const supportsMfa = authService.supportsFeature('mfa');
+  const lastRecordedVisit = recentVisitsWithFormats[0] ?? null;
+  const lastSignInAt = authUser?.lastSignInAt ?? lastRecordedVisit?.createdAt ?? null;
+  const formattedLastSignIn = lastSignInAt ? await formatDateServer(lastSignInAt, userId) : null;
 
   const totalSpendCents = Number(paymentStats._sum.amountCents ?? 0);
   const totalSpendFormatted = formatCurrency(totalSpendCents, activeCurrency);
@@ -186,7 +177,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const tokenStatHelper = planDisplay.tokenStatHelper;
   // token tone is no longer used after moving the token stat into the hero panels
 
-  const lastSignInLabel = formattedLastSignIn ?? 'Never';
+  const lastSignInLabel = formattedLastSignIn ?? 'Not recorded yet';
 
   const uniqueLocations = new Set<string>();
   for (const visit of recentVisitsWithFormats) {
@@ -218,7 +209,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
           {
             label: 'Last sign-in',
             value: lastSignInLabel,
-            helper: formattedLastSignIn ? 'Most recent' : 'Sign in to keep your account protected',
+            helper: formattedLastSignIn ? 'Latest recorded account activity' : 'No recent account activity recorded yet',
             tone: formattedLastSignIn ? 'blue' : 'indigo',
           },
         ]}
@@ -253,13 +244,13 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {clerkUser ? (
+          {authUser ? (
             <div className={dashboardPanelClass('space-y-4')}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Current session</h3>
                   <p className="text-sm text-slate-500 dark:text-neutral-400">
-                    You’re signed in with Clerk. Manage trusted devices and revoke access if something looks unfamiliar.
+                    Review your current account details and recent activity. If anything looks unfamiliar, inspect your active sessions below.
                   </p>
                 </div>
                 <span className={dashboardPillClass('border-emerald-200/70 bg-emerald-100/70 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200')}>
@@ -270,22 +261,28 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">User</dt>
                   <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {[clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || clerkUser.fullName || 'Unknown user'}
+                    {[authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.fullName || 'Unknown user'}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Email</dt>
                   <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {clerkUser.email ?? '—'}
+                    {authUser.email ?? '—'}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Last sign-in</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{formattedLastSignIn ?? 'Never'}</dd>
+                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{formattedLastSignIn ?? 'Not recorded yet'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Two-factor auth</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{'Not available'}</dd>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Security features</dt>
+                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">
+                    {supportsMfa
+                      ? 'Advanced verification available'
+                      : supportsSessionManagement
+                        ? 'Session controls available'
+                        : `${authProviderName === 'nextauth' ? 'NextAuth' : 'Current auth provider'} session only`}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -295,10 +292,14 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
           <div className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Active sessions</h3>
-              <span className={dashboardPillClass('text-blue-600 dark:text-blue-200')}>Secured by Clerk</span>
+              <span className={dashboardPillClass('text-blue-600 dark:text-blue-200')}>
+                {supportsSessionManagement ? 'Managed sessions' : 'Current device'}
+              </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-neutral-400 mb-2">
-              Manage your signed-in devices. Revoke access instantly if something looks unfamiliar.
+              {supportsSessionManagement
+                ? 'Manage your signed-in devices. Revoke access if something looks unfamiliar.'
+                : 'Review the current signed-in device and recent account activity for anything unusual.'}
             </p>
             <div className="-m-3 sm:-m-4 lg:-m-6">
               <ActiveSessionsList />

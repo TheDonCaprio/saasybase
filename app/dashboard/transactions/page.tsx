@@ -135,13 +135,13 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           {
             label: 'All transactions',
             value: totalCount,
-            helper: totalCount > 0 ? 'Renewals, upgrades, and refunds' : 'No payments recorded yet',
+            helper: totalCount > 0 ? 'Everything logged' : 'Nothing yet',
             tone: totalCount > 0 ? 'indigo' : 'slate',
           },
           {
             label: 'Total spent',
             value: totalSpentFormatted,
-            helper: totalCount > 0 ? `${refundedAmountFormatted} refunded` : 'Spend appears after your first purchase',
+            helper: totalCount > 0 ? `${refundedAmountFormatted} refunded` : 'Nothing yet',
             tone: totalCount > 0 ? 'emerald' : 'slate',
           },
         ]}

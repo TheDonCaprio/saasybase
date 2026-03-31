@@ -185,6 +185,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
     })),
   );
   const subscriptionStart = activeSub?.startedAt ?? null;
+  const formattedSubscriptionStart = subscriptionStart ? await formatDateServer(subscriptionStart) : null;
   const accessProgressPercent =
     subscriptionStart && nextBillingDate && nextBillingDate.getTime() !== subscriptionStart.getTime()
       ? Math.min(
@@ -201,7 +202,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
       : 0;
   const cycleProgressHelper =
     activeSub && daysUntilRenewal != null
-      ? `${pluralize(daysUntilRenewal, 'day')} remaining`
+      ? `${pluralize(daysUntilRenewal, 'day')}`
       : activeSub
         ? 'Renewal date to be announced'
         : 'Upgrade to start tracking usage';
@@ -253,13 +254,13 @@ export default async function PlanPage({ searchParams }: PageProps) {
       {
         label: 'Price',
         value: planPriceFormatted,
-        helper: currentPlan?.autoRenew ? 'Renews automatically' : 'One-time access period',
+        helper: formattedNextBilling ? `Next: ${formattedNextBilling}` : (currentPlan?.autoRenew ? 'Auto-renewing' : 'One-time access'),
         tone: 'emerald' as const,
       },
       {
         label: 'Access',
         value: durationLabel,
-        helper: currentPlan?.autoRenew ? 'Recurring payment' : 'Ends after this cycle',
+        helper: currentPlan?.autoRenew ? (formattedSubscriptionStart ? `Since ${formattedSubscriptionStart}` : 'Auto-renewing') : 'Ends after this cycle',
         tone: 'rose' as const,
       },
       {
@@ -288,9 +289,9 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const planProgress = activeSub
     ? {
       label: currentPlan?.autoRenew ? 'Cycle ends' : 'Access ends',
-      dateDisplay: formattedNextBilling ?? '—',
+      dateDisplay: cycleProgressHelper,
       percent: accessProgressPercent,
-      helper: cycleProgressHelper,
+      helper: formattedNextBilling ?? '—',
       secondary: formattedCanceledAt ? `Cancelled on ${formattedCanceledAt}` : null,
       badges: [
         { label: 'Billing:', value: billingTypeLabel, tone: 'emerald' as const },
@@ -318,13 +319,13 @@ export default async function PlanPage({ searchParams }: PageProps) {
             tone: planDisplay.planSource === 'FREE' ? 'slate' : 'indigo'
           },
           {
-            label: currentPlan?.autoRenew ? 'Cycle ends' : 'Access ends',
+            label: currentPlan?.autoRenew ? 'Cycle ends in' : 'Access ends',
             value: activeSub
-              ? formattedNextBilling ?? 'Not scheduled'
+              ? cycleProgressHelper
               : planDisplay.planSource === 'ORGANIZATION' && planDisplay.workspace
                 ? `Managed Access`
                 : 'Not scheduled',
-            helper: activeSub ? cycleProgressHelper : planDisplay.planSource === 'ORGANIZATION' ? planDisplay.statusHelper : 'Start a plan to track your cycle',
+            helper: activeSub ? formattedNextBilling ?? '—' : planDisplay.planSource === 'ORGANIZATION' ? planDisplay.statusHelper : 'Start a plan to track your cycle',
             tone: activeSub ? 'blue' : planDisplay.planSource === 'ORGANIZATION' ? 'indigo' : 'slate'
           },
           // Token stat moved into the Plan overview panel below per design request

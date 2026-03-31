@@ -82,6 +82,11 @@ function toAuthUser(clerkUser: Record<string, unknown>): AuthUser {
     lastName,
     fullName,
     imageUrl: (clerkUser.imageUrl as string) ?? null,
+    lastSignInAt: typeof clerkUser.lastSignInAt === 'number'
+      ? new Date(clerkUser.lastSignInAt)
+      : clerkUser.lastSignInAt instanceof Date
+        ? clerkUser.lastSignInAt
+        : null,
     emailVerified,
   };
 }

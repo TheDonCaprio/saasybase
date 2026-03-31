@@ -251,12 +251,20 @@ export async function sendSubscriptionCheckoutNotifications(params: {
                 });
                 const siteName = await getSiteName();
                 if (user?.email) {
-                    await sendEmail({
+                    const result = await sendEmail({
                         to: user.email,
                         userId: params.userId,
                         subject: `${siteName}: Subscription scheduled`,
                         text: `Your payment for ${params.plan.name} was successful. Your new subscription will automatically activate when your current subscription expires.`,
                     });
+
+                    if (!result.success) {
+                        Logger.warn('Subscription scheduled email delivery failed', {
+                            userId: params.userId,
+                            email: user.email,
+                            error: result.error,
+                        });
+                    }
                 }
             }
         }

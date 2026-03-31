@@ -193,6 +193,7 @@ export default async function PricingPage() {
   const tokenStatValue = planDisplay.tokenStatValue;
   const tokenStatHelper = planDisplay.tokenStatHelper;
   const subscriptionStart = currentSubscription?.startedAt ?? null;
+  const formattedSubscriptionStart = subscriptionStart ? await formatDateServer(subscriptionStart) : null;
   const accessProgressPercent =
     subscriptionStart && nextBillingDate && nextBillingDate.getTime() !== subscriptionStart.getTime()
       ? Math.min(
@@ -211,7 +212,7 @@ export default async function PricingPage() {
     ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
     : null;
   const cycleProgressHelper = currentSubscription && daysUntilRenewal != null
-    ? `${pluralize(daysUntilRenewal, 'day')} ${planAutoRenew ? 'until renewal' : 'remaining'}`
+    ? `${pluralize(daysUntilRenewal, 'day')} ${planAutoRenew ? '' : 'left'}`
     : currentSubscription
     ? 'Renewal date to be announced'
     : workspaceOnly
@@ -232,13 +233,13 @@ export default async function PricingPage() {
         {
           label: 'Price',
           value: planPriceDisplay,
-          helper: planAutoRenew ? 'Renews automatically' : 'One-time payment',
+          helper: formattedNextBilling ? `Next: ${formattedNextBilling}` : (planAutoRenew ? 'Auto-renewing' : 'One-time payment'),
           tone: 'emerald' as const,
         },
         {
           label: 'Access',
           value: planDurationLabel,
-          helper: planAutoRenew ? 'Recurring payment' : 'Ends after this cycle',
+          helper: planAutoRenew ? (formattedSubscriptionStart ? `Since ${formattedSubscriptionStart}` : 'Auto-renewing') : 'Ends after this cycle',
           tone: 'rose' as const,
         },
         {
@@ -267,9 +268,9 @@ export default async function PricingPage() {
   const planProgress = currentSubscription
     ? {
         label: planAutoRenew ? 'Cycle ends' : 'Access ends',
-        dateDisplay: formattedNextBilling ?? '—',
+        dateDisplay: cycleProgressHelper,
         percent: accessProgressPercent,
-        helper: cycleProgressHelper,
+        helper: formattedNextBilling ?? '—',
         secondary: formattedCanceledAt ? `Cancelled on ${formattedCanceledAt}` : null,
         badges: [
           { label: 'Billing:', value: billingTypeLabel, tone: 'emerald' as const },

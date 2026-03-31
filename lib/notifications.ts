@@ -265,7 +265,7 @@ export async function sendBillingNotification(
         emailVariables.siteLogo = await getSiteLogo();
       }
 
-      await sendEmail({
+      const result = await sendEmail({
         to: resolvedEmail,
         userId,
         subject: expectedSubject, // Fallback subject
@@ -273,6 +273,16 @@ export async function sendBillingNotification(
         templateKey,
         variables: emailVariables,
       });
+
+      if (!result.success) {
+        Logger.warn('Billing email delivery failed', {
+          userId,
+          email: resolvedEmail,
+          templateKey,
+          error: result.error,
+        });
+        return { notificationCreated, emailSent: false };
+      }
 
       emailSent = true;
 
@@ -527,13 +537,22 @@ export async function sendAdminNotificationEmail(options: AdminNotificationOptio
       return true;
     }
 
-    await sendEmail({
+    const result = await sendEmail({
       to: adminEmail,
       subject: expectedSubject,
       text: options.message,
       templateKey: options.templateKey || 'admin_notification',
       variables: emailVariables,
     });
+
+    if (!result.success) {
+      Logger.warn('Admin billing email delivery failed', {
+        adminEmail,
+        templateKey: options.templateKey || 'admin_notification',
+        error: result.error,
+      });
+      return false;
+    }
 
     Logger.info('Admin billing email sent', {
       adminEmail,

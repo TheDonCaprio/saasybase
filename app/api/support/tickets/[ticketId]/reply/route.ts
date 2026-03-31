@@ -135,13 +135,20 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
           audience: 'ADMIN'
         });
 
-        await sendEmail({
+        const result = await sendEmail({
           to: supportEmail,
           subject: payload.subject,
           text: payload.text,
           html: payload.html,
           userId
         });
+
+        if (!result.success) {
+          Logger.warn('Support ticket reply email delivery failed', {
+            ticketId: ticket.id,
+            error: result.error,
+          });
+        }
       } catch (notifyErr: unknown) {
         Logger.warn('Failed to send support ticket reply email', { error: toError(notifyErr).message, ticketId: ticket.id });
       }

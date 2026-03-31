@@ -139,13 +139,21 @@ export async function POST(
           audience: 'USER'
         });
 
-        await sendEmail({
+        const result = await sendEmail({
           to: recipient,
           subject: payload.subject,
           text: payload.text,
           html: payload.html,
           userId: ticket.userId
         });
+
+        if (!result.success) {
+          Logger.warn('Admin support reply email delivery failed', {
+            ticketId: ticket.id,
+            userId: ticket.userId,
+            error: result.error,
+          });
+        }
       } catch (notifyErr: unknown) {
         const err = toError(notifyErr);
         Logger.warn('Failed to send admin support reply email', { error: err.message, ticketId: ticket.id });

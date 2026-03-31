@@ -15,6 +15,7 @@ import type {
   AuthProvider,
   AuthProviderFeature,
   AuthSession,
+  AuthSessionInfo,
   AuthUser,
   AuthOrganization,
   AuthOrganizationMembership,
@@ -24,6 +25,19 @@ import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
 import { ACTIVE_ORG_COOKIE } from '../../active-organization';
 import { validateAndFormatPersonName } from '../../name-validation';
+
+type SessionRecord = {
+  id: string;
+  userId: string;
+  expires: Date;
+};
+
+const SESSION_COOKIE_CANDIDATES = [
+  '__Secure-authjs.session-token',
+  'authjs.session-token',
+  '__Secure-next-auth.session-token',
+  'next-auth.session-token',
+];
 
 // ---------------------------------------------------------------------------
 // Lazy imports — keep the module loadable even if next-auth isn't installed
@@ -50,6 +64,65 @@ async function getPrisma(): Promise<PrismaClient> {
   return _prisma;
 }
 
+async function getSessionTokenFromCookies(): Promise<string | null> {
+  try {
+    const { cookies } = await import('next/headers');
+    const jar = await cookies();
+
+    for (const candidate of SESSION_COOKIE_CANDIDATES) {
+      const direct = jar.get(candidate)?.value;
+      if (direct) {
+        return direct;
+      }
+
+      const chunked = jar
+        .getAll()
+        .filter((entry) => entry.name.startsWith(`${candidate}.`))
+        .map((entry) => ({
+          index: Number.parseInt(entry.name.slice(candidate.length + 1), 10),
+          value: entry.value,
+        }))
+        .filter((entry) => Number.isFinite(entry.index))
+        .sort((left, right) => left.index - right.index);
+
+      if (chunked.length > 0) {
+        return chunked.map((entry) => entry.value).join('');
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function getCurrentSessionRecord(): Promise<SessionRecord | null> {
+  const sessionToken = await getSessionTokenFromCookies();
+  if (!sessionToken) {
+    return null;
+  }
+
+  const prisma = await getPrisma();
+  const record = await prisma.session.findUnique({
+    where: { sessionToken },
+    select: {
+      id: true,
+      userId: true,
+      expires: true,
+    },
+  });
+
+  if (!record) {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    userId: record.userId,
+    expires: record.expires,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helper: map DB user to AuthUser
 // ---------------------------------------------------------------------------
@@ -65,6 +138,7 @@ function toAuthUser(dbUser: Record<string, unknown>): AuthUser {
     lastName: nameParts.slice(1).join(' ') || null,
     fullName: name,
     imageUrl: (dbUser.imageUrl as string) ?? (dbUser.image as string) ?? null,
+    lastSignInAt: null,
     emailVerified: !!dbUser.emailVerified,
   };
 }
@@ -81,7 +155,8 @@ export class NextAuthProvider implements AuthProvider {
   private static readonly SUPPORTED: AuthProviderFeature[] = [
     'oauth',
     'middleware',
-    // Note: organizations, session_management, user_profile_ui,
+    'session_management',
+    // Note: organizations, user_profile_ui,
     // sign_in_ui, sign_up_ui, organization_switcher_ui are NOT supported.
     // The consumer code checks supportsFeature() before calling these.
   ];
@@ -111,6 +186,8 @@ export class NextAuthProvider implements AuthProvider {
         return { userId: null, orgId: null, sessionId: null };
       }
 
+      const currentSession = await getCurrentSessionRecord();
+
       // Read the active organization from the cookie
       let orgId: string | null = null;
       try {
@@ -137,7 +214,7 @@ export class NextAuthProvider implements AuthProvider {
       return {
         userId: dbUser.id,
         orgId,
-        sessionId: null, // session token is httpOnly, not exposed
+        sessionId: currentSession?.userId === dbUser.id ? currentSession.id : null,
       };
     } catch (err) {
       Logger.debug('NextAuthProvider.getSession failed', { error: toError(err) });
@@ -158,7 +235,11 @@ export class NextAuthProvider implements AuthProvider {
       });
 
       if (!user) return null;
-      return toAuthUser(user as unknown as Record<string, unknown>);
+      const authUser = toAuthUser(user as unknown as Record<string, unknown>);
+      return {
+        ...authUser,
+        lastSignInAt: null,
+      };
     } catch (err) {
       Logger.debug('NextAuthProvider.getCurrentUser failed', { error: toError(err) });
       return null;
@@ -355,6 +436,31 @@ export class NextAuthProvider implements AuthProvider {
     const prisma = await getPrisma();
     const organizations = await prisma.organization.findMany({ where: { ownerUserId: userId } });
     return organizations.map((org) => this._toAuthOrg(org as unknown as Record<string, unknown>));
+  }
+
+  async getUserSessions(userId: string): Promise<AuthSessionInfo[]> {
+    const prisma = await getPrisma();
+    const sessions = await prisma.session.findMany({
+      where: { userId },
+      orderBy: { expires: 'desc' },
+      select: {
+        id: true,
+        expires: true,
+      },
+    });
+    const now = Date.now();
+
+    return sessions.map((session) => ({
+      id: session.id,
+      status: session.expires.getTime() > now ? 'active' : 'expired',
+      lastActiveAt: session.expires,
+      activity: null,
+    }));
+  }
+
+  async revokeSession(sessionId: string): Promise<void> {
+    const prisma = await getPrisma();
+    await prisma.session.deleteMany({ where: { id: sessionId } });
   }
 
   // ── Webhooks ───────────────────────────────────────────────────────

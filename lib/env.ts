@@ -39,10 +39,12 @@ const envSchema = z
     NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL must be a valid URL'),
 
     // Email (optional for development)
+    EMAIL_PROVIDER: z.enum(['nodemailer', 'resend']).optional(),
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.string().optional(),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    RESEND_API_KEY: z.string().optional(),
     SUPPORT_EMAIL: z.string().email().optional(),
 
     // Security
@@ -78,6 +80,14 @@ const envSchema = z
     requireOne(['PAYMENT_PRICE_1M', 'SUBSCRIPTION_PRICE_1M'], ['PRICE_1M']);
     requireOne(['PAYMENT_PRICE_3M', 'SUBSCRIPTION_PRICE_3M'], ['PRICE_3M']);
     requireOne(['PAYMENT_PRICE_1Y', 'SUBSCRIPTION_PRICE_1Y'], ['PRICE_1Y']);
+
+    if ((env.EMAIL_PROVIDER ?? 'nodemailer') === 'resend' && !env.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['RESEND_API_KEY'],
+        message: 'RESEND_API_KEY is required when EMAIL_PROVIDER=resend',
+      });
+    }
   });
 
 export type Env = z.infer<typeof envSchema>;

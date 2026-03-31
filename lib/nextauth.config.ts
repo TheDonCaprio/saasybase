@@ -16,7 +16,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import NodemailerProvider from 'next-auth/providers/nodemailer';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { sendNextAuthMagicLinkEmail } from '@/lib/nextauth-email-verification';
+import { sendNextAuthMagicLinkEmail, sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
 import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 // ---------------------------------------------------------------------------
@@ -170,6 +170,13 @@ function buildProviders(): NextAuthConfig['providers'] {
         });
 
         if (!existingUser?.emailVerified) {
+          if (existingUser?.id) {
+            await sendNextAuthVerificationEmail({
+              userId: existingUser.id,
+              email,
+              name: existingUser.name,
+            });
+          }
           return;
         }
 
@@ -214,7 +221,7 @@ function buildProviders(): NextAuthConfig['providers'] {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: buildProviders(),
-  session: { strategy: 'jwt' },
+  session: { strategy: 'database' },
   pages: {
     signIn: '/sign-in',
     newUser: '/dashboard/onboarding',
@@ -268,47 +275,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return true;
     },
-    async jwt({ token, user, trigger }) {
-      // On initial sign-in, `user` is the object returned by authorize() or the adapter.
-      if (user) {
-        token.id = user.id;
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id! } });
-        const dbUserRecord = dbUser as (typeof dbUser & { tokenVersion?: number }) | null;
-        token.role = dbUserRecord?.role ?? 'USER';
-        token.tokenVersion = dbUserRecord?.tokenVersion ?? 0;
-        if (dbUserRecord?.imageUrl) {
-          token.picture = dbUserRecord.imageUrl;
-        }
-      }
-
-      // On every subsequent request, verify tokenVersion hasn't been bumped
-      // (password change/reset increments it to invalidate existing JWTs).
-      if (!user && token.id && trigger !== 'signIn') {
-        const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
-        const dbUserRecord = dbUser as (typeof dbUser & { tokenVersion?: number }) | null;
-        if (!dbUserRecord) {
-          return {
-            ...token,
-            id: undefined,
-            role: undefined,
-            tokenVersion: undefined,
-            picture: undefined,
-            sub: undefined,
-            email: undefined,
-            name: undefined,
-          };
-        }
-        if (dbUserRecord && dbUserRecord.tokenVersion !== (token.tokenVersion ?? 0)) {
-          // Token is stale — force re-authentication
-          return { ...token, id: undefined, role: undefined };
-        }
-      }
-
-      return token;
-    },
-    async session({ session, token }) {
-      // Propagate JWT claims into the session object returned by auth().
-      if (!token.id) {
+    async session({ session, user }) {
+      if (!user?.id) {
         return {
           ...session,
           user: undefined,
@@ -316,13 +284,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       }
 
-      if (session.user) {
-        session.user.id = token.id as string;
-        (session.user as unknown as Record<string, unknown>).role = token.role ?? 'USER';
-        if (token.picture) {
-          session.user.image = token.picture as string;
-        }
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          id: true,
+          role: true,
+          imageUrl: true,
+        },
+      });
+
+      if (!dbUser || !session.user) {
+        return {
+          ...session,
+          user: undefined,
+          expires: session.expires,
+        };
       }
+
+      session.user.id = dbUser.id;
+      (session.user as unknown as Record<string, unknown>).role = dbUser.role ?? 'USER';
+      session.user.lastSignInAt = null;
+      if (dbUser.imageUrl) {
+        session.user.image = dbUser.imageUrl;
+      }
+
       return session;
     },
   },

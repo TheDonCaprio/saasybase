@@ -4,11 +4,17 @@ import { NextRequest } from 'next/server';
 const rateLimitMock = vi.hoisted(() => vi.fn(async () => ({ success: true, allowed: true, remaining: 19, reset: Date.now() + 60_000 })));
 const getClientIPMock = vi.hoisted(() => vi.fn(() => '127.0.0.1'));
 const sendNextAuthVerificationEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
+const consoleErrorSpy = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
   },
 }));
+
+vi.stubGlobal('console', {
+  ...console,
+  error: consoleErrorSpy,
+});
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/rateLimit', () => ({
@@ -25,6 +31,7 @@ import { POST } from '../app/api/auth/resend-verification/route';
 describe('auth resend-verification route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sendNextAuthVerificationEmailMock.mockResolvedValue(undefined);
   });
 
   it('resends verification only for unverified users', async () => {
@@ -68,5 +75,27 @@ describe('auth resend-verification route', () => {
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(sendNextAuthVerificationEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when verification delivery fails', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_1',
+      email: 'pending@example.com',
+      name: 'Pending User',
+      emailVerified: null,
+    });
+    sendNextAuthVerificationEmailMock.mockRejectedValue(new Error('domain not verified'));
+
+    const req = new NextRequest('http://localhost/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'pending@example.com' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe('Something went wrong. Please try again.');
   });
 });

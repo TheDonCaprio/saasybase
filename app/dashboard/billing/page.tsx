@@ -134,6 +134,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
     ? `$${(latestPayment.amountCents / 100).toFixed(2)} • ${latestPayment.subscription?.plan?.name ?? 'Subscription'}`
     : 'No invoices on file';
   const subscriptionStart = subscription?.startedAt ?? null;
+  const formattedSubscriptionStart = subscriptionStart ? await formatDateServer(subscriptionStart) : null;
   const accessProgressPercent =
     subscriptionStart && nextBillingDate && nextBillingDate.getTime() !== subscriptionStart.getTime()
       ? Math.min(
@@ -148,7 +149,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
       : 0;
   const cycleProgressHelper =
     personalActive && daysUntilRenewal != null
-      ? `${pluralize(daysUntilRenewal, 'day')} remaining`
+      ? `${pluralize(daysUntilRenewal, 'day')}`
       : workspaceOnly
       ? planDisplay.statusHelper
       : 'Start a plan to track your cycle';
@@ -204,13 +205,13 @@ export default async function BillingPage({ searchParams }: PageProps) {
         {
           label: 'Price',
           value: planPriceDisplay,
-          helper: planAutoRenew ? 'Renews automatically' : 'One-time payment',
+          helper: formattedNextBillingDate ? `Next: ${formattedNextBillingDate}` : (planAutoRenew ? 'Auto-renewing' : 'One-time payment'),
           tone: 'emerald' as const,
         },
         {
           label: 'Access',
           value: planDurationLabel,
-          helper: planAutoRenew ? 'Recurring payment' : 'Ends after this cycle',
+          helper: planAutoRenew ? (formattedSubscriptionStart ? `Since ${formattedSubscriptionStart}` : 'Auto-renewing') : 'Ends after this cycle',
           tone: 'rose' as const,
         },
         {
@@ -239,9 +240,9 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const planProgress = personalActive
     ? {
         label: planAutoRenew ? 'Cycle ends' : 'Access ends',
-        dateDisplay: formattedNextBillingDate ?? '—',
+        dateDisplay: cycleProgressHelper,
         percent: accessProgressPercent,
-        helper: cycleProgressHelper,
+        helper: formattedNextBillingDate ?? '—',
         secondary: formattedCanceledAt ? `Cancelled on ${formattedCanceledAt}` : latestPaymentDate ? `Last invoice: ${latestPaymentDate}` : null,
         badges: [
           { label: 'Billing:', value: billingTypeLabel, tone: 'emerald' as const },

@@ -57,12 +57,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Reset link has expired. Please request a new one.' }, { status: 400 });
     }
 
-    // Update password and bump tokenVersion to invalidate existing JWTs
     const hashed = await hashPassword(password);
-    await prisma.user.update({
-      where: { email: email.toLowerCase().trim() },
+    const normalizedEmail = email.toLowerCase().trim();
+    const updatedUser = await prisma.user.update({
+      where: { email: normalizedEmail },
       data: { password: hashed, tokenVersion: { increment: 1 } },
+      select: { id: true },
     });
+
+    await prisma.session.deleteMany({ where: { userId: updatedUser.id } });
 
     // Delete the used token
     await prisma.verificationToken.deleteMany({ where: { identifier } });

@@ -49,6 +49,29 @@ function ButtonIconWrap({ children }: { children: React.ReactNode }) {
   return <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center">{children}</span>;
 }
 
+async function signInWithPassword(email: string, password: string): Promise<{ ok: boolean; error?: string; code?: string }> {
+  try {
+    const response = await fetch('/api/auth/credentials-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: data?.error || 'Invalid email or password. Please try again.',
+        code: data?.code,
+      };
+    }
+
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Something went wrong. Please try again.' };
+  }
+}
+
 function MagicLinkIcon() {
   return (
     <svg className="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -481,20 +504,16 @@ function SignInForm({
               return;
             }
 
-            const result = await signIn('credentials', {
-              email,
-              password,
-              redirect: false,
-            });
+            const result = await signInWithPassword(email, password);
 
-            if (result?.error) {
-              setError('Invalid email or password. Please try again.');
+            if (!result.ok) {
+              if (result.code === 'EMAIL_NOT_VERIFIED') {
+                setPendingVerificationEmail(email);
+              }
+              setError(result.error || 'Invalid email or password. Please try again.');
               setLoading(false);
-            } else if (result?.ok) {
-              window.location.href = redirectUrl;
             } else {
-              setError('Something went wrong. Please try again.');
-              setLoading(false);
+              window.location.href = redirectUrl;
             }
           } catch {
             setError('Something went wrong. Please try again.');
@@ -575,7 +594,7 @@ function MagicLinkForm({
       <div>
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Sign in with a magic link</h2>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Enter your email and we&apos;ll send you a secure sign-in link.
+          Enter your email and we&apos;ll send you a secure sign-in link. If your account still needs verification, we&apos;ll send that first.
         </p>
       </div>
 
@@ -602,8 +621,8 @@ function MagicLinkForm({
                 return;
               }
 
-              const message = 'Check your inbox for a secure sign-in link. It usually arrives within a minute.';
-              setSuccess('If that email is eligible, we just sent a secure sign-in link.');
+              const message = 'Check your inbox for a sign-in or verification link. It usually arrives within a minute.';
+              setSuccess('If that email is eligible, we just sent a sign-in or verification link.');
               onSentChange?.(message);
             } catch {
               setError('We could not send a sign-in link right now. Please try again.');
@@ -883,8 +902,8 @@ export function AuthSignUp(props: {
               if (data?.requiresVerification) {
                 window.location.href = `/sign-in?verification=check-email`;
               } else {
-                const result = await signIn('credentials', { email, password, redirect: false });
-                if (result?.ok) {
+                const result = await signInWithPassword(email, password);
+                if (result.ok) {
                   window.location.href = redirectUrl;
                 } else {
                   // Registration succeeded but auto-login failed — redirect to sign-in

@@ -35,6 +35,16 @@ function getPrettyMagicLinkUrl(rawUrl: string) {
   }
 }
 
+async function sendAuthEmailOrThrow(
+  options: Parameters<typeof sendEmail>[0],
+  failureMessage: string,
+) {
+  const result = await sendEmail(options);
+  if (!result.success) {
+    throw new Error(result.error || failureMessage);
+  }
+}
+
 export function getEmailVerificationIdentifier(email: string) {
   return `${EMAIL_VERIFY_PREFIX}${email.toLowerCase().trim()}`;
 }
@@ -137,7 +147,7 @@ export async function sendNextAuthVerificationEmail(params: {
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 
-  await sendEmail({
+  await sendAuthEmailOrThrow({
     to: normalizedEmail,
     userId: params.userId,
     subject: 'Verify your email address',
@@ -149,7 +159,7 @@ export async function sendNextAuthVerificationEmail(params: {
       userEmail: normalizedEmail,
       actionUrl: verifyUrl,
     },
-  });
+  }, 'Failed to send verification email');
 }
 
 export async function sendNextAuthEmailChangeVerification(params: {
@@ -184,7 +194,7 @@ export async function sendNextAuthEmailChangeVerification(params: {
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedNewEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 
-  await sendEmail({
+  await sendAuthEmailOrThrow({
     to: normalizedNewEmail,
     userId: params.userId,
     subject: 'Confirm your new email address',
@@ -197,7 +207,7 @@ export async function sendNextAuthEmailChangeVerification(params: {
       actionUrl: verifyUrl,
       currentEmail: params.currentEmail.toLowerCase().trim(),
     },
-  });
+  }, 'Failed to send email change verification');
 }
 
 export async function sendNextAuthMagicLinkEmail(params: {
@@ -212,7 +222,7 @@ export async function sendNextAuthMagicLinkEmail(params: {
   const expiresAt = formatExpiryTime(params.expires);
   const magicLinkUrl = getPrettyMagicLinkUrl(params.url);
 
-  await sendEmail({
+  await sendAuthEmailOrThrow({
     to: normalizedEmail,
     userId: params.userId,
     subject: 'Your sign-in link',
@@ -224,5 +234,5 @@ export async function sendNextAuthMagicLinkEmail(params: {
       userEmail: normalizedEmail,
       actionUrl: magicLinkUrl,
     },
-  });
+  }, 'Failed to send magic link email');
 }

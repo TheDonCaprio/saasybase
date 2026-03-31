@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import React from 'react';
+import { headers } from 'next/headers';
 import { GroupedSidebarNav } from '../../components/dashboard/GroupedSidebarNav';
 import { faTachometerAlt, faUsers, faFileInvoiceDollar, faListAlt, faLifeRing, faBell, faChartLine, faTrafficLight, faClipboardList, faCogs, faShoppingCart, faTicketAlt, faTriangleExclamation, faEnvelope, faUserShield, faPalette, faFileLines, faNewspaper, faSitemap, faWrench } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -8,12 +9,17 @@ import { requireAdminAreaActor } from '../../lib/route-guards';
 import { prisma } from '../../lib/prisma';
 import type { ModeratorSection } from '../../lib/moderator';
 import { DemoReadOnlyNotice } from '../../components/ui/DemoReadOnlyNotice';
+import { hasMatchingAppRoute } from '../../lib/server-route-match';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
-  const actor = await requireAdminAreaActor();
+  const requestHeaders = await headers();
+  const requestPathname = requestHeaders.get('x-request-pathname');
+  const hasMatchingRoute = await hasMatchingAppRoute('admin', requestPathname);
+  const actor = hasMatchingRoute ? await requireAdminAreaActor() : null;
   let userCount = 0; let payCount = 0; let ticketCount = 0; let unreadNotifications = 0; let purchasesCount = 0; let subscriptionsCount = 0; let couponCount = 0; let logCount = 0; let moderatorLogCount = 0;
-  try {
+  if (actor) {
+    try {
     const [users, pays, tickets, notifications, purchases, subscriptions, coupons] = await Promise.all([
       prisma.user.count(),
       prisma.payment.count(),
@@ -37,9 +43,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     if (moderatorLogDelegate?.count) {
       moderatorLogCount = await moderatorLogDelegate.count();
     }
-  } catch (e) {
+    } catch (e) {
     // Swallow errors to avoid breaking admin layout if counts fail
     console.warn('Failed to load admin counts for sidebar:', e);
+    }
   }
   type NavCandidate = {
     href: string;
@@ -74,7 +81,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/settings', label: 'Settings', icon: faCogs, adminOnly: true }
   ];
 
-  const nav = navCandidates.filter((item) => {
+  const nav = actor ? navCandidates.filter((item) => {
     if (item.adminOnly && actor.role !== 'ADMIN') {
       return false;
     }
@@ -82,7 +89,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       return false;
     }
     return true;
-  });
+  }) : [];
 
   // Organize nav items into groups
   type NavGroup = {

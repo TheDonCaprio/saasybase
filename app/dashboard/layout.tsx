@@ -1,4 +1,5 @@
 import React from 'react';
+import { headers } from 'next/headers';
 import { SidebarNav } from '../../components/dashboard/SidebarNav';
 import { faPlay, faUser, faUserShield, faFileInvoiceDollar, faHistory, faBell, faLifeRing, faBars, faTicketAlt, faSackDollar, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../lib/prisma';
@@ -11,11 +12,15 @@ import { getPendingEmailChangeForUser } from '../../lib/nextauth-email-verificat
 import { PendingEmailChangeNotice } from '../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../lib/user-helpers';
 import { DemoReadOnlyNotice } from '../../components/ui/DemoReadOnlyNotice';
+import { hasMatchingAppRoute } from '../../lib/server-route-match';
 
 import { SidebarFooter } from '../../components/dashboard/SidebarFooter';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
+  const requestHeaders = await headers();
+  const requestPathname = requestHeaders.get('x-request-pathname');
+  const hasMatchingRoute = await hasMatchingAppRoute('dashboard', requestPathname);
   // Middleware handles authentication protection
   // Only authenticated users will reach this component
 
@@ -28,7 +33,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let couponBadge: string | undefined = undefined;
   let teamBadge: string | undefined = undefined;
   let pendingEmailChange: { newEmail: string; expires: string } | null = null;
-  try {
+  if (hasMatchingRoute) {
+    try {
     const { userId } = await authService.getSession();
     if (userId) {
       // Find if any ticket for this user has at least one admin reply created after the ticket
@@ -83,8 +89,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }
       }
     }
-  } catch (err) {
+    } catch (err) {
     console.warn('Failed to compute support badge:', err);
+    }
   }
 
   const nav = [

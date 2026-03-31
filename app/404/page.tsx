@@ -1,6 +1,5 @@
-import React from 'react';
-import { NotFoundPage } from '../components/NotFoundPage';
-import { buildDashboardMetadata } from '../lib/dashboardMetadata';
+import { NotFoundPage } from '../../components/NotFoundPage';
+import { buildDashboardMetadata } from '../../lib/dashboardMetadata';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -10,6 +9,6 @@ export async function generateMetadata() {
   });
 }
 
-export default function NotFound() {
+export default function StandaloneNotFoundPage() {
   return <NotFoundPage />;
 }

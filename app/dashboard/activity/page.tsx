@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
+import { formatDate } from '../../../lib/formatDate';
 import { formatDateServer } from '../../../lib/formatDate.server';
 import { pluralize } from '../../../lib/pluralize';
 import { formatCurrency } from '../../../lib/utils/currency';
@@ -16,7 +17,7 @@ import {
 } from '../../../components/dashboard/dashboardSurfaces';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 export const dynamic = 'force-dynamic';
 
@@ -55,13 +56,13 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   ] = await Promise.all([
     authService.getCurrentUser().catch(() => null),
     prisma.payment.findMany({
-      where: { userId, ...getPaymentScopeFilter(planScope) },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       include: { subscription: { include: { plan: true } } },
       take: 5
     }),
     prisma.payment.aggregate({
-      where: { userId, status: { not: 'REFUNDED' }, ...getPaymentScopeFilter(planScope) },
+      where: { userId, status: { not: 'REFUNDED' } },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
@@ -145,6 +146,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const lastRecordedVisit = recentVisitsWithFormats[0] ?? null;
   const lastSignInAt = authUser?.lastSignInAt ?? lastRecordedVisit?.createdAt ?? null;
   const formattedLastSignIn = lastSignInAt ? await formatDateServer(lastSignInAt, userId) : null;
+  const relativeLastSignIn = lastSignInAt ? formatDate(lastSignInAt, { mode: 'relative' }) : null;
 
   const totalSpendCents = Number(paymentStats._sum.amountCents ?? 0);
   const totalSpendFormatted = formatCurrency(totalSpendCents, activeCurrency);
@@ -177,8 +179,6 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
   const tokenStatHelper = planDisplay.tokenStatHelper;
   // token tone is no longer used after moving the token stat into the hero panels
 
-  const lastSignInLabel = formattedLastSignIn ?? 'Not recorded yet';
-
   const uniqueLocations = new Set<string>();
   for (const visit of recentVisitsWithFormats) {
     const location = [visit.city, visit.country].filter(Boolean).join(', ');
@@ -208,8 +208,8 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
           },
           {
             label: 'Last sign-in',
-            value: lastSignInLabel,
-            helper: formattedLastSignIn ? 'Latest recorded account activity' : 'No recent account activity recorded yet',
+            value: relativeLastSignIn ?? 'Not recorded yet',
+            helper: formattedLastSignIn ?? 'No recent activity yet',
             tone: formattedLastSignIn ? 'blue' : 'indigo',
           },
         ]}
@@ -289,7 +289,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
           ) : null}
 
           {/* Active sessions moved from sidebar into the main column */}
-          <div className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
+          <div className={dashboardPanelClass('space-y-4 p-4 sm:p-6')}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Active sessions</h3>
               <span className={dashboardPillClass('text-blue-600 dark:text-blue-200')}>
@@ -301,7 +301,7 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
                 ? 'Manage your signed-in devices. Revoke access if something looks unfamiliar.'
                 : 'Review the current signed-in device and recent account activity for anything unusual.'}
             </p>
-            <div className="-m-3 sm:-m-4 lg:-m-6">
+            <div className="-mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
               <ActiveSessionsList />
             </div>
           </div>

@@ -5,26 +5,13 @@ const authServiceMock = vi.hoisted(() => ({
   getUserSessions: vi.fn(),
 }));
 
-const headersMock = vi.hoisted(() => vi.fn());
-
 vi.mock('../lib/auth-provider', () => ({ authService: authServiceMock }));
-vi.mock('next/headers', () => ({
-  headers: headersMock,
-}));
 
 import { GET } from '../app/api/user/sessions/route';
 
 describe('GET /api/user/sessions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    headersMock.mockResolvedValue({
-      get: (key: string) => {
-        if (key === 'user-agent') return 'Mozilla/5.0 Chrome/123.0 Safari/537.36';
-        if (key === 'x-forwarded-for') return '203.0.113.10';
-        if (key === 'x-real-ip') return null;
-        return null;
-      },
-    });
   });
 
   it('requires authentication', async () => {
@@ -35,14 +22,22 @@ describe('GET /api/user/sessions', () => {
     expect(res.status).toBe(401);
   });
 
-  it('marks the current session and enriches its activity from request headers', async () => {
+  it('marks the current session and returns provider activity details', async () => {
     authServiceMock.getSession.mockResolvedValue({ userId: 'user_1', sessionId: 'sess_current' });
     authServiceMock.getUserSessions.mockResolvedValue([
       {
         id: 'sess_current',
         status: 'active',
         lastActiveAt: new Date('2026-03-20T12:00:00.000Z'),
-        activity: null,
+        activity: {
+          browserName: 'Chrome',
+          browserVersion: '123.0',
+          deviceType: 'desktop',
+          ipAddress: '203.0.113.10',
+          isMobile: false,
+          city: 'Lagos',
+          country: 'Nigeria',
+        },
       },
       {
         id: 'sess_other',
@@ -63,11 +58,12 @@ describe('GET /api/user/sessions', () => {
         lastActiveAt: '2026-03-20T12:00:00.000Z',
         latestActivity: {
           browserName: 'Chrome',
+          browserVersion: '123.0',
           deviceType: 'desktop',
           ipAddress: '203.0.113.10',
           isMobile: false,
-          city: null,
-          country: null,
+          city: 'Lagos',
+          country: 'Nigeria',
         },
         isCurrent: true,
       },

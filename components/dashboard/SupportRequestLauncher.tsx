@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SupportTicketForm } from './SupportTicketForm';
-import { dashboardMutedPanelClass } from './dashboardSurfaces';
+import { dashboardMutedPanelClass, dashboardPanelClass } from './dashboardSurfaces';
 
 interface SupportRequestLauncherProps {
   userId: string;
@@ -78,7 +78,7 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
   };
 
   return (
-    <div className="space-y-4 p-3 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
+    <div className={dashboardPanelClass('space-y-4 p-3 sm:p-4')}>
       <div className="space-y-3">
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">Submit a support request</h3>

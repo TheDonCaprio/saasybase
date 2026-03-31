@@ -644,10 +644,16 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  lastActiveAt DateTime?
+  ipAddress    String?
+  userAgent    String?
+  country      String?
+  city         String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, lastActiveAt], name: "Session_userId_lastActiveAt_idx")
 }
 
 model VerificationToken {

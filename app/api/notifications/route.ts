@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       // Only compute totals when explicitly requested
       try {
         [totalCount, unreadCount, generalCount, billingCount, supportCount, accountCount, readCount] = await Promise.all([
-          runCount({ where: { userId } }),
+          runCount({ where: whereBase }),
           runCount({ where: { userId, read: false } }),
           runCount({ where: { userId, type: 'GENERAL' } }),
           runCount({ where: { userId, type: 'BILLING' } }),
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         ]);
       } catch (err: unknown) {
         if (isPrismaModeError(err)) {
-          const safeWhere = stripMode({ userId }) as unknown;
+          const safeWhere = stripMode(whereBase) as unknown;
           const safeUnreadWhere = stripMode({ userId, read: false }) as unknown;
           const safeGeneralWhere = stripMode({ userId, type: 'GENERAL' }) as unknown;
           const safeBillingWhere = stripMode({ userId, type: 'BILLING' }) as unknown;

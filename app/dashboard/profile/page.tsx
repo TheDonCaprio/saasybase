@@ -11,7 +11,7 @@ import { UserSettingsTabs } from '../../../components/dashboard/UserSettingsTabs
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../lib/settings';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
-import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
+import { getOrganizationPlanContext, buildPlanDisplay, getPlanScope, getSubscriptionScopeFilter } from '../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../lib/dashboard-workspace-guard';
 
 interface PageProps {
@@ -58,19 +58,19 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
       include: { plan: true }
     }),
     prisma.payment.aggregate({
-      where: { userId, status: { not: 'REFUNDED' }, ...getPaymentScopeFilter(planScope) },
+      where: { userId, status: { not: 'REFUNDED' } },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
     prisma.userSetting.findMany({ where: { userId } }),
     getDefaultTokenLabel(),
     prisma.payment.aggregate({
-      where: { userId, ...getPaymentScopeFilter(planScope) },
+      where: { userId },
       _sum: { amountCents: true },
       _count: { id: true }
     }),
     prisma.payment.findMany({
-      where: { userId, ...getPaymentScopeFilter(planScope) },
+      where: { userId },
       take: 200,
       select: {
         plan: { select: { name: true } },
@@ -122,7 +122,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
   const preformattedCreatedAt = await formatDateServer(user.createdAt, userId);
 
   const currentPlanFooter = subscription
-    ? `${daysLabel} left in current cycle`
+    ? `${daysLabel} left`
     : planDisplay.planSource === 'ORGANIZATION' && planDisplay.workspace
       ? `Managed by ${planDisplay.workspace.name}`
       : 'No active subscription yet';

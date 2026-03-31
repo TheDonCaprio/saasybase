@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 import { useAuthInstance, useAuthSession } from '@/lib/auth-provider/client';
+import { isCurrentPageNotFound } from '@/lib/client-not-found';
 import { showToast } from '../ui/Toast';
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
@@ -81,7 +82,8 @@ export function OrgValidityCheck() {
         // like /sign-in where a reload would look like a redirect loop.
         const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
         const isAppArea = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-        if (!isAppArea || !isLoaded || !isSignedIn) return;
+        const isNotFoundPage = isCurrentPageNotFound();
+        if (!isAppArea || isNotFoundPage || !isLoaded || !isSignedIn) return;
         const initialPathname = pathname;
 
         const start = Date.now();

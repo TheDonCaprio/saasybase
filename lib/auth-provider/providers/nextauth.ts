@@ -25,11 +25,21 @@ import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
 import { ACTIVE_ORG_COOKIE } from '../../active-organization';
 import { validateAndFormatPersonName } from '../../name-validation';
+import {
+  parseUserAgent,
+  resolveSessionActivityFromHeaders,
+  shouldRefreshSessionActivity,
+} from '../../session-activity';
 
 type SessionRecord = {
   id: string;
   userId: string;
   expires: Date;
+  lastActiveAt: Date | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  country: string | null;
+  city: string | null;
 };
 
 const SESSION_COOKIE_CANDIDATES = [
@@ -109,6 +119,11 @@ async function getCurrentSessionRecord(): Promise<SessionRecord | null> {
       id: true,
       userId: true,
       expires: true,
+      lastActiveAt: true,
+      ipAddress: true,
+      userAgent: true,
+      country: true,
+      city: true,
     },
   });
 
@@ -116,11 +131,61 @@ async function getCurrentSessionRecord(): Promise<SessionRecord | null> {
     return null;
   }
 
-  return {
+  const currentRecord: SessionRecord = {
     id: record.id,
     userId: record.userId,
     expires: record.expires,
+    lastActiveAt: record.lastActiveAt,
+    ipAddress: record.ipAddress,
+    userAgent: record.userAgent,
+    country: record.country,
+    city: record.city,
   };
+
+  try {
+    const { headers } = await import('next/headers');
+    const currentHeaders = await headers();
+    const resolvedActivity = await resolveSessionActivityFromHeaders(currentHeaders);
+
+    if (!shouldRefreshSessionActivity(currentRecord, resolvedActivity)) {
+      return currentRecord;
+    }
+
+    const updated = await prisma.session.update({
+      where: { id: record.id },
+      data: {
+        lastActiveAt: new Date(),
+        ...(resolvedActivity.userAgent ? { userAgent: resolvedActivity.userAgent } : {}),
+        ...(resolvedActivity.ipAddress ? { ipAddress: resolvedActivity.ipAddress } : {}),
+        ...(resolvedActivity.country ? { country: resolvedActivity.country } : {}),
+        ...(resolvedActivity.city ? { city: resolvedActivity.city } : {}),
+      },
+      select: {
+        id: true,
+        userId: true,
+        expires: true,
+        lastActiveAt: true,
+        ipAddress: true,
+        userAgent: true,
+        country: true,
+        city: true,
+      },
+    });
+
+    return {
+      id: updated.id,
+      userId: updated.userId,
+      expires: updated.expires,
+      lastActiveAt: updated.lastActiveAt,
+      ipAddress: updated.ipAddress,
+      userAgent: updated.userAgent,
+      country: updated.country,
+      city: updated.city,
+    };
+  } catch (err) {
+    Logger.debug('NextAuthProvider.getCurrentSessionRecord activity sync failed', { error: toError(err) });
+    return currentRecord;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -230,15 +295,25 @@ export class NextAuthProvider implements AuthProvider {
       if (!session?.user?.id) return null;
 
       const prisma = await getPrisma();
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-      });
+      const [user, latestSession] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: session.user.id },
+        }),
+        prisma.session.findFirst({
+          where: { userId: session.user.id },
+          orderBy: [{ lastActiveAt: 'desc' }, { expires: 'desc' }],
+          select: {
+            lastActiveAt: true,
+            expires: true,
+          },
+        }),
+      ]);
 
       if (!user) return null;
       const authUser = toAuthUser(user as unknown as Record<string, unknown>);
       return {
         ...authUser,
-        lastSignInAt: null,
+        lastSignInAt: latestSession?.lastActiveAt ?? latestSession?.expires ?? null,
       };
     } catch (err) {
       Logger.debug('NextAuthProvider.getCurrentUser failed', { error: toError(err) });
@@ -442,20 +517,40 @@ export class NextAuthProvider implements AuthProvider {
     const prisma = await getPrisma();
     const sessions = await prisma.session.findMany({
       where: { userId },
-      orderBy: { expires: 'desc' },
+      orderBy: [{ lastActiveAt: 'desc' }, { expires: 'desc' }],
       select: {
         id: true,
         expires: true,
+        lastActiveAt: true,
+        userAgent: true,
+        ipAddress: true,
+        country: true,
+        city: true,
       },
     });
     const now = Date.now();
 
-    return sessions.map((session) => ({
-      id: session.id,
-      status: session.expires.getTime() > now ? 'active' : 'expired',
-      lastActiveAt: session.expires,
-      activity: null,
-    }));
+    return sessions.map((session) => {
+      const parsedUserAgent = parseUserAgent(session.userAgent);
+      const hasActivity = Boolean(session.userAgent || session.ipAddress || session.country || session.city);
+
+      return {
+        id: session.id,
+        status: session.expires.getTime() > now ? 'active' : 'expired',
+        lastActiveAt: session.lastActiveAt ?? session.expires,
+        activity: hasActivity
+          ? {
+              browserName: parsedUserAgent.browserName,
+              browserVersion: parsedUserAgent.browserVersion,
+              deviceType: parsedUserAgent.deviceType,
+              ipAddress: session.ipAddress,
+              city: session.city,
+              country: session.country,
+              isMobile: parsedUserAgent.isMobile,
+            }
+          : null,
+      };
+    });
   }
 
   async revokeSession(sessionId: string): Promise<void> {

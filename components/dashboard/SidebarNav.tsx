@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
+import { isCurrentPageNotFound } from '@/lib/client-not-found';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
@@ -52,7 +53,10 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
 
   useEffect(() => {
-    if (!isSignedIn || profileLoadedForOrg) {
+    const isDashboardArea = pathname.startsWith('/dashboard');
+    const isNotFoundPage = isCurrentPageNotFound();
+
+    if (!isSignedIn || !isDashboardArea || isNotFoundPage || profileLoadedForOrg) {
       return;
     }
 
@@ -83,7 +87,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     return () => {
       controller.abort();
     };
-  }, [isSignedIn, currentOrgId, profileLoadedForOrg]);
+  }, [isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
 
   const visibleItems = (() => {
     if (!items) return [] as NavItem[];

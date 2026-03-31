@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
+import { isCurrentPageNotFound } from '@/lib/client-not-found';
 
 const LAST_RUN_KEY = 'user:expiry-cleanup:last-run-at';
 const RUN_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -15,7 +16,8 @@ export function TokenExpiryCleanupPing() {
     // like /sign-in where a reload would look like a redirect loop.
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
     const isAppArea = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-    if (!isAppArea) return;
+    const isNotFoundPage = isCurrentPageNotFound();
+    if (!isAppArea || isNotFoundPage) return;
     const initialPathname = pathname;
 
     // Only run the check if Clerk is enabled (user could be signed in)

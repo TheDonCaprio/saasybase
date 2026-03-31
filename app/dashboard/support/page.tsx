@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { getSupportEmail } from '../../../lib/settings';
 import { SupportDashboardClient } from '../../../components/dashboard/SupportDashboardClient';
 import { DashboardPageHeader } from '../../../components/dashboard/DashboardPageHeader';
+import { formatDate } from '../../../lib/formatDate';
 import { formatDateServer } from '../../../lib/formatDate.server';
 import { buildDashboardMetadata } from '../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../lib/route-guards';
@@ -81,10 +82,12 @@ export default async function SupportPage({ searchParams }: PageProps) {
 
   const latestTicket = await prisma.supportTicket.findFirst({
     where: { userId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { updatedAt: 'desc' }
   });
 
-  const latestTicketFormatted = latestTicket ? await formatDateServer(latestTicket.createdAt) : null;
+  const latestTicketUpdatedAt = latestTicket?.updatedAt ?? latestTicket?.createdAt ?? null;
+  const latestTicketFormatted = latestTicketUpdatedAt ? await formatDateServer(latestTicketUpdatedAt) : null;
+  const latestTicketRelative = latestTicketUpdatedAt ? formatDate(latestTicketUpdatedAt, { mode: 'relative' }) : null;
 
   let highlightedTicketId: string | null = null;
   if (requestedTicketId) {
@@ -128,8 +131,8 @@ export default async function SupportPage({ searchParams }: PageProps) {
     },
     {
       label: 'Last update',
-      value: latestTicketFormatted ?? '—',
-      helper: latestTicketFormatted ? 'Most recent ticket activity' : 'No tickets yet',
+      value: latestTicketRelative ?? '—',
+      helper: latestTicketFormatted ?? 'No tickets yet',
       tone: latestTicketFormatted ? ('emerald' as const) : ('slate' as const),
     },
   ];

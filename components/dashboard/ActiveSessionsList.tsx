@@ -16,6 +16,7 @@ import {
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { showToast } from '../ui/Toast';
 import { toError } from '../../lib/runtime-guards';
+import { dashboardCardClass } from './dashboardSurfaces';
 
 interface SessionActivity {
   id: string;
@@ -505,10 +506,10 @@ export function ActiveSessionsList() {
             }
             
             return (
-              <div key={session.id} className={`p-4 border rounded-lg transition-all hover:border-neutral-600 ${
+              <div key={session.id} className={`${dashboardCardClass('p-4')} transition-all hover:border-neutral-300 dark:hover:border-neutral-600 ${
                 isCurrentSession
                   ? 'border-blue-500/60 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-950/20'
-                  : 'border-neutral-700 bg-transparent'
+                  : 'border-slate-200/80 bg-white dark:border-neutral-800 dark:bg-neutral-900/70'
               }`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start">
                   <div className="flex-1">
@@ -558,9 +559,9 @@ export function ActiveSessionsList() {
                   {/* Session details */}
                   <div className="w-full sm:w-auto text-left sm:text-right text-xs text-neutral-500 space-y-1 mt-3 sm:mt-0">
                     {ip && (
-                      <div className="flex items-center gap-1 justify-end">
+                      <div className="flex items-center gap-1 justify-start sm:justify-end min-w-0">
                         <FontAwesomeIcon icon={faWifi} className="text-neutral-600" />
-                        <span>{ip}</span>
+                        <span className="break-all sm:break-normal font-mono text-[11px] sm:text-xs">{ip}</span>
                       </div>
                     )}
                     {session.lastActiveAt && (

@@ -68,10 +68,12 @@ export interface AuthSessionInfo {
   /** Optional device / geo info (Clerk provides this). */
   activity?: {
     browserName?: string | null;
+    browserVersion?: string | null;
     deviceType?: string | null;
     ipAddress?: string | null;
     city?: string | null;
     country?: string | null;
+    isMobile?: boolean;
   } | null;
 }
 

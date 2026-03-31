@@ -26,6 +26,7 @@ export interface AuthClientActiveSession {
   isCurrent?: boolean;
   latestActivity?: {
     browserName?: string | null;
+    browserVersion?: string | null;
     deviceType?: string | null;
     ipAddress?: string | null;
     city?: string | null;

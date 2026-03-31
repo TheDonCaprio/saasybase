@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
+import { isCurrentPageNotFound } from '@/lib/client-not-found';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
@@ -65,7 +66,10 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
   const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
 
   useEffect(() => {
-    if (!isSignedIn || profileLoadedForOrg || profileRequestInFlightRef.current) {
+    const isAdminArea = pathname.startsWith('/admin');
+    const isNotFoundPage = isCurrentPageNotFound();
+
+    if (!isSignedIn || !isAdminArea || isNotFoundPage || profileLoadedForOrg || profileRequestInFlightRef.current) {
       return;
     }
 
@@ -90,7 +94,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, currentOrgId, profileLoadedForOrg]);
+  }, [isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
 
   const defaultExpandedGroups = useMemo(() => {
     const s = new Set<string>();

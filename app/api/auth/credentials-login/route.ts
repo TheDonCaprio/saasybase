@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { getClientIP, rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { resolveSessionActivityFromHeaders } from '@/lib/session-activity';
 
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -71,12 +72,18 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+    const activity = await resolveSessionActivityFromHeaders(request.headers);
 
     await prisma.session.create({
       data: {
         sessionToken,
         userId: user.id,
         expires,
+        lastActiveAt: new Date(),
+        userAgent: activity.userAgent,
+        ipAddress: activity.ipAddress,
+        country: activity.country,
+        city: activity.city,
       },
     });
 

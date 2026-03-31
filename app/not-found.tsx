@@ -12,7 +12,10 @@ export async function generateMetadata() {
 
 export default function NotFound() {
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-6 py-24 text-center">
+    <div
+      data-not-found-page="true"
+      className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-6 py-24 text-center"
+    >
 
       {/* Large numeric indicator */}
       <div

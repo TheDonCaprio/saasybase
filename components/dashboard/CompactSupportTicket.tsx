@@ -51,7 +51,7 @@ export function CompactSupportTicket({ ticket, onOpen }: CompactSupportTicketPro
 
   return (
     <>
-      <div className="border border-neutral-200 dark:border-neutral-700 rounded hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
         {/* Compact Header - Now clickable to open modal */}
         <div 
           className="p-3 sm:p-4 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors"

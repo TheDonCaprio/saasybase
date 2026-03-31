@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     if (wantCount) {
       try {
         const [countRes, allPayments] = await Promise.all([
-            runCount({ where: { userId } }),
+          runCount({ where: whereBase }),
             runFindMany({ where: { userId }, select: { amountCents: true } })
         ]);
         totalCount = countRes;
@@ -162,8 +162,8 @@ export async function GET(request: NextRequest) {
           }, 0);
       } catch (err: unknown) {
         if (isPrismaModeError(err)) {
-          const [countRes, allPayments] = await Promise.all([
-              runCount({ where: stripMode({ userId }) }),
+            const [countRes, allPayments] = await Promise.all([
+              runCount({ where: stripMode(whereBase) }),
               runFindMany({ where: stripMode({ userId }) as unknown, select: { amountCents: true } })
           ]);
           totalCount = countRes;

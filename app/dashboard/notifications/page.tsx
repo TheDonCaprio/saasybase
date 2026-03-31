@@ -64,13 +64,13 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
           {
             label: 'Total notifications',
             value: totalCount,
-            helper: totalCount > 0 ? 'Latest 50 are shown below' : 'We’ll notify you when something needs attention',
+            helper: totalCount > 0 ? 'Latest 50 shown below' : 'We’ll notify you when something needs attention',
             tone: 'theme',
           },
           {
             label: 'Unread',
             value: unreadCount,
-            helper: unreadCount > 0 ? 'Clear them or keep them for reference' : 'No pending alerts',
+            helper: unreadCount > 0 ? 'Clear them or keep them' : 'No pending alerts',
             tone: 'theme',
           },
         ]}

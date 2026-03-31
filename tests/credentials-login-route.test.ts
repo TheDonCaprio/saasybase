@@ -14,6 +14,16 @@ const prismaMock = vi.hoisted(() => ({
 
 const rateLimitMock = vi.hoisted(() => vi.fn());
 const getClientIPMock = vi.hoisted(() => vi.fn());
+const resolveSessionActivityFromHeadersMock = vi.hoisted(() => vi.fn(async () => ({
+  browserName: 'Chrome',
+  browserVersion: '123.0',
+  deviceType: 'desktop',
+  isMobile: false,
+  userAgent: 'Mozilla/5.0 Chrome/123.0 Safari/537.36',
+  ipAddress: '203.0.113.10',
+  city: 'Lagos',
+  country: 'Nigeria',
+})));
 
 vi.mock('bcryptjs', () => ({
   default: {
@@ -26,6 +36,9 @@ vi.mock('../lib/rateLimit', () => ({
   RATE_LIMITS: { AUTH: { limit: 5, windowMs: 900000, message: 'Too many attempts' } },
   rateLimit: rateLimitMock,
   getClientIP: getClientIPMock,
+}));
+vi.mock('../lib/session-activity', () => ({
+  resolveSessionActivityFromHeaders: resolveSessionActivityFromHeadersMock,
 }));
 
 import { POST } from '../app/api/auth/credentials-login/route';
@@ -103,6 +116,16 @@ describe('POST /api/auth/credentials-login', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
     expect(prismaMock.session.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.session.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user_1',
+        userAgent: 'Mozilla/5.0 Chrome/123.0 Safari/537.36',
+        ipAddress: '203.0.113.10',
+        city: 'Lagos',
+        country: 'Nigeria',
+        lastActiveAt: expect.any(Date),
+      }),
+    });
     expect(cookieHeader).toContain('authjs.session-token=');
   });
 });

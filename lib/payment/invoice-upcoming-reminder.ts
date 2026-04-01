@@ -81,7 +81,7 @@ export async function handleInvoiceUpcomingReminder(params: {
                 planName: dbSub.plan.name,
                 amount,
                 expiresAt: renewAt ? renewAt.toLocaleDateString() : undefined,
-                billingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/pricing`
+                billingUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/pricing`
             }
         });
     } catch (err) {

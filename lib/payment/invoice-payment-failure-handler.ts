@@ -76,7 +76,7 @@ export async function handleInvoicePaymentFailureEvent(params: {
             message: 'We were unable to process your subscription payment. Please update your payment method to continue your service.',
             templateKey: 'invoice_payment_failed',
             variables: {
-                billingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/dashboard/billing`
+                billingUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/billing`
             }
         });
     } catch (notifErr) {

@@ -337,7 +337,7 @@ PADDLE_API_KEY="pat_live_..."
 PADDLE_WEBHOOK_SECRET="..."             # Notification destination secret; supports comma-separated rotation
 NEXT_PUBLIC_PADDLE_CLIENT_TOKEN="..."   # Paddle.js client token
 PADDLE_DEFAULT_TAX_CATEGORY="standard" # Required for auto-creation of products/prices
-# Sandbox:
+# Sandbox / live selection:
 PADDLE_ENV="sandbox"
 NEXT_PUBLIC_PADDLE_ENV="sandbox"
 ```
@@ -1192,10 +1192,11 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
 | Currency | `PAYMENTS_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
 | Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Switch between SMTP/Nodemailer and Resend |
+| Geolocation | `IPINFO_LITE_TOKEN` | Optional; activity geolocation falls back to `country.is` when unset |
 | Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs or S3 |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN` | Server-side secrets |
-| Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_SANDBOX`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
+| Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
 | Dev helpers | `DEV_ADMIN_ID`, `DEV_ADMIN_EMAIL`, `ALLOW_ADMIN_SCRIPT` | Local dev only |
 
 ---

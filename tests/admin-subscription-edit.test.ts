@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const requireAdminOrModeratorMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'admin_1', role: 'ADMIN' })));
@@ -42,6 +42,8 @@ import { POST } from '../app/api/admin/subscriptions/[id]/edit/route';
 
 describe('admin subscription edit route', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
     vi.clearAllMocks();
     prismaMock.subscription.findUnique.mockResolvedValue({
       id: 'sub_1',
@@ -81,6 +83,10 @@ describe('admin subscription edit route', () => {
       currentPeriodEnd: new Date('2026-04-01T00:00:00.000Z'),
       expiresAt: new Date('2026-04-01T00:00:00.000Z'),
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('reactivates a provider-backed subscription and clears scheduled cancellation', async () => {

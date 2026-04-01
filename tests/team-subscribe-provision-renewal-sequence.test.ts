@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type MockRecord = Record<string, unknown>;
 type MockWhere = Record<string, unknown>;
@@ -268,8 +268,14 @@ type FoundInvoiceSubscription = Awaited<ReturnType<ProcessInvoicePaidInput['find
 
 describe('team subscribe -> provision -> renew sequence', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
     vi.clearAllMocks();
     state.reset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('backfills the provisioned org onto the subscription and credits the org bucket on a later renewal without org metadata', async () => {

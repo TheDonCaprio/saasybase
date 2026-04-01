@@ -72,8 +72,11 @@ describe('session activity helpers', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('falls back to edge header country when no IPinfo token is configured', async () => {
-    const fetchMock = vi.fn();
+  it('uses country.is when no IPinfo token is configured', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ country: 'US' }),
+    }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { resolveSessionActivityFromHeaders } = await import('../lib/session-activity');
@@ -81,13 +84,16 @@ describe('session activity helpers', () => {
       get(name: string) {
         if (name === 'user-agent') return 'Mozilla/5.0 Chrome/123.0 Safari/537.36';
         if (name === 'x-forwarded-for') return '198.51.100.20';
-        if (name === 'cf-ipcountry') return 'US';
         return null;
       },
     });
 
     expect(activity.country).toBe('US');
     expect(activity.city).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.country.is/198.51.100.20',
+      expect.objectContaining({ cache: 'no-store' })
+    );
   });
 });

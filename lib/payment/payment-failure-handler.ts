@@ -73,7 +73,7 @@ export async function handlePaymentFailureEvent(params: {
             templateKey: 'payment_failed',
             variables: {
                 errorMessage: errorMessage || 'Payment declined',
-                billingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/dashboard/billing`
+                billingUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/billing`
             }
         });
     } catch (notifErr) {

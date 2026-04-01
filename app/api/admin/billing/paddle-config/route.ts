@@ -27,7 +27,7 @@ function getPaddleApiBaseUrl(): string {
   const explicit = process.env.PADDLE_API_BASE_URL;
   if (explicit) return explicit.replace(/\/$/, '');
   const env = (process.env.PADDLE_ENV || '').toLowerCase();
-  const isSandbox = env === 'sandbox' || process.env.PADDLE_SANDBOX === '1';
+  const isSandbox = env === 'sandbox';
   return isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
 }
 

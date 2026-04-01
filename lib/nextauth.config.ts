@@ -10,6 +10,7 @@
 
 import NextAuth, { type NextAuthConfig } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import type { Adapter } from 'next-auth/adapters';
 import type { EmailConfig } from 'next-auth/providers';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
@@ -62,6 +63,18 @@ async function hashPassword(password: string): Promise<string> {
 
 async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
   return bcrypt.compare(plain, hashed);
+}
+
+function createPrismaAdapter(): Adapter {
+  const adapter = PrismaAdapter(prisma);
+
+  return {
+    ...adapter,
+    async deleteSession(sessionToken) {
+      await prisma.session.deleteMany({ where: { sessionToken } });
+      return null;
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +225,7 @@ function buildProviders(): NextAuthConfig['providers'] {
 // ---------------------------------------------------------------------------
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: createPrismaAdapter(),
   providers: buildProviders(),
   session: { strategy: 'database' },
   pages: {

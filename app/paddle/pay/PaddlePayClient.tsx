@@ -32,7 +32,7 @@ export default function PaddlePayClient() {
   const publicToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
   const publicEnv = (process.env.NEXT_PUBLIC_PADDLE_ENV || '').toLowerCase();
   const tokenImpliesSandbox = typeof publicToken === 'string' && publicToken.startsWith('test_');
-  const isSandbox = publicEnv === 'sandbox' || process.env.NEXT_PUBLIC_PADDLE_SANDBOX === '1' || tokenImpliesSandbox;
+  const isSandbox = publicEnv === 'sandbox' || tokenImpliesSandbox;
 
   useEffect(() => {
     if (!scriptLoaded) return;

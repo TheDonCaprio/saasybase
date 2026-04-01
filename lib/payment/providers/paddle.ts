@@ -205,7 +205,7 @@ export class PaddlePaymentProvider implements PaymentProvider {
 		}
 
 		const env = (process.env.PADDLE_ENV || '').toLowerCase();
-		const isSandbox = env === 'sandbox' || process.env.PADDLE_SANDBOX === '1';
+		const isSandbox = env === 'sandbox';
 		this.apiBaseUrl = isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
 	}
 

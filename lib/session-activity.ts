@@ -161,6 +161,56 @@ function getIpinfoLiteToken(): string | null {
   return token ? token : null;
 }
 
+async function lookupCountryFromCountryIs(ip: string, fallback: GeoLookupResult | null): Promise<GeoLookupResult | null> {
+  const now = Date.now();
+  const cached = geoLookupCache.get(ip);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), GEOLOOKUP_TIMEOUT_MS)
+    : null;
+
+  try {
+    const response = await fetch(`https://api.country.is/${encodeURIComponent(ip)}`, {
+      cache: 'no-store',
+      signal: controller?.signal,
+    });
+
+    if (!response.ok) {
+      geoLookupCache.set(ip, { expiresAt: now + GEOLOOKUP_CACHE_TTL_MS, value: fallback });
+      return fallback;
+    }
+
+    const payload = await response.json() as {
+      country?: string | null;
+      country_code?: string | null;
+    };
+
+    const value: GeoLookupResult = {
+      city: null,
+      country: typeof payload.country === 'string' && payload.country.trim().length > 0
+        ? payload.country.trim()
+        : typeof payload.country_code === 'string' && payload.country_code.trim().length > 0
+          ? payload.country_code.trim()
+          : fallback?.country ?? null,
+    };
+
+    geoLookupCache.set(ip, { expiresAt: now + GEOLOOKUP_CACHE_TTL_MS, value });
+    return value;
+  } catch (error) {
+    Logger.debug('Session geo lookup failed via country.is', { ip, error: toError(error).message });
+    geoLookupCache.set(ip, { expiresAt: now + GEOLOOKUP_CACHE_TTL_MS, value: fallback });
+    return fallback;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function lookupGeoForIp(ipAddress: string | null, headers?: HeaderReader): Promise<GeoLookupResult | null> {
   const ip = normalizeIpAddress(ipAddress);
   const headerCountry = headers?.get('cf-ipcountry')?.trim() || null;
@@ -170,8 +220,12 @@ async function lookupGeoForIp(ipAddress: string | null, headers?: HeaderReader):
 
   const token = getIpinfoLiteToken();
 
-  if (!ip || !token || isPrivateOrLocalIp(ip)) {
+  if (!ip || isPrivateOrLocalIp(ip)) {
     return fallback;
+  }
+
+  if (!token) {
+    return lookupCountryFromCountryIs(ip, fallback);
   }
 
   const now = Date.now();

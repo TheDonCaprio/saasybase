@@ -5,7 +5,7 @@ import { sendEmail, getSupportEmail, getSiteLogo, getSiteName } from './email';
 import { getSetting, SETTING_DEFAULTS, SETTING_KEYS, parseStringListSetting } from './settings';
 import { EmailVariables } from './email-templates';
 
-const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 function escapeHtml(value: string): string {

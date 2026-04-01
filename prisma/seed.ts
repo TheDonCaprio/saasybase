@@ -127,6 +127,32 @@ async function main() {
       emailVerified: new Date(), // Auto-verify email
     }
   });
+
+  const isClerkEnabled = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'clerk';
+  if (isClerkEnabled && process.env.CLERK_SECRET_KEY) {
+    console.log('Syncing admin user to Clerk...');
+    try {
+      const { createClerkClient } = await import('@clerk/nextjs/server');
+      const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+      const existingClerkUsers = await clerk.users.getUserList({ emailAddress: [adminCredentials.email] });
+      
+      if (existingClerkUsers.totalCount === 0) {
+        await clerk.users.createUser({
+          emailAddress: [adminCredentials.email],
+          password: adminCredentials.password,
+          firstName: 'Admin',
+          skipPasswordChecks: true,
+          publicMetadata: { role: 'ADMIN' }
+        });
+        console.log(`Successfully synced ${adminCredentials.email} to Clerk.`);
+      } else {
+        console.log(`Admin ${adminCredentials.email} already exists in Clerk.`);
+      }
+    } catch (err) {
+      console.warn('Failed to sync admin user to Clerk:', err);
+    }
+  }
+
   console.log(`Admin user ready: ${adminCredentials.email} (${adminCredentials.source})`);
 
   console.log('Attempting to sync plans with payment providers...');

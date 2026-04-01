@@ -189,6 +189,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const shouldInjectGa = Boolean(gaMeasurementId);
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
+  const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   // Preserve previous default aspect ratio (160x48) as a CSS fallback while using
   // a CSS-based layout (fill + object-contain) so the image never gets squished.
   const DEFAULT_LOGO_W = 160;
@@ -207,17 +208,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <head>
           <link rel="icon" href={faviconHref} />
-          {/* Theme script must run before body renders to prevent hydration mismatch */}
-          <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=localStorage.getItem('themePreference');if(p==='dark'){document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');}else if(p==='light'){document.documentElement.classList.add('light');document.documentElement.classList.remove('dark');}else{document.documentElement.classList.remove('light','dark');if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}else{document.documentElement.classList.add('light');}}}catch(e){} })()` }} />
+          {/* External scripts loaded as async <script src> — React 19 treats
+              these as hoisted resources so they never trigger the
+              "Encountered a script tag" console warning. */}
+          <script async src="/scripts/theme-init.js" />
           <style id="theme-color-vars" dangerouslySetInnerHTML={{ __html: themeColorVarsCss }} />
           {customCss ? <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
           {customHeadSnippet ? (
-            <script
-              id="custom-theme-head-snippet"
-              dangerouslySetInnerHTML={{
-                __html: `(function(){try{document.head.insertAdjacentHTML('beforeend', ${JSON.stringify(customHeadSnippet.replace(/<\/script/gi, '<\\/script'))});}catch(e){console.error('theme head snippet failed', e);}})();`
-              }}
-            />
+            <>
+              <template id="custom-head-snippet-data" dangerouslySetInnerHTML={{ __html: customHeadSnippet }} />
+              <script async src="/scripts/head-snippet-init.js" />
+            </>
           ) : null}
         </head>
         {/*
@@ -233,7 +234,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AppAuthProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
             {/* Indicate to client code whether Clerk is enabled so client-only
               helpers can avoid calling auth APIs for anonymous visitors. */}
-            <script dangerouslySetInnerHTML={{ __html: `window.__CLERK_ENABLED=${!!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}` }} />
+            <meta name="x-clerk-enabled" content={String(clerkEnabled)} />
+            <script async src="/scripts/clerk-flag-init.js" />
             <FormatSettingsProvider initialMode={formatSettings.mode} initialTimezone={formatSettings.timezone}>
           {shouldInjectGa ? (
             <>

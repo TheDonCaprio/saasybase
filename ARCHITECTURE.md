@@ -64,8 +64,7 @@ proxy.ts (Edge Middleware)
   └── Route protection rules
         ├── /admin/* → requires AUTH
         ├── /api/admin/* → requires AUTH
-        ├── /dashboard/* → requires AUTH
-        └── Public routes → pass through
+  └── Public routes + dashboard pages → pass through
 
 lib/auth-provider/
   ├── types.ts              # AuthProvider interface, AuthSession, AuthUser
@@ -81,6 +80,41 @@ lib/auth-provider/
 ```
 
 **Data flow:** Request → Middleware (verify session) → Route handler → `authService.requireUserId()` → Business logic
+
+Notes:
+- `/dashboard/*` is protected primarily by server-side guards such as `requireAuth()` rather than edge middleware.
+- Under `AUTH_PROVIDER=nextauth`, session resolution reads the DB-backed `Session` row and active-organization cookie via `lib/auth-provider/providers/nextauth.ts`.
+
+### 1.1 Route Grouping And 404 Boundaries
+
+```
+app/
+  admin/
+    [...slug]/page.tsx        # invalid admin child paths → notFound()
+    (valid)/
+      layout.tsx              # admin shell + sidebar counts
+      page.tsx                # /admin
+      users/page.tsx          # /admin/users
+      ...
+
+  dashboard/
+    [...slug]/page.tsx        # invalid dashboard child paths → notFound()
+    (valid)/
+      layout.tsx              # dashboard shell + workspace chrome
+      page.tsx                # /dashboard
+      profile/page.tsx        # /dashboard/profile
+      ...
+```
+
+Why this exists:
+- Valid admin/dashboard routes still share their respective layouts.
+- Invalid child URLs such as `/admin/whatever` or `/dashboard/payment` bypass those layouts and resolve through the global `not-found` boundary.
+- This avoids layout-level DB work for typo routes and returns a real 404 instead of rendering inside the admin/dashboard shell.
+
+Supporting files:
+- `app/not-found.tsx` — global not-found boundary
+- `components/NotFoundPage.tsx` — shared 404 UI
+- `lib/client-not-found.ts` — client-side helper so dashboard/admin client components can suppress background refresh behavior while on a 404 page
 
 ### 2. Payment Layer
 
@@ -134,6 +168,45 @@ User clicks "Subscribe"
   → User notified (email + in-app)
 ```
 
+### 2.1 Email Delivery Layer
+
+```
+lib/email.ts
+  ├── Provider selector
+  │     ├── EMAIL_PROVIDER=nodemailer  → SMTP transport
+  │     └── EMAIL_PROVIDER=resend      → Resend API client
+  │
+  ├── Template rendering
+  │     └── lib/email-templates.ts
+  │
+  ├── Brand/theme helpers
+  │     ├── site name / support email / logo
+  │     └── accent colors from settings/theme palette
+  │
+  └── Delivery + persistence
+        ├── send mail via provider
+        └── persist EmailLog row in Prisma
+```
+
+Providers:
+- `nodemailer` remains the default application email transport and uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS`.
+- `resend` is now a first-class alternative transport for transactional app email and requires `EMAIL_PROVIDER=resend` plus `RESEND_API_KEY`.
+- `lib/env.ts` validates that `RESEND_API_KEY` is present when Resend is selected.
+
+Important distinction:
+- Application email (`lib/email.ts`) supports both Nodemailer and Resend.
+- NextAuth email-auth / magic-link flow still uses `NodemailerProvider` in `lib/nextauth.config.ts`, so email-login remains SMTP-based even when transactional app email is configured to use Resend.
+
+Delivery flow:
+```
+Business event
+  → lib/email.ts:sendEmail()
+  → optional template render (lib/email-templates.ts)
+  → provider dispatch (Nodemailer SMTP or Resend API)
+  → EmailLog persisted in Prisma
+  → failures logged via Logger without crashing core business flow
+```
+
 ### 3. Data Layer
 
 ```
@@ -177,7 +250,10 @@ Key Models:
 
 ```
 app/admin/
-  ├── page.tsx              # Overview with stats
+  ├── [...slug]/page.tsx    # invalid child path → global notFound()
+  └── (valid)/
+      ├── layout.tsx        # Admin chrome, sidebar, counts, access guard
+      ├── page.tsx          # Overview with stats
   │
   ├── Users & Access
   │     ├── users/          # User management (CRUD, role, tokens)
@@ -204,29 +280,36 @@ app/admin/
   │     ├── analytics/      # GA4 dashboard
   │     └── traffic/        # First-party visit tracking
   │
-  └── Developer
-        ├── api/            # Auto-generated API docs
-        ├── logs/           # System logs viewer
-        └── maintenance/    # Cleanup/repair tools
+      └── Developer
+            ├── api/        # Auto-generated API docs
+            ├── logs/       # System logs viewer
+            └── maintenance/# Cleanup/repair tools
 ```
+
+External URLs are unchanged. The `(valid)` folder is a Next.js route group and does not appear in the URL.
 
 ### 5. User Dashboard
 
 ```
 app/dashboard/
-  ├── page.tsx              # Main SaaS app area (SaaSyApp)
-  ├── profile/              # User profile & settings
-  ├── plan/                 # Current plan details
-  ├── billing/              # Billing management
-  ├── transactions/         # Payment history
-  ├── team/                 # Team management (if team plan)
-  ├── support/              # Support tickets
-  ├── notifications/        # User notifications
-  ├── coupons/              # Redeemed coupons
-  ├── activity/             # Activity log
-  ├── settings/             # User preferences
-  └── onboarding/           # Guided setup wizard
+  ├── [...slug]/page.tsx    # invalid child path → global notFound()
+  └── (valid)/
+      ├── layout.tsx        # Dashboard chrome, notices, sidebar badges
+      ├── page.tsx          # Main SaaS app area (SaaSyApp)
+      ├── profile/          # User profile & settings
+      ├── plan/             # Current plan details
+      ├── billing/          # Billing management
+      ├── transactions/     # Payment history
+      ├── team/             # Team management (if team plan)
+      ├── support/          # Support tickets
+      ├── notifications/    # User notifications
+      ├── coupons/          # Redeemed coupons
+      ├── activity/         # Activity log
+      ├── settings/         # User preferences
+      └── onboarding/       # Guided setup wizard
 ```
+
+As with admin, `(valid)` is a route group only. URLs remain `/dashboard/...`.
 
 ---
 
@@ -243,6 +326,18 @@ Browser → Edge Middleware (proxy.ts)
     → HTML streamed to client
   → Client hydrates with React
 ```
+
+### Invalid Admin/Dashboard Child Request
+
+```
+Browser → /admin/unknown or /dashboard/unknown
+  → top-level catch-all route (`[...slug]`)
+  → `notFound()`
+  → global not-found boundary (`app/not-found.tsx`)
+  → shared 404 UI (`components/NotFoundPage.tsx`)
+```
+
+This path intentionally avoids the heavy admin/dashboard `(valid)` layouts.
 
 ### API Request
 

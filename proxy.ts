@@ -81,9 +81,6 @@ const devBypass = process.env.NODE_ENV !== 'production' && !!process.env.DEV_ADM
 const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set('x-request-pathname', req.nextUrl.pathname);
-
   if (shouldBlockDemoReadOnlyMutation({
     enabled: demoReadOnlyMode,
     method: req.method,
@@ -103,18 +100,14 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   }
 
   if (!isProtectedRoute(req)) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return;
   }
 
   if (devBypass) {
     // Skip protection in dev when DEV_ADMIN_ID is present — the API route
     // handlers themselves still call `requireAdmin()` which will use the
     // DEV_ADMIN_ID bypass when appropriate.
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return;
   }
 
   // Clerk's middleware callback exposes an auth helper that is invoked as
@@ -126,9 +119,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   if (isAuthenticated(authResult)) {
     // User is authenticated; let them through to the page/API handler.
     // The handler will decide if they have sufficient permissions (admin vs moderator).
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return;
   }
 
   // User is NOT authenticated. For API routes, return JSON 401.

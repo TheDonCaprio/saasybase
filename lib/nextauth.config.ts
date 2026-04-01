@@ -10,10 +10,10 @@
 
 import NextAuth, { type NextAuthConfig } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import type { EmailConfig } from 'next-auth/providers';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
-import NodemailerProvider from 'next-auth/providers/nodemailer';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendNextAuthMagicLinkEmail, sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
@@ -70,7 +70,6 @@ async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
 
 function buildProviders(): NextAuthConfig['providers'] {
   const providers: NextAuthConfig['providers'] = [];
-  const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
 
   // Credentials (email + password) — always available
   providers.push(
@@ -142,54 +141,48 @@ function buildProviders(): NextAuthConfig['providers'] {
     })
   );
 
-  providers.push(
-    NodemailerProvider({
-      server: {
-        host: process.env.SMTP_HOST || '::1',
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth:
-          process.env.SMTP_USER && process.env.SMTP_PASS
-            ? {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-              }
-            : undefined,
-      },
-      from: process.env.EMAIL_FROM || `no-reply@${process.env.NEXT_PUBLIC_APP_DOMAIN || 'example.com'}`,
-      maxAge: 15 * 60,
-      async sendVerificationRequest({ identifier, url, expires }) {
-        const email = identifier.toLowerCase().trim();
-        const existingUser = await prisma.user.findUnique({
-          where: { email },
-          select: {
-            id: true,
-            name: true,
-            emailVerified: true,
-          },
-        });
+  const emailProvider: EmailConfig = {
+    id: 'nodemailer',
+    type: 'email',
+    name: 'Email',
+    from: process.env.EMAIL_FROM || `no-reply@${process.env.NEXT_PUBLIC_APP_DOMAIN || 'example.com'}`,
+    maxAge: 15 * 60,
+    normalizeIdentifier(identifier) {
+      return identifier.toLowerCase().trim();
+    },
+    async sendVerificationRequest({ identifier, url, expires }) {
+      const email = identifier.toLowerCase().trim();
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          emailVerified: true,
+        },
+      });
 
-        if (!existingUser?.emailVerified) {
-          if (existingUser?.id) {
-            await sendNextAuthVerificationEmail({
-              userId: existingUser.id,
-              email,
-              name: existingUser.name,
-            });
-          }
-          return;
+      if (!existingUser?.emailVerified) {
+        if (existingUser?.id) {
+          await sendNextAuthVerificationEmail({
+            userId: existingUser.id,
+            email,
+            name: existingUser.name,
+          });
         }
+        return;
+      }
 
-        await sendNextAuthMagicLinkEmail({
-          userId: existingUser.id,
-          email,
-          name: existingUser.name,
-          url,
-          expires,
-        });
-      },
-    })
-  );
+      await sendNextAuthMagicLinkEmail({
+        userId: existingUser.id,
+        email,
+        name: existingUser.name,
+        url,
+        expires,
+      });
+    },
+  };
+
+  providers.push(emailProvider);
 
   // GitHub OAuth
   if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {

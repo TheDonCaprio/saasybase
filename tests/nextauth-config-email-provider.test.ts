@@ -1,0 +1,196 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+type CapturedProvider = {
+  id?: string;
+  type?: string;
+  server?: unknown;
+  sendVerificationRequest?: (...args: unknown[]) => unknown;
+  [key: string]: unknown;
+};
+
+type CapturedNextAuthConfig = {
+  providers?: CapturedProvider[];
+};
+
+const nextAuthMock = vi.hoisted(() => vi.fn((config) => {
+  globalThis.__capturedNextAuthConfig = config;
+
+  return {
+    handlers: {
+      GET: vi.fn(),
+      POST: vi.fn(),
+    },
+    auth: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  };
+}));
+
+const prismaAdapterMock = vi.hoisted(() => vi.fn(() => ({})));
+const credentialsProviderMock = vi.hoisted(() => vi.fn((config) => ({ id: 'credentials', type: 'credentials', ...config })));
+const githubProviderMock = vi.hoisted(() => vi.fn((config) => ({ id: 'github', type: 'oauth', ...config })));
+const googleProviderMock = vi.hoisted(() => vi.fn((config) => ({ id: 'google', type: 'oauth', ...config })));
+const sendNextAuthMagicLinkEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
+const sendNextAuthVerificationEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
+const prismaMock = vi.hoisted(() => ({
+  rateLimitBucket: {
+    findUnique: vi.fn(),
+  },
+  user: {
+    findUnique: vi.fn(),
+    update: vi.fn(),
+  },
+}));
+
+declare global {
+  var __capturedNextAuthConfig: CapturedNextAuthConfig | undefined;
+}
+
+vi.mock('next-auth', () => ({
+  default: nextAuthMock,
+}));
+
+vi.mock('@auth/prisma-adapter', () => ({
+  PrismaAdapter: prismaAdapterMock,
+}));
+
+vi.mock('next-auth/providers/credentials', () => ({
+  default: credentialsProviderMock,
+}));
+
+vi.mock('next-auth/providers/github', () => ({
+  default: githubProviderMock,
+}));
+
+vi.mock('next-auth/providers/google', () => ({
+  default: googleProviderMock,
+}));
+
+vi.mock('../lib/prisma', () => ({
+  prisma: prismaMock,
+}));
+
+vi.mock('../lib/nextauth-email-verification', () => ({
+  sendNextAuthMagicLinkEmail: sendNextAuthMagicLinkEmailMock,
+  sendNextAuthVerificationEmail: sendNextAuthVerificationEmailMock,
+}));
+
+vi.mock('../lib/rateLimit', () => ({
+  rateLimit: vi.fn(),
+  RATE_LIMITS: {
+    AUTH: {
+      limit: 20,
+      windowMs: 15 * 60 * 1000,
+    },
+  },
+}));
+
+vi.mock('bcryptjs', () => ({
+  default: {
+    hash: vi.fn(),
+    compare: vi.fn(),
+  },
+}));
+
+function getCapturedEmailProvider() {
+  const providers = globalThis.__capturedNextAuthConfig?.providers ?? [];
+  return providers.find((provider: { type?: string; id?: string }) => provider.type === 'email' && provider.id === 'nodemailer');
+}
+
+async function loadConfigModule() {
+  vi.resetModules();
+  globalThis.__capturedNextAuthConfig = undefined;
+  await import('../lib/nextauth.config');
+  return globalThis.__capturedNextAuthConfig;
+}
+
+describe('nextauth email provider config', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_PORT;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+    process.env.EMAIL_PROVIDER = 'resend';
+    process.env.RESEND_API_KEY = 're_test_key';
+    process.env.EMAIL_FROM = 'no-reply@example.com';
+    process.env.NEXT_PUBLIC_APP_DOMAIN = 'example.com';
+  });
+
+  it('registers a custom email provider without requiring SMTP settings', async () => {
+    await loadConfigModule();
+
+    const provider = getCapturedEmailProvider();
+
+    expect(nextAuthMock).toHaveBeenCalledTimes(1);
+    expect(prismaAdapterMock).toHaveBeenCalledTimes(1);
+    expect(provider).toMatchObject({
+      id: 'nodemailer',
+      type: 'email',
+      name: 'Email',
+      from: 'no-reply@example.com',
+      maxAge: 15 * 60,
+    });
+    expect(provider.server).toBeUndefined();
+    expect(typeof provider.sendVerificationRequest).toBe('function');
+  });
+
+  it('routes verified-user magic links through the shared email helper', async () => {
+    await loadConfigModule();
+    const provider = getCapturedEmailProvider();
+    const expires = new Date('2026-03-31T12:00:00.000Z');
+
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_1',
+      name: 'Verified User',
+      emailVerified: new Date('2026-03-01T00:00:00.000Z'),
+    });
+
+    await provider.sendVerificationRequest({
+      identifier: 'Verified@example.com',
+      url: 'http://localhost:3000/api/auth/callback/nodemailer?token=abc&email=verified%40example.com',
+      expires,
+      provider,
+      token: 'abc',
+      theme: {},
+      request: new Request('http://localhost:3000/api/auth/signin/nodemailer', { method: 'POST' }),
+    });
+
+    expect(sendNextAuthMagicLinkEmailMock).toHaveBeenCalledWith({
+      userId: 'user_1',
+      email: 'verified@example.com',
+      name: 'Verified User',
+      url: 'http://localhost:3000/api/auth/callback/nodemailer?token=abc&email=verified%40example.com',
+      expires,
+    });
+    expect(sendNextAuthVerificationEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('routes unverified-user requests through the shared verification helper', async () => {
+    await loadConfigModule();
+    const provider = getCapturedEmailProvider();
+
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_2',
+      name: 'Pending User',
+      emailVerified: null,
+    });
+
+    await provider.sendVerificationRequest({
+      identifier: 'Pending@example.com',
+      url: 'http://localhost:3000/api/auth/callback/nodemailer?token=abc&email=pending%40example.com',
+      expires: new Date('2026-03-31T12:00:00.000Z'),
+      provider,
+      token: 'abc',
+      theme: {},
+      request: new Request('http://localhost:3000/api/auth/signin/nodemailer', { method: 'POST' }),
+    });
+
+    expect(sendNextAuthVerificationEmailMock).toHaveBeenCalledWith({
+      userId: 'user_2',
+      email: 'pending@example.com',
+      name: 'Pending User',
+    });
+    expect(sendNextAuthMagicLinkEmailMock).not.toHaveBeenCalled();
+  });
+});

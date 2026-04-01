@@ -286,54 +286,57 @@ export async function prepareCheckoutSessionForProcessing(params: {
 
     if (params.session.customerId && userId) {
         try {
-            const userForCid = await prisma.user.findUnique({ where: { id: userId }, select: { externalCustomerIds: true } });
+            const userForCid = await prisma.user.findUnique({ where: { id: userId }, select: { externalCustomerIds: true, externalCustomerId: true } });
             const mergedCids = params.mergeIdMap(userForCid?.externalCustomerIds, params.providerKey, params.session.customerId);
 
-            // Prevent ambiguous customerId → user attribution.
-            // If the same provider/customerId is already associated to a different user,
-            // do not add it to this user's `externalCustomerIds` map.
-            let canMergeCustomerIdMap = true;
-            try {
-                const usersWithMaps = await prisma.user.findMany({
-                    where: { externalCustomerIds: { not: null } },
-                    select: { id: true, externalCustomerIds: true },
-                });
-                for (const u of usersWithMaps) {
-                    if (u.id === userId) continue;
-                    const map = (u.externalCustomerIds ?? {}) as Record<string, unknown>;
-                    if (map[params.providerKey] === params.session.customerId) {
-                        canMergeCustomerIdMap = false;
+            let isAvailable = true;
+            const alreadyOwnsItLegacy = userForCid?.externalCustomerId === params.session.customerId;
+            const map = (userForCid?.externalCustomerIds ?? {}) as Record<string, unknown>;
+            const alreadyOwnsItMap = map[params.providerKey] === params.session.customerId;
+
+            if (!alreadyOwnsItLegacy && !alreadyOwnsItMap) {
+                try {
+                    const cidOwner = await prisma.user.findUnique({
+                        where: { externalCustomerId: params.session.customerId },
+                        select: { id: true }
+                    });
+                    if (cidOwner?.id && cidOwner.id !== userId) {
+                        isAvailable = false;
+                    }
+
+                    if (isAvailable) {
+                        const usersWithMaps = await prisma.user.findMany({
+                            where: { externalCustomerIds: { not: null } },
+                            select: { id: true, externalCustomerIds: true },
+                        });
+                        for (const u of usersWithMaps) {
+                            if (u.id === userId) continue;
+                            const m = (u.externalCustomerIds ?? {}) as Record<string, unknown>;
+                            if (m[params.providerKey] === params.session.customerId) {
+                                isAvailable = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isAvailable) {
                         Logger.warn('customerId already associated to a different user; skipping externalCustomerIds merge', {
                             sessionId: params.session.id,
                             provider: params.providerKey,
                             userId,
-                            otherUserId: u.id,
                             customerId: params.session.customerId,
                         });
-                        break;
                     }
+                } catch {
+                    // best-effort lookup
                 }
-            } catch {
-                // best-effort; if this fails we fall back to existing behavior
-            }
-
-            let canSetLegacyCid = true;
-            try {
-                const cidOwner = await prisma.user.findUnique({
-                    where: { externalCustomerId: params.session.customerId },
-                    select: { id: true },
-                });
-                if (cidOwner?.id && cidOwner.id !== userId) {
-                    canSetLegacyCid = false;
-                }
-            } catch {
             }
 
             await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    ...(canSetLegacyCid ? { externalCustomerId: params.session.customerId } : null),
-                    externalCustomerIds: (canMergeCustomerIdMap ? (mergedCids ?? userForCid?.externalCustomerIds) : userForCid?.externalCustomerIds),
+                    ...(isAvailable && !alreadyOwnsItLegacy ? { externalCustomerId: params.session.customerId } : null),
+                    externalCustomerIds: isAvailable ? (mergedCids ?? userForCid?.externalCustomerIds) : userForCid?.externalCustomerIds,
                     paymentProvider: params.providerKey,
                 },
             });

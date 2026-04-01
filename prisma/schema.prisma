@@ -30,9 +30,9 @@ model User {
   externalCustomerIds    String?
   // Paid token balance (from purchases/top-ups)
   tokenBalance           Int      @default(0)
-  // Free token balance (managed by free plan settings and monthly resets)
+  // Free token balance (managed by free plan settings and scheduled resets)
   freeTokenBalance       Int      @default(0)
-  // Track when free tokens were last reset for monthly renewals
+  // Track when free tokens were last reset for daily/monthly renewals
   freeTokensLastResetAt  DateTime?
   // Legacy field (kept for backwards compatibility/migrations)
   tokensLastResetAt      DateTime?

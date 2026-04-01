@@ -298,6 +298,7 @@ export function EditableSettings({
                               autoFocus
                             >
                               <option value="one-time">One-time (never renew)</option>
+                              <option value="daily">Daily (renew each day)</option>
                               <option value="monthly">Monthly (renew each month)</option>
                               <option value="unlimited">Unlimited (no token limit)</option>
                             </select>

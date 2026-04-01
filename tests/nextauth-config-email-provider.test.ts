@@ -12,6 +12,10 @@ type CapturedNextAuthConfig = {
   providers?: CapturedProvider[];
 };
 
+type CapturedEmailProvider = CapturedProvider & {
+  sendVerificationRequest: (...args: unknown[]) => unknown;
+};
+
 const nextAuthMock = vi.hoisted(() => vi.fn((config) => {
   globalThis.__capturedNextAuthConfig = config;
 
@@ -92,9 +96,16 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-function getCapturedEmailProvider() {
+function getCapturedEmailProvider(): CapturedEmailProvider {
   const providers = globalThis.__capturedNextAuthConfig?.providers ?? [];
-  return providers.find((provider: { type?: string; id?: string }) => provider.type === 'email' && provider.id === 'nodemailer');
+  const provider = providers.find((candidate: { type?: string; id?: string }) => candidate.type === 'email' && candidate.id === 'nodemailer');
+  if (!provider) {
+    throw new Error('Expected the NextAuth config to register the nodemailer email provider');
+  }
+  if (typeof provider.sendVerificationRequest !== 'function') {
+    throw new Error('Expected the nodemailer email provider to define sendVerificationRequest');
+  }
+  return provider as CapturedEmailProvider;
 }
 
 async function loadConfigModule() {

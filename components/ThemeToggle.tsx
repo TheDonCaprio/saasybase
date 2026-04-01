@@ -8,6 +8,11 @@ import { fetchUserSettings, updateCachedUserSetting } from '@/lib/user-settings.
 
 type ThemePreference = 'light' | 'dark' | 'auto';
 
+function setThemeResolvedCookie(theme: 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  document.cookie = `themeResolved=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
 function readLocalPreference(): ThemePreference {
   if (typeof window === 'undefined') return 'auto';
   try {
@@ -35,15 +40,19 @@ export function ThemeToggle() {
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
+      setThemeResolvedCookie('light');
     } else if (theme === 'dark') {
       root.classList.remove('light');
       root.classList.add('dark');
+      setThemeResolvedCookie('dark');
     } else {
       root.classList.remove('light', 'dark');
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         root.classList.add('dark');
+        setThemeResolvedCookie('dark');
       } else {
         root.classList.add('light');
+        setThemeResolvedCookie('light');
       }
     }
 

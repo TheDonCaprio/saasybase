@@ -1,6 +1,8 @@
 import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
+import { prisma } from '@/lib/prisma';
+import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
 
 type ProxyAuthResult = {
   userId?: unknown;
@@ -65,6 +67,20 @@ function isAuthenticated(authResult: ProxyAuthResult | null): boolean {
   return extractAuthenticatedUserId(authResult) !== null;
 }
 
+async function isAdminUser(userId: string | null): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    return user?.role === 'ADMIN';
+  } catch (error) {
+    console.warn('proxy: admin role lookup failed', error);
+    return false;
+  }
+}
+
 const isProtectedRoute = createAuthRouteMatcher([
   // NOTE: Dashboard pages already enforce auth via server-side guards
   // (see `requireAuth()` usage under `app/dashboard/*`). Keeping dashboard
@@ -81,10 +97,12 @@ const devBypass = process.env.NODE_ENV !== 'production' && !!process.env.DEV_ADM
 const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
+  const pathname = req.nextUrl.pathname;
+
   if (shouldBlockDemoReadOnlyMutation({
     enabled: demoReadOnlyMode,
     method: req.method,
-    pathname: req.nextUrl.pathname,
+    pathname,
   })) {
     return NextResponse.json(
       {
@@ -97,6 +115,39 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
         },
       }
     );
+  }
+
+  const authResult = await resolveAuthResult(auth);
+
+  if (await isMaintenanceModeEnabled()) {
+    const userId = extractAuthenticatedUserId(authResult);
+    const adminBypass = await isAdminUser(userId);
+
+    if (!adminBypass && !isMaintenanceBypassPath(pathname)) {
+      if (pathname.startsWith('/api')) {
+        return NextResponse.json(
+          {
+            error: 'Maintenance mode is enabled. Please try again later.',
+          },
+          {
+            status: 503,
+            headers: {
+              'Retry-After': '300',
+              'X-Maintenance-Mode': 'true',
+            },
+          }
+        );
+      }
+
+      const maintenanceUrl = new URL('/maintenance', req.url);
+      const requestedPath = `${pathname}${req.nextUrl.search ?? ''}`;
+      maintenanceUrl.searchParams.set('from', requestedPath);
+      return NextResponse.rewrite(maintenanceUrl, {
+        headers: {
+          'X-Maintenance-Mode': 'true',
+        },
+      });
+    }
   }
 
   if (!isProtectedRoute(req)) {
@@ -114,8 +165,6 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   // `auth()` in current docs, while older integrations sometimes passed an
   // object directly. Support both shapes so a package upgrade does not change
   // how protected routes are recognized.
-  const authResult = await resolveAuthResult(auth);
-
   if (isAuthenticated(authResult)) {
     // User is authenticated; let them through to the page/API handler.
     // The handler will decide if they have sufficient permissions (admin vs moderator).

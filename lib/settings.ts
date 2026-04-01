@@ -1,5 +1,10 @@
 import { prisma } from './prisma';
 import { emitUnmigratedDbHealthWarningOnce, Logger } from './logger';
+import {
+  requiresFreePlanResetTracking,
+  shouldResetFreePlanTokensAt,
+  type FreePlanRenewalType,
+} from './free-plan-renewal';
 
 export type AppFormatMode =
   | 'short'
@@ -416,7 +421,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.ANNOUNCEMENT_MESSAGE]: '',
   [SETTING_KEYS.MAINTENANCE_MODE]: 'false',
   [SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]: '5',
-  [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'one-time', // 'unlimited', 'monthly', 'one-time'
+  [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'daily', // 'unlimited', 'daily', 'monthly', 'one-time'
   [SETTING_KEYS.FREE_PLAN_TOKEN_NAME]: '', // empty means use default token label
   [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":true,"transactions":true,"purchases":true,"subscriptions":true,"support":true,"notifications":true,"blog":true,"analytics":false,"traffic":false}',
   [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Home","href":"/"},{"label":"Dashboard","href":"/dashboard"},{"label":"Pricing","href":"/pricing"}]',
@@ -937,7 +942,7 @@ export async function getFreePlanSettings() {
 
   return {
     tokenLimit: parseInt(tokenLimit, 10) || 0,
-    renewalType: renewalType as 'unlimited' | 'monthly' | 'one-time',
+    renewalType: renewalType as FreePlanRenewalType,
     tokenName: tokenName.trim() || (await getDefaultTokenLabel())
   };
 }
@@ -1002,9 +1007,9 @@ export async function getFreeTokenLimit(): Promise<number> {
   return parseInt(value, 10) || 0;
 }
 
-export async function getFreePlanRenewalType(): Promise<'unlimited' | 'monthly' | 'one-time'> {
+export async function getFreePlanRenewalType(): Promise<FreePlanRenewalType> {
   const value = await getSetting(SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE, SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]);
-  return value as 'unlimited' | 'monthly' | 'one-time';
+  return value as FreePlanRenewalType;
 }
 
 export async function getFreeTokenName(): Promise<string> {
@@ -1015,18 +1020,13 @@ export async function getFreeTokenName(): Promise<string> {
   return getDefaultTokenLabel();
 }
 
-// Monthly token reset functionality
+// Free-plan token reset functionality
 export async function shouldResetMonthlyTokens(user: { freeTokensLastResetAt?: Date | null }): Promise<boolean> {
   const renewalType = await getFreePlanRenewalType();
-  if (renewalType !== 'monthly') {
-    return false;
-  }
-
-  const now = new Date();
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  
-  // If never reset, or last reset was before this month
-  return !user.freeTokensLastResetAt || user.freeTokensLastResetAt < currentMonthStart;
+  return shouldResetFreePlanTokensAt({
+    renewalType,
+    freeTokensLastResetAt: user.freeTokensLastResetAt ?? null,
+  });
 }
 
 export async function resetUserTokensIfNeeded(userId: string): Promise<boolean> {
@@ -1090,7 +1090,7 @@ export async function initializeNewUserTokens(userId: string): Promise<void> {
 
   // Set initial token balance based on free plan configuration
   // Use raw SQL update to avoid depending on generated client types during a staged migration
-  await prisma.$executeRaw`UPDATE "User" SET "freeTokenBalance" = ${freePlanSettings.tokenLimit}, "freeTokensLastResetAt" = ${freePlanSettings.renewalType === 'monthly' ? now : null} WHERE id = ${userId}`;
+  await prisma.$executeRaw`UPDATE "User" SET "freeTokenBalance" = ${freePlanSettings.tokenLimit}, "freeTokensLastResetAt" = ${requiresFreePlanResetTracking(freePlanSettings.renewalType) ? now : null} WHERE id = ${userId}`;
 }
 
 export async function getBlogListingStyle(): Promise<string> {

@@ -333,6 +333,6 @@ export const rateLimitSchemas = {
 // Free plan settings validation
 export const freePlanSchemas = {
   tokenLimit: z.coerce.number().min(0).max(999999),
-  renewalType: z.enum(['unlimited', 'monthly', 'one-time']),
+  renewalType: z.enum(['unlimited', 'daily', 'monthly', 'one-time']),
   tokenName: z.string().max(50).optional().transform(val => val?.trim() || ''),
 };

@@ -264,7 +264,7 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
     // (on-access cleanup) so token balances reflect wall-clock time.
     await expireStaleActiveSubscriptionsForUser(userId);
 
-    // Then check if monthly free-token reset is needed
+    // Then check if a scheduled free-token reset is needed
     await resetUserTokensIfNeeded(userId);
   }
 
@@ -364,7 +364,7 @@ export async function syncUserFromClerk() {
     // (on-access cleanup) so token balances reflect wall-clock time.
     await expireStaleActiveSubscriptionsForUser(userId);
 
-    // Then check if monthly free-token reset is needed
+    // Then check if a scheduled free-token reset is needed
     await resetUserTokensIfNeeded(userId);
 
     // Finally, clear paid tokens only if the user has been expired for >24h.

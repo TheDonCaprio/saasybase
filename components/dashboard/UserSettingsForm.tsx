@@ -16,6 +16,11 @@ interface UserSettingsFormProps {
   initialSettings: UserSetting[];
 }
 
+function setThemeResolvedCookie(theme: 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  document.cookie = `themeResolved=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
 // Use shared curated timezone list
 const TIMEZONE_OPTIONS = TIMEZONES;
 
@@ -61,10 +66,12 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
+      setThemeResolvedCookie('light');
       try { localStorage.setItem('themePreference', 'light'); } catch (e) { void e; }
     } else if (theme === 'dark') {
       root.classList.remove('light');
       root.classList.add('dark');
+      setThemeResolvedCookie('dark');
       try { localStorage.setItem('themePreference', 'dark'); } catch (e) { void e; }
     } else {
       // Auto mode - detect system preference
@@ -72,8 +79,10 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
       try { localStorage.setItem('themePreference', 'auto'); } catch (e) { void e; }
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         root.classList.add('dark');
+        setThemeResolvedCookie('dark');
       } else {
         root.classList.add('light');
+        setThemeResolvedCookie('light');
       }
     }
   };

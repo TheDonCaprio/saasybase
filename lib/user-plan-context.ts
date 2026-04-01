@@ -193,7 +193,7 @@ export function getMemberSharedTokenBalance(context: OrganizationPlanContext | n
 
 type FreePlanShape = {
   tokenLimit: number;
-  renewalType: 'unlimited' | 'monthly' | 'one-time';
+  renewalType: 'unlimited' | 'daily' | 'monthly' | 'one-time';
   tokenName: string;
 };
 

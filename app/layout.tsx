@@ -26,6 +26,7 @@ import {
   type ThemeColorTokens,
 } from '../lib/settings';
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
+import { cookies } from 'next/headers';
 import Script from 'next/script';
 import Link from 'next/link';
 import TwitterLoader from '../components/twitter/TwitterLoader';
@@ -39,6 +40,7 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
   const enableBackgroundRefreshChecks = true;
   const siteName = await getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
   const siteLogo = await getSiteLogo().catch(() => process.env.NEXT_PUBLIC_SITE_LOGO || '');
@@ -190,6 +192,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const shouldInjectGa = Boolean(gaMeasurementId);
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
   const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const themeCookie = cookieStore.get('themeResolved')?.value;
+  const initialThemeClass = themeCookie === 'dark' || themeCookie === 'light' ? themeCookie : undefined;
   // Preserve previous default aspect ratio (160x48) as a CSS fallback while using
   // a CSS-based layout (fill + object-contain) so the image never gets squished.
   const DEFAULT_LOGO_W = 160;
@@ -198,12 +202,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
       <html
         lang="en"
+        className={initialThemeClass}
         suppressHydrationWarning={true}
         style={{
           backgroundColor: 'rgb(var(--bg-primary))',
           backgroundImage: 'linear-gradient(to bottom, var(--theme-page-gradient-from), var(--theme-page-gradient-via), var(--theme-page-gradient-to))',
           backgroundRepeat: 'no-repeat',
-          backgroundSize: '100% 100%'
+          backgroundSize: '100% 100%',
+          colorScheme: initialThemeClass === 'dark' ? 'dark' : 'light'
         }}
       >
         <head>

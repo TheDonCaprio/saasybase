@@ -404,6 +404,7 @@ model SupportTicket {
   userId    String
   subject   String
   message   String
+  category  String   @default("GENERAL")
   status    String   @default("OPEN")
   createdByRole String @default("USER")
   createdAt DateTime @default(now())
@@ -413,6 +414,7 @@ model SupportTicket {
   replies TicketReply[]
 
   @@index([status])
+  @@index([category])
 }
 
 model TicketReply {

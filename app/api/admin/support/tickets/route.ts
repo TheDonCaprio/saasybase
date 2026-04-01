@@ -8,11 +8,17 @@ import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../../lib/queryUtils';
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
+import {
+  DEFAULT_SUPPORT_TICKET_CATEGORY,
+  SUPPORT_TICKET_CATEGORIES,
+  isSupportTicketCategory,
+} from '../../../../../lib/support-ticket-categories';
 
 const createTicketSchema = z.object({
   userId: z.string().min(1),
   subject: z.string().trim().min(1).max(200),
-  message: z.string().trim().min(1).max(5000)
+  message: z.string().trim().min(1).max(5000),
+  category: z.enum(SUPPORT_TICKET_CATEGORIES).default(DEFAULT_SUPPORT_TICKET_CATEGORY)
 });
 
 export async function GET(request: NextRequest) {
@@ -23,6 +29,7 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1');
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const status = searchParams.get('status');
+  const category = searchParams.get('category');
   const search = searchParams.get('search') || '';
   const sortBy = searchParams.get('sortBy') || 'createdAt';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
@@ -72,6 +79,9 @@ export async function GET(request: NextRequest) {
   let where: Record<string, unknown> = {};
     if (status && status !== 'ALL') {
       where.status = status;
+    }
+    if (category && category !== 'ALL' && isSupportTicketCategory(category)) {
+      where.category = category;
     }
 
     if (search) {
@@ -254,6 +264,7 @@ export async function POST(request: NextRequest) {
     const { userId } = validation.data;
     const subject = sanitizeSubject(validation.data.subject);
     const message = sanitizeMessage(validation.data.message);
+    const category = validation.data.category;
 
     if (!subject || !message) {
       return NextResponse.json({ error: 'Invalid ticket payload' }, { status: 400 });
@@ -269,6 +280,7 @@ export async function POST(request: NextRequest) {
         userId,
         subject,
         message,
+        category,
         status: 'OPEN',
         createdByRole: 'ADMIN'
       }
@@ -279,7 +291,7 @@ export async function POST(request: NextRequest) {
       action: 'support.create_ticket',
       targetType: 'support_ticket',
       targetUserId: userId,
-      details: { ticketId: ticket.id, subject },
+      details: { ticketId: ticket.id, subject, category },
     });
 
     return NextResponse.json({ ticket });

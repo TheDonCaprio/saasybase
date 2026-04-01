@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { SUPPORT_TICKET_CATEGORIES, SUPPORT_TICKET_CATEGORY_LABELS, type SupportTicketCategory } from '../../lib/support-ticket-categories';
 
 interface SupportTicketFormProps {
   userId: string;
   subject: string;
   message: string;
+  category: SupportTicketCategory;
   onSubjectChange: (value: string) => void;
   onMessageChange: (value: string) => void;
+  onCategoryChange: (value: SupportTicketCategory) => void;
   onSuccess?: () => void;
 }
 
-export function SupportTicketForm({ userId, subject, message, onSubjectChange, onMessageChange, onSuccess }: SupportTicketFormProps) {
+export function SupportTicketForm({ userId, subject, message, category, onSubjectChange, onMessageChange, onCategoryChange, onSuccess }: SupportTicketFormProps) {
   // userId is intentionally unused on the client form; keep a void reference to silence lint in some builds
   void userId;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +28,7 @@ export function SupportTicketForm({ userId, subject, message, onSubjectChange, o
       const response = await fetch('/api/support/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message })
+        body: JSON.stringify({ subject, message, category })
       });
 
       if (!response.ok) throw new Error('Failed to submit ticket');
@@ -52,6 +55,21 @@ export function SupportTicketForm({ userId, subject, message, onSubjectChange, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Category</label>
+        <select
+          value={category}
+          onChange={(e) => onCategoryChange(e.target.value as SupportTicketCategory)}
+          className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"
+        >
+          {SUPPORT_TICKET_CATEGORIES.map((value) => (
+            <option key={value} value={value}>
+              {SUPPORT_TICKET_CATEGORY_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div>
         <label className="block text-sm font-medium mb-2">Subject</label>
         <input

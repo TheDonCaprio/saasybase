@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { authService } from './auth-provider';
+import { isLocalhostDevBypassEnabled } from './dev-admin-bypass';
 import type { AuthUser } from './auth-provider';
 import { initializeNewUserTokens, resetUserTokensIfNeeded } from './settings';
 import { Logger } from './logger';
@@ -169,7 +170,7 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
     try {
       const normalizedEmail = opts?.emailOverride ? normalizeEmail(opts.emailOverride) : pickClerkEmail(clerkUser);
       // Check if this user should be an admin (matches DEV_ADMIN_ID in development)
-      const shouldBeAdmin = process.env.NODE_ENV !== 'production' &&
+      const shouldBeAdmin = isLocalhostDevBypassEnabled() &&
         process.env.DEV_ADMIN_ID &&
         userId === process.env.DEV_ADMIN_ID;
       const defaultSelect = {
@@ -281,7 +282,7 @@ export async function syncUserFromClerk() {
   const normalizedEmail = pickClerkEmail(clerkUser);
 
   // Check if this user should be an admin (matches DEV_ADMIN_ID in development)
-  const shouldBeAdmin = process.env.NODE_ENV !== 'production' &&
+  const shouldBeAdmin = isLocalhostDevBypassEnabled() &&
     process.env.DEV_ADMIN_ID &&
     userId === process.env.DEV_ADMIN_ID;
 

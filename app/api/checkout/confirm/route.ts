@@ -13,6 +13,7 @@ import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '.
 import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
 import type { Prisma } from '@prisma/client';
+import { canUseLocalhostDevBypass } from '../../../../lib/dev-admin-bypass';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
   const { userId: clerkUserId, orgId: authOrgId } = await authService.getSession();
   let actorUserId = clerkUserId ?? null;
 
-  if (!actorUserId && process.env.NODE_ENV !== 'production') {
+  if (!actorUserId && canUseLocalhostDevBypass(req.nextUrl.hostname)) {
     const devAdminId = process.env.DEV_ADMIN_ID;
     if (devAdminId) {
       const fallback = await prisma.user.findUnique({ where: { id: devAdminId }, select: { id: true } });

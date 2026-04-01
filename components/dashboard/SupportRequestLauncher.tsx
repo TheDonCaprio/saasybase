@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SupportTicketForm } from './SupportTicketForm';
 import { dashboardMutedPanelClass, dashboardPanelClass } from './dashboardSurfaces';
+import { DEFAULT_SUPPORT_TICKET_CATEGORY, type SupportTicketCategory } from '../../lib/support-ticket-categories';
 
 interface SupportRequestLauncherProps {
   userId: string;
@@ -20,10 +21,15 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
 
   const [draftSubject, setDraftSubject] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
+  const [draftCategory, setDraftCategory] = useState<SupportTicketCategory>(DEFAULT_SUPPORT_TICKET_CATEGORY);
 
   const hasDraft = useMemo(() => {
-    return Boolean(draftSubject.trim().length > 0 || draftMessage.trim().length > 0);
-  }, [draftSubject, draftMessage]);
+    return Boolean(
+      draftSubject.trim().length > 0 ||
+      draftMessage.trim().length > 0 ||
+      draftCategory !== DEFAULT_SUPPORT_TICKET_CATEGORY
+    );
+  }, [draftCategory, draftMessage, draftSubject]);
 
   const closeModalImmediate = useCallback(() => {
     setShowCloseDraftConfirm(false);
@@ -74,6 +80,7 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
     // Successful submit clears draft; close without prompting.
     setDraftSubject('');
     setDraftMessage('');
+    setDraftCategory(DEFAULT_SUPPORT_TICKET_CATEGORY);
     closeModalImmediate();
   };
 
@@ -143,8 +150,10 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
                   userId={userId}
                   subject={draftSubject}
                   message={draftMessage}
+                  category={draftCategory}
                   onSubjectChange={setDraftSubject}
                   onMessageChange={setDraftMessage}
+                  onCategoryChange={setDraftCategory}
                   onSuccess={handleTicketSuccess}
                 />
               </div>
@@ -182,6 +191,7 @@ export function SupportRequestLauncher({ userId, activeTicketsCount, onTicketSub
                       onClick={() => {
                         setDraftSubject('');
                         setDraftMessage('');
+                        setDraftCategory(DEFAULT_SUPPORT_TICKET_CATEGORY);
                         setShowCloseDraftConfirm(false);
                         closeModalImmediate();
                       }}

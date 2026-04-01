@@ -14,6 +14,7 @@ import {
 } from './moderator';
 import { raiseAuthGuardError } from './auth-guard-error';
 import { authService } from './auth-provider';
+import { isLocalhostDevBypassEnabled } from './dev-admin-bypass';
 
 export { AuthGuardError, isAuthGuardError, toAuthGuardErrorResponse } from './auth-guard-error';
 
@@ -58,14 +59,9 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 }
 
 export async function requireAdmin() {
-  // Development-friendly bypass: allow a special header to authenticate as the
-  // DEV_ADMIN_ID when running locally. This keeps production behavior unchanged.
-  if (process.env.NODE_ENV !== 'production') {
+  // Only allow the DEV_ADMIN_ID bypass in explicitly localhost-only environments.
+  if (isLocalhostDevBypassEnabled()) {
     try {
-      // `globalThis` is available in Node; Next's app router exposes the Request
-      // via runtime globals in edge-like contexts, but we can't access the
-      // current request here. Instead, allow callers to set DEV_ADMIN_BYPASS
-      // environment var for CLI testing or use the DEV_ADMIN_ID if present.
       const devId = process.env.DEV_ADMIN_ID;
       if (devId) {
         const dbDev = await prisma.user.findUnique({ where: { id: devId } });
@@ -114,7 +110,7 @@ export interface AdminOrModeratorContext {
 }
 
 export async function requireAdminOrModerator(section?: ModeratorSection): Promise<AdminOrModeratorContext> {
-  if (process.env.NODE_ENV !== 'production') {
+  if (isLocalhostDevBypassEnabled()) {
     const devId = process.env.DEV_ADMIN_ID;
     if (devId) {
       try {

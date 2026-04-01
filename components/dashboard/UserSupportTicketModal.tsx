@@ -7,11 +7,13 @@ import { SupportTeamIcon } from '../ui/SupportTeamIcon';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 import Confirm from '../ui/Confirm';
+import { getSupportTicketCategoryLabel } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: string | Date;
   createdByRole?: string;
@@ -324,6 +326,9 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticketData.status)}`}>
                       {ticketData.status.replace('_', ' ')}
+                    </span>
+                    <span className="px-2 py-1 rounded-full text-xs font-medium border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
+                      {getSupportTicketCategoryLabel(ticketData.category)}
                     </span>
                     {showUnreadReplies && (
                       <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">

@@ -9,6 +9,7 @@ export type SupportEmailActor = {
 export type SupportEmailContext = {
   ticketId: string;
   ticketSubject: string;
+  ticketCategory?: string | null;
   ticketStatus?: string | null;
   message: string;
   actor: SupportEmailActor;
@@ -55,6 +56,7 @@ const buildTicketUrls = (ticketId: string) => {
 export function buildSupportEmail({
   ticketId,
   ticketSubject,
+  ticketCategory,
   ticketStatus,
   message,
   actor,
@@ -74,6 +76,7 @@ export function buildSupportEmail({
   const subject = `${subjectPrefix} ${actionLabel}: ${ticketSubject} (${ticketLabel})`;
 
   const { adminUrl, dashboardUrl } = buildTicketUrls(ticketId);
+  const categoryLine = ticketCategory ? `Category: ${ticketCategory}` : null;
   const statusLine = ticketStatus ? `Current status: ${ticketStatus}` : null;
 
   const replyInstructionText = audience === 'USER'
@@ -87,6 +90,7 @@ export function buildSupportEmail({
   const textLines = [
     `${actionLabel} on ticket ${ticketLabel}`,
     `Subject: ${ticketSubject}`,
+    categoryLine ? categoryLine : null,
     statusLine ? statusLine : null,
     `From: ${actorLabel}`,
     '',
@@ -117,6 +121,7 @@ export function buildSupportEmail({
           <td style="padding: 24px 24px 12px;">
             <h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">${escapeHtml(actionLabel)} on ${escapeHtml(ticketLabel)}</h1>
             <p style="margin: 12px 0 0; font-size: 14px; color: #6b7280;">${escapeHtml(ticketSubject)}</p>
+            ${categoryLine ? `<p style="margin: 8px 0 0; font-size: 13px; color: #6b7280; font-weight: 500;">${escapeHtml(categoryLine)}</p>` : ''}
             ${statusLine ? `<p style="margin: 8px 0 0; font-size: 13px; color: #22c55e; font-weight: 500;">${escapeHtml(statusLine)}</p>` : ''}
           </td>
         </tr>

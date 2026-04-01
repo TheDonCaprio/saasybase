@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Logger } from './logger';
 import type { ModeratorSection } from './moderator';
 import { incrementMetric } from './metrics';
+import { isLocalhostDevBypassEnabled } from './dev-admin-bypass';
 
 export type AuthGuardCode = 'UNAUTHENTICATED' | 'FORBIDDEN';
 
@@ -83,7 +84,7 @@ function logAuthGuardFailure(code: AuthGuardCode, meta: AuthGuardFailureMeta): v
     source,
     section: section ?? 'none',
     reason,
-    isDevBypass: String(!!process.env.DEV_ADMIN_ID)
+    isDevBypass: String(isLocalhostDevBypassEnabled())
   });
 }
 

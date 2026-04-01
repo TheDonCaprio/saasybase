@@ -22,6 +22,7 @@ import { getIdByProvider, getCurrentProviderKey } from '../../../lib/utils/provi
 import { getProviderCurrency, getProviderDefaultCurrency } from '../../../lib/payment/registry';
 import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
+import { canUseLocalhostDevBypass } from '../../../lib/dev-admin-bypass';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -81,8 +82,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!userId && process.env.NODE_ENV !== 'production') {
-      // Dev fallback: use DEV_ADMIN_ID or first ADMIN user
+    if (!userId && canUseLocalhostDevBypass(req.nextUrl.hostname)) {
+      // Localhost-only dev fallback: use DEV_ADMIN_ID or first ADMIN user
       if (process.env.DEV_ADMIN_ID) {
         userId = process.env.DEV_ADMIN_ID;
       } else {

@@ -2,11 +2,13 @@
 
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
+import { getSupportTicketCategoryLabel } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: string | Date;
   createdByRole?: string;
@@ -66,6 +68,9 @@ export function CompactSupportTicket({ ticket, onOpen }: CompactSupportTicketPro
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${getStatusColor(ticket.status)}`}>
                   {ticket.status.replace('_', ' ')}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
+                  {getSupportTicketCategoryLabel(ticket.category)}
                 </span>
                 {showUnreadBadge && (
                   <span className="bg-blue-600 text-white text-[11px] px-2 py-0.5 rounded-full">

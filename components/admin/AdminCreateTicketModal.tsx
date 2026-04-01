@@ -5,6 +5,12 @@ import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { showToast } from '../ui/Toast';
+import {
+  DEFAULT_SUPPORT_TICKET_CATEGORY,
+  SUPPORT_TICKET_CATEGORIES,
+  SUPPORT_TICKET_CATEGORY_LABELS,
+  type SupportTicketCategory,
+} from '../../lib/support-ticket-categories';
 
 interface UserSuggestion {
   id: string;
@@ -29,6 +35,7 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [category, setCategory] = useState<SupportTicketCategory>(DEFAULT_SUPPORT_TICKET_CATEGORY);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -76,6 +83,7 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
       setShowSuggestions(false);
       setSubject('');
       setMessage('');
+      setCategory(DEFAULT_SUPPORT_TICKET_CATEGORY);
       setIsSubmitting(false);
       return;
     }
@@ -154,7 +162,8 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
         body: JSON.stringify({
           userId: selectedUser.id,
           subject: subject.trim(),
-          message: message.trim()
+          message: message.trim(),
+          category,
         })
       });
 
@@ -176,7 +185,7 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
     } finally {
       setIsSubmitting(false);
     }
-  }, [message, onClose, onCreated, selectedUser, subject]);
+  }, [category, message, onClose, onCreated, selectedUser, subject]);
 
   if (!portalReady || !containerRef.current) return null;
   if (!open) return null;
@@ -262,6 +271,21 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
               placeholder="Concise ticket subject"
               className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Category</label>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as SupportTicketCategory)}
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
+            >
+              {SUPPORT_TICKET_CATEGORIES.map((option) => (
+                <option key={option} value={option}>
+                  {SUPPORT_TICKET_CATEGORY_LABELS[option]}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

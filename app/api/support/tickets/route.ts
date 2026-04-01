@@ -9,6 +9,11 @@ import { buildSupportEmail } from '../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail } from '../../../../lib/email';
 import { isSupportEmailNotificationEnabled } from '../../../../lib/notifications';
 import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
+import {
+  getSupportTicketCategoryLabel,
+  isSupportTicketCategory,
+  normalizeSupportTicketCategory,
+} from '../../../../lib/support-ticket-categories';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const status = searchParams.get('status');
+    const category = searchParams.get('category');
     const search = searchParams.get('search');
     const sortByParam = searchParams.get('sortBy') || 'createdAt';
     const sortOrderParam = searchParams.get('sortOrder') || 'desc';
@@ -91,6 +97,7 @@ export async function GET(request: NextRequest) {
     // Build base where clause as an untyped record; we'll narrow at the Prisma callsite
     let whereBase: Record<string, unknown> = { userId };
     if (status && status !== 'ALL') whereBase.status = status;
+    if (category && category !== 'ALL' && isSupportTicketCategory(category)) whereBase.category = category;
     const dbUrl = process.env.DATABASE_URL || '';
     if (search) {
       whereBase.OR = [
@@ -233,6 +240,7 @@ export async function GET(request: NextRequest) {
         subject: typeof r.subject === 'string' ? r.subject : '',
         message: typeof r.message === 'string' ? r.message : '',
         status: typeof r.status === 'string' ? r.status : 'OPEN',
+        category: typeof r.category === 'string' ? r.category : 'GENERAL',
         createdByRole: typeof r.createdByRole === 'string' ? r.createdByRole : 'USER',
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : (typeof r.createdAt === 'string' ? new Date(r.createdAt).toISOString() : null),
         replies
@@ -323,6 +331,7 @@ export async function POST(request: NextRequest) {
     const bodyRec = asRecord(body) ?? {};
     const subject = sanitizeSubject(bodyRec.subject);
     const message = sanitizeMessage(bodyRec.message);
+    const category = normalizeSupportTicketCategory(bodyRec.category);
 
     if (!subject || !message) {
       return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });
@@ -333,6 +342,7 @@ export async function POST(request: NextRequest) {
         userId,
         subject,
         message,
+        category,
         status: 'OPEN',
         createdByRole: 'USER'
       }
@@ -354,6 +364,7 @@ export async function POST(request: NextRequest) {
         const payload = buildSupportEmail({
           ticketId: ticket.id,
           ticketSubject: subject,
+          ticketCategory: getSupportTicketCategoryLabel(ticket.category),
           ticketStatus: ticket.status,
           message,
           actor: {
@@ -388,6 +399,7 @@ export async function POST(request: NextRequest) {
       id: ticket.id,
       subject: ticket.subject,
       message: ticket.message,
+      category: ticket.category,
       status: ticket.status,
       createdAt: ticket.createdAt?.toISOString?.() ?? null
     };

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
 import { prisma } from '@/lib/prisma';
 import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
+import { canUseLocalhostDevBypass } from '@/lib/dev-admin-bypass';
 
 type ProxyAuthResult = {
   userId?: unknown;
@@ -90,10 +91,6 @@ const isProtectedRoute = createAuthRouteMatcher([
   '/api/admin(.*)',
 ]);
 
-// Allow a development bypass: when running locally you can set DEV_ADMIN_ID and
-// the proxy will skip Clerk protection so tests and CLI tools can hit
-// /admin and /api/admin routes. Production behavior is unchanged.
-const devBypass = process.env.NODE_ENV !== 'production' && !!process.env.DEV_ADMIN_ID;
 const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
@@ -154,7 +151,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
     return;
   }
 
-  if (devBypass) {
+  if (canUseLocalhostDevBypass(req.nextUrl.hostname)) {
     // Skip protection in dev when DEV_ADMIN_ID is present — the API route
     // handlers themselves still call `requireAdmin()` which will use the
     // DEV_ADMIN_ID bypass when appropriate.

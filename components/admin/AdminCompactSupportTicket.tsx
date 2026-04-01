@@ -5,11 +5,13 @@ import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 import SupportTicketModal from './SupportTicketModal';
 import { dashboardPanelClass } from '../dashboard/dashboardSurfaces';
+import { getSupportTicketCategoryLabel } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: string | Date;
   createdByRole?: string;
@@ -77,6 +79,9 @@ export function AdminCompactSupportTicket({ ticket, onUpdate }: AdminCompactSupp
               </span>
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${getStatusBadgeClass(ticket.status)}`}>
                 {ticket.status.replace('_', ' ')}
+              </span>
+              <span className="rounded-full bg-violet-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-500/20 dark:text-violet-200">
+                {getSupportTicketCategoryLabel(ticket.category)}
               </span>
               {needsResponse && (
                 <span className="rounded-full bg-rose-500 text-[11px] font-semibold uppercase tracking-wide text-white px-2.5 py-1">

@@ -9,6 +9,7 @@ type SupportTicket = {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: Date | string;
   replies: Array<{

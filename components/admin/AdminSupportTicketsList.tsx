@@ -12,11 +12,13 @@ import { dashboardMutedPanelClass, dashboardPanelClass } from '../dashboard/dash
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faEnvelopeOpenText } from '@fortawesome/free-solid-svg-icons';
 import { useFormatSettings } from '../FormatSettingsProvider';
+import { SUPPORT_TICKET_CATEGORY_FILTER_OPTIONS } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: string | Date;
   user: {
@@ -56,6 +58,7 @@ export function AdminSupportTicketsList({
   const formatNumber = (value: number) => numberFormatter.format(value);
 
   const { search, setSearch, debouncedSearch, status, setStatus, datePreset, setDatePreset, startDate, endDate, setStartDate, setEndDate } = useListFilterState('', 'ALL', 500);
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
   const [sortBy, setSortBy] = useState<'createdAt' | 'status' | 'lastResponse'>('lastResponse');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -146,6 +149,7 @@ export function AdminSupportTicketsList({
     filters: {
       search: debouncedSearch || undefined,
       status: status === 'ALL' ? undefined : status,
+      category: categoryFilter === 'ALL' ? undefined : categoryFilter,
       sortBy: sortBy,
       sortOrder: sortOrder,
       startDate: startDate || undefined,
@@ -167,7 +171,7 @@ export function AdminSupportTicketsList({
   useEffect(() => {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status, sortBy, sortOrder, startDate, endDate]);
+  }, [categoryFilter, debouncedSearch, status, sortBy, sortOrder, startDate, endDate]);
 
   const refreshTickets = useCallback(() => fetchPage(currentPage), [fetchPage, currentPage]);
 
@@ -323,6 +327,13 @@ export function AdminSupportTicketsList({
           statusOptions={['ALL', 'OPEN', 'IN_PROGRESS', 'CLOSED']}
           currentStatus={status}
           onStatusChange={(s) => handleStatusFilterChange(s)}
+          secondaryOptions={[...SUPPORT_TICKET_CATEGORY_FILTER_OPTIONS]}
+          currentSecondary={categoryFilter}
+          onSecondaryChange={(value) => {
+            setCategoryFilter(value);
+            fetchPage(1);
+          }}
+          secondaryLabel="Category"
           sortOptions={[
             { value: 'createdAt', label: 'Date Created' },
             { value: 'lastResponse', label: 'Last Response' },
@@ -385,7 +396,9 @@ export function AdminSupportTicketsList({
         {tickets.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-slate-500 dark:text-neutral-300">
             {status === 'ALL'
-              ? 'No support tickets found.'
+              ? categoryFilter === 'ALL'
+                ? 'No support tickets found.'
+                : 'No support tickets found for this category.'
               : `No ${status.toLowerCase().replace('_', ' ')} tickets found.`}
           </div>
         ) : (

@@ -70,6 +70,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ ticketI
       id: ticket.id,
       subject: ticket.subject,
       message: ticket.message,
+      category: ticket.category,
       status: ticket.status,
       createdByRole: ticket.createdByRole,
       createdAt: ticket.createdAt?.toISOString?.() ?? null,

@@ -35,6 +35,12 @@ interface ListFiltersProps<T extends string = string> {
   onEndDateChange?: (d: string | null) => void;
   // Optional extra optgroups to render (label + list of status keys). Useful for domain-specific groups
   extraOptgroups?: Array<{ label: string; items: string[] }>;
+  secondaryOptions?: string[];
+  currentSecondary?: string;
+  onSecondaryChange?: (value: string) => void;
+  secondaryLabel?: string;
+  secondaryTotals?: Record<string, number>;
+  secondaryExtraOptgroups?: Array<{ label: string; items: string[] }>;
 }
 
 export function ListFilters<T extends string = string>({
@@ -64,7 +70,13 @@ export function ListFilters<T extends string = string>({
   onStartDateChange,
   onEndDateChange
   ,
-  extraOptgroups = []
+  extraOptgroups = [],
+  secondaryOptions = [],
+  currentSecondary = 'ALL',
+  onSecondaryChange,
+  secondaryLabel = 'Category',
+  secondaryTotals,
+  secondaryExtraOptgroups = []
 }: ListFiltersProps<T>) {
   const [showFilters, setShowFilters] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
@@ -109,6 +121,9 @@ export function ListFilters<T extends string = string>({
     if (code === 'BILLING') return 'Billing';
     if (code === 'SUPPORT') return 'Support';
     if (code === 'ACCOUNT') return 'Account';
+    if (code === 'TECHNICAL_SUPPORT') return 'Technical support';
+    if (code === 'PRE_SALE') return 'Pre-sale';
+    if (code === 'FEATURE_REQUEST') return 'Feature request';
     // Fallback: prettify
     return code.split('_').map(p => p.charAt(0) + p.slice(1).toLowerCase()).join(' ');
   };
@@ -120,6 +135,11 @@ export function ListFilters<T extends string = string>({
       return statusTotals?.['Scheduled Cancel'] ?? statusTotals?.[label];
     }
     return statusTotals?.[label];
+  };
+
+  const countForSecondary = (code: string) => {
+    const label = displayLabelFor(code);
+    return secondaryTotals?.[label];
   };
 
   return (
@@ -310,6 +330,61 @@ export function ListFilters<T extends string = string>({
                 </svg>
               </div>
             </div>
+            {secondaryOptions.length > 0 && onSecondaryChange && (
+              <div className="relative">
+                <select
+                  suppressHydrationWarning
+                  value={currentSecondary}
+                  onChange={(e) => onSecondaryChange(e.target.value)}
+                  className="appearance-none rounded-lg border border-slate-200 bg-white/90 px-4 py-2.5 pr-10 text-sm text-slate-700 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 hover:bg-white hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900/80 dark:text-neutral-200 dark:hover:bg-neutral-900 dark:focus:border-blue-500"
+                >
+                  {secondaryOptions.includes('ALL') && (
+                    <option key="secondary-ALL" value="ALL">
+                      All {secondaryLabel.toLowerCase()}s{typeof secondaryTotals?.All === 'number' ? ` (${secondaryTotals.All})` : ''}
+                    </option>
+                  )}
+                  {(() => {
+                    const extraGroups = (secondaryExtraOptgroups || [])
+                      .map((group) => ({ label: group.label, items: group.items.filter((item) => secondaryOptions.includes(item)) }))
+                      .filter((group) => group.items.length > 0);
+                    const otherItems = secondaryOptions.filter((item) => item !== 'ALL' && !extraGroups.some((group) => group.items.includes(item)));
+
+                    return (
+                      <>
+                        {extraGroups.map((group) => (
+                          <optgroup key={`secondary-${group.label}`} label={group.label}>
+                            {group.items.map((item) => (
+                              <option key={`secondary-${item}`} value={item}>
+                                {displayLabelFor(item)}{typeof countForSecondary(item) === 'number' ? ` (${countForSecondary(item)})` : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                        {otherItems.length > 0 && (
+                          <optgroup label={secondaryLabel}>
+                            {otherItems.map((item) => (
+                              <option key={`secondary-other-${item}`} value={item}>
+                                {displayLabelFor(item)}{typeof countForSecondary(item) === 'number' ? ` (${countForSecondary(item)})` : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    );
+                  })()}
+                </select>
+                <div className="absolute right-0 top-0 flex h-full items-center pr-3 pointer-events-none">
+                  <svg 
+                    className="w-4 h-4 text-slate-400 dark:text-neutral-500" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Compact filters toggle + refresh placed on same row for widths < 1025px */}
@@ -520,6 +595,64 @@ export function ListFilters<T extends string = string>({
                                         ))}
                                       </optgroup>
                                     )}
+                              </>
+                            );
+                          })()}
+                        </select>
+                        <div className="absolute right-0 top-0 flex h-full items-center pr-2 pointer-events-none">
+                          <svg 
+                            className="w-3 h-3 text-slate-400 dark:text-neutral-500" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {secondaryOptions.length > 0 && onSecondaryChange && (
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-neutral-300 mb-1">{secondaryLabel}:</label>
+                      <div className="relative">
+                        <select
+                          suppressHydrationWarning
+                          value={currentSecondary}
+                          onChange={(e) => { onSecondaryChange(e.target.value); setShowFilters(false); }}
+                          className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 pr-8 text-xs text-slate-700 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200/70 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:border-blue-500"
+                        >
+                          {secondaryOptions.includes('ALL') && (
+                            <option key="secondary-ALL-mobile" value="ALL">
+                              All {secondaryLabel.toLowerCase()}s{typeof secondaryTotals?.All === 'number' ? ` (${secondaryTotals.All})` : ''}
+                            </option>
+                          )}
+                          {(() => {
+                            const extraGroupsMobile = (secondaryExtraOptgroups || [])
+                              .map((group) => ({ label: group.label, items: group.items.filter((item) => secondaryOptions.includes(item)) }))
+                              .filter((group) => group.items.length > 0);
+                            const otherItems = secondaryOptions.filter((item) => item !== 'ALL' && !extraGroupsMobile.some((group) => group.items.includes(item)));
+
+                            return (
+                              <>
+                                {extraGroupsMobile.map((group) => (
+                                  <optgroup key={`secondary-${group.label}-mobile`} label={group.label}>
+                                    {group.items.map((item) => (
+                                      <option key={`secondary-${item}-mobile`} value={item}>
+                                        {displayLabelFor(item)}{typeof countForSecondary(item) === 'number' ? ` (${countForSecondary(item)})` : ''}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                                {otherItems.length > 0 && (
+                                  <optgroup label={secondaryLabel}>
+                                    {otherItems.map((item) => (
+                                      <option key={`secondary-other-${item}-mobile`} value={item}>
+                                        {displayLabelFor(item)}{typeof countForSecondary(item) === 'number' ? ` (${countForSecondary(item)})` : ''}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                               </>
                             );
                           })()}

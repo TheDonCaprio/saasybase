@@ -6,11 +6,13 @@ import { showToast } from '../ui/Toast';
 import { SupportTeamIcon } from '../ui/SupportTeamIcon';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
+import { getSupportTicketCategoryLabel } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: string | Date;
   createdByRole?: string;
@@ -295,6 +297,9 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
                 <h2 className="text-lg font-medium text-neutral-900 dark:text-white truncate">{localTicket.subject}</h2>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(localTicket.status)}`}>
                   {localTicket.status.replace('_', ' ')}
+                </span>
+                <span className="px-2 py-1 rounded-full text-xs font-medium border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
+                  {getSupportTicketCategoryLabel(localTicket.category)}
                 </span>
                 {needsResponse && (
                   <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">

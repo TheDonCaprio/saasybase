@@ -9,11 +9,13 @@ import usePaginatedList from '../hooks/usePaginatedList';
 import { useListFilterState } from '../hooks/useListFilters';
 import UserSupportTicketModal from './UserSupportTicketModal';
 import { dashboardMutedPanelClass } from './dashboardSurfaces';
+import { SUPPORT_TICKET_CATEGORY_FILTER_OPTIONS } from '../../lib/support-ticket-categories';
 
 interface SupportTicket {
   id: string;
   subject: string;
   message: string;
+  category: string;
   status: string;
   createdAt: Date | string;
   createdByRole?: string;
@@ -51,6 +53,7 @@ export function SupportTicketsList({
   const [, startTransition] = useTransition();
   const { search, setSearch, debouncedSearch, setStatus } = useListFilterState('', 'ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'createdAt' | 'lastResponse'>('lastResponse');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeTicketId, setActiveTicketId] = useState<string | null>(initialActiveTicketId);
@@ -70,6 +73,7 @@ export function SupportTicketsList({
     filters: {
       search: debouncedSearch || undefined,
       status: statusFilter === 'ALL' ? undefined : statusFilter,
+      category: categoryFilter === 'ALL' ? undefined : categoryFilter,
       sortBy,
       sortOrder
     }
@@ -182,11 +186,15 @@ export function SupportTicketsList({
     setStatus(status);
   };
 
+  const handleCategoryFilterChange = (category: string) => {
+    setCategoryFilter(category);
+  };
+
   // Debounced search: trigger fetch for page 1 after user stops typing
   useEffect(() => {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, sortBy, sortOrder]);
+  }, [categoryFilter, debouncedSearch, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!activeTicketId) return;
@@ -277,6 +285,10 @@ export function SupportTicketsList({
           statusOptions={['ALL', 'OPEN', 'IN_PROGRESS', 'CLOSED']}
           currentStatus={statusFilter}
           onStatusChange={(s) => handleStatusFilterChange(s)}
+          secondaryOptions={[...SUPPORT_TICKET_CATEGORY_FILTER_OPTIONS]}
+          currentSecondary={categoryFilter}
+          onSecondaryChange={handleCategoryFilterChange}
+          secondaryLabel="Category"
           onRefresh={() => refreshTickets()}
           placeholder="Search by subject, message, or ticket ID..."
           sortOptions={[
@@ -301,7 +313,9 @@ export function SupportTicketsList({
           ) : (
             <div className={dashboardMutedPanelClass('py-12 text-center text-sm text-slate-600 dark:text-neutral-300')}>
               {statusFilter === 'ALL'
-                ? 'No support tickets yet. Submit your first request above.'
+                ? categoryFilter === 'ALL'
+                  ? 'No support tickets yet. Submit your first request above.'
+                  : 'No support tickets found for this category.'
                 : `No ${statusFilter.toLowerCase().replace('_', ' ')} tickets found.`}
             </div>
           )

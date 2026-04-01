@@ -330,14 +330,6 @@ export default async function PlanPage({ searchParams }: PageProps) {
           },
           // Token stat moved into the Plan overview panel below per design request
         ]}
-        actions={!activeSub ? (
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold !text-white shadow-sm transition hover:bg-purple-700"
-          >
-            Browse plans
-          </Link>
-        ) : null}
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]">

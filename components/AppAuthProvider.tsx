@@ -50,6 +50,19 @@ export default function AppAuthProvider({
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
       appearance={getAuthProviderAppearance(isDark)}
+      localization={{
+        signIn: {
+          start: {
+            title: `Sign in to ${process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}`,
+          },
+        },
+        signUp: {
+          start: {
+            title: 'Create your account',
+            subtitle: `to continue to ${process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}`,
+          },
+        },
+      }}
     >
       {children}
     </AuthProvider>

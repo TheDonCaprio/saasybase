@@ -519,6 +519,7 @@ async function main() {
   };
 
   console.log('Counts after seeding:', counts);
+  console.log('Press Enter to continue...');
 }
 
 main()

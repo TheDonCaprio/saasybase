@@ -49,7 +49,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <div className="flex justify-center px-4 py-10 sm:px-6 lg:px-8">
-  <div className="max-w-md w-full space-y-8 mt-6">
+  <div className="max-w-lg w-full space-y-8 mt-6">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-white">
             Sign in to your account

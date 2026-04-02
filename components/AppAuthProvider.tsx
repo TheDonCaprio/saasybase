@@ -3,6 +3,7 @@
 import React from 'react';
 import { AuthProvider } from '@/lib/auth-provider/client';
 import { getAuthProviderAppearance } from '@/lib/auth-provider/client/clerk-appearance';
+import { ui } from '@clerk/ui';
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
 const IS_CLERK = AUTH_PROVIDER === 'clerk';
@@ -50,6 +51,7 @@ export default function AppAuthProvider({
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
       appearance={getAuthProviderAppearance(isDark)}
+      ui={ui}
       localization={{
         signIn: {
           start: {

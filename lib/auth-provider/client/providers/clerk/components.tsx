@@ -7,6 +7,14 @@
  * These are used when `AUTH_PROVIDER=clerk`.
  */
 
+import React from 'react';
+import { ClerkProvider } from '@clerk/nextjs';
+import { ui } from '@clerk/ui';
+
+export function AuthProvider(props: React.ComponentProps<typeof ClerkProvider>) {
+  return <ClerkProvider ui={ui} {...props} />;
+}
+
 export {
   SignIn as AuthSignIn,
   SignUp as AuthSignUp,
@@ -15,7 +23,6 @@ export {
   SignOutButton as AuthSignOutButton,
   OrganizationSwitcher as AuthOrganizationSwitcher,
   UserProfile as AuthUserProfile,
-  ClerkProvider as AuthProvider,
   ClerkLoaded as AuthLoaded,
   ClerkLoading as AuthLoading,
 } from '@clerk/nextjs';

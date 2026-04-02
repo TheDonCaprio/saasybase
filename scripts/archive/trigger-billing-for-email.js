@@ -35,7 +35,7 @@ async function run(emailAddress) {
     await prisma.emailLog.create({ data: { userId, to: user.email, subject: 'Billing test', template: null, status: userResult.success ? 'SENT' : 'FAILED', error: userResult.success ? null : userResult.error } });
     console.log('User email result:', userResult);
 
-    const adminEmail = process.env.SUPPORT_EMAIL || 'support@screenbend.com';
+    const adminEmail = process.env.SUPPORT_EMAIL || 'support@.com';
     const adminResult = await sendWithFallback(from, adminEmail, 'Billing test', `User ${userId}: ${message}`);
     await prisma.emailLog.create({ data: { userId: null, to: adminEmail, subject: 'Billing test', template: null, status: adminResult.success ? 'SENT' : 'FAILED', error: adminResult.success ? null : adminResult.error } });
     console.log('Admin email result:', adminResult);

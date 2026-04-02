@@ -1,4 +1,4 @@
-import { BlogCategory, Prisma } from '@prisma/client';
+import { BlogCategory, Prisma } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import {
   buildSitePageMetadata,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../../lib/auth';
 import { prisma } from '../../../../../../lib/prisma';
 import { toError } from '../../../../../../lib/runtime-guards';

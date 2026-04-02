@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { authService } from '@/lib/auth-provider';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from '../../../../lib/prisma';
 import { paymentService } from '../../../../lib/payment/service';
 import { Logger } from '../../../../lib/logger';

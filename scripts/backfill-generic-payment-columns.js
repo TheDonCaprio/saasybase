@@ -1,7 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
+let prisma;
 
 async function main() {
+    prisma = await createPrismaClient();
     console.log('Starting backfill of generic payment columns...');
 
     // 1. Users
@@ -119,5 +120,7 @@ main()
         process.exit(1);
     })
     .finally(async () => {
-        await prisma.$disconnect();
+        if (prisma) {
+            await prisma.$disconnect();
+        }
     });

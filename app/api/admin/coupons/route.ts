@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { normalizeCouponCode, ensureCouponArtifactsAcrossProviders } from '@/lib/coupons';
 import { Logger } from '@/lib/logger';
 import { toError, asRecord } from '@/lib/runtime-guards';

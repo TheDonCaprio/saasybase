@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import { ui as clerkUi } from '@clerk/ui';
 import { AuthProvider } from '@/lib/auth-provider/client';
 import { getAuthProviderAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 
@@ -46,7 +45,6 @@ export default function AppAuthProvider({
   return (
     <AuthProvider
       publishableKey={publishableKey}
-      ui={clerkUi}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/dashboard"

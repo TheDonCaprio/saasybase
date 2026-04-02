@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/lib/prisma-client';
+import { createPrismaClient } from './create-prisma-client';
 import { validateEnv } from './env';
 
 declare global {
@@ -10,7 +11,7 @@ let prisma: PrismaClient;
 if (process.env.NODE_ENV === 'production') {
   // Validate environment in production
   validateEnv();
-  prisma = new PrismaClient({
+  prisma = createPrismaClient({
     log: ['error'],
     errorFormat: 'minimal',
   });
@@ -24,7 +25,7 @@ if (process.env.NODE_ENV === 'production') {
       console.warn('Some features may not work properly without proper environment setup');
     }
     
-    global.prisma = new PrismaClient({
+    global.prisma = createPrismaClient({
       log: ['query', 'info', 'warn', 'error'],
       errorFormat: 'pretty',
     });

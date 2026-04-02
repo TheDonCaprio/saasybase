@@ -1,5 +1,5 @@
 import { prisma } from '../prisma';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { Logger } from '../logger';
 import { toError } from '../runtime-guards';
 import { shouldClearPaidTokensOnRenewal } from '../paidTokens';

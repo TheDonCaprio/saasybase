@@ -6,12 +6,13 @@
 require('dotenv').config({ path: '.env.local' });
 
 async function testProrationAPI() {
+  let prisma;
   try {
     console.log('🧪 Testing proration API...\n');
     
     // Get a test plan ID (different from current plan)
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const { createPrismaClient } = require('../create-prisma-client.cjs');
+    prisma = await createPrismaClient();
     
     const currentUser = await prisma.user.findFirst({
       where: { 
@@ -81,10 +82,12 @@ async function testProrationAPI() {
       console.log('\n❌ Unexpected response from proration API');
     }
     
-    await prisma.$disconnect();
-    
   } catch (error) {
     console.error('Error testing proration API:', error.message);
+  } finally {
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 }
 

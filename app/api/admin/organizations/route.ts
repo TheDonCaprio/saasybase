@@ -4,7 +4,7 @@ import { requireAdminSectionAccess } from '../../../../lib/route-guards';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { Logger } from '../../../../lib/logger';
 import { buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/prisma-client';
 
 export const dynamic = 'force-dynamic';
 

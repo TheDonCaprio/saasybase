@@ -8,7 +8,7 @@ import { normalizeCouponCode, ensureProviderCoupon, syncProviderPromotionState }
 import { getActivePaymentProvider } from '@/lib/payment/provider-config';
 import { getProviderCurrency } from '@/lib/payment/registry';
 
-import type { Coupon, Prisma } from '@prisma/client';
+import type { Coupon, Prisma } from '@/lib/prisma-client';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });

@@ -5,7 +5,7 @@ import type { AuthUser } from './auth-provider';
 import { initializeNewUserTokens, resetUserTokensIfNeeded } from './settings';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { notifyExpiredSubscriptions } from './notifications';
 import { syncOrganizationEligibilityForUser } from './organization-access';
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from './paidTokenCleanup';

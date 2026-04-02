@@ -7,7 +7,7 @@ import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { formatCurrency } from '../../../../lib/utils/currency';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });

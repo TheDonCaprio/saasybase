@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';

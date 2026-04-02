@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 (async function main(){
-  const prisma = new PrismaClient();
+  const prisma = await createPrismaClient();
   try {
     console.log('Running PRAGMA and schema inspection for BlogPostCategory...');
     const tableInfo = await prisma.$queryRawUnsafe("PRAGMA table_info('BlogPostCategory')");

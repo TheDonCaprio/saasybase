@@ -2,9 +2,8 @@
 // Backfill script: populate stripeRefundId for refunded payments missing it.
 // Usage: node scripts/backfill-stripe-refunds.js
 
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 const Stripe = require('stripe');
-const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
 
 async function findRefundForPayment(payment) {
@@ -36,6 +35,7 @@ async function findRefundForPayment(payment) {
 }
 
 (async () => {
+  const prisma = await createPrismaClient();
   try {
     console.log('Starting backfill: looking for refunded payments missing stripeRefundId...');
     const payments = await prisma.payment.findMany({ where: { status: 'REFUNDED', stripeRefundId: null }, take: 500 });

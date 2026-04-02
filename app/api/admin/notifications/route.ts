@@ -6,7 +6,7 @@ import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../l
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 
 export async function GET(request: NextRequest) {
   try {

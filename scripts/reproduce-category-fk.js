@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 (async function main(){
-  const prisma = new PrismaClient();
+  const prisma = await createPrismaClient();
   try {
     // Find one blog post
     const post = await prisma.sitePage.findFirst({ where: { collection: 'blog' } });

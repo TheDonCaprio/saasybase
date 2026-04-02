@@ -12,8 +12,8 @@
  This script uses the Prisma Client available in the project.
 */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
+let prisma;
 
 const argv = process.argv.slice(2);
 const dryRun = argv.includes('--dry-run');
@@ -22,6 +22,7 @@ const batchArg = argv.find(a => a.startsWith('--batch='));
 const batchSize = batchArg ? Math.max(1, Number(batchArg.split('=')[1] || 200)) : 200;
 
 async function main() {
+  prisma = await createPrismaClient();
   console.log('Backfill: Subscription.lastPaymentAmountCents');
   console.log(`Options: dryRun=${dryRun}, force=${force}, batchSize=${batchSize}`);
 
@@ -76,5 +77,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   });

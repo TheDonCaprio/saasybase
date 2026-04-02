@@ -1,4 +1,4 @@
-import { Prisma, SitePage } from '@prisma/client';
+import { Prisma, SitePage } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { sanitizeRichText, summarizePlainText } from './htmlSanitizer';

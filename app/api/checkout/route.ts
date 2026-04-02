@@ -8,7 +8,7 @@ import {
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
 import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../lib/plans';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from '../../../lib/prisma';
 import { paymentService } from '../../../lib/payment/service';
 import { Logger } from '../../../lib/logger';

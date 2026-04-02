@@ -13,7 +13,7 @@
  *   node scripts/fix-active-expired-coupons.js --apply
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 let Stripe = null;
 if (process.env.STRIPE_SECRET_KEY) {
   try {
@@ -25,7 +25,7 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 async function main() {
-  const prisma = new PrismaClient();
+  const prisma = await createPrismaClient();
   try {
     const now = new Date();
     const coupons = await prisma.coupon.findMany({

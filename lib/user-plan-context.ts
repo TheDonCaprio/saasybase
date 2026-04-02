@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { getActiveTeamSubscription, getOrganizationAccessSummary } from './organization-access';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 
 export const PLAN_WITH_BILLING_FIELDS = {
   id: true,

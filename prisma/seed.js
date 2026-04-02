@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('../scripts/create-prisma-client.cjs');
 const bcrypt = require('bcryptjs');
 // Inline plan definitions to avoid importing TS/ESM modules from this CommonJS seed script
 const PLAN_DEFINITIONS = [
@@ -66,7 +66,7 @@ const CORE_SITE_PAGES = [
 <p>Join the conversation on our community forum to share feedback and ideas.</p>`
   }
 ];
-const prisma = new PrismaClient();
+let prisma;
 
 async function ensurePlansSeeded() {
   for (const plan of PLAN_DEFINITIONS) {
@@ -131,6 +131,7 @@ async function ensureSitePagesSeeded() {
 }
 
 async function main() {
+  prisma = await createPrismaClient();
   console.log('Seeding plans...');
   await ensurePlansSeeded();
 
@@ -197,5 +198,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   });

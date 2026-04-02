@@ -10,7 +10,7 @@ import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPr
 import { syncOrganizationBillingMetadata } from '../../../../lib/organization-billing-metadata';
 import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
 import { resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { findProviderByValue, getCurrentProviderKey, getIdByProvider } from '../../../../lib/utils/provider-ids';

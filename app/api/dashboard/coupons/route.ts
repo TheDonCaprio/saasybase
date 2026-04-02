@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';

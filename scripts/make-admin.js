@@ -13,10 +13,10 @@
  * or set DEV_ADMIN_ID in .env.local and run: node scripts/make-admin.js
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 
 async function makeAdmin() {
+  const prisma = await createPrismaClient();
   // SECURITY: Block execution in production unless explicitly allowed
   if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_ADMIN_SCRIPT) {
     console.error('\n🚨 SECURITY: This script is disabled in production.');

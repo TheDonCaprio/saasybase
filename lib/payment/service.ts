@@ -18,7 +18,7 @@ import {
     mergeProviderIdMap,
     mapContainsValue
 } from '../utils/provider-ids';
-import type { Prisma, Plan } from '@prisma/client';
+import type { Prisma, Plan } from '@/lib/prisma-client';
 import { PaymentProviderFactory } from './factory';
 import {
     findRecentNotificationByExactMessage as findRecentNotificationByExactMessageExternal,

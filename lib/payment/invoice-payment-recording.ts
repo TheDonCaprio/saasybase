@@ -1,7 +1,7 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
 import { creditOrganizationSharedTokens } from '../teams';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import type { StandardizedInvoice } from './types';
 import { toError } from '../runtime-guards';
 import { updateSubscriptionLastPaymentAmount } from '../payments';

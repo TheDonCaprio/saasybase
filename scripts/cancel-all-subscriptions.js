@@ -7,10 +7,10 @@
  *  - Or set CONFIRM=true env var to run without flag.
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./create-prisma-client.cjs');
 
 async function main() {
-  const prisma = new PrismaClient();
+  const prisma = await createPrismaClient();
   try {
     const proceed = process.argv.includes('--yes') || process.env.CONFIRM === 'true';
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 const { createBillingNotification } = require('../../lib/notifications');
 const { sendEmail, shouldEmailUser, getSupportEmail, getSiteName } = require('../../lib/email');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('../create-prisma-client.cjs');
 
 (async () => {
+  const prisma = await createPrismaClient();
   try {
     // Use the first user and plan from our database
     const user = await prisma.user.findFirst({

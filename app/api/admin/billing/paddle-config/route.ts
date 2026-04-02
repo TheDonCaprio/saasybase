@@ -4,7 +4,7 @@ import { adminRateLimit } from '@/lib/rateLimit';
 import { Logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { getIdByProvider } from '@/lib/utils/provider-ids';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/prisma-client';
 
 type PaddleErrorEnvelope = {
   error?: {

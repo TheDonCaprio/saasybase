@@ -6,7 +6,7 @@ import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereF
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/currency';
 import { Logger } from '../../../../lib/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { paymentService } from '../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';

@@ -5,10 +5,10 @@
  * Run this after creating a new subscription to check if the fix works
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('../create-prisma-client.cjs');
 
 async function testCustomerIdSync() {
-  const prisma = new PrismaClient();
+  const prisma = await createPrismaClient();
   
   try {
     // Find users with recent subscriptions but no stripeCustomerId

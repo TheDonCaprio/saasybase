@@ -1,4 +1,4 @@
-import type { Plan } from '@prisma/client';
+import type { Plan } from '@/lib/prisma-client';
 import type { StandardizedCheckoutSession } from './types';
 import type { StandardizedPayment } from './types';
 import type { StandardizedInvoice } from './types';

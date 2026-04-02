@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from '../../../../lib/prisma';
 import { formatDateServer } from '@/lib/formatDate.server';
 import { stripMode, isPrismaModeError } from '@/lib/queryUtils';

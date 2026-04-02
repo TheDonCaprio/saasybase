@@ -22,6 +22,8 @@ npx prisma db seed                # Seed database (prompts for admin email/passw
 npm run dev                       # Start dev server
 ```
 
+With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed`. To skip admin creation for a particular seed run, use `npx prisma db seed -- --skip-admin`.
+
 ### Dev Scripts
 
 | Command | Purpose |

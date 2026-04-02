@@ -2,10 +2,11 @@
 // Backfill script to populate User.paymentsCount from Payment rows.
 // Usage: node scripts/backfill-user-payments-count.js --batch=200 [--dry-run]
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
+let prisma;
 
 async function main() {
+  prisma = await createPrismaClient();
   const argv = require('minimist')(process.argv.slice(2));
   const dryRun = !!argv['dry-run'] || !!argv['dryRun'];
   const batchSize = parseInt(argv.batch || argv['batchSize'] || '200', 10) || 200;
@@ -54,5 +55,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   });

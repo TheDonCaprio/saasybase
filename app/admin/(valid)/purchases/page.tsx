@@ -7,7 +7,7 @@ import { PaginatedPurchaseManagement } from '../../../../components/admin/Pagina
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import { AdminStatCard } from '../../../../components/admin/AdminStatCard';
 import type { AdminStatCardProps } from '../../../../components/admin/AdminStatCard';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import {
   faSackDollar,
   faCalendarDay,

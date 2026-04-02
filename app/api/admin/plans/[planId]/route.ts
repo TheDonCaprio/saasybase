@@ -15,7 +15,7 @@ import { isPaymentCatalogAutoCreateEnabled } from '@/lib/payment/auto-create';
 import { getProviderCurrency } from '@/lib/payment/registry';
 import { PAYMENT_PROVIDERS } from '@/lib/payment/provider-config';
 import { PaymentError, PaymentProviderError } from '@/lib/payment/errors';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { sanitizeRichText } from '@/lib/htmlSanitizer';
 import type { PriceDetails } from '@/lib/payment/types';
 
@@ -888,7 +888,7 @@ export async function DELETE(
 
     await prisma.$transaction(async (tx) => {
       if (subIds.length > 0) {
-        const delPayments = await tx.payment.deleteMany({ where: { subscriptionId: { in: subIds } } }) as import('@prisma/client').Prisma.BatchPayload;
+        const delPayments = await tx.payment.deleteMany({ where: { subscriptionId: { in: subIds } } }) as Prisma.BatchPayload;
         // deleteMany returns a BatchPayload with `count` property
         deleted.paymentsDeleted = delPayments.count ?? 0;
         await tx.subscription.deleteMany({ where: { id: { in: subIds } } });

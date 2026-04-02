@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { requireAdminAuth } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import { stripMode, isPrismaModeError } from '@/lib/queryUtils';

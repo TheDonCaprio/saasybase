@@ -6,7 +6,7 @@ import { updateSubscriptionLastPaymentAmount } from '../payments';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import { getDefaultTokenLabel } from '../settings';
 import { toError } from '../runtime-guards';
-import type { Prisma, Plan } from '@prisma/client';
+import type { Prisma, Plan } from '@/lib/prisma-client';
 import type { OrganizationPlanContext } from '../user-plan-context';
 import type { StandardizedCheckoutSession } from './types';
 

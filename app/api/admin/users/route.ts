@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { authService } from '@/lib/auth-provider';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';

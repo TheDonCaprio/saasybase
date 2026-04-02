@@ -6,9 +6,9 @@
   - Calls admin endpoints on localhost:3000 and prints status, headers and body
 */
 require('dotenv').config({ path: '.env.local' });
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('../create-prisma-client.cjs');
 const fetch = global.fetch || require('node-fetch');
+let prisma;
 
 async function upsertDevAdmin() {
   const id = process.env.DEV_ADMIN_ID;
@@ -54,6 +54,7 @@ async function doFetch(method, path, body) {
 
 async function main() {
   try {
+    prisma = await createPrismaClient();
     await upsertDevAdmin();
 
     // Small delay to ensure DB writes are visible to server
@@ -71,7 +72,9 @@ async function main() {
     console.error('Smoke test failed', err);
     process.exit(1);
   } finally {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 }
 

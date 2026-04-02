@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '../../../../../lib/prisma';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../../lib/queryUtils';

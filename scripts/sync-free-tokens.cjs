@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
+let prisma;
 
 async function getSetting(key, defaultValue) {
   const s = await prisma.setting.findUnique({ where: { key }, select: { value: true } });
@@ -8,6 +8,7 @@ async function getSetting(key, defaultValue) {
 }
 
 async function main() {
+  prisma = await createPrismaClient();
   const args = process.argv.slice(2);
   const execute = args.includes('--execute');
 

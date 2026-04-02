@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Logger } from '@/lib/logger';
 import { asRecord, toError } from '@/lib/runtime-guards';
 import { getPaidTokensNaturalExpiryGraceHours } from '@/lib/settings';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { findActivePaidPersonalSubscription, hasUnlimitedPaidPersonalAccess } from '@/lib/personal-paid-access';
 
 type SpendBucket = 'auto' | 'paid' | 'free' | 'shared';

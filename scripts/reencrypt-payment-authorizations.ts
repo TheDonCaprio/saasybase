@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './create-prisma-client';
 import dotenv from 'dotenv';
 
 import {
@@ -10,7 +10,7 @@ import {
   sealPaymentAuthorizationCode,
 } from '../lib/payment/payment-authorization-storage';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const ENCRYPTED_PREFIX = 'enc:v1:';
 
 function loadEnvFiles() {

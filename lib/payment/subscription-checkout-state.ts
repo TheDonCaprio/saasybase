@@ -1,4 +1,4 @@
-import type { Plan, Prisma } from '@prisma/client';
+import type { Plan, Prisma } from '@/lib/prisma-client';
 import { Logger } from '../logger';
 import { prisma } from '../prisma';
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../paidTokenCleanup';

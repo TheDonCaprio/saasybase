@@ -1,4 +1,4 @@
-import type { Plan } from '@prisma/client';
+import type { Plan } from '@/lib/prisma-client';
 import { Logger } from '../logger';
 import { sendBillingNotification } from '../notifications';
 import { shouldEmailUser } from '../email';

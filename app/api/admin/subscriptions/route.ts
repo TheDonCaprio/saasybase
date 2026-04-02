@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
+import { Prisma } from '@/lib/prisma-client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
@@ -156,7 +157,7 @@ export async function GET(req: Request) {
       try {
         const safeArgs = typeof queryArgs === 'object' && queryArgs !== null ? (queryArgs as Record<string, unknown>) : {};
         return await prisma.subscription.findMany({
-          ...(safeArgs as import('@prisma/client').Prisma.SubscriptionFindManyArgs),
+          ...(safeArgs as Prisma.SubscriptionFindManyArgs),
           include: subscriptionInclude
         });
       } catch (err: unknown) {
@@ -165,7 +166,7 @@ export async function GET(req: Request) {
           // Narrow queryArgs safely before reading `.where`
           const origWhere = typeof queryArgs === 'object' && queryArgs !== null ? (queryArgs as Record<string, unknown>).where : undefined;
           const safeWhere = origWhere ? stripMode(origWhere as Record<string, unknown>) : undefined;
-          const safeArgs = { ...(typeof queryArgs === 'object' && queryArgs !== null ? (queryArgs as Record<string, unknown>) : {}), where: safeWhere } as import('@prisma/client').Prisma.SubscriptionFindManyArgs;
+          const safeArgs = { ...(typeof queryArgs === 'object' && queryArgs !== null ? (queryArgs as Record<string, unknown>) : {}), where: safeWhere } as Prisma.SubscriptionFindManyArgs;
           return await prisma.subscription.findMany({
             ...safeArgs,
             include: subscriptionInclude
@@ -247,10 +248,10 @@ export async function GET(req: Request) {
     if (wantCount) {
       // compute totalCount (only when requested). If Prisma rejects `mode`, retry without it.
       try {
-        totalCount = await prisma.subscription.count({ where: whereClause as import('@prisma/client').Prisma.SubscriptionWhereInput });
+        totalCount = await prisma.subscription.count({ where: whereClause as Prisma.SubscriptionWhereInput });
       } catch (err) {
         if (isPrismaModeError(err)) {
-          totalCount = await prisma.subscription.count({ where: stripMode(whereClause) as import('@prisma/client').Prisma.SubscriptionWhereInput });
+          totalCount = await prisma.subscription.count({ where: stripMode(whereClause) as Prisma.SubscriptionWhereInput });
         } else {
           throw err;
         }

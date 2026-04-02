@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@/lib/prisma-client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse, type UserRole } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
@@ -382,7 +383,7 @@ export async function PATCH(
           }
         });
         // Increment denormalized paymentsCount for this user
-        await tx.user.update({ where: { id: params.userId }, data: ({ paymentsCount: { increment: 1 } } as unknown) as import('@prisma/client').Prisma.UserUpdateInput });
+        await tx.user.update({ where: { id: params.userId }, data: ({ paymentsCount: { increment: 1 } } as unknown) as Prisma.UserUpdateInput });
 
         const updatedUser = await tx.user.findUnique({
           where: { id: params.userId },

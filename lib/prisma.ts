@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/lib/prisma-client';
+import { createPrismaClient } from './create-prisma-client';
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -9,14 +10,14 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient({
+  prisma = createPrismaClient({
     log: ['error'],
     errorFormat: 'minimal',
   });
 } else {
   // Development: use global variable to prevent multiple instances during hot reload
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient({
+    globalForPrisma.prisma = createPrismaClient({
       log: ['query', 'info', 'warn', 'error'],
       errorFormat: 'pretty',
     });

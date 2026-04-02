@@ -1,4 +1,4 @@
-import type { Coupon } from '@prisma/client';
+import type { Coupon } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';

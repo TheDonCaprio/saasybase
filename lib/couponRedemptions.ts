@@ -1,4 +1,4 @@
-import type { CouponRedemption } from '@prisma/client';
+import type { CouponRedemption } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';

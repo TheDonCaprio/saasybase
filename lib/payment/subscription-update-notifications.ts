@@ -6,7 +6,7 @@ import { toError } from '../runtime-guards';
 import { sendEmail, shouldEmailUser, getSiteName } from '../email';
 import { prisma } from '../prisma';
 import { activatePendingSubscriptions } from '../auth';
-import type { Plan } from '@prisma/client';
+import type { Plan } from '@/lib/prisma-client';
 import type { SubscriptionDetails, StandardizedCheckoutSession } from './types';
 
 type SubscriptionForActivationNotification = {

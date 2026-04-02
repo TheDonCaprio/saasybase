@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { createPrismaClient } from './create-prisma-client';
+const prisma = createPrismaClient();
 
 async function fixDuplicateCustomerIds() {
     const customerId = 'cust_SBR4Z3a22GBwFU';

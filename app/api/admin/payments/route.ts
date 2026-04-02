@@ -5,7 +5,7 @@ import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../l
 import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from '../../../../lib/queryUtils';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
 import { Logger } from '../../../../lib/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { paymentService } from '../../../../lib/payment/service';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { formatCurrency as formatCurrencyUtil } from '../../../../lib/utils/currency';

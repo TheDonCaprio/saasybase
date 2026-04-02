@@ -12,7 +12,7 @@ import { syncOrganizationEligibilityForUser } from '../../../../lib/organization
 import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { canUseLocalhostDevBypass } from '../../../../lib/dev-admin-bypass';
 
 function jsonError(message: string, status: number, code: string) {
@@ -818,7 +818,7 @@ export async function GET(req: NextRequest) {
           data: paymentData
         });
       // Increment denormalized payments count for the user
-      await tx.user.update({ where: { id: userId }, data: ({ paymentsCount: { increment: 1 } } as unknown) as import('@prisma/client').Prisma.UserUpdateInput });
+      await tx.user.update({ where: { id: userId }, data: ({ paymentsCount: { increment: 1 } } as unknown) as Prisma.UserUpdateInput });
       return p;
     });
     // Update denormalized lastPaymentAmountCents for subscription if present

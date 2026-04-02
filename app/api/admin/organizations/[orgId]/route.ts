@@ -5,7 +5,7 @@ import { adminRateLimit } from '../../../../../lib/rateLimit';
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 
 const adminOrganizationInclude = {
   owner: { select: { id: true, name: true, email: true } },

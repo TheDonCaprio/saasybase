@@ -1,6 +1,6 @@
 import { prisma } from '../prisma';
 import { PLAN_DEFINITIONS } from '../plans';
-import type { Plan } from '@prisma/client';
+import type { Plan } from '@/lib/prisma-client';
 
 type LatestActiveOneTimeDispositionSub = {
     id: string;

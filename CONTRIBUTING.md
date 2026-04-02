@@ -14,6 +14,8 @@ npx prisma db seed
 npm run dev
 ```
 
+If you need to skip admin creation, run `npx prisma db seed -- --skip-admin`.
+
 ---
 
 ## Workflow

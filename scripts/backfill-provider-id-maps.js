@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./create-prisma-client.cjs');
+let prisma;
 
 function parseMap(value) {
     if (!value) return {};
@@ -159,6 +159,7 @@ async function backfillPayments() {
 }
 
 async function main() {
+    prisma = await createPrismaClient();
     console.log('Starting provider-aware ID map backfill...');
     await backfillUsers();
     await backfillPlans();
@@ -173,5 +174,7 @@ main()
         process.exit(1);
     })
     .finally(async () => {
-        await prisma.$disconnect();
+        if (prisma) {
+            await prisma.$disconnect();
+        }
     });

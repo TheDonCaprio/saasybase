@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { getOrganizationAccessSummary, type TeamSubscriptionStatus } from './organization-access';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 
 export type TeamDashboardMember = {
   id: string;

@@ -1,7 +1,7 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
 import { toError } from '../runtime-guards';
-import type { Plan, Prisma } from '@prisma/client';
+import type { Plan, Prisma } from '@/lib/prisma-client';
 import type { StandardizedInvoice, StandardizedSubscription, SubscriptionDetails } from './types';
 
 export async function resolveSubscriptionCreatedRecordWithRetry<TSubscription>(params: {

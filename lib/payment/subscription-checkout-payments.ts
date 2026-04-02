@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/lib/prisma-client';
 import { Logger } from '../logger';
 import { prisma } from '../prisma';
 import { creditOrganizationSharedTokens } from '../teams';

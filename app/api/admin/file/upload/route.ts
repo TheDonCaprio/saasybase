@@ -28,6 +28,13 @@ type DomPurifyLike = {
 
 let cachedDomPurify: DomPurifyLike | null = null;
 
+const XML_MIME_CANDIDATES = new Set(['application/xml', 'text/xml']);
+
+function looksLikeSvg(buffer: Buffer): boolean {
+  const head = buffer.slice(0, 4096).toString('utf8').replace(/^\uFEFF/, '').trimStart();
+  return /<svg(?:\s|>)/i.test(head) || /<svg(?:\s|>)/i.test(head.replace(/<\?xml[^>]*\?>/i, '').trimStart());
+}
+
 async function detectMime(buffer: Buffer): Promise<string | null> {
   try {
     const mod = await import('file-type');
@@ -40,10 +47,26 @@ async function detectMime(buffer: Buffer): Promise<string | null> {
     // Detection failure is non-fatal; fall back to header hint below.
     console.warn('file-type detection failed', error);
   }
-  if (buffer.slice(0, 512).toString('utf8').trimStart().startsWith('<svg')) {
+  if (looksLikeSvg(buffer)) {
     return 'image/svg+xml';
   }
   return null;
+}
+
+function resolveEffectiveMime(detectedMime: string | null, hintedMime: string, buffer: Buffer): string | null {
+  if (detectedMime && ALLOWED_MIMES.has(detectedMime)) {
+    return detectedMime;
+  }
+
+  if (looksLikeSvg(buffer) && (hintedMime === 'image/svg+xml' || (detectedMime ? XML_MIME_CANDIDATES.has(detectedMime) : false))) {
+    return 'image/svg+xml';
+  }
+
+  if (hintedMime && ALLOWED_MIMES.has(hintedMime)) {
+    return hintedMime;
+  }
+
+  return detectedMime;
 }
 
 async function getDomPurify(): Promise<DomPurifyLike> {
@@ -137,7 +160,7 @@ export async function POST(req: NextRequest) {
     let buffer = Buffer.from(arrayBuffer) as Buffer;
 
     const detectedMime = await detectMime(buffer);
-    const effectiveMime = detectedMime || hintedMime;
+    const effectiveMime = resolveEffectiveMime(detectedMime, hintedMime, buffer);
 
     if (!effectiveMime || !ALLOWED_MIMES.has(effectiveMime)) {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });

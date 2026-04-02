@@ -131,8 +131,8 @@ export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance
   return {
     elements: {
       formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-sm normal-case',
-      cardBox: 'w-full max-w-[348px] bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700',
-      card: 'bg-white border-0 dark:bg-neutral-900 w-full',
+      cardBox: 'bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700',
+      card: 'bg-white border-0 dark:bg-neutral-900',
       headerTitle: 'hidden',
       headerSubtitle: 'hidden',
       formFieldInput: isModal

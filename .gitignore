@@ -64,6 +64,7 @@ Dockerfile.dev
 *.sqlite
 *.sqlite3
 /prisma/dev.db
+/prisma/dev2.db
 
 # Keys, certificates, and other secrets
 *.pem

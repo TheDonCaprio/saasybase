@@ -241,7 +241,10 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
                   intervalCount: recurringIntervalCount,
                 }
               : undefined,
-            metadata: { name } // Pass plan name for Paystack
+            metadata: {
+              name,
+              description: shortDescriptionValue || '',
+            }
           }).catch(async (currencyErr) => {
             if (!isUnsupportedCurrencyError(currencyErr) || !providerCurrency) throw currencyErr;
 
@@ -267,7 +270,10 @@ export const POST = withValidation(apiSchemas.adminPlanCreate, async (request, p
                         intervalCount: recurringIntervalCount,
                       }
                     : undefined,
-                  metadata: { name },
+                  metadata: {
+                    name,
+                    description: shortDescriptionValue || '',
+                  },
                 });
 
                 creationWarnings.push(

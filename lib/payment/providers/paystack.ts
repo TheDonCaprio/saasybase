@@ -123,6 +123,21 @@ interface PaystackProduct {
     price: number;
 }
 
+function isNumericIdentifier(value: string): boolean {
+    return /^\d+$/.test(value);
+}
+
+function isPaystackPlanCode(value: string): boolean {
+    return value.startsWith('PLN_');
+}
+
+function normalizePaystackText(value: string | null | undefined): string | undefined {
+    if (typeof value !== 'string') return undefined;
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
 interface PaystackRefund {
     id: number;
     transaction: number; // numeric transaction ID
@@ -907,13 +922,15 @@ export class PaystackPaymentProvider implements PaymentProvider {
         // Try to create a real product only if we have metadata indicating this is for one-time
         // Otherwise, return a placeholder that will be overwritten by createPrice
         try {
+            const description = normalizePaystackText(options.description) ?? normalizePaystackText(options.name) ?? 'Plan';
+
             const response = await this.request<PaystackProduct>(
                 '/product',
                 {
                     method: 'POST',
                     body: JSON.stringify({
                         name: options.name,
-                        description: options.description || options.name,
+                        description,
                         price: 100, // Minimum price in kobo (1 unit) - Paystack requires non-zero
                         currency: PaystackPaymentProvider.DEFAULT_CURRENCY,
                     }),
@@ -927,14 +944,49 @@ export class PaystackPaymentProvider implements PaymentProvider {
         }
     }
 
+    private async resolveProductUpdateTarget(productId: string): Promise<string> {
+        if (isNumericIdentifier(productId)) {
+            return productId;
+        }
+
+        const response = await this.request<PaystackProduct[]>(
+            '/product',
+        );
+        const matchedProduct = response.data.find(product => product.product_code === productId);
+
+        if (!matchedProduct) {
+            throw new PaymentProviderError(`Paystack product not found for identifier: ${productId}`);
+        }
+
+        return String(matchedProduct.id);
+    }
+
     async updateProduct(productId: string, options: UpdateProductOptions): Promise<void> {
+        const description = normalizePaystackText(options.description);
+
+        if (isPaystackPlanCode(productId)) {
+            await this.request<PaystackPlan>(
+                `/plan/${encodeURIComponent(productId)}`,
+                {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: options.name,
+                        ...(description ? { description } : {}),
+                    }),
+                },
+            );
+            return;
+        }
+
+        const updateTarget = await this.resolveProductUpdateTarget(productId);
+
         await this.request<PaystackProduct>(
-            `/product/${encodeURIComponent(productId)}`,
+            `/product/${encodeURIComponent(updateTarget)}`,
             {
                 method: 'PUT',
                 body: JSON.stringify({
                     name: options.name,
-                    description: options.description,
+                    ...(description ? { description } : {}),
                 }),
             },
         );
@@ -962,6 +1014,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
 
         const recurringInterval = options.recurring?.interval;
         const intervalCount = Math.max(1, Math.floor(options.recurring?.intervalCount || 1));
+        const description = normalizePaystackText(options.metadata?.description);
 
         let paystackInterval = recurringInterval ? (intervalMap[recurringInterval] || 'monthly') : 'monthly';
         if (recurringInterval === 'month') {
@@ -986,6 +1039,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
                 method: 'POST',
                 body: JSON.stringify({
                     name: options.metadata?.name || 'Plan',
+                    ...(description ? { description } : {}),
                     amount: options.unitAmount,
                     interval: options.recurring ? paystackInterval : 'monthly',
                     currency: options.currency.toUpperCase(),

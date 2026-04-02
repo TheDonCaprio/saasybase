@@ -9,7 +9,7 @@ import { apiSchemas, withValidation } from '@/lib/validation';
 import { adminRateLimit } from '@/lib/rateLimit';
 import { findPlanSeedByName } from '@/lib/plans';
 import { persistEnvValue } from '@/lib/env-files';
-import { providerSupportsOneTimePrices, setIdByProvider, getIdByProvider } from '@/lib/utils/provider-ids';
+import { providerSupportsOneTimePrices, setIdByProvider, getIdByProvider, isProviderProductIdCompatible } from '@/lib/utils/provider-ids';
 import { PaymentProviderFactory } from '@/lib/payment/factory';
 import { isPaymentCatalogAutoCreateEnabled } from '@/lib/payment/auto-create';
 import { getProviderCurrency } from '@/lib/payment/registry';
@@ -47,6 +47,16 @@ function getProviderFallbackCurrencies(providerName: string, triedCurrency: stri
   return config.supportedCurrencies
     .map(c => c.toUpperCase())
     .filter(c => c !== triedCurrency.toUpperCase());
+}
+
+function pushUniqueCandidate(candidates: string[], candidate: string | null | undefined) {
+  if (!candidate || candidates.includes(candidate)) return;
+  candidates.push(candidate);
+}
+
+function isRazorpayMissingItemError(providerName: string, error: Error | null): boolean {
+  if (providerName !== 'razorpay' || !error) return false;
+  return error.message.includes('BAD_REQUEST_ERROR: The id provided does not exist');
 }
 
 async function getPlanId(context: unknown): Promise<string | null> {
@@ -321,22 +331,41 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
     if (nameChanged || shortDescriptionChanged) {
       for (const { name: providerName, provider } of configuredProviders) {
         try {
-          let productId: string | null | undefined = getIdByProvider(newExternalProductIds, providerName, null);
+          const productIdsToTry: string[] = [];
+          const storedProductId = getIdByProvider(newExternalProductIds, providerName, null);
+          const priceIdFromMap = getIdByProvider(newExternalPriceIds, providerName, null);
 
-          if (!productId) {
-            const priceIdFromMap = getIdByProvider(newExternalPriceIds, providerName, null);
-            if (priceIdFromMap) {
-              const price = await provider.verifyPrice(priceIdFromMap);
-              productId = price.productId;
+          if (storedProductId && isProviderProductIdCompatible(providerName, storedProductId)) {
+            pushUniqueCandidate(productIdsToTry, storedProductId);
+          }
+
+          if (priceIdFromMap && providerName !== 'razorpay') {
+            try {
+              const verifiedPrice = await provider.verifyPrice(priceIdFromMap);
+              if (verifiedPrice.productId && isProviderProductIdCompatible(providerName, verifiedPrice.productId)) {
+                pushUniqueCandidate(productIdsToTry, verifiedPrice.productId);
+              }
+            } catch (verifyError) {
+              Logger.warn('Failed to verify provider price while resolving product metadata update target', {
+                planId,
+                provider: providerName,
+                priceId: priceIdFromMap,
+                error: toError(verifyError).message,
+              });
             }
           }
 
-          if (!productId) {
-            // Try to resolve by name (avoid creating new products here; billing sync can backfill missing artifacts)
-            productId = await provider.findProduct(existingPlan.name);
+          if (productIdsToTry.length === 0) {
+            const lookupNames = finalName === existingPlan.name ? [existingPlan.name] : [existingPlan.name, finalName];
+            for (const lookupName of lookupNames) {
+              const foundProductId = await provider.findProduct(lookupName);
+              if (foundProductId && isProviderProductIdCompatible(providerName, foundProductId)) {
+                pushUniqueCandidate(productIdsToTry, foundProductId);
+              }
+            }
           }
 
-          if (!productId) {
+          if (productIdsToTry.length === 0) {
             Logger.warn('Skipping provider product update: no product ID available', {
               planId,
               provider: providerName,
@@ -344,18 +373,43 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
             continue;
           }
 
-          await provider.updateProduct(productId, {
-            name: nameChanged ? finalName : undefined,
-            description: shortDescriptionChanged ? (finalShortDescription ?? undefined) : undefined,
-          });
+          let updatedProductId: string | null = null;
+          let lastProviderError: Error | null = null;
 
-          newExternalProductIds = setIdByProvider(newExternalProductIds, providerName, productId);
+          for (const candidateProductId of productIdsToTry) {
+            try {
+              await provider.updateProduct(candidateProductId, {
+                name: nameChanged ? finalName : undefined,
+                description: shortDescriptionChanged ? (finalShortDescription ?? undefined) : undefined,
+              });
+              updatedProductId = candidateProductId;
+              break;
+            } catch (candidateError) {
+              lastProviderError = toError(candidateError);
+            }
+          }
+
+          if (!updatedProductId) {
+            if (isRazorpayMissingItemError(providerName, lastProviderError)) {
+              Logger.warn('Skipping Razorpay product metadata update: mutable item target unavailable', {
+                planId,
+                provider: providerName,
+                candidateProductIds: productIdsToTry,
+                updatedByAdmin: adminId,
+              });
+              continue;
+            }
+
+            throw lastProviderError ?? new Error('No compatible product identifier succeeded');
+          }
+
+          newExternalProductIds = setIdByProvider(newExternalProductIds, providerName, updatedProductId);
           anyProductTouched = true;
 
           Logger.info('Updated provider product metadata', {
             planId,
             provider: providerName,
-            productId,
+            productId: updatedProductId,
             nameChanged,
             shortDescriptionChanged,
             updatedByAdmin: adminId,
@@ -448,6 +502,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
             metadata: {
               planId: planId,
               name: finalName,
+              description: finalShortDescription ?? '',
               createdByAdmin: adminId,
               createdAt: new Date().toISOString(),
               previousPriceCents: existingPlan.priceCents.toString(),
@@ -571,7 +626,10 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
                   interval: (finalRecurringInterval ?? 'month') as 'day' | 'week' | 'month' | 'year',
                   intervalCount: finalRecurringIntervalCount,
                 },
-                metadata: { name: finalName }
+                metadata: {
+                  name: finalName,
+                  description: finalShortDescription ?? '',
+                }
               });
 
               newExternalPriceIds = setIdByProvider(newExternalPriceIds, providerName, price.id);
@@ -639,6 +697,10 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
                 unitAmount: finalPriceCents,
                 currency: providerCurrency,
                 productId: productId,
+                metadata: {
+                  name: finalName,
+                  description: finalShortDescription ?? '',
+                },
               });
 
               newExternalPriceIds = setIdByProvider(newExternalPriceIds, providerName, price.id);

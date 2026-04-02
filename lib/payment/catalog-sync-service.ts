@@ -89,7 +89,10 @@ export async function syncPlansToProviders() {
                     intervalCount: plan.recurringIntervalCount,
                 }
                 : undefined,
-            metadata: { name: plan.name }
+            metadata: {
+              name: plan.name,
+              description: plan.shortDescription || '',
+            }
         });
 
         // Update local maps

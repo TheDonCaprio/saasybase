@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useAuthUser } from '@/lib/auth-provider/client';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 
@@ -17,11 +18,18 @@ type GraceStatus =
 const DISMISS_UNTIL_KEY = 'dashboard:grace-notice:dismiss-until';
 
 export function GracePeriodNotice() {
+  const { isLoaded, isSignedIn } = useAuthUser();
   const [status, setStatus] = useState<GraceStatus | null>(null);
   const [hidden, setHidden] = useState(false);
   const formatSettings = useFormatSettings();
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setStatus(null);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
@@ -39,7 +47,7 @@ export function GracePeriodNotice() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const graceEndsAt = useMemo(() => {
     if (!status || !status.inGrace) return null;

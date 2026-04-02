@@ -23,9 +23,15 @@ type SidebarProfile = {
   permissions?: Record<string, boolean>;
 };
 
+const PROFILE_FETCH_RETRY_DELAY_MS = 300;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], items?: NavItem[] }) {
   const pathname = usePathname();
-  const { isSignedIn } = useAuthUser();
+  const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
   const currentOrgId = orgId ?? null;
 
@@ -69,15 +75,33 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     const isAdminArea = pathname.startsWith('/admin');
     const isNotFoundPage = isCurrentPageNotFound();
 
-    if (!isSignedIn || !isAdminArea || isNotFoundPage || profileLoadedForOrg || profileRequestInFlightRef.current) {
+    if (!isLoaded || !isSignedIn || !isAdminArea || isNotFoundPage || profileLoadedForOrg || profileRequestInFlightRef.current) {
       return;
     }
 
     profileRequestInFlightRef.current = true;
     let cancelled = false;
 
-    fetch('/api/user/profile')
-      .then((r) => r.json())
+    const fetchProfile = async () => {
+      const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
+      if (response.ok) {
+        return response.json() as Promise<SidebarProfile>;
+      }
+      if (response.status === 401) {
+        await delay(PROFILE_FETCH_RETRY_DELAY_MS);
+        const retryResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
+        if (retryResponse.ok) {
+          return retryResponse.json() as Promise<SidebarProfile>;
+        }
+        if (retryResponse.status === 401) {
+          return null;
+        }
+        throw new Error(`profile-fetch-${retryResponse.status}`);
+      }
+      throw new Error(`profile-fetch-${response.status}`);
+    };
+
+    fetchProfile()
       .then((data) => {
         if (cancelled) return;
         setProfileState({ orgId: currentOrgId, profile: data, loaded: true });
@@ -94,7 +118,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
+  }, [isLoaded, isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
 
   const defaultExpandedGroups = useMemo(() => {
     const s = new Set<string>();

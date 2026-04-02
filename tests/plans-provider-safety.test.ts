@@ -22,7 +22,7 @@ vi.mock('../lib/runtime-guards', () => ({
   toError: (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
 }));
 
-import { resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds, PLAN_DEFINITIONS } from '../lib/plans';
+import { ensurePlansSeeded, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds, PLAN_DEFINITIONS } from '../lib/plans';
 
 describe('plan provider safety', () => {
   const originalEnv = { ...process.env };
@@ -74,6 +74,34 @@ describe('plan provider safety', () => {
       expect.objectContaining({
         planId: '24H',
         provider: 'paddle',
+      })
+    );
+  });
+
+  it('persists seeded short descriptions for plans that define them', async () => {
+    await ensurePlansSeeded();
+
+    expect(prismaMock.plan.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: 'Quarterly Pro' },
+        update: expect.objectContaining({
+          shortDescription: 'Save 20%',
+        }),
+        create: expect.objectContaining({
+          shortDescription: 'Save 20%',
+        }),
+      })
+    );
+
+    expect(prismaMock.plan.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: 'Monthly Pro' },
+        update: expect.objectContaining({
+          shortDescription: 'Flexible monthly access.',
+        }),
+        create: expect.objectContaining({
+          shortDescription: 'Flexible monthly access.',
+        }),
       })
     );
   });

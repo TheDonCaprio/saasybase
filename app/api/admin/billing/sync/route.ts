@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
                 currency: providerCurrency,
                 productId,
                 recurring: recurringOpts,
-                metadata: { planId: plan.id, name: plan.name },
+                metadata: { planId: plan.id, name: plan.name, description: plan.shortDescription || '' },
               });
             } catch (currencyErr) {
               if (!isUnsupportedCurrencyError(currencyErr)) throw currencyErr;
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
                     currency: fallbackCurrency,
                     productId,
                     recurring: recurringOpts,
-                    metadata: { planId: plan.id, name: plan.name },
+                    metadata: { planId: plan.id, name: plan.name, description: plan.shortDescription || '' },
                   });
                   usedCurrency = fallbackCurrency;
                   Logger.info('Admin billing sync: price created with fallback currency', {

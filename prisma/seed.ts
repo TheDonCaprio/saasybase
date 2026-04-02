@@ -75,6 +75,10 @@ function getSeedPromptStreams(): SeedPromptStreams | null {
   return null;
 }
 
+function isValidEmailAddress(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function shouldSkipAdminSeed() {
   const skipAdminArg = process.argv.some((arg) => arg === '--skip-admin');
 
@@ -112,7 +116,7 @@ function getCanonicalAdminUpdate(args: {
 }) {
   return {
     email: args.email,
-    name: args.name ?? 'Admin',
+    name: args.name ?? 'Admin User',
     imageUrl: args.imageUrl ?? null,
     role: 'ADMIN',
     password: args.hashedPassword,
@@ -310,21 +314,21 @@ async function upsertLocalAdminUser(args: {
       clerkUserId: args.clerkUserId,
       email: args.email,
       hashedPassword: args.hashedPassword,
-      fallbackName: 'Admin',
+      fallbackName: 'Admin User',
     });
   }
 
   await prisma.user.upsert({
     where: { email: args.email },
     update: {
-      name: 'Admin',
+      name: 'Admin User',
       role: 'ADMIN',
       password: args.hashedPassword,
       emailVerified: new Date(),
     },
     create: {
       email: args.email,
-      name: 'Admin',
+      name: 'Admin User',
       role: 'ADMIN',
       password: args.hashedPassword,
       emailVerified: new Date(),
@@ -353,8 +357,30 @@ async function promptSeedAdminCredentials() {
   const rl = createInterface(promptStreams);
 
   try {
-    const enteredEmail = (await rl.question(`Admin email [${defaultEmail}]: `)).trim();
-    const email = enteredEmail || defaultEmail;
+    let email = defaultEmail;
+
+    while (true) {
+      const enteredEmail = (await rl.question('Enter your preferred admin email (press Enter to use the configured default): ')).trim();
+      email = enteredEmail || defaultEmail;
+
+      if (isValidEmailAddress(email)) {
+        if (!enteredEmail) {
+          console.log(`Using default admin email: ${defaultEmail}`);
+          break;
+        }
+
+        const confirmedEmail = (await rl.question('Confirm admin email: ')).trim();
+
+        if (confirmedEmail !== email) {
+          console.warn('Email addresses do not match. Try again.');
+          continue;
+        }
+
+        break;
+      }
+
+      console.warn('Please enter a valid email address.');
+    }
 
     if (envPassword) {
       console.log('Using SEED_ADMIN_PASSWORD from environment for the seeded admin user.');
@@ -366,7 +392,7 @@ async function promptSeedAdminCredentials() {
     }
 
     while (true) {
-      const password = await rl.question('Admin password (min 8 chars, upper/lower/number): ');
+      const password = await rl.question('Enter your preferred admin password (min 8 chars, upper/lower/number): ');
       const validation = validatePasswordStrength(password);
 
       if (!validation.valid) {
@@ -446,6 +472,7 @@ async function main() {
             emailAddress: [adminCredentials.email],
             password: adminCredentials.password,
             firstName: 'Admin',
+            lastName: 'User',
             skipPasswordChecks: true,
             publicMetadata: { role: 'ADMIN' }
           });

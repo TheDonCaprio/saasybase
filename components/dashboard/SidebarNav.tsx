@@ -20,9 +20,15 @@ type SidebarProfile = {
   hasPendingTeamInvites?: boolean;
 };
 
+const PROFILE_FETCH_RETRY_DELAY_MS = 300;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const { isSignedIn } = useAuthUser();
+  const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
   const currentOrgId = orgId ?? null;
   const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
@@ -56,7 +62,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     const isDashboardArea = pathname.startsWith('/dashboard');
     const isNotFoundPage = isCurrentPageNotFound();
 
-    if (!isSignedIn || !isDashboardArea || isNotFoundPage || profileLoadedForOrg) {
+    if (!isLoaded || !isSignedIn || !isDashboardArea || isNotFoundPage || profileLoadedForOrg) {
       return;
     }
 
@@ -70,16 +76,34 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     abortControllerRef.current = controller;
     const capturedOrgId = currentOrgId;
 
-    fetch('/api/user/profile', { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error(`profile-fetch-${r.status}`);
-        return r.json() as Promise<SidebarProfile>;
-      })
+    const fetchProfile = async () => {
+      const response = await fetch('/api/user/profile', { credentials: 'same-origin', signal: controller.signal });
+
+      if (response.ok) {
+        return response.json() as Promise<SidebarProfile>;
+      }
+
+      if (response.status === 401) {
+        await delay(PROFILE_FETCH_RETRY_DELAY_MS);
+        const retryResponse = await fetch('/api/user/profile', { credentials: 'same-origin', signal: controller.signal });
+        if (retryResponse.ok) {
+          return retryResponse.json() as Promise<SidebarProfile>;
+        }
+        if (retryResponse.status === 401) {
+          return null;
+        }
+        throw new Error(`profile-fetch-${retryResponse.status}`);
+      }
+
+      throw new Error(`profile-fetch-${response.status}`);
+    };
+
+    fetchProfile()
       .then((data) => {
         setProfileState({ orgId: capturedOrgId, profile: data, loaded: true });
       })
       .catch((err: Error) => {
-        if (err.name === 'AbortError') return; // org changed mid-flight; new effect will fetch
+        if (err.name === 'AbortError') return;
         console.error('Failed to fetch profile:', err);
         setProfileState({ orgId: capturedOrgId, profile: null, loaded: true });
       });
@@ -87,7 +111,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     return () => {
       controller.abort();
     };
-  }, [isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
+  }, [isLoaded, isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
 
   const visibleItems = (() => {
     if (!items) return [] as NavItem[];

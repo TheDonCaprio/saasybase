@@ -121,7 +121,7 @@ function formatEventTime(at: number) {
 }
 
 export default function SaaSyAppClient() {
-  const { orgId } = useAuthSession();
+  const { orgId, isLoaded, isSignedIn } = useAuthSession();
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -155,10 +155,17 @@ export default function SaaSyAppClient() {
   }
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setProfile(null);
+      setProfileError(null);
+      return;
+    }
+
     refreshProfile().catch((err: unknown) => {
       setProfileError(err instanceof Error ? err.message : 'Failed to fetch profile');
     });
-  }, [orgId]);
+  }, [isLoaded, isSignedIn, orgId]);
 
   useEffect(() => {
     if (!profile) return;

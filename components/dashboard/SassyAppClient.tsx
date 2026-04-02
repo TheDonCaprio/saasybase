@@ -94,7 +94,7 @@ function getBucketTokenName(resolved: Exclude<Bucket, 'auto'>, profile: ProfileP
 }
 
 export default function SassyAppClient() {
-  const { orgId } = useAuthSession();
+  const { orgId, isLoaded, isSignedIn } = useAuthSession();
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -111,6 +111,13 @@ export default function SassyAppClient() {
   const tokenName = useMemo(() => getBucketTokenName(resolvedBucket, profile), [resolvedBucket, profile]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setProfile(null);
+      setProfileError(null);
+      return;
+    }
+
     let cancelled = false;
 
     async function run() {
@@ -132,7 +139,7 @@ export default function SassyAppClient() {
     return () => {
       cancelled = true;
     };
-  }, [orgId]);
+  }, [isLoaded, isSignedIn, orgId]);
 
   // Load simulator state from localStorage (best-effort)
   useEffect(() => {

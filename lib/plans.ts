@@ -76,6 +76,7 @@ export const PLAN_DEFINITIONS: PlanSeed[] = [
     autoRenew: true,
     recurringInterval: 'month',
     recurringIntervalCount: 1,
+    description: 'Flexible monthly access.',
   },
   {
     id: '3M_SUB',
@@ -169,6 +170,8 @@ export async function ensurePlansSeeded() {
   });
 
   for (const plan of PLAN_DEFINITIONS) {
+    const seededShortDescription = plan.description ?? null;
+
     await prisma.plan.upsert({
       where: { name: plan.name },
       update: {
@@ -178,10 +181,12 @@ export async function ensurePlansSeeded() {
         autoRenew: plan.autoRenew ?? (plan.priceMode === 'subscription'),
         recurringInterval: plan.recurringInterval || (plan.priceMode === 'subscription' ? 'month' : null),
         recurringIntervalCount: plan.recurringIntervalCount || 1,
+        ...(plan.description !== undefined ? { shortDescription: seededShortDescription } : {}),
         active: true, // Ensure it's active
       },
       create: {
         name: plan.name,
+        shortDescription: seededShortDescription,
         durationHours: plan.durationHours,
         priceCents: plan.priceCents,
         sortOrder: plan.sortOrder,

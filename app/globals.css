@@ -1043,8 +1043,8 @@ input[autocomplete="one-time-code"] {
 [data-clerk-root] .cl-rootBox,
 [data-clerk-root] .cl-cardBox,
 [data-clerk-root] .cl-userProfile-root {
-  width: 448px !important;
-  max-width: 448px !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* Force a light background for Clerk card containers when the app is in the .light theme.

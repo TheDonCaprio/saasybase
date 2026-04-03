@@ -729,7 +729,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
       data: { tokenBalance: planTokenLimit },
     });
 
-    Logger.warn('Reconciled missing team tokens during provisioning', {
+    Logger.info('Reconciled missing team tokens during provisioning', {
       userId,
       organizationId: params.organizationId,
       planId: plan.id,

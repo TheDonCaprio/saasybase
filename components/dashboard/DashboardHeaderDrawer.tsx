@@ -326,202 +326,190 @@ export function DashboardHeaderDrawer({
         <span className="sr-only">Toggle account menu</span>
       </button>
 
-        {open && typeof document !== 'undefined' ? createPortal(
-          <div className="fixed inset-0 z-[60000]">
-            <button
-              type="button"
-              onClick={close}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              aria-hidden
-            />
-            <div
-              role="dialog"
-              aria-modal="true"
-              id="dashboard-header-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-visible border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
-            >
-              <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
-                  <p className="text-base font-semibold text-neutral-100">{activeItem ? activeItem.label : 'Menu'}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] text-neutral-400 transition hover:border-[color:rgb(var(--border-secondary))] hover:text-neutral-100"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
-                  <span className="sr-only">Close menu</span>
-                </button>
+      {open && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[60000]">
+          <button
+            type="button"
+            onClick={close}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            id="dashboard-header-drawer"
+            className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
+          >
+            <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
+                <p className="text-base font-semibold text-neutral-100">{activeItem ? activeItem.label : 'Menu'}</p>
               </div>
+              <button
+                type="button"
+                onClick={close}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary))] text-neutral-400 transition hover:border-[color:rgb(var(--border-secondary))] hover:text-neutral-100"
+              >
+                <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+                <span className="sr-only">Close menu</span>
+              </button>
+            </div>
 
-              {/* Account Info Section */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
               {isSignedIn && (
                 <div className="border-b border-[color:rgb(var(--border-primary))] bg-neutral-900/50">
-                  {loading ? (
-                    <div className="space-y-2.5 p-3.5">
-                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse w-3/4" />
-                    </div>
-                  ) : profile ? (
-                    <div className="space-y-2.5 p-3.5">
-                      <button
-                        type="button"
-                        onClick={() => setDetailsExpanded((prev) => !prev)}
-                        className="flex w-full items-start justify-between gap-3 rounded-xl px-0 py-0 text-left transition"
-                        aria-expanded={detailsExpanded}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-neutral-100">
-                            {profile.user.name}
-                          </p>
-                          <p className="truncate text-xs text-neutral-400">
-                            {profile.user.email}
-                          </p>
-                          {profile.organization && (
-                            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                              {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
-                            </p>
-                          )}
-                        </div>
-                        <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800/70 text-neutral-400">
-                          <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transition-transform ${detailsExpanded ? 'rotate-180' : ''}`} />
-                        </span>
-                      </button>
-
-                      {detailsExpanded ? (
-                        <div className="space-y-2 rounded-xl py-2.5">
-                          <div className="flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCrown} className="h-4 w-4 text-amber-500" />
-                            <span className="text-neutral-300">
-                              {activePlanName}
-                            </span>
-                          </div>
-
-                          {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-emerald-500" />
-                              <span className="text-neutral-300">
-                                {personalTokenDisplay} {personalTokenName} (Personal)
-                              </span>
-                            </div>
-                          )}
-
-                          {shouldShowSharedTokens && profile.sharedTokens && (
-                            <div className="flex items-start gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-[rgb(var(--accent-primary-rgb))]" />
-                              <div>
-                                <span className="text-neutral-300">
-                                  {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
-                                  {profile.organization ? ` (${profile.organization.name})` : ''}
-                                </span>
-                                <p className="text-[11px] text-neutral-400">
-                                  {profile.sharedTokens.cap != null
-                                    ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
-                                    : profile.sharedTokens.strategy === 'DISABLED'
-                                    ? 'Member caps disabled'
-                                    : ''}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {profile.freeTokens && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-sky-500" />
-                              <span className="text-neutral-300">
-                                {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
-                              </span>
-                            </div>
-                          )}
-
-                          {expiresAt && (
-                            <div className="flex items-center gap-2 text-xs text-neutral-400">
-                              <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                              <span>Expires: {expiresAt}</span>
-                            </div>
-                          )}
-
-                          {profile.planSource === 'FREE' && (
-                            <TransientNavLink
-                              href="/pricing"
-                              className="block text-sm text-[rgb(var(--accent-primary-rgb))] hover:text-[rgb(var(--accent-hover-rgb))]"
-                              onClick={close}
-                            >
-                              Upgrade to Pro →
-                            </TransientNavLink>
-                          )}
-
-                          {ACCOUNT_DRAWER_SHORTCUTS.length > 0 && (
-                            <div className="space-y-1.5 border-t border-[color:rgb(var(--border-primary))] pt-2">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Account</p>
-                              {ACCOUNT_DRAWER_SHORTCUTS.map((item) => {
-                                const active = item.href === '/dashboard'
-                                  ? pathname === '/dashboard'
-                                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                                const label = item.href === '/dashboard/plan'
-                                  ? profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan')
-                                  : item.label;
-
-                                return (
-                                  <TransientNavLink
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={close}
-                                    className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
-                                      active
-                                        ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
-                                        : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
-                                    }`}
-                                  >
-                                    <span className="flex items-center gap-3">
-                                      {item.icon && (
-                                        <FontAwesomeIcon
-                                          icon={item.icon}
-                                          className={`h-4 w-4 transition ${
-                                            active
-                                              ? 'text-[rgb(var(--accent-primary-rgb))]'
-                                              : 'text-neutral-500 group-hover:text-neutral-200'
-                                          }`}
-                                        />
-                                      )}
-                                      <span className="font-medium tracking-tight text-current">{label}</span>
-                                    </span>
-                                    {item.badge && (
-                                      <span
-                                        className={`text-[10px] font-semibold uppercase tracking-wide ${
-                                          item.badge === 'NEW'
-                                            ? 'rounded-full bg-emerald-500 px-2 py-1 text-white'
-                                            : 'rounded-full bg-neutral-800 px-2 py-1 text-neutral-200'
-                                        }`}
-                                      >
-                                        {item.badge}
-                                      </span>
-                                    )}
-                                  </TransientNavLink>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
-                        <AuthOrganizationSwitcher
-                          hidePersonal={false}
-                          appearance={getOrganizationSwitcherAppearance({
-                            variant: 'drawer',
-                            canCreateOrganization: profile?.canCreateOrganization,
-                          })}
-                        />
+                    {loading ? (
+                      <div className="space-y-2.5 p-3.5">
+                        <div className="h-4 rounded bg-neutral-200 animate-pulse dark:bg-neutral-800" />
+                        <div className="h-4 w-3/4 rounded bg-neutral-200 animate-pulse dark:bg-neutral-800" />
                       </div>
-                    </div>
-                  ) : null}
+                    ) : profile ? (
+                      <div className="space-y-2.5 p-3.5">
+                        <button
+                          type="button"
+                          onClick={() => setDetailsExpanded((prev) => !prev)}
+                          className="flex w-full items-start justify-between gap-3 rounded-xl px-0 py-0 text-left transition"
+                          aria-expanded={detailsExpanded}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-neutral-100">
+                              {profile.user.name}
+                            </p>
+                            <p className="truncate text-xs text-neutral-400">
+                              {profile.user.email}
+                            </p>
+                            {profile.organization && (
+                              <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                                {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
+                              </p>
+                            )}
+                          </div>
+                          <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--accent-primary-rgb))] text-[color:#fff] shadow-sm transition hover:opacity-90">
+                            <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transition-transform ${detailsExpanded ? 'rotate-180' : ''}`} />
+                          </span>
+                        </button>
+
+                        {detailsExpanded ? (
+                          <div className="space-y-2 rounded-xl py-2.5">
+                            <div className="flex items-center gap-2 text-sm">
+                              <FontAwesomeIcon icon={faCrown} className="h-4 w-4 text-amber-500" />
+                              <span className="text-neutral-300">{activePlanName}</span>
+                            </div>
+
+                            {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-emerald-500" />
+                                <span className="text-neutral-300">
+                                  {personalTokenDisplay} {personalTokenName} (Personal)
+                                </span>
+                              </div>
+                            )}
+
+                            {shouldShowSharedTokens && profile.sharedTokens && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-[rgb(var(--accent-primary-rgb))]" />
+                                <div>
+                                  <span className="text-neutral-300">
+                                    {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
+                                    {profile.organization ? ` (${profile.organization.name})` : ''}
+                                  </span>
+                                  <p className="text-[11px] text-neutral-400">
+                                    {profile.sharedTokens.cap != null
+                                      ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
+                                      : profile.sharedTokens.strategy === 'DISABLED'
+                                      ? 'Member caps disabled'
+                                      : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {profile.freeTokens && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-sky-500" />
+                                <span className="text-neutral-300">
+                                  {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
+                                </span>
+                              </div>
+                            )}
+
+                            {expiresAt && (
+                              <div className="flex items-center gap-2 text-xs text-neutral-400">
+                                <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+                                <span>Expires: {expiresAt}</span>
+                              </div>
+                            )}
+
+                            {profile.planSource === 'FREE' && (
+                              <TransientNavLink
+                                href="/pricing"
+                                className="block text-sm text-[rgb(var(--accent-primary-rgb))] hover:text-[rgb(var(--accent-hover-rgb))]"
+                                onClick={close}
+                              >
+                                Upgrade to Pro →
+                              </TransientNavLink>
+                            )}
+
+                            {ACCOUNT_DRAWER_SHORTCUTS.length > 0 && (
+                              <div className="space-y-1.5 border-t border-[color:rgb(var(--border-primary))] pt-2">
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Account</p>
+                                {ACCOUNT_DRAWER_SHORTCUTS.map((item) => {
+                                  const active = item.href === '/dashboard'
+                                    ? pathname === '/dashboard'
+                                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                  const label = item.href === '/dashboard/plan'
+                                    ? profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan')
+                                    : item.label;
+
+                                  return (
+                                    <TransientNavLink
+                                      key={item.href}
+                                      href={item.href}
+                                      onClick={close}
+                                      className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
+                                        active
+                                          ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
+                                          : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-3">
+                                        {item.icon && (
+                                          <FontAwesomeIcon
+                                            icon={item.icon}
+                                            className={`h-4 w-4 transition ${
+                                              active
+                                                ? 'text-[rgb(var(--accent-primary-rgb))]'
+                                                : 'text-neutral-500 group-hover:text-neutral-200'
+                                            }`}
+                                          />
+                                        )}
+                                        <span className="font-medium tracking-tight text-current">{label}</span>
+                                      </span>
+                                    </TransientNavLink>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
+                          <AuthOrganizationSwitcher
+                            hidePersonal={false}
+                            appearance={getOrganizationSwitcherAppearance({
+                              variant: 'drawer',
+                              canCreateOrganization: profile?.canCreateOrganization,
+                            })}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+
                 </div>
               )}
 
-              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
+              <nav className="flex flex-col gap-1 px-3 py-3">
                 {mainNavItems.map((item) => {
                   const active = !!(
                     item.href &&
@@ -529,6 +517,7 @@ export function DashboardHeaderDrawer({
                       ? pathname === '/dashboard'
                       : pathname === item.href || pathname.startsWith(item.href + '/'))
                   );
+
                   return (
                     <TransientNavLink
                       key={item.href}
@@ -553,6 +542,7 @@ export function DashboardHeaderDrawer({
                         )}
                         <span className="font-medium tracking-tight text-current">{item.label}</span>
                       </span>
+
                       {item.badge && (
                         <span
                           className={`text-[10px] font-semibold uppercase tracking-wide ${
@@ -568,11 +558,11 @@ export function DashboardHeaderDrawer({
                   );
                 })}
               </nav>
+              </div>
 
-              {/* Sign Out Button */}
               <div className="border-t border-[color:rgb(var(--border-primary))] px-4 py-3">
                 <AuthSignOutButton>
-                  <button 
+                  <button
                     onClick={handleSignOut}
                     className="w-full rounded-full border border-[color:rgb(var(--border-primary))] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-300 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
                   >

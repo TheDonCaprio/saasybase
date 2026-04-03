@@ -160,7 +160,7 @@ export function CouponRedeemer({
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Redeem a coupon</h2>
           <p className="text-sm text-slate-500 dark:text-neutral-400">
-            Enter the code you received from the team. Each code can only be redeemed once per account.
+            Each code can only be redeemed once per account.
           </p>
         </div>
 
@@ -181,10 +181,6 @@ export function CouponRedeemer({
             {loading ? 'Redeeming…' : 'Redeem code'}
           </button>
         </div>
-
-        <p className="text-xs text-slate-500 dark:text-neutral-400">
-          Need more coupons? Check announcements or contact support. Redeemed coupons appear below and can be applied during checkout.
-        </p>
       </section>
 
   <section className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">

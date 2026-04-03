@@ -1,16 +1,28 @@
 # SaaSyBase
 
-A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **dual auth provider system** (Clerk or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
+A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **dual auth provider system** (Clerk or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
+
+## What Is SaaSyBase?
+
+SaaSyBase is a **complete SaaS foundation** — not a starter template. It gives you everything a real SaaS product needs out of the box: authentication, subscription billing with four payment providers, a token/credit system, team/organization support, an admin dashboard, email templates, a blog CMS, support tickets, and more.
+
+**Who is it for?**
+
+- **Professional developers** who want a battle-tested architecture to build on, with clean abstractions, 90+ unit tests, and production-hardened patterns.
+- **Vibecoders and AI-assisted builders** (Cursor, Lovable, Windsurf, etc.) who want a working SaaS backend they can scaffold their app into without building billing, auth, and admin from scratch.
+
+You plug in your own product logic — SaaSyBase handles the business infrastructure.
 
 ---
 
 ## Table of Contents
 
 1. [Tech Stack](#tech-stack)
-2. [Quick Start](#quick-start)
-3. [Authentication](#authentication)
-4. [Admin Setup](#admin-setup)
-5. [Payment Providers](#payment-providers)
+2. [Project Structure](#project-structure)
+3. [Quick Start](#quick-start)
+4. [Authentication](#authentication)
+5. [Admin Setup](#admin-setup)
+6. [Payment Providers](#payment-providers)
    - [Stripe](#stripe)
    - [Paystack](#paystack)
    - [Paddle](#paddle)
@@ -18,33 +30,37 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
    - [Provider Feature Matrix](#provider-feature-matrix)
    - [Currency System](#currency-system)
    - [Adding New Providers](#adding-new-providers)
-6. [Token System](#token-system)
-7. [Team Plans & Organizations](#team-plans--organizations)
-8. [Feature Gating](#feature-gating)
-9. [Coupon System](#coupon-system)
-10. [Blog & CMS](#blog--cms)
-11. [Site Pages](#site-pages)
-12. [Theming & Branding](#theming--branding)
-13. [Email Templates](#email-templates)
-14. [Notifications](#notifications)
-15. [Support Tickets](#support-tickets)
-16. [Contact Page](#contact-page)
-17. [Invoice & Refund Receipts](#invoice--refund-receipts)
-18. [Webhooks](#webhooks)
-19. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
-20. [File & Logo Storage (S3)](#file--logo-storage-s3)
-21. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
-22. [Visit Tracking](#visit-tracking)
-23. [Moderator Roles](#moderator-roles)
-24. [Rate Limiting](#rate-limiting)
-25. [Logging & Audit Trail](#logging--audit-trail)
-26. [Security](#security)
-27. [Dark Mode](#dark-mode)
-28. [Testing](#testing)
-29. [Admin Dashboard Overview](#admin-dashboard-overview)
-30. [Production Setup](#production-setup)
-31. [Self-hosted Deployments](#self-hosted-deployments)
-32. [Environment Variable Reference](#environment-variable-reference)
+7. [Token System](#token-system)
+8. [Team Plans & Organizations](#team-plans--organizations)
+9. [Feature Gating](#feature-gating)
+10. [Coupon System](#coupon-system)
+11. [Blog & CMS](#blog--cms)
+12. [Site Pages](#site-pages)
+13. [Theming & Branding](#theming--branding)
+14. [Email Templates](#email-templates)
+15. [Notifications](#notifications)
+16. [Support Tickets](#support-tickets)
+17. [Contact Page](#contact-page)
+18. [Invoice & Refund Receipts](#invoice--refund-receipts)
+19. [Webhooks](#webhooks)
+20. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
+21. [File & Logo Storage (S3)](#file--logo-storage-s3)
+22. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
+23. [Visit Tracking](#visit-tracking)
+24. [Maintenance Mode](#maintenance-mode)
+25. [Session Activity](#session-activity)
+26. [Moderator Roles](#moderator-roles)
+27. [Rate Limiting](#rate-limiting)
+28. [Logging & Audit Trail](#logging--audit-trail)
+29. [Security](#security)
+30. [Dark Mode](#dark-mode)
+31. [Testing](#testing)
+32. [Admin Dashboard Overview](#admin-dashboard-overview)
+33. [User Dashboard Overview](#user-dashboard-overview)
+34. [Production Setup](#production-setup)
+35. [Self-hosted Deployments](#self-hosted-deployments)
+36. [Environment Variable Reference](#environment-variable-reference)
+37. [Demo Read-Only Mode](#demo-read-only-mode)
 
 ---
 
@@ -55,11 +71,11 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
 | Framework | Next.js 16 (App Router) |
 | Auth | **Clerk** or **NextAuth (Auth.js v5)** — switchable via `AUTH_PROVIDER` |
 | Payment | **Stripe**, **Paystack**, **Paddle**, **Razorpay** — switchable via `PAYMENT_PROVIDER` |
-| Database | Prisma ORM · SQLite (dev) · PostgreSQL / MySQL (prod) |
+| Database | Prisma 7 ORM · SQLite (dev) · PostgreSQL (prod) |
 | Styling | Tailwind CSS |
 | Rich Text Editor | TipTap (blog posts, site pages, email templates) |
 | Email | Nodemailer (SMTP) or Resend, switchable via `EMAIL_PROVIDER` |
-| Analytics | Google Analytics 4 (via Data API) |
+| Analytics | Google Analytics 4 (via Data API) + built-in visit tracking |
 | PDF Generation | pdf-lib (invoices, refund receipts) |
 | Validation | Zod |
 | Testing | Vitest (unit) · Playwright (E2E) |
@@ -67,7 +83,55 @@ A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **du
 
 ---
 
+## Project Structure
+
+A quick map of where things live — useful whether you're browsing the code yourself or pointing an AI agent at it.
+
+```
+saasybase/
+├── app/                    # Next.js App Router pages and API routes
+│   ├── admin/              # Admin dashboard pages (users, plans, blog, etc.)
+│   ├── api/                # API routes (webhooks, checkout, internal, etc.)
+│   ├── dashboard/          # User dashboard pages (billing, team, profile, etc.)
+│   ├── blog/               # Public blog routes
+│   ├── pricing/            # Public pricing page
+│   ├── contact/            # Public contact page
+│   ├── sign-in/ & sign-up/ # Auth pages
+│   └── layout.tsx          # Root layout (theme injection, auth provider)
+├── components/             # React components
+│   ├── ui/                 # Reusable primitives (Modal, Toast, Pagination, etc.)
+│   ├── admin/              # Admin-specific components
+│   ├── dashboard/          # Dashboard-specific components
+│   ├── billing/            # Checkout & billing components
+│   ├── blog/               # Blog display components
+│   └── team/               # Team/org management components
+├── lib/                    # Core business logic
+│   ├── auth-provider/      # Auth abstraction layer (Clerk / NextAuth)
+│   ├── payment/            # Payment abstraction layer (Stripe / Paystack / Paddle / Razorpay)
+│   │   ├── providers/      # Individual provider implementations
+│   │   ├── types.ts        # PaymentProvider interface
+│   │   ├── service.ts      # Payment service orchestration
+│   │   └── webhook-router.ts # Unified webhook routing
+│   ├── email.ts            # Email sending (Nodemailer / Resend)
+│   ├── email-templates.ts  # 27 built-in email templates
+│   ├── settings.ts         # Admin settings system (60+ keys)
+│   ├── features.ts         # Feature gating registry
+│   └── ...                 # Tokens, teams, coupons, notifications, etc.
+├── prisma/
+│   ├── schema.prisma       # Database schema (25+ models)
+│   └── seed.ts             # Database seeding script
+├── scripts/                # Operational scripts (backfills, admin tools)
+├── tests/                  # 90+ Vitest unit tests + Playwright E2E
+├── docs/                   # Internal documentation
+├── ops/                    # Production operations (indexes, Umami, runbooks)
+└── .env.example            # Full environment variable template
+```
+
+> **Tip for vibecoders:** Most of your custom app code will go in `app/dashboard/` (user-facing pages), `components/` (UI), and `lib/` (business logic). The payment, auth, and admin infrastructure is already built — you're extending it, not rebuilding it.
+
 ## Quick Start
+
+> **Requires:** Node.js 18+ and npm.
 
 ```bash
 # 1. Copy env template
@@ -79,12 +143,14 @@ npm install
 # 3. Run database migrations
 npx prisma migrate dev --name init
 
-# 4. Seed the database
+# 4. Seed the database (prompts for admin email/password)
 npx prisma db seed
 
 # 5. Start dev server
 npm run dev
 ```
+
+After running `npm run dev`, open [http://localhost:3000](http://localhost:3000). You'll see the landing page. Sign in at `/sign-in` or go to `/admin` once you've set up an admin user (see [Admin Setup](#admin-setup)).
 
 With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
 
@@ -104,12 +170,14 @@ With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`
 
 ## Authentication
 
-The app ships with **two fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable (defaults to `clerk`).
+The app ships with **two fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable.
 
 ```bash
 # .env.local
-AUTH_PROVIDER="clerk"     # Options: "clerk", "nextauth"
+AUTH_PROVIDER="nextauth"  # Options: "clerk", "nextauth"
 ```
+
+> **Default behavior:** The `.env.example` template ships with `AUTH_PROVIDER="nextauth"` so you can start locally without any third-party accounts. The code's internal fallback is `clerk` if the variable is unset, but since `.env.example` explicitly sets it, most new setups use NextAuth by default.
 
 `next.config.mjs` automatically exposes this as `NEXT_PUBLIC_AUTH_PROVIDER` to the client bundle so that the auth abstraction layer (`lib/auth-provider`) can DCE (dead-code eliminate) the unused provider at build time.
 
@@ -555,6 +623,8 @@ The gate checks **both** personal subscriptions **and** organization access — 
 
 `PRO_FEATURES` in `lib/features.ts` lists all gated features (e.g. `OFFSET_SETTINGS`, `EXPORT_SCALE_*`, `WATERMARK_REMOVAL`, `SUPPORT_PRIORITY`, `USAGE_LIMIT_ELEVATED`, etc.).
 
+> **Note for new projects:** The shipped `FeatureId` entries (like `WATERMARK_REMOVAL`, `FOV_ADJUST`) are examples from the original product. Replace them with your own feature IDs — the gating system works with any string enum values.
+
 ---
 
 ## Coupon System
@@ -668,19 +738,37 @@ The app includes a full email template CMS with database-backed, editable templa
 
 `/admin/emails` — WYSIWYG editor for all email templates. Each template supports HTML and plain text versions with `{{variable}}` placeholders.
 
-### Built-in Templates
+### Built-in Templates (27 total)
 
 | Template Key | When Sent |
 |---|---|
 | `welcome` | User registers and verifies email |
+| `subscription_activated` | Subscription becomes active |
 | `subscription_extended` | Existing subscription is extended |
 | `subscription_upgraded` | User upgrades from non-recurring to recurring plan |
+| `subscription_upgraded_recurring` | User upgrades between recurring plans |
+| `subscription_upgrade_scheduled_recurring` | Recurring upgrade scheduled for cycle end |
+| `subscription_change_scheduled_recurring` | Plan change scheduled for cycle end |
+| `subscription_downgraded` | User downgrades plan |
+| `subscription_cancelled` | Subscription cancelled |
+| `subscription_expired` | Subscription expired |
+| `subscription_ended` | Subscription fully ended |
+| `subscription_renewed` | Subscription renewed |
+| `subscription_renewal_reminder` | Upcoming renewal reminder (Stripe `invoice.upcoming`) |
 | `token_topup` | User purchases additional tokens/credits |
 | `tokens_credited` | Admin credits tokens to a user |
 | `tokens_debited` | Admin debits tokens from a user |
 | `admin_assigned_plan` | Admin assigns a plan to a user |
 | `team_invitation` | User is invited to join an organization |
 | `admin_notification` | Admin billing alert emails |
+| `refund_issued` | Refund processed for a payment |
+| `refund_processed` | Refund confirmed by provider |
+| `payment_failed` | Payment attempt failed |
+| `invoice_payment_failed` | Invoice payment failed |
+| `password_reset` | Password reset link (NextAuth) |
+| `email_verification` | Email verification link (NextAuth) |
+| `email_change_confirmation` | Email address change confirmation (NextAuth) |
+| `magic_link` | Magic link sign-in (NextAuth) |
 
 ### Template Variables
 
@@ -736,6 +824,7 @@ A built-in support ticket system for user-admin communication.
 
 - **Ticket lifecycle:** Open → admin/user replies → resolved
 - **Reply threads** with user and admin messages
+- **Ticket categories:** General, Technical Support, Billing, Pre-Sale, Account, Feature Request
 - **Email notifications:** Configurable per-event (`new_ticket_to_admin`, `admin_reply_to_user`, `user_reply_to_admin`)
 - **Dashboard badge:** Users see a "NEW" badge when an admin has replied
 
@@ -789,7 +878,7 @@ Similar layout with refund-specific details:
 | `paddle-signature` | Paddle |
 | `x-razorpay-signature` | Razorpay |
 
-Provider-specific routes (`/api/webhooks/stripe`, `/api/webhooks/paystack`, `/api/webhooks/paddle`) also exist as aliases.
+Provider-specific routes also exist as aliases: `/api/stripe/webhook` (Stripe), `/api/webhooks/paystack` (Paystack), `/api/webhooks/paddle` (Paddle).
 
 ### Clerk webhook
 
@@ -836,7 +925,7 @@ As a fallback, `app/dashboard/layout.tsx` calls `getCurrentUserWithFallback()` �
 
 ## File & Logo Storage (S3)
 
-By default, uploaded logos are stored on the local filesystem. Switch to S3:
+By default, uploaded logos are stored on the local filesystem. Switch to S3 (or any S3-compatible provider):
 
 ```bash
 LOGO_STORAGE="s3"
@@ -844,8 +933,11 @@ LOGO_S3_BUCKET="my-bucket-name"
 AWS_REGION=""
 AWS_ACCESS_KEY_ID=""
 AWS_SECRET_ACCESS_KEY=""
-LOGO_CDN_DOMAIN=""   # Optional: CloudFront distribution domain (recommended)
+LOGO_CDN_DOMAIN=""        # Optional: CloudFront distribution domain (recommended)
+LOGO_S3_ENDPOINT=""       # Optional: Custom S3-compatible endpoint (Cloudflare R2, MinIO, DigitalOcean Spaces)
 ```
+
+> **S3-compatible providers:** Set `LOGO_S3_ENDPOINT` to your provider's endpoint URL (e.g. `https://<account>.r2.cloudflarestorage.com` for Cloudflare R2). Leave it blank for standard AWS S3.
 
 When `LOGO_CDN_DOMAIN` is set, the upload handler returns CDN URLs (`https://<LOGO_CDN_DOMAIN>/logos/<file>`) instead of raw S3 links.
 
@@ -906,6 +998,29 @@ Metrics surfaced: total visits, unique visitors, new users, engaged sessions, pa
 The app includes lightweight first-party visit tracking via `lib/visit-tracking.ts` and the `VisitLog` model. Middleware (`POST /api/internal/track-visit`) records visits for admin traffic reporting, skipping API routes, static files, admin routes, and bots. This is an alternative/supplement to Google Analytics for self-hosted analytics.
 
 There is also an optional **Umami** integration. See `ops/README-umami.md` for setup and `ops/UMAMI_LOCAL_SETUP.md` for running Umami locally via Docker.
+
+---
+
+## Maintenance Mode
+
+The app includes a DB-backed maintenance mode that can be toggled from the admin dashboard.
+
+- **Admin toggle:** `/admin/maintenance` — enable/disable maintenance mode
+- **Behavior:** When enabled, all public routes redirect to `/maintenance` with a branded "under maintenance" page
+- **Bypass paths:** Admin pages (`/admin/*`), auth pages (`/sign-in`, `/sign-up`), API routes for auth/webhooks/cron/health, and `/access-denied` are always accessible
+- **Implementation:** `lib/maintenance-mode.ts` reads from the settings system — no env var or restart needed
+
+---
+
+## Session Activity
+
+The app tracks user session activity with device/browser detection and IP-based geolocation.
+
+- **User page:** `/dashboard/activity` — view active sessions with browser, device, location, and last-active timestamps
+- **Session tracking:** `lib/session-activity.ts` parses User-Agent for browser name/version and device type (desktop/mobile/tablet)
+- **Geolocation:** Uses `IPINFO_LITE_TOKEN` for IP lookups when configured, falls back to `country.is` (free, no API key needed). Results are cached for 24 hours.
+- **Session revocation:** Users can revoke individual sessions (when using an auth provider that supports it)
+- **Activity refresh:** Sessions are refreshed every 5 minutes to avoid unnecessary writes
 
 ---
 
@@ -1023,14 +1138,16 @@ npm test              # Run all unit tests
 npm test -- --watch   # Watch mode
 ```
 
-58+ test files covering:
-- Payment provider flows (Stripe, Paystack, Paddle, Razorpay, Lemon Squeezy)
+90+ test files covering:
+- Payment provider flows (Stripe, Paystack, Paddle, Razorpay)
 - Webhook handling and event normalization
 - Subscription lifecycle (checkout, proration, cancellation, resurrection)
-- Team/organization operations
+- Team/organization operations and provisioning
 - Token spending and organization scoping
-- Auth flows and route guards
-- Admin operations and sorting/filtering
+- Auth flows, route guards, and session management
+- Admin operations, sorting, and filtering
+- Coupon redemption and plan resolution
+- Support ticket categories and cursor pagination
 
 ### E2E Tests (Playwright)
 
@@ -1059,9 +1176,32 @@ The admin dashboard (`/admin`) is organized into logical groups:
 ### Notable Admin Features
 
 - **Admin API Docs** (`/admin/api`) — auto-generated API inventory from `lib/admin-api.inventory.ts`
-- **Maintenance Tools** (`/admin/maintenance`) — cleanup and repair utilities
+- **Maintenance Tools** (`/admin/maintenance`) — cleanup, repair utilities, and maintenance mode toggle
 - **System Logs** (`/admin/logs`) — persisted WARN/ERROR logs with filtering
-- **Onboarding** (`/dashboard/onboarding`) — guided setup for new users
+- **One-Time Plans** (`/admin/one-time-plans`) — manage non-recurring plan offerings
+
+---
+
+## User Dashboard Overview
+
+The user dashboard (`/dashboard`) provides users with a full self-service experience:
+
+| Page | Path | Description |
+|---|---|---|
+| **Home** | `/dashboard` | Overview with current plan, token balance, quick stats |
+| **Onboarding** | `/dashboard/onboarding` | Guided setup for new users |
+| **Plan** | `/dashboard/plan` | Current plan details and upgrade options |
+| **Billing** | `/dashboard/billing` | Payment management, manage subscription |
+| **Transactions** | `/dashboard/transactions` | Payment history |
+| **Team** | `/dashboard/team` | Team management (invites, members, settings) |
+| **Profile** | `/dashboard/profile` | Edit name, avatar, and profile info |
+| **Account** | `/dashboard/account` | Password changes, email updates, account deletion |
+| **Activity** | `/dashboard/activity` | Session history with device/location tracking |
+| **Settings** | `/dashboard/settings` | Preferences (email notifications, timezone, etc.) |
+| **Notifications** | `/dashboard/notifications` | In-app notification center |
+| **Support** | `/dashboard/support` | Support ticket creation and history |
+| **Coupons** | `/dashboard/coupons` | Redeemed coupons and pending redemptions |
+| **Editor** | `/dashboard/sassyapp` | Your app's workspace (scaffold your product here) |
 
 ---
 
@@ -1185,19 +1325,25 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 
 | Group | Key prefix | Notes |
 |---|---|---|
-| Database | `DATABASE_URL` | SQLite for dev, Postgres for prod |
-| App | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_NAME` | Public-facing URL and branding |
-| Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET` | Choose Clerk or NextAuth |
+| Database | `DATABASE_URL` | SQLite for dev, PostgreSQL for prod |
+| App | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_APP_DOMAIN` | Public-facing URL and branding |
+| Branding | `NEXT_PUBLIC_SITE_LOGO`, `NEXT_PUBLIC_SITE_LOGO_LIGHT/DARK`, `NEXT_PUBLIC_SITE_LOGO_HEIGHT` | Site logo configuration |
+| Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET`, `NEXTAUTH_SECRET` | Choose Clerk or NextAuth |
+| Auth OAuth | `GITHUB_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` | NextAuth OAuth providers |
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
-| Currency | `PAYMENTS_CURRENCY`, `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Payment currency configuration |
+| Payment config | `PAYMENT_AUTO_CREATE`, `PAYMENTS_CURRENCY` | Catalog sync and currency |
+| Currency | `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider currency overrides |
 | Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Switch between SMTP/Nodemailer and Resend |
 | Geolocation | `IPINFO_LITE_TOKEN` | Optional; activity geolocation falls back to `country.is` when unset |
-| Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs or S3 |
+| Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `LOGO_S3_ENDPOINT`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs, S3, or S3-compatible (R2, MinIO) |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN` | Server-side secrets |
+| Demo | `DEMO_READ_ONLY_MODE` | Read-only demo mode |
 | Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
+| Seeding | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Non-interactive admin creation |
 | Dev helpers | `DEV_ADMIN_ID`, `DEV_ADMIN_EMAIL`, `ALLOW_ADMIN_SCRIPT` | Local dev only |
+| E2E testing | `PLAYWRIGHT_*` | Playwright base URL, credentials, org IDs |
 
 ---
 

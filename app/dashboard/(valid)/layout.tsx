@@ -1,6 +1,6 @@
 import React from 'react';
 import { SidebarNav } from '../../../components/dashboard/SidebarNav';
-import { faPlay, faUser, faUserShield, faFileInvoiceDollar, faHistory, faBell, faLifeRing, faBars, faTicketAlt, faSackDollar, faFlask } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faUser, faUserShield, faBell, faLifeRing, faTicketAlt, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';
@@ -90,13 +90,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const nav = [
     { href: '/dashboard', label: 'SaaSyApp', icon: faFlask },
     { href: '/dashboard/onboarding', label: 'Get Started', icon: faPlay },
-    { href: '/dashboard/profile', label: 'Profile & Settings', icon: faUser },
-    { href: '/dashboard/plan', label: 'Plan', icon: faBars },
-    { href: '/dashboard/billing', label: 'Billing', icon: faFileInvoiceDollar },
     { href: '/dashboard/coupons', label: 'Coupons', icon: faTicketAlt, badge: couponBadge },
-    { href: '/dashboard/transactions', label: 'Transactions', icon: faSackDollar },
     { href: '/dashboard/team', label: 'Team', icon: faUserShield, badge: teamBadge },
-    { href: '/dashboard/activity', label: 'Activity', icon: faHistory },
     { href: '/dashboard/support', label: 'Support', icon: faLifeRing, badge: supportBadge },
     { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },
   ];

@@ -7,8 +7,6 @@ import { pluralize } from '../../../../lib/pluralize';
 import { formatCurrency } from '../../../../lib/utils/currency';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../../lib/settings';
-import ActiveSessionsList from '../../../../components/dashboard/ActiveSessionsList';
-import { ActiveSessionsSummary } from '../../../../components/dashboard/ActiveSessionsSummary';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import {
   dashboardPanelClass,
@@ -140,9 +138,6 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
     return 'Unknown Device';
   }
 
-  const authProviderName = authService.providerName;
-  const supportsSessionManagement = authService.supportsFeature('session_management');
-  const supportsMfa = authService.supportsFeature('mfa');
   const lastRecordedVisit = recentVisitsWithFormats[0] ?? null;
   const lastSignInAt = authUser?.lastSignInAt ?? lastRecordedVisit?.createdAt ?? null;
   const formattedLastSignIn = lastSignInAt ? await formatDateServer(lastSignInAt, userId) : null;
@@ -238,74 +233,11 @@ export default async function UserActivityPage({ searchParams }: PageProps) {
             <div className={dashboardPanelClass('space-y-2')}>
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Active devices</span>
               <div className="text-2xl font-semibold text-slate-900 dark:text-neutral-100">
-                <ActiveSessionsSummary />
+                —
               </div>
-              <p className="text-xs text-slate-500 dark:text-neutral-400">Detected sessions</p>
+              <p className="text-xs text-slate-500 dark:text-neutral-400">Session details live in Settings</p>
             </div>
           </div>
-
-          {authUser ? (
-            <div className={dashboardPanelClass('space-y-4')}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Current session</h3>
-                  <p className="text-sm text-slate-500 dark:text-neutral-400">
-                    Review your current account details and recent activity. If anything looks unfamiliar, inspect your active sessions below.
-                  </p>
-                </div>
-                <span className={dashboardPillClass('border-emerald-200/70 bg-emerald-100/70 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200')}>
-                  🟢 Active
-                </span>
-              </div>
-              <dl className="grid gap-4 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">User</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {[authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.fullName || 'Unknown user'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Email</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {authUser.email ?? '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Last sign-in</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">{formattedLastSignIn ?? 'Not recorded yet'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Security features</dt>
-                  <dd className="mt-1 text-slate-900 dark:text-neutral-100">
-                    {supportsMfa
-                      ? 'Advanced verification available'
-                      : supportsSessionManagement
-                        ? 'Session controls available'
-                        : `${authProviderName === 'nextauth' ? 'NextAuth' : 'Current auth provider'} session only`}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          ) : null}
-
-          {/* Active sessions moved from sidebar into the main column */}
-          <div className={dashboardPanelClass('space-y-4 p-4 sm:p-6')}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Active sessions</h3>
-              <span className={dashboardPillClass('text-blue-600 dark:text-blue-200')}>
-                {supportsSessionManagement ? 'Managed sessions' : 'Current device'}
-              </span>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-neutral-400 mb-2">
-              {supportsSessionManagement
-                ? 'Manage your signed-in devices. Revoke access if something looks unfamiliar.'
-                : 'Review the current signed-in device and recent account activity for anything unusual.'}
-            </p>
-            <div className="-mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
-              <ActiveSessionsList />
-            </div>
-          </div>
-
 
         </div>
 

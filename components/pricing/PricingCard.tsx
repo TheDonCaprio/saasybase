@@ -1821,7 +1821,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
+                <div className="w-full max-w-[28rem] rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
                   {authView === 'sign-in' ? (
                     <AuthSignIn
                       appearance={getAuthFormAppearance('modal')}
@@ -1840,7 +1840,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
 
                 <p className="mt-4 text-center text-[11px] text-neutral-500 dark:text-neutral-500">
-                  Having trouble? <Link href="/support" className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Contact support</Link>
+                  Having trouble? <Link href="/contact" className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Contact support</Link>
                 </p>
               </div>
             </div>

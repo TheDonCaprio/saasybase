@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faUser, faCrown, faCoins, faCalendarDays, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faUser, faCrown, faCoins, faCalendarDays, faChevronDown, faHouse, faBars, faFileInvoiceDollar, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
 import { AuthSignOutButton, useAuthUser, useAuthInstance, useAuthSession, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
@@ -11,6 +11,12 @@ import { createPortal } from 'react-dom';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
 
 const PROFILE_FETCH_RETRY_DELAY_MS = 450;
+const ACCOUNT_DRAWER_PATHS = new Set([
+  '/dashboard/profile',
+  '/dashboard/plan',
+  '/dashboard/billing',
+  '/dashboard/transactions',
+]);
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,6 +82,20 @@ interface UserProfile {
   canCreateOrganization?: boolean;
   hasPendingTeamInvites?: boolean;
 }
+
+interface DrawerShortcut {
+  href: string;
+  label: string;
+  icon: typeof faHouse;
+}
+
+const ACCOUNT_DRAWER_SHORTCUTS: DrawerShortcut[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: faHouse },
+  { href: '/dashboard/profile', label: 'Profile & Settings', icon: faUser },
+  { href: '/dashboard/plan', label: 'Plan', icon: faBars },
+  { href: '/dashboard/billing', label: 'Billing', icon: faFileInvoiceDollar },
+  { href: '/dashboard/transactions', label: 'Transactions', icon: faSackDollar },
+];
 
 export function DashboardHeaderDrawer({
   items,
@@ -284,6 +304,14 @@ export function DashboardHeaderDrawer({
   const expiresAt = isOrganizationContext
     ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
     : profile?.subscription?.expiresAt ?? null;
+  const mainNavItems = useMemo(() => displayItems.filter((item) => !ACCOUNT_DRAWER_PATHS.has(item.href)), [displayItems]);
+
+  useEffect(() => {
+    const isAccountRoute = ACCOUNT_DRAWER_PATHS.has(pathname) || Array.from(ACCOUNT_DRAWER_PATHS).some((basePath) => pathname.startsWith(`${basePath}/`));
+    if (open && isAccountRoute) {
+      setDetailsExpanded(true);
+    }
+  }, [open, pathname]);
 
   return (
     <>
@@ -362,7 +390,7 @@ export function DashboardHeaderDrawer({
                       </button>
 
                       {detailsExpanded ? (
-                        <div className="space-y-2 rounded-xl bg-neutral-900/35 px-3 py-2.5">
+                        <div className="space-y-2 rounded-xl py-2.5">
                           <div className="flex items-center gap-2 text-sm">
                             <FontAwesomeIcon icon={faCrown} className="h-4 w-4 text-amber-500" />
                             <span className="text-neutral-300">
@@ -423,6 +451,58 @@ export function DashboardHeaderDrawer({
                               Upgrade to Pro →
                             </TransientNavLink>
                           )}
+
+                          {ACCOUNT_DRAWER_SHORTCUTS.length > 0 && (
+                            <div className="space-y-1.5 border-t border-[color:rgb(var(--border-primary))] pt-2">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Account</p>
+                              {ACCOUNT_DRAWER_SHORTCUTS.map((item) => {
+                                const active = item.href === '/dashboard'
+                                  ? pathname === '/dashboard'
+                                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                const label = item.href === '/dashboard/plan'
+                                  ? profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan')
+                                  : item.label;
+
+                                return (
+                                  <TransientNavLink
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={close}
+                                    className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
+                                      active
+                                        ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
+                                        : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-3">
+                                      {item.icon && (
+                                        <FontAwesomeIcon
+                                          icon={item.icon}
+                                          className={`h-4 w-4 transition ${
+                                            active
+                                              ? 'text-[rgb(var(--accent-primary-rgb))]'
+                                              : 'text-neutral-500 group-hover:text-neutral-200'
+                                          }`}
+                                        />
+                                      )}
+                                      <span className="font-medium tracking-tight text-current">{label}</span>
+                                    </span>
+                                    {item.badge && (
+                                      <span
+                                        className={`text-[10px] font-semibold uppercase tracking-wide ${
+                                          item.badge === 'NEW'
+                                            ? 'rounded-full bg-emerald-500 px-2 py-1 text-white'
+                                            : 'rounded-full bg-neutral-800 px-2 py-1 text-neutral-200'
+                                        }`}
+                                      >
+                                        {item.badge}
+                                      </span>
+                                    )}
+                                  </TransientNavLink>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       ) : null}
 
@@ -442,7 +522,7 @@ export function DashboardHeaderDrawer({
               )}
 
               <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
-                {displayItems.map((item) => {
+                {mainNavItems.map((item) => {
                   const active = !!(
                     item.href &&
                     (item.href === '/dashboard'

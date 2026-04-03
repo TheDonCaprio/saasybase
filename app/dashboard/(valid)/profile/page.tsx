@@ -13,6 +13,7 @@ import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay, getPlanScope, getSubscriptionScopeFilter } from '../../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../../lib/dashboard-workspace-guard';
+import { authService } from '@/lib/auth-provider';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -126,6 +127,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
     : planDisplay.planSource === 'ORGANIZATION' && planDisplay.workspace
       ? `Managed by ${planDisplay.workspace.name}`
       : 'No active subscription yet';
+  const currentAuthUser = authService.providerName === 'nextauth' ? await authService.getCurrentUser() : null;
 
   return (
     <div className="space-y-6">
@@ -195,6 +197,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
         user={user}
         subscription={subscription}
         userSettings={userSettings}
+        currentUserEmailVerified={currentAuthUser?.emailVerified}
         initialActiveTab={undefined}
         preformattedCreatedAt={preformattedCreatedAt}
       />

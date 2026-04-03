@@ -23,6 +23,8 @@ export function getAuthProviderAppearance(isDark: boolean): ClerkAppearance {
     },
     elements: {
       modalBackdrop: 'bg-black/60 backdrop-blur-sm',
+      rootBox: 'w-full max-w-[28rem]',
+      cardBox: 'w-[28rem] max-w-[calc(100vw-2rem)]',
       formButtonPrimary: 'bg-violet-600 hover:bg-violet-700 text-white',
       card: isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200',
       headerTitle: isDark ? 'text-neutral-100' : 'text-neutral-900',
@@ -131,7 +133,9 @@ export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance
   return {
     elements: {
       formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-sm normal-case',
-      cardBox: 'bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700',
+      cardBox: isModal
+        ? 'w-[28rem] max-w-[calc(100vw-2rem)] bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700'
+        : 'w-full max-w-[28rem] bg-white border border-neutral-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-700',
       card: 'bg-white border-0 dark:bg-neutral-900',
       headerTitle: 'hidden',
       headerSubtitle: 'hidden',

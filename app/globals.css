@@ -1062,6 +1062,20 @@ input[autocomplete="one-time-code"] {
   border-radius: 10px;
 }
 
+/* Allow Clerk auth surfaces to use the intended fixed form width instead of the
+   generic full-width profile rule above. */
+.cl-signIn-root.cl-rootBox,
+.cl-signUp-root.cl-rootBox,
+[data-clerk-root] .cl-signIn-root.cl-rootBox,
+[data-clerk-root] .cl-signUp-root.cl-rootBox,
+.cl-signIn-root .cl-cardBox,
+.cl-signUp-root .cl-cardBox,
+[data-clerk-root] .cl-signIn-root .cl-cardBox,
+[data-clerk-root] .cl-signUp-root .cl-cardBox {
+  width: 28rem !important;
+  max-width: calc(100vw - 2rem) !important;
+}
+
 .light .hover\:bg-neutral-900\/60:hover {
   background-color: rgb(var(--bg-secondary) / 0.45) !important;
 }

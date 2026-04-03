@@ -7,6 +7,7 @@ import { twMerge } from 'tailwind-merge';
 import Link from 'next/link';
 import { ReactiveProfileHeader } from './ReactiveProfileHeader';
 import { UserSettingsForm } from './UserSettingsForm';
+import { SecurityDataSessionsPanel } from './SecurityDataSessionsPanel';
 import { showToast } from '../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
@@ -40,6 +41,7 @@ interface UserSettingsTabsProps {
   user: BaseUser;
   subscription: SubscriptionDetails | null;
   userSettings: UserSettingValue[];
+  currentUserEmailVerified?: boolean;
   /** Optional initial active tab when the component is mounted (client-side). */
   initialActiveTab?: 'profile' | 'security';
   preformattedCreatedAt?: string;
@@ -50,6 +52,7 @@ export function UserSettingsTabs({
   subscription,
   userSettings
   , initialActiveTab,
+  currentUserEmailVerified,
   preformattedCreatedAt
 }: UserSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState(initialActiveTab ?? 'profile');
@@ -119,7 +122,9 @@ export function UserSettingsTabs({
         description: 'Account verification, exports, and deletion.',
         content: (
           <div className="space-y-6">
-            <EmailVerificationCard />
+            <SecurityDataSessionsPanel />
+
+            <EmailVerificationCard isVerified={currentUserEmailVerified} />
 
             <PasswordChangeCard />
 
@@ -330,7 +335,7 @@ function AccountDeletionPanel() {
 
 const isNextAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth';
 
-function EmailVerificationCard() {
+function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -368,7 +373,7 @@ function EmailVerificationCard() {
             <span className="text-base">✓</span>
             Verified
           </span>
-          {isNextAuth && (
+          {isNextAuth && !isVerified && (
             <button
               type="button"
               onClick={handleResend}

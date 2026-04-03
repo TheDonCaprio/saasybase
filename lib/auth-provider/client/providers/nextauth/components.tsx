@@ -100,6 +100,25 @@ function GitHubIcon() {
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.46 21.46 0 0 1 5.06-5.94" />
+      <path d="M1 1l22 22" />
+      <path d="M9.53 9.53A3.5 3.5 0 0 0 14.47 14.47" />
+    </svg>
+  );
+}
+
 function useAvailableOAuthProviders() {
   const [providers, setProviders] = useState<Set<string> | null>(null);
 
@@ -387,6 +406,7 @@ function SignInForm({
   const [loading, setLoading] = useState(false);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     onMagicLinkSentChange?.(null);
@@ -541,7 +561,17 @@ function SignInForm({
               Forgot password?
             </button>
           </div>
-          <input id="signin-password" name="password" type="password" required className={inputCx} />
+          <div className="relative">
+            <input id="signin-password" name="password" type={showPassword ? 'text' : 'password'} required className={`${inputCx} pr-10`} />
+            <button
+              type="button"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded text-neutral-500 hover:text-neutral-700"
+            >
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
         </div>
         <button type="submit" disabled={loading} className={primaryBtnCx}>
           {loading ? 'Signing in…' : 'Sign In'}
@@ -584,6 +614,8 @@ function MagicLinkForm({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     onSentChange?.(null);
@@ -822,13 +854,33 @@ function ResetPasswordForm({
             <label htmlFor="reset-password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               New Password
             </label>
-            <input id="reset-password" name="password" type="password" required minLength={8} className={inputCx} />
+            <div className="relative">
+              <input id="reset-password" name="password" type={showPassword ? 'text' : 'password'} required minLength={8} className={`${inputCx} pr-10`} />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded text-neutral-500 hover:text-neutral-700"
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </div>
           <div>
             <label htmlFor="reset-confirm" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               Confirm Password
             </label>
-            <input id="reset-confirm" name="confirm" type="password" required minLength={8} className={inputCx} />
+            <div className="relative">
+              <input id="reset-confirm" name="confirm" type={showConfirm ? 'text' : 'password'} required minLength={8} className={`${inputCx} pr-10`} />
+              <button
+                type="button"
+                aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                onClick={() => setShowConfirm((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded text-neutral-500 hover:text-neutral-700"
+              >
+                {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={loading} className={primaryBtnCx}>
             {loading ? 'Resetting…' : 'Reset Password'}
@@ -867,6 +919,7 @@ export function AuthSignUp(props: {
   const redirectUrl = props.forceRedirectUrl || props.fallbackRedirectUrl || '/dashboard/onboarding';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="w-full max-w-sm mx-auto space-y-4">
@@ -946,7 +999,17 @@ export function AuthSignUp(props: {
           <label htmlFor="signup-password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
             Password
           </label>
-          <input id="signup-password" name="password" type="password" required minLength={8} className={inputCx} />
+          <div className="relative">
+            <input id="signup-password" name="password" type={showPassword ? 'text' : 'password'} required minLength={8} className={`${inputCx} pr-10`} />
+            <button
+              type="button"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded text-neutral-500 hover:text-neutral-700"
+            >
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
           <p className="mt-1 text-xs text-neutral-400">Minimum 8 characters. Password must contain at least an uppercase letter, a lowercase letter, and a number.</p>
         </div>
         <button type="submit" disabled={loading} className={primaryBtnCx}>

@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays, faBars, faFileInvoiceDollar, faSackDollar, faHouse } from '@fortawesome/free-solid-svg-icons';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
-import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   user: {
@@ -58,6 +58,7 @@ interface UserProfile {
     remaining: number;
   } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
+  planActionLabel?: 'Upgrade' | 'Change Plan';
   canCreateOrganization?: boolean;
 }
 
@@ -85,6 +86,7 @@ export function isWithinAuthOverlay(target: Element | null): boolean {
 }
 
 export default function AccountMenu() {
+  const pathname = usePathname();
   const { isSignedIn, isLoaded } = useAuthUser();
   const { orgId } = useAuthSession();
   const currentOrgId = orgId ?? null;
@@ -274,11 +276,25 @@ export default function AccountMenu() {
     : isPersonalContext
       ? profile?.subscription?.planName || 'Free Plan'
       : 'Free Plan';
+  const planActionLabel = profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan');
   const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
   const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
   const expiresAt = isOrganizationContext
     ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
     : profile?.subscription?.expiresAt ?? null;
+
+  const isActiveRoute = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard';
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  const shortcutClass = (href: string) => (
+    `block px-4 py-3 text-sm transition-colors ${
+      isActiveRoute(href)
+        ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300'
+        : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800'
+    }`
+  );
 
   return (
     <div className="relative z-50" ref={menuRef}>
@@ -410,24 +426,53 @@ export default function AccountMenu() {
               <div className="border-t border-neutral-200 dark:border-neutral-800">
                 <TransientNavLink
                   href="/dashboard"
-                  className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+                  className={shortcutClass('/dashboard')}
                   onClick={() => setIsOpen(false)}
                 >
-                  Dashboard
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5 opacity-60" />
+                    <span>Dashboard</span>
+                  </span>
                 </TransientNavLink>
                 <TransientNavLink
-                  href="/dashboard/account"
-                  className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+                  href="/dashboard/profile"
+                  className={shortcutClass('/dashboard/profile')}
                   onClick={() => setIsOpen(false)}
                 >
-                  Account Settings
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faUser} className="w-3.5 h-3.5 opacity-60" />
+                    <span>Profile & Settings</span>
+                  </span>
+                </TransientNavLink>
+                <TransientNavLink
+                  href="/dashboard/plan"
+                  className={shortcutClass('/dashboard/plan')}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faBars} className="w-3.5 h-3.5 opacity-60" />
+                    <span>{planActionLabel}</span>
+                  </span>
                 </TransientNavLink>
                 <TransientNavLink
                   href="/dashboard/billing"
-                  className="block px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+                  className={shortcutClass('/dashboard/billing')}
                   onClick={() => setIsOpen(false)}
                 >
-                  Billing
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faFileInvoiceDollar} className="w-3.5 h-3.5 opacity-60" />
+                    <span>Billing</span>
+                  </span>
+                </TransientNavLink>
+                <TransientNavLink
+                  href="/dashboard/transactions"
+                  className={shortcutClass('/dashboard/transactions')}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faSackDollar} className="w-3.5 h-3.5 opacity-60" />
+                    <span>Transactions</span>
+                  </span>
                 </TransientNavLink>
                 {profile.user.role === 'ADMIN' && (
                   <TransientNavLink

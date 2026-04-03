@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuthUser } from '@/lib/auth-provider/client';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -56,6 +56,7 @@ export function UserSettingsTabs({
   preformattedCreatedAt
 }: UserSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState(initialActiveTab ?? 'profile');
+  const [exportingAccountData, setExportingAccountData] = useState(false);
 
   const hydratedUser = useMemo(() => ({
     ...user,
@@ -69,6 +70,36 @@ export function UserSettingsTabs({
       expiresAt: subscription.expiresAt instanceof Date ? subscription.expiresAt : new Date(subscription.expiresAt)
     };
   }, [subscription]);
+
+  const handleDownloadAccountData = useCallback(async () => {
+    if (exportingAccountData) return;
+
+    setExportingAccountData(true);
+    try {
+      const response = await fetch('/api/user/export-account-data');
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Failed to export account data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `saasybase-account-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast('Account data downloaded successfully', 'success');
+    } catch (error) {
+      console.error('Error downloading account data:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to download account data', 'error');
+    } finally {
+      setExportingAccountData(false);
+    }
+  }, [exportingAccountData]);
 
   const tabs = useMemo(
     () => [
@@ -132,13 +163,26 @@ export function UserSettingsTabs({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Download account data</p>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400">Export your settings, invoices, and history in one bundle.</p>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">Export your settings, invoices, sessions, and history in one JSON bundle.</p>
                 </div>
                 <button
-                  disabled
-                  className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400"
+                  type="button"
+                  onClick={handleDownloadAccountData}
+                  disabled={exportingAccountData}
+                  aria-busy={exportingAccountData}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-600 dark:hover:bg-neutral-900"
                 >
-                  Coming soon
+                  {exportingAccountData ? (
+                    <>
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" strokeWidth="2" className="opacity-25" />
+                        <path d="M12 2a10 10 0 0 1 10 10" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Preparing export...
+                    </>
+                  ) : (
+                    'Download JSON'
+                  )}
                 </button>
               </div>
             </div>
@@ -148,7 +192,7 @@ export function UserSettingsTabs({
         )
       }
     ],
-    [hydratedSubscription, hydratedUser, userSettings, currentUserEmailVerified, preformattedCreatedAt]
+    [hydratedSubscription, hydratedUser, userSettings, currentUserEmailVerified, preformattedCreatedAt, exportingAccountData, handleDownloadAccountData]
   );
 
   const activeContent = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
@@ -164,10 +208,7 @@ export function UserSettingsTabs({
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            type="button"
-            role="tab"
             id={`${tab.id}-tab`}
-            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as 'profile' | 'security')}
             className={cx(
               'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all',

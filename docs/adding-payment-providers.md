@@ -16,6 +16,20 @@ This guide walks through the process of adding a new payment gateway to the appl
 
 ---
 
+## Status Update (March 2026)
+
+The payment architecture now supports **multi-provider ID mappings** using JSON strings (for SQLite compatibility) instead of single-provider columns. This allows a single record (User, Plan, Subscription) to track IDs across multiple providers simultaneously.
+
+### Plural field mapping
+| Old Field | New Plural Field | Type | Description |
+|-----------|-----------------|------|-------------|
+| `externalPriceId` | `externalPriceIds` | JSON String | Map of provider -> price ID |
+| `externalProductId` | `externalProductIds` | JSON String | Map of provider -> product ID |
+| `externalSubscriptionId` | `externalSubscriptionIds` | JSON String | Map of provider -> subscription ID |
+| `externalCustomerId` | `externalCustomerIds` | JSON String | Map of provider -> customer ID |
+
+---
+
 ## Architecture Overview
 
 The payment system consists of:
@@ -28,7 +42,9 @@ lib/payment/
 ├── service.ts        # PaymentService orchestration layer
 └── providers/
     ├── stripe.ts     # Stripe implementation
-    └── paystack.ts   # Paystack implementation
+    ├── paystack.ts   # Paystack implementation
+    ├── paddle.ts     # Paddle implementation
+    └── razorpay.ts   # Razorpay implementation
 ```
 
 All providers implement the `PaymentProvider` interface, which defines standardized methods for:

@@ -94,6 +94,7 @@ Key API endpoint groups:
 - /api/webhooks/payments — Centralized webhook ingress (auto-detects provider)
 - /api/billing/ — Cancel, undo cancel, invoice, customer portal
 - /api/user/profile — User profile with token breakdown
+- /api/user/spend-tokens — User-scoped token deduction
 - /api/internal/spend-tokens — Server-to-server token deduction
 - /api/admin/ — Admin CRUD operations
 - /api/support/tickets — Support ticket management

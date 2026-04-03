@@ -12,7 +12,6 @@ const config = [
       'tests/**/*.js',
       'tests/**/*.cjs',
       'tests/**/*.mjs',
-      'update-admin.js',
     ],
   },
   ...nextCoreWebVitals,

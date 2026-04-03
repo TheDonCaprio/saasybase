@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
+import { requireAdmin, requireAdminOrModerator, toAuthGuardErrorResponse } from '@/lib/auth';
 import { recordAdminAction } from '@/lib/admin-actions';
 import { Logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
@@ -49,7 +49,8 @@ function getProviderFallbackCurrencies(providerName: string, triedCurrency: stri
 
 export async function GET(request: NextRequest) {
   try {
-    const adminId = await requireAdmin();
+    const actor = await requireAdminOrModerator('users');
+    const adminId = actor.userId;
     const rateLimitResult = await adminRateLimit(adminId, request, 'admin-plans:list', { limit: 240, windowMs: 120_000 });
 
     if (!rateLimitResult.success && !rateLimitResult.allowed) {

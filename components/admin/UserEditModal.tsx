@@ -81,10 +81,11 @@ interface UserEditModalProps {
   onUserUpdate: (updatedUser: Partial<User>) => void;
   onUserDelete: (userId: string) => void;
   canManageRoles: boolean;
+  canAssignPlans: boolean;
   currentAdminId: string;
 }
 
-export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelete, canManageRoles, currentAdminId }: UserEditModalProps) {
+export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelete, canManageRoles, canAssignPlans, currentAdminId }: UserEditModalProps) {
   const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -127,6 +128,15 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
     if (!isOpen) return;
     let cancelled = false;
 
+    if (!canAssignPlans) {
+      setPlans([]);
+      setSelectedPlanId('');
+      setPlansLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const loadPlans = async () => {
       setPlansLoading(true);
       try {
@@ -167,7 +177,7 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, canAssignPlans]);
 
   const handleAdjustTokens = async () => {
     if (tokenUpdating) return;
@@ -431,6 +441,7 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
                 </button>
               </div>
 
+              {canAssignPlans ? (
               <div className="border border-neutral-200 dark:border-neutral-800 rounded-md p-4 space-y-3 bg-white dark:bg-neutral-900/30 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">Assign Plan</h3>
@@ -468,6 +479,7 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
                   {assignLoading ? 'Assigning…' : 'Assign Plan'}
                 </button>
               </div>
+              ) : null}
 
               </div>
 

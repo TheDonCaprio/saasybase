@@ -21,6 +21,7 @@ export async function generateMetadata() {
 export default async function AdminUsersPage() {
   const { userId: actorId, role: actorRole } = await requireAdminSectionAccess('users');
   const canManageRoles = actorRole === 'ADMIN';
+  const canAssignPlans = actorRole === 'ADMIN' || actorRole === 'MODERATOR';
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -174,6 +175,7 @@ export default async function AdminUsersPage() {
         initialPage={page}
         currentAdminId={actorId}
         canManageRoles={canManageRoles}
+        canAssignPlans={canAssignPlans}
       />
 
 

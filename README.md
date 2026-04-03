@@ -267,18 +267,19 @@ Key differences from Clerk:
 
 > ⚠️ This is disabled in production (`NODE_ENV === 'production'`). Never rely on it outside local dev.
 
+### Database seed
+
+For a fresh local database, run `npx prisma db seed` to create the initial admin user during setup. The seed script prompts for the admin email and password in an interactive terminal, and it also supports non-interactive creation with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`.
+
 ### Production
 
 **Option 1 — Direct SQL (most secure)**
 ```sql
 UPDATE "User" SET role = 'ADMIN' WHERE id = 'user_xxxxxxxxxxxxx';
 ```
+**Option 2 — Direct SQL (most secure)**
 
-**Option 2 — Admin promotion script**
-```bash
-# Requires ALLOW_ADMIN_SCRIPT=true in env
-node scripts/make-admin.js user_xxxxxxxxxxxxx
-```
+For a fresh production databse, `npx prisma db seed` also lets you set up the initial admin user.
 
 > 💡 Find your Clerk user ID in the Clerk dashboard, or your DB user ID via `npx prisma studio`.
 

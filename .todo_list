@@ -1,5 +1,0 @@
-- [x] Update PaymentActions to support icon-only refund button and optional receipt toggle
-- [x] Pass icon-only refund button + disable receipt on admin transactions list
-- [x] Run npm run -s lint to verify changes
-- [x] Apply dependency upgrades (puppeteer→24.26.0+, nodemailer→^7.0.9) and rerun audit/depcheck
-- [x] Harden auth failure handling for requireAdmin / requireAdminOrModerator (structured logs + metrics)

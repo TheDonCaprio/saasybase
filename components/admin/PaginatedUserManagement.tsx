@@ -58,6 +58,7 @@ interface PaginatedUserManagementProps {
   initialPage: number;
   currentAdminId: string;
   canManageRoles: boolean;
+  canAssignPlans: boolean;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -68,6 +69,7 @@ export function PaginatedUserManagement({
   initialPage,
   currentAdminId,
   canManageRoles,
+  canAssignPlans,
 }: PaginatedUserManagementProps) {
   const itemsPerPage = 50;
   const { search, setSearch, debouncedSearch, status, setStatus } = useListFilterState('', 'ALL');
@@ -481,6 +483,7 @@ export function PaginatedUserManagement({
             onUserUpdate={handleUserUpdate}
             onUserDelete={handleUserDeleted}
             canManageRoles={canManageRoles}
+            canAssignPlans={canAssignPlans}
             currentAdminId={currentAdminId}
           />
 

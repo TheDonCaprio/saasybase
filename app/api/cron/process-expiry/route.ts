@@ -18,17 +18,22 @@ function getBearerToken(req: NextRequest): string | null {
 }
 
 function isCronAuthorized(req: NextRequest): boolean {
-    const expected = process.env.CRON_PROCESS_EXPIRY_TOKEN || process.env.CRON_TOKEN || process.env.INTERNAL_API_TOKEN || null;
+    const expectedTokens = [
+        process.env.CRON_PROCESS_EXPIRY_TOKEN,
+        process.env.CRON_SECRET,
+        process.env.CRON_TOKEN,
+        process.env.INTERNAL_API_TOKEN,
+    ].filter((value): value is string => typeof value === 'string' && value.length > 0);
     const bearer = getBearerToken(req);
 
     // Production: require a configured secret and a matching Bearer token.
     if (process.env.NODE_ENV === 'production') {
-        return Boolean(expected && bearer && bearer === expected);
+        return Boolean(bearer && expectedTokens.some((token) => token === bearer));
     }
 
     // Non-production: allow either the explicit dev header or the bearer token.
     if (req.headers.get('X-Internal-API') === 'true') return true;
-    return Boolean(expected && bearer && bearer === expected);
+    return Boolean(bearer && expectedTokens.some((token) => token === bearer));
 }
 
 export async function GET(request: NextRequest) {

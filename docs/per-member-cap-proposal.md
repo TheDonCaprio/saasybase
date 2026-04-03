@@ -1,4 +1,6 @@
-# Per-Member Shared Token Cap Proposal
+# Per-Member Shared Token Cap Implementation
+
+> Status: implemented in the live app as of April 2026. This document is retained as the rollout shape and design record.
 
 ## Objectives
 - Prevent a single workspace member from exhausting the entire shared token pool.

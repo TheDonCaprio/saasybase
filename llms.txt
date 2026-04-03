@@ -1,14 +1,17 @@
 # SaaSyBase
 
-> A production-ready SaaS boilerplate for vibecoders. Built with Next.js 16, dual auth (Clerk/NextAuth), multi-payment providers (Stripe/Paystack/Paddle/Razorpay), Prisma ORM, and a full admin dashboard.
+SaaSyBase is a production-ready SaaS boilerplate for vibecoders and experienced developers. It provides the infrastructure layer you usually do not want to build from scratch: auth, billing, organizations, tokens, admin dashboards, email, notifications, support, analytics, and ops tooling.
 
-## What is SaaSyBase?
+## Read This First
 
-SaaSyBase is a complete SaaS starter kit that handles the infrastructure so you can focus on building your product. Auth, payments, billing, teams, email, admin dashboards, blog, support tickets, and more are already wired and ready to go.
+- This codebase is scaffold-first, not app-logic-first. Your product code belongs mainly in `app/dashboard/`, `components/`, and `lib/`.
+- Auth and payments are provider-agnostic. Use `authService` and `PaymentProviderFactory`; do not import vendor SDKs in business logic.
+- Many flows are already wired: checkout, webhooks, subscriptions, organization provisioning, token spending, email templates, and admin tooling.
+- The canonical docs are `README.md`, `ARCHITECTURE.md`, `PATTERNS.md`, `CLAUDE.md`, `INSTRUCTIONS.md`, `AGENTS.md`, `TECH_STACK.md`, and `CONTRIBUTING.md`.
 
-## Quick Start
+## Fast Setup
 
-```
+```bash
 cp .env.example .env.local
 npm install
 npx prisma migrate dev --name init
@@ -16,103 +19,75 @@ npx prisma db seed
 npm run dev
 ```
 
-## Core Features
+Use `AUTH_PROVIDER="clerk"` or `AUTH_PROVIDER="nextauth"`. Use `PAYMENT_PROVIDER="stripe"`, `"paystack"`, `"paddle"`, or `"razorpay"`.
 
-- Dual auth provider system (Clerk or NextAuth) — switchable via AUTH_PROVIDER env var
-- Multi-payment provider architecture (Stripe, Paystack, Paddle, Razorpay) — switchable via PAYMENT_PROVIDER env var
-- Three-tier token system (paid, free, shared team tokens)
-- Organization/team management with seat limits and token caps
-- Subscription lifecycle management (create, upgrade, downgrade, cancel, proration)
-- Feature gating behind paid plans
-- Coupon/discount system with per-plan restrictions
-- Full admin dashboard with user management, analytics, and settings
-- Blog CMS with categories and SEO
-- Editable site pages (Terms, Privacy, etc.)
-- Email template system with variable interpolation
-- In-app notification system
-- Support ticket system
-- Theme/branding designer (no code changes needed)
-- PDF invoice and refund receipt generation
-- Rate limiting (database-backed)
-- Moderator roles with per-section access
-- Google Analytics 4 integration
-- First-party visit tracking
-- S3/CDN file storage
-- 90+ regression tests (Vitest) and E2E tests (Playwright)
+## What the App Ships
 
-## Tech Stack
+- Dual auth provider system with Clerk organizations or NextAuth credentials/OAuth/email login.
+- Four active payment providers plus centralized webhook ingress.
+- Paid, free, and shared token pools with organization-aware consumption.
+- Team plan provisioning, invites, member management, and teardown.
+- Feature gates, coupons, subscriptions, invoices, and refund receipts.
+- Blog CMS, site pages, theming, email templates, notifications, and support tickets.
+- Admin dashboard sections for users, plans, billing, content, support, analytics, and maintenance.
+- Demo read-only mode for safe showcase environments.
 
-- Framework: Next.js 16 (App Router)
-- Auth: Clerk or NextAuth (Auth.js v5)
-- Payments: Stripe, Paystack, Paddle, Razorpay
-- Database: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
-- Styling: Tailwind CSS
-- Rich Text: TipTap
-- Email: Nodemailer or Resend
-- Validation: Zod
-- Testing: Vitest + Playwright
-- PDF: pdf-lib
-- Analytics: Google Analytics 4
+## Codebase Map
 
-## Architecture
+- `app/` — App Router pages and API routes.
+- `components/` — Reusable UI and domain components.
+- `lib/` — Business logic, provider abstractions, settings, tokens, teams, billing, email, and security helpers.
+- `prisma/` — Schema and seed data.
+- `tests/` — Vitest and Playwright coverage.
+- `docs/` — Deeper implementation notes for billing, orgs, and token handling.
 
-The codebase uses a provider abstraction pattern for both auth and payments. Business logic lives in lib/, route handlers in app/api/, pages in app/, and reusable components in components/. The database schema has 25+ models managed by Prisma.
+## High-Value Rules for Agents
 
-Provider selection is environment-driven:
-- AUTH_PROVIDER=clerk or AUTH_PROVIDER=nextauth
-- PAYMENT_PROVIDER=stripe, paystack, paddle, or razorpay
+- Use `authService.requireUserId()` in protected API routes.
+- Use `handleApiError()` in API `catch` blocks.
+- Validate inputs with Zod before touching business logic.
+- Rate-limit public endpoints.
+- Use `Logger` instead of `console.log`.
+- Check provider capability support before calling optional methods.
+- Query provider identifiers through provider-neutral fields and JSON map helpers.
+- Use the Prisma singleton from `lib/prisma.ts`.
 
-## Key Directories
+## Key Routes
 
-- app/ — Next.js pages and API routes
-- lib/ — Server-side business logic (auth, payments, tokens, email, subscriptions)
-- lib/auth-provider/ — Auth abstraction layer
-- lib/payment/ — Payment abstraction layer with 4 provider implementations
-- components/ — React components (ui/, admin/, dashboard/, billing/, checkout/, team/)
-- prisma/ — Database schema and migrations
-- tests/ — 90+ unit tests and 3 E2E test specs
-- scripts/ — Operational scripts (backfill, admin, validation)
-- docs/ — Internal architecture documentation
+- `/dashboard` — user dashboard and shipped demo workspace.
+- `/dashboard/team` — team management.
+- `/dashboard/notifications` — notification center.
+- `/dashboard/support` — support tickets.
+- `/admin` — admin dashboard.
+- `/admin/organizations` — organization browser.
+- `/admin/maintenance` — maintenance tools and mode toggle.
+- `/api/webhooks/payments` — centralized payment webhook ingress.
+- `/api/cron/process-expiry` — expiry automation.
+- `/api/health` — health check.
 
-## Documentation Files
+## Docs Index
 
-- README.md — Full feature documentation and setup guide
-- CLAUDE.md — AI agent context and coding rules
-- INSTRUCTIONS.md — Developer guide for extending the codebase
-- AGENTS.md — Specialized AI agent role definitions
-- PATTERNS.md — Codebase patterns and conventions reference
-- TECH_STACK.md — Complete technology stack with versions and rationale
-- ARCHITECTURE.md — System architecture with diagrams and data flows
-- CONTRIBUTING.md — Contribution workflow and guidelines
-- docs/adding-payment-providers.md — Guide for adding new payment providers
-- docs/token-usage-and-deduction.md — Token system integration guide
+- `README.md` — product-facing overview and setup.
+- `ARCHITECTURE.md` — system diagrams and data flow.
+- `PATTERNS.md` — implementation patterns to follow.
+- `CLAUDE.md` — agent rules and quick reference.
+- `INSTRUCTIONS.md` — developer workflow and conventions.
+- `AGENTS.md` — specialized agent roles.
+- `TECH_STACK.md` — stack, versions, and rationale.
+- `CONTRIBUTING.md` — contribution workflow.
+- `docs/adding-payment-providers.md` — payment provider extension guide.
+- `docs/token-usage-and-deduction.md` — token spend API guide.
+- `docs/organization-rollout-plan.md` — organization rollout status and history.
 
-## API Routes
+## Useful Environment Groups
 
-Key API endpoint groups:
-- /api/checkout — Payment checkout session creation
-- /api/webhooks/payments — Centralized webhook ingress (auto-detects provider)
-- /api/billing/ — Cancel, undo cancel, invoice, customer portal
-- /api/user/profile — User profile with token breakdown
-- /api/user/spend-tokens — User-scoped token deduction
-- /api/internal/spend-tokens — Server-to-server token deduction
-- /api/admin/ — Admin CRUD operations
-- /api/support/tickets — Support ticket management
-- /api/notifications — In-app notifications
-- /api/cron/process-expiry — Subscription expiry automation
-- /api/health — Health check endpoint
+- Core: `DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_APP_DOMAIN`, `NEXT_PUBLIC_SITE_NAME`
+- Auth: `AUTH_PROVIDER`, `AUTH_SECRET`, Clerk keys, NextAuth OAuth keys
+- Payments: `PAYMENT_PROVIDER`, `PAYMENTS_CURRENCY`, provider secrets, webhook secrets
+- Security: `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN`
+- Email: `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL`
+- Storage and analytics: `LOGO_*`, `AWS_*`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*`
 
-## Database Models
+## Practical Note
 
-Core models: User, Plan, PlanPrice, Subscription, Payment, Organization, OrganizationMembership, OrganizationInvite, Coupon, CouponRedemption, SupportTicket, TicketReply, EmailLog, EmailTemplate, Notification, Setting, SitePage, BlogCategory, VisitLog, SystemLog, AdminActionLog, RateLimitBucket
-
-## Environment Variables
-
-Required groups:
-- Core: DATABASE_URL, NEXT_PUBLIC_APP_URL
-- Auth: AUTH_PROVIDER + provider-specific keys
-- Payments: PAYMENT_PROVIDER + provider-specific keys
-- Security: ENCRYPTION_SECRET, INTERNAL_API_TOKEN
-- Email: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
-
-See .env.example for the complete reference.
+The shipped product is a foundation. If you are building a new SaaS on top of it, keep the infra layers intact and add your product-specific logic where the route and component structure already expects it.

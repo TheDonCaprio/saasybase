@@ -65,7 +65,7 @@
 - Use `supportsFeature()` checks before calling optional methods
 - Webhooks must verify signatures before processing
 - Test webhook flows with both happy and error paths
-- Check both `externalSubscriptionId` AND `stripeSubscriptionId` when querying
+- Check `externalSubscriptionId` first, then use the provider-ID JSON map helpers when older multi-provider data must be resolved
 
 ---
 
@@ -204,7 +204,7 @@
 **Role:** Manage email templates, transactional email sending, and in-app notifications.
 
 **Expertise:**
-- Email template CMS (TipTap rich text)
+- Email template admin UI (HTML + plain text templates, test sends, activation toggles)
 - Template variable interpolation
 - SMTP configuration and delivery
 - In-app notification system with deduplication

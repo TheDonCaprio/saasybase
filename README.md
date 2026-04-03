@@ -73,7 +73,7 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 | Payment | **Stripe**, **Paystack**, **Paddle**, **Razorpay** — switchable via `PAYMENT_PROVIDER` |
 | Database | Prisma 7 ORM · SQLite (dev) · PostgreSQL (prod) |
 | Styling | Tailwind CSS |
-| Rich Text Editor | TipTap (blog posts, site pages, email templates) |
+| Rich Text Editor | TipTap (blog posts and editable site pages) |
 | Email | Nodemailer (SMTP) or Resend, switchable via `EMAIL_PROVIDER` |
 | Analytics | Google Analytics 4 (via Data API) + built-in visit tracking |
 | PDF Generation | pdf-lib (invoices, refund receipts) |
@@ -123,7 +123,7 @@ saasybase/
 ├── scripts/                # Operational scripts (backfills, admin tools)
 ├── tests/                  # 90+ Vitest unit tests + Playwright E2E
 ├── docs/                   # Internal documentation
-├── ops/                    # Production operations (indexes, Umami, runbooks)
+├── ops/                    # Production operations (indexes, runbooks)
 └── .env.example            # Full environment variable template
 ```
 
@@ -207,7 +207,7 @@ GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 ```
 
-NextAuth supports **credentials** (email + password), **GitHub OAuth**, **Google OAuth**, and **magic link** out of the box — enable the ones you need in `lib/nextauth.config.ts`. All app email flows, including auth emails, send through the shared mail layer and can use either Nodemailer or Resend via `EMAIL_PROVIDER`.
+NextAuth supports **credentials** (email + password), **GitHub OAuth**, **Google OAuth**, and **passwordless email magic links** out of the box — enable the ones you need in `lib/nextauth.config.ts`. Transactional app email can use either Nodemailer or Resend via `EMAIL_PROVIDER`; the NextAuth email-login flow itself is SMTP-based.
 
 #### GitHub OAuth setup
 
@@ -509,22 +509,12 @@ The app resolves the active currency in this order:
 
 ### Database Schema for Multi-Provider
 
-The schema uses dual-column patterns for backward compatibility:
-- **Legacy columns** (`stripeSubscriptionId`, `stripePriceId`) — kept for existing Stripe data.
-- **Generic columns** (`externalSubscriptionId`, `paymentProvider`) — used for all new transactions.
-- **Provider ID maps** (`externalSubscriptionIds` as JSON) — for multi-provider per-record support.
+The schema uses provider-neutral fields plus JSON maps for multi-provider support:
+- **Generic columns** (`externalSubscriptionId`, `externalPriceId`, `paymentProvider`) — used for all new transactions.
+- **Provider ID maps** (`externalSubscriptionIds`, `externalPriceIds` as JSON) — for multi-provider per-record support.
+- **Compatibility aliases** — some admin/API inputs still accept Stripe-named aliases like `stripePriceId` for convenience, but the database model itself is provider-neutral.
 
-When querying, always check both:
-```typescript
-const subscription = await prisma.subscription.findFirst({
-  where: {
-    OR: [
-      { externalSubscriptionId: providerId },
-      { stripeSubscriptionId: providerId },
-    ],
-  },
-});
-```
+When querying, always resolve subscriptions and plans the same way the service layer does: check the direct column first, then fall back to the provider-ID JSON map helpers in `lib/payment/service.ts` and `lib/plans.ts`.
 
 ### Adding New Providers
 
@@ -585,7 +575,7 @@ When a user belongs to a team plan, the organization has its own token system:
 
 Team subscriptions provision managed organizations and keep them in sync with billing status.
 
-- **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to Clerk (if using Clerk).
+- **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to Clerk (if using Clerk). In practice, that means an active team plan whose plan has `supportsOrganizations: true` and is not in a proration-pending state.
 - **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses, the helper dismantles the organization and clears member access.
 - **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, and provisioning refresh.
 - **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
@@ -736,7 +726,7 @@ The app includes a full email template CMS with database-backed, editable templa
 
 ### Admin UI
 
-`/admin/emails` — WYSIWYG editor for all email templates. Each template supports HTML and plain text versions with `{{variable}}` placeholders.
+`/admin/emails` — form-based editor for all email templates. Each template supports HTML and plain text versions, activation toggles, test sends, and `{{variable}}` placeholders.
 
 ### Built-in Templates (27 total)
 
@@ -802,6 +792,7 @@ The app has a full in-app notification system.
 ### Features
 
 - **In-app notifications** with unread badge counts
+- **Type labels:** The app treats `BILLING`, `SUPPORT`, `ACCOUNT`, `TEAM_INVITE`, and `GENERAL` as the standard categories, but the database stores `type` as a string rather than a hard enum.
 - **URL deep-linking** — each notification can link to a specific page
 - **Deduplication** — 5-minute window prevents duplicate notifications
 - **Paired with email:** Billing notifications can optionally trigger an email via the template system
@@ -995,9 +986,9 @@ Metrics surfaced: total visits, unique visitors, new users, engaged sessions, pa
 
 ## Visit Tracking
 
-The app includes lightweight first-party visit tracking via `lib/visit-tracking.ts` and the `VisitLog` model. Middleware (`POST /api/internal/track-visit`) records visits for admin traffic reporting, skipping API routes, static files, admin routes, and bots. This is an alternative/supplement to Google Analytics for self-hosted analytics.
+The app includes lightweight first-party visit tracking via `lib/visit-tracking.ts` and the `VisitLog` model. Middleware (`POST /api/internal/track-visit`) records visits for admin traffic reporting, skipping API routes, static files, admin routes, and bots. This is the built-in self-hosted analytics path alongside GA4.
 
-There is also an optional **Umami** integration. See `ops/README-umami.md` for setup and `ops/UMAMI_LOCAL_SETUP.md` for running Umami locally via Docker.
+> Historical note: the repository still contains deprecated Umami ops playbooks in `ops/`, but they are no longer part of the supported analytics setup.
 
 ---
 
@@ -1188,7 +1179,7 @@ The user dashboard (`/dashboard`) provides users with a full self-service experi
 
 | Page | Path | Description |
 |---|---|---|
-| **Home** | `/dashboard` | Overview with current plan, token balance, quick stats |
+| **Home** | `/dashboard` | Overview and the shipped SaaSyApp demo workspace with current plan, token balance, and quick stats |
 | **Onboarding** | `/dashboard/onboarding` | Guided setup for new users |
 | **Plan** | `/dashboard/plan` | Current plan details and upgrade options |
 | **Billing** | `/dashboard/billing` | Payment management, manage subscription |
@@ -1201,11 +1192,23 @@ The user dashboard (`/dashboard`) provides users with a full self-service experi
 | **Notifications** | `/dashboard/notifications` | In-app notification center |
 | **Support** | `/dashboard/support` | Support ticket creation and history |
 | **Coupons** | `/dashboard/coupons` | Redeemed coupons and pending redemptions |
-| **Editor** | `/dashboard/sassyapp` | Your app's workspace (scaffold your product here) |
+| **Legacy redirects** | `/dashboard/editor`, `/dashboard/sassyapp` | Redirect to `/dashboard` |
+
+The main dashboard page is the place to replace the demo SaaSyApp experience with your own product logic.
 
 ---
 
 ## Production Setup
+
+### Before the first live deploy
+
+Complete these steps after local development is finished and before you point real traffic at the app:
+
+1. Provision a hosted PostgreSQL database and update `DATABASE_URL`.
+2. Run production migrations with `npx prisma migrate deploy` against that production database.
+3. Configure all production env vars for your chosen auth provider, payment provider, email provider, and secrets.
+4. If admins will upload logos or other managed files in production, switch from local filesystem storage to S3-compatible storage.
+5. Configure your webhook endpoints and verify signatures before accepting live traffic.
 
 ### Required environment variables
 
@@ -1230,6 +1233,7 @@ ENCRYPTION_SECRET=""           # Encrypt sensitive DB fields
 INTERNAL_API_TOKEN=""          # Server-to-server endpoints (/api/internal/*)
 HEALTHCHECK_TOKEN=""           # Auth for /api/health detailed output
 CRON_PROCESS_EXPIRY_TOKEN=""   # Auth for /api/cron/process-expiry
+CRON_SECRET=""                 # Optional: Vercel Cron secret (Authorization header)
 
 # Email
 EMAIL_PROVIDER="nodemailer"      # or "resend"
@@ -1257,6 +1261,22 @@ Authorization: Bearer <HEALTHCHECK_TOKEN>
 
 Returns database connectivity, environment validation (Stripe, Clerk), and runtime diagnostics. Without the token, returns a minimal public response.
 
+### Vercel deployment
+
+SaaSyBase does not need much Vercel-specific config, but there are a few production realities you should handle explicitly:
+
+1. Import the repo into Vercel and let Next.js auto-detect the framework.
+2. Set production env vars in the Vercel project settings.
+3. Use PostgreSQL, not SQLite.
+4. Run `npx prisma migrate deploy` against the production database before the first live release and on future schema changes. Vercel does not apply Prisma migrations for you automatically.
+5. If you need admin-managed uploads (logos, blog assets, similar files), use `LOGO_STORAGE="s3"` plus S3-compatible credentials. Vercel's local filesystem is not suitable for durable app-managed uploads.
+6. Set `CRON_SECRET` in Vercel if you want the built-in Vercel cron job to call `/api/cron/process-expiry`. The shipped `vercel.json` schedules that route once per day at `03:00 UTC`.
+
+Notes:
+
+- The default `vercel.json` cron schedule is intentionally conservative so it works on Vercel Hobby plans too. If you need faster cleanup and your plan supports it, increase the frequency.
+- If you want manual or external cron callers in addition to Vercel Cron, you can also keep `CRON_PROCESS_EXPIRY_TOKEN` set.
+
 ### Clerk webhook (production)
 
 1. Go to Clerk Dashboard → Webhooks → Add endpoint.
@@ -1276,6 +1296,15 @@ Multiple comma-separated secrets are supported for rotation:
 STRIPE_WEBHOOK_SECRET="whsec_primary,whsec_rotating"
 ```
 
+### Vercel deployment checklist
+
+- `DATABASE_URL` points at PostgreSQL.
+- `NEXT_PUBLIC_APP_URL` matches the production domain exactly.
+- `AUTH_PROVIDER` and `PAYMENT_PROVIDER` are set deliberately.
+- `CRON_SECRET` is configured if using the bundled Vercel cron.
+- `LOGO_STORAGE="s3"` is configured if you need durable uploads.
+- Clerk and payment webhooks point at the production domain.
+
 ### Support ticket emails
 
 - New tickets/user replies → email to `SUPPORT_EMAIL`.
@@ -1286,6 +1315,22 @@ STRIPE_WEBHOOK_SECRET="whsec_primary,whsec_rotating"
 ---
 
 ## Self-hosted Deployments
+
+### Coolify
+
+Coolify can deploy SaaSyBase as a standard Node/Next.js app without a custom Dockerfile.
+
+Recommended setup:
+
+1. Connect the repository as a Node or Nixpacks-style application.
+2. Set the build command to `npm run build`.
+3. Set the start command to `npm run start`.
+4. Run `npx prisma migrate deploy` as a pre-deploy step or separate deployment job.
+5. Use PostgreSQL for production data.
+6. Use S3-compatible storage if you need durable uploaded assets across container restarts or reschedules.
+7. Configure a scheduled HTTP job for `/api/cron/process-expiry` with `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` unless you are relying on a platform-native scheduler that can inject a bearer token.
+
+### Linux VPS (Nginx or Apache)
 
 For bare-metal / VPS hosts (AlmaLinux, RHEL, Ubuntu):
 
@@ -1317,6 +1362,67 @@ set -a; source .env.production; set +a
 npm run start
 ```
 
+### Linux VPS deployment flow
+
+Typical production sequence:
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run build
+npm run start
+```
+
+Run the app under `systemd`, `pm2`, or another process manager. `systemd` is the simplest default on most Linux VPS hosts.
+
+### Nginx reverse proxy
+
+Example site block:
+
+```nginx
+server {
+  server_name yourdomain.com www.yourdomain.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection upgrade;
+  }
+}
+```
+
+Pair this with TLS via Let's Encrypt or your existing certificate automation.
+
+### Apache reverse proxy
+
+Example VirtualHost:
+
+```apache
+<VirtualHost *:80>
+  ServerName yourdomain.com
+  ServerAlias www.yourdomain.com
+
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
+  RequestHeader set X-Forwarded-Proto "http"
+</VirtualHost>
+```
+
+Enable the required proxy modules (`proxy`, `proxy_http`, `headers`) and terminate TLS in your HTTPS virtual host.
+
+### Linux VPS cron example
+
+```bash
+curl -fsS -m 60 \
+  -H 'Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>' \
+  'https://yourdomain.com/api/cron/process-expiry'
+```
+
 ---
 
 ## Environment Variable Reference
@@ -1333,12 +1439,13 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
 | Payment config | `PAYMENT_AUTO_CREATE`, `PAYMENTS_CURRENCY` | Catalog sync and currency |
+| Currency settings | `DEFAULT_CURRENCY` | DB-backed admin setting used by payment currency resolution |
 | Currency | `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider currency overrides |
 | Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Switch between SMTP/Nodemailer and Resend |
 | Geolocation | `IPINFO_LITE_TOKEN` | Optional; activity geolocation falls back to `country.is` when unset |
 | Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `LOGO_S3_ENDPOINT`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs, S3, or S3-compatible (R2, MinIO) |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
-| Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN` | Server-side secrets |
+| Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN`, `CRON_SECRET` | Server-side secrets |
 | Demo | `DEMO_READ_ONLY_MODE` | Read-only demo mode |
 | Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
 | Seeding | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Non-interactive admin creation |

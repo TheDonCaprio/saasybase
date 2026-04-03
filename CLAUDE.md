@@ -133,7 +133,7 @@ Tests cover: payment provider flows, webhook normalization, subscription lifecyc
 | Raw `req.json()` without validation | Parse with Zod schema from `lib/validation.ts` |
 | Querying only `externalSubscriptionId` | Also check `externalSubscriptionIds` JSON map for multi-provider setups |
 | Missing rate limiting on API route | Add `rateLimit(key, RATE_LIMITS.API_GENERAL)` |
-| Hardcoding currency | Use `resolveActiveCurrency()` from settings |
+| Hardcoding currency | Use `getActiveCurrency()` or `getActiveCurrencyAsync()` and let `DEFAULT_CURRENCY` / `PAYMENTS_CURRENCY` resolve through the payment registry |
 | Direct `new PrismaClient()` | Use singleton from `lib/prisma.ts` |
 
 ---

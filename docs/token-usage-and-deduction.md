@@ -30,9 +30,11 @@ Use the authenticated spend-tokens endpoint for client-side integrations (e.g. y
 ```
 
 **Responses**:
-- `200 OK`: `{ ok: true, bucket, balances: { paid, free, sharedPool } }`
-- `409 Conflict`: `{ ok: false, error: "insufficient_tokens", bucket, required, available }`
+- `200 OK`: `{ ok: true, userId, amount, bucket, organizationId, warnings?, sharedCap?, balances: { paid, free, sharedPool } }`
+- `409 Conflict`: `{ ok: false, error: "insufficient_tokens", bucket, required, available, poolAvailable?, memberCap?, memberUsage?, memberRemainingCap?, capStrategy? }`
 - `401 Unauthorized`: if not logged in.
+
+`warnings` and `sharedCap` are present when a workspace member spends from the shared pool and the cap strategy produces soft-limit feedback.
 
 **Bucket Selection Strategy (`auto`)**:
 1. Check for an active personal subscription with remaining **paid tokens**.

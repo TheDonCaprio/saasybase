@@ -109,7 +109,7 @@ export function DashboardHeaderDrawer({
   const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
   const [openPathname, setOpenPathname] = useState<string | null>(null);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [manualDetailsExpanded, setManualDetailsExpanded] = useState(false);
   const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
   const prevOrgIdRef = useRef(currentOrgId);
   const profileRequestInFlightRef = useRef(false);
@@ -191,12 +191,15 @@ export function DashboardHeaderDrawer({
     return matches.reduce((best, current) => (current.href.length > best.href.length ? current : best));
   })();
 
+  const isAccountRoute = ACCOUNT_DRAWER_PATHS.has(pathname) || Array.from(ACCOUNT_DRAWER_PATHS).some((basePath) => pathname.startsWith(`${basePath}/`));
+  const detailsExpanded = isAccountRoute || manualDetailsExpanded;
+
   const toggle = useCallback(() => {
     setOpenPathname(prev => (prev === pathname ? null : pathname));
   }, [pathname]);
   const close = useCallback(() => {
     setOpenPathname(null);
-    setDetailsExpanded(false);
+    setManualDetailsExpanded(false);
     hasAttemptedProfileFetchRef.current = false;
     setProfileState((prev) => {
       if (prev?.orgId === currentOrgId && prev.profile == null) {
@@ -306,13 +309,6 @@ export function DashboardHeaderDrawer({
     : profile?.subscription?.expiresAt ?? null;
   const mainNavItems = useMemo(() => displayItems.filter((item) => !ACCOUNT_DRAWER_PATHS.has(item.href)), [displayItems]);
 
-  useEffect(() => {
-    const isAccountRoute = ACCOUNT_DRAWER_PATHS.has(pathname) || Array.from(ACCOUNT_DRAWER_PATHS).some((basePath) => pathname.startsWith(`${basePath}/`));
-    if (open && isAccountRoute) {
-      setDetailsExpanded(true);
-    }
-  }, [open, pathname]);
-
   return (
     <>
       <button
@@ -367,7 +363,7 @@ export function DashboardHeaderDrawer({
                       <div className="space-y-2.5 p-3.5">
                         <button
                           type="button"
-                          onClick={() => setDetailsExpanded((prev) => !prev)}
+                          onClick={() => setManualDetailsExpanded((prev) => !prev)}
                           className="flex w-full items-start justify-between gap-3 rounded-xl px-0 py-0 text-left transition"
                           aria-expanded={detailsExpanded}
                         >

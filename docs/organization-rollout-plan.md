@@ -1,16 +1,17 @@
 # Organization / Team Rollout Plan
 
-_Last updated: 2025-11-18_
+_Last updated: 2026-04-03_
 
 ## Current Status
 - ✅ Database schema ships with `Organization`, `OrganizationMembership`, and `OrganizationInvite` plus the plan/payment links added in migration `20251117223256_add_organizations`.
-- ✅ `.env.example` + `lib/env.ts` validate the new `TEAM_SUBSCRIPTION_PRICE_*` variables and dev seeds include a representative team tier.
+- ✅ `.env.example` + `lib/env.ts` validate the `SUBSCRIPTION_PRICE_*` variables and dev seeds include a representative team tier.
 - ✅ Runtime wiring complete: `syncOrganizationEligibilityForUser` now runs across checkout confirmation, subscription activation, Stripe webhooks, admin overrides, and auth flows so organizations are provisioned or torn down automatically.
 - ✅ Owner tooling live: `/dashboard/team` (built with `TeamManagementClient`, `TeamMembersList`, `TeamInviteForm`, `ProvisionRefreshButton`) calls the `/api/team/*` routes to view membership state, resend invites, revoke seats, and re-provision if anything drifts.
 - ✅ Server helpers (`lib/organization-access.ts`, `lib/team-dashboard.ts`) centralize organization slugging, Clerk metadata sync, and the dashboard snapshot used by the client.
-- 🚧 Documentation + wider product touchpoints (invite acceptance UX, account switchers, marketing copy) still need to catch up.
+- ✅ Invite acceptance UX ships at `/invite/[token]` and the admin organization browser is available at `/admin/organizations`.
+- 📝 Remaining work is mostly editorial or policy-level follow-up (for example, final seat-limit enforcement decisions and help-center copy), not missing core wiring.
 
-## Remaining Tracks & Owners
+## Historical Notes / Future Questions
 1. **Data & Backfill**
    - Confirm whether any legacy "team" metadata needs migration; if so, write a backfill to seed `OrganizationMembership` rows for historical customers.
    - Decide how QA/staging orgs should be seeded now that runtime provisioning is live (fixture script vs. dashboard-only setup).

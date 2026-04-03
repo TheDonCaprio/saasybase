@@ -39,23 +39,13 @@ if (provider.supportsFeature('proration')) {
 
 ---
 
-## 2. Dual-Column Query Pattern
+## 2. Provider-ID Lookup Pattern
 
-The database has both legacy Stripe-specific columns and generic multi-provider columns. Always query both:
+The database now uses provider-neutral columns plus JSON maps for provider-specific IDs. Query the direct column first, then fall back to the helper-based JSON map lookup when needed:
 
 ```typescript
-// ✅ Correct — checks both columns
-const subscription = await prisma.subscription.findFirst({
-  where: {
-    OR: [
-      { externalSubscriptionId: providerId },
-      { stripeSubscriptionId: providerId },
-    ],
-  },
-});
-
-// ❌ Wrong — misses legacy Stripe data
-const subscription = await prisma.subscription.findFirst({
+// ✅ Correct — direct column first, helper fallback for JSON map lookups
+const subscription = await prisma.subscription.findUnique({
   where: { externalSubscriptionId: providerId },
 });
 ```
@@ -66,7 +56,7 @@ const subscription = await prisma.subscription.findFirst({
 - `Payment`: `externalSessionId` — provider checkout session ID
 - `User`: `stripeCustomerId` — exists as legacy for Stripe-created customers
 
-> **Note:** The legacy `stripeSubscriptionId` and `stripePriceId` columns have been removed. If you're working with older data that might pre-date the migration, use the `externalSubscriptionIds` JSON map on the Subscription model.
+> **Note:** Use the `externalSubscriptionIds` and `externalPriceIds` JSON maps, plus the lookup helpers in `lib/payment/service.ts` and `lib/plans.ts`, when you need to resolve provider IDs across older multi-provider records.
 
 **Why:** Multi-provider support with clean provider-agnostic identifiers.
 

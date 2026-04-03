@@ -1,6 +1,6 @@
 import React from 'react';
 import { SidebarNav } from '../../../components/dashboard/SidebarNav';
-import { faPlay, faUser, faUserShield, faBell, faLifeRing, faFlask } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faUserShield, faBell, faLifeRing, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';

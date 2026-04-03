@@ -25,10 +25,7 @@ export function GracePeriodNotice() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!isSignedIn) {
-      setStatus(null);
-      return;
-    }
+    if (!isSignedIn) return;
 
     let cancelled = false;
     (async () => {
@@ -79,6 +76,8 @@ export function GracePeriodNotice() {
     // The API-backed `status.inGrace` check already ensures the grace window is active.
     return stored.getTime() >= graceEndsAt.getTime();
   }, [status, graceEndsAt, dismissedUntilIso]);
+
+  if (!isLoaded || !isSignedIn) return null;
 
   if (!status || !status.inGrace) return null;
   if (hidden || isDismissedForThisGrace) return null;

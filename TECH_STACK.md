@@ -86,7 +86,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| **TipTap** | 3.x | WYSIWYG editor for blog posts, site pages, email templates |
+| **TipTap** | 3.x | WYSIWYG editor for blog posts and editable site pages |
 
 ### TipTap Extensions
 - `@tiptap/starter-kit` — Core editing
@@ -121,7 +121,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| **TanStack React Query** | 5.x | Client-side data fetching, caching, mutations |
+| **TanStack React Query** | 5.x | Installed dependency, not currently the primary app-wide client data layer |
 | **Zod** | 3.x | Schema validation for API inputs and form data |
 
 ---
@@ -131,7 +131,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | **pdf-lib** | 1.x | Server-side PDF generation (invoices, refund receipts) |
-| **@react-pdf/renderer** | 3.x | React-based PDF rendering |
+| **@react-pdf/renderer** | 3.x | Installed compatibility dependency; not the primary invoice/refund rendering path |
 
 ---
 
@@ -167,7 +167,7 @@ Optional dependency: `@aws-sdk/client-s3` (in `optionalDependencies`)
 
 ### Test Stats
 - **90+ unit test files** covering payments, auth, subscriptions, tokens, webhooks
-- **3 E2E test specs** for dashboard navigation, org switching, org deletion
+- **4 E2E test specs** for dashboard navigation, org switching, org deletion, and demo read-only admin behavior
 
 ---
 
@@ -203,10 +203,10 @@ Optional dependencies: `dompurify`, `jsdom` (in `optionalDependencies`)
 |-----------|---------|
 | **date-fns** | Date formatting and manipulation |
 | **file-type** | File MIME type detection |
-| **glob** | File pattern matching (scripts) |
-| **puppeteer** | Browser automation (optional, for PDF/screenshot tasks) |
+| **glob** | Installed for script/archive tooling; not a core runtime primitive |
+| **puppeteer** | Optional browser automation dependency; not part of the current main app flow |
 | **react-easy-crop** | Image cropping UI |
-| **re-resizable** | Resizable UI panels |
+| **re-resizable** | Installed dependency, not currently a major documented UI primitive |
 
 ---
 

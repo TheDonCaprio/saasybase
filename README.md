@@ -297,13 +297,11 @@ All providers share a common checkout → webhook → subscription lifecycle. Th
 
 > **Note:** A Lemon Squeezy provider implementation exists in `lib/payment/providers/lemonsqueezy.ts` but is **archived** and not wired into the active provider registry. It is kept for reference only.
 
-### Plan Price IDs
+### Plan Catalog Sync
 
-Plans reference provider price IDs via environment variables:
+Seeded plans automatically receive provider-generated price IDs during `npx prisma db seed` when catalog auto-create is enabled for the active payment provider. You do not need to hand-maintain plan ID env vars for the shipped plans.
 
-- **One-time plans:** `PAYMENT_PRICE_<key>` (e.g. `PAYMENT_PRICE_24H`, `PAYMENT_PRICE_1M`)
-- **Recurring/subscription plans:** `SUBSCRIPTION_PRICE_<key>` (e.g. `SUBSCRIPTION_PRICE_1M`, `SUBSCRIPTION_PRICE_1Y`)
-- **Legacy fallback:** `PRICE_*` keys still work but will log a warning — rename them when you can.
+If you create new plans later, the same provider sync path can populate their IDs into the database.
 
 ### Multi-Currency Pricing
 

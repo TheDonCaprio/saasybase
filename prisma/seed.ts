@@ -502,7 +502,7 @@ async function main() {
     const { syncPlansToProviders } = await import('../lib/payment/catalog-sync-service');
     
     await syncPlanExternalPriceIds();
-    console.log('Plan external price IDs synced from environment.');
+    console.log('Plan external price IDs synced from the provider catalog.');
     
     await syncPlansToProviders();
     console.log('Plans synced with active payment providers.');

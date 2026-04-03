@@ -98,7 +98,7 @@
 **Rules:**
 - Never expose internal error details in production responses
 - Always use `createErrorResponse()` from `lib/secure-errors.ts`
-- Rate-limit all auth-related endpoints with `RATE_LIMIT_TIERS.AUTH`
+- Rate-limit all auth-related endpoints with `RATE_LIMITS.AUTH`
 - Verify webhook signatures before processing events
 - Use `ENCRYPTION_SECRET` for sensitive data at rest
 - Never log sensitive data — use `logger` which auto-redacts
@@ -185,7 +185,7 @@
 - `playwright.config.ts` — Playwright configuration
 - `tests/vitest.setup.ts` — Global test setup
 - `tests/mocks/` — Mock modules (server-only, etc.)
-- `tests/*.test.ts` — 84+ test files with patterns to follow
+- `tests/*.test.ts` — 90+ test files with patterns to follow
 - `tests/e2e/` — Playwright E2E specs
 - `tests/README.md` — Test documentation
 

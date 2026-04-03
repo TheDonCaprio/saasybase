@@ -100,15 +100,12 @@ export async function GET(req: NextRequest) {
 // Use the singleton
 import { prisma } from '@/lib/prisma';
 
-// Always check both columns for subscriptions
+// Use external identifiers for standard querying
 const sub = await prisma.subscription.findFirst({
-  where: {
-    OR: [
-      { externalSubscriptionId: id },
-      { stripeSubscriptionId: id },
-    ],
-  },
+  where: { externalSubscriptionId: id },
 });
+
+// For complex multi-provider lookups backwards compatibility, check externalSubscriptionIds JSON map
 ```
 
 ### Error Throwing
@@ -127,12 +124,12 @@ throw new PaymentError('Charge declined');
 ### Logging
 
 ```typescript
-// Always use the logger, never console.log
-import { logger } from '@/lib/logger';
+// Always use the Logger, never console.log
+import { Logger } from '@/lib/logger';
 
-logger.info('Action completed', { userId, action });
-logger.warn('Deprecated API called', { endpoint });
-logger.error('External service failed', error);
+Logger.info('Action completed', { userId, action });
+Logger.warn('Deprecated API called', { endpoint });
+Logger.error('External service failed', error);
 ```
 
 ---

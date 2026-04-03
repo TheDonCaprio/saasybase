@@ -153,7 +153,7 @@ Before submitting a PR that touches auth, payments, or user data:
 - [ ] Input validated with Zod schemas
 - [ ] Rate limiting applied to new endpoints
 - [ ] Auth check present (`authService.requireUserId()`)
-- [ ] No sensitive data in logs (use `logger` which auto-redacts)
+- [ ] No sensitive data in logs (use `Logger` which auto-redacts)
 - [ ] Error responses don't leak internal details in production
 - [ ] Webhook signatures verified before processing
 - [ ] SQL injection prevented (Prisma handles this, but double-check raw queries)

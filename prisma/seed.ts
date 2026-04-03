@@ -134,7 +134,7 @@ function getCanonicalAdminUpdate(args: {
   };
 }
 
-async function reassignUserReferences(oldUserId: string, newUserId: string) {
+export async function reassignUserReferences(oldUserId: string, newUserId: string) {
   await prisma.$transaction(async (tx) => {
     await tx.organization.updateMany({ where: { ownerUserId: oldUserId }, data: { ownerUserId: newUserId } });
     await tx.organizationMembership.updateMany({ where: { userId: oldUserId }, data: { userId: newUserId } });

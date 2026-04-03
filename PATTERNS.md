@@ -61,12 +61,14 @@ const subscription = await prisma.subscription.findFirst({
 ```
 
 **Columns affected:**
-- `Subscription`: `stripeSubscriptionId` ↔ `externalSubscriptionId`
-- `Subscription`: `stripePriceId` ↔ `externalPriceId`
-- `Payment`: `stripeSessionId` ↔ `externalSessionId`
-- `User`: `stripeCustomerId` ↔ generic customer ID maps
+- `Subscription`: `externalSubscriptionId` — primary identifier for provider subscriptions
+- `Subscription`: `externalPriceId` — provider-specific price reference
+- `Payment`: `externalSessionId` — provider checkout session ID
+- `User`: `stripeCustomerId` — exists as legacy for Stripe-created customers
 
-**Why:** Backward compatibility with existing Stripe data while supporting multi-provider.
+> **Note:** The legacy `stripeSubscriptionId` and `stripePriceId` columns have been removed. If you're working with older data that might pre-date the migration, use the `externalSubscriptionIds` JSON map on the Subscription model.
+
+**Why:** Multi-provider support with clean provider-agnostic identifiers.
 
 ---
 
@@ -77,7 +79,7 @@ All API routes follow this structure:
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider/service';
-import { rateLimit, RATE_LIMIT_TIERS } from '@/lib/rateLimit';
+import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { handleApiError, ApiError } from '@/lib/api-error';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -86,8 +88,7 @@ const schema = z.object({ /* ... */ });
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Rate limiting
-    await rateLimit('feature-name', RATE_LIMIT_TIERS.API_GENERAL);
+    await rateLimit('feature-name', RATE_LIMITS.API_GENERAL);
     
     // 2. Authentication
     const userId = await authService.requireUserId();
@@ -252,12 +253,12 @@ return createErrorResponse(error, 'Something went wrong');
 Database-backed rate limiting with preconfigured tiers:
 
 ```typescript
-import { rateLimit, RATE_LIMIT_TIERS } from '@/lib/rateLimit';
+import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 // In API routes
-await rateLimit('checkout-create', RATE_LIMIT_TIERS.CHECKOUT);  // 5 req / 1 min
-await rateLimit('api-general', RATE_LIMIT_TIERS.API_GENERAL);   // 100 req / 15 min
-await rateLimit('password-change', RATE_LIMIT_TIERS.API_SENSITIVE); // 10 req / 15 min
+await rateLimit('checkout-create', RATE_LIMITS.CHECKOUT);  // 5 req / 1 min
+await rateLimit('api-general', RATE_LIMITS.API_GENERAL);   // 100 req / 15 min
+await rateLimit('password-change', RATE_LIMITS.API_SENSITIVE); // 10 req / 15 min
 ```
 
 **Features:**
@@ -273,11 +274,11 @@ await rateLimit('password-change', RATE_LIMIT_TIERS.API_SENSITIVE); // 10 req / 
 Structured, secure logging with auto-redaction:
 
 ```typescript
-import { logger } from '@/lib/logger';
+import { Logger } from '@/lib/logger';
 
-logger.info('Checkout completed', { userId, planId, amount });
-logger.warn('Retry exhausted', { provider: 'stripe', attempts: 3 });
-logger.error('Webhook failed', error, { endpoint: '/api/webhooks/payments' });
+Logger.info('Checkout completed', { userId, planId, amount });
+Logger.warn('Retry exhausted', { provider: 'stripe', attempts: 3 });
+Logger.error('Webhook failed', error, { endpoint: '/api/webhooks/payments' });
 ```
 
 **Auto-redacted keys:** password, token, secret, authorization, api_key, stripe_secret, cookie, session

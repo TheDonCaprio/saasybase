@@ -60,7 +60,7 @@ Most features are **already wired and ready to go**. The user's job is to build 
 Auth and payment providers are selected via environment variables, not code changes:
 
 ```bash
-AUTH_PROVIDER="clerk"           # or "nextauth"
+AUTH_PROVIDER="nextauth"        # or "clerk"
 PAYMENT_PROVIDER="stripe"      # or "paystack", "paddle", "razorpay"
 ```
 
@@ -102,7 +102,7 @@ Mirror the existing pattern in `lib/auth-provider/`:
 ## Testing
 
 ```bash
-npm test                    # Vitest unit tests (84+ test files)
+npm test                    # Vitest unit tests (90+ test files)
 npm run test:e2e            # Playwright E2E tests
 npm run test:e2e:headed     # E2E with visible browser
 npm run typecheck           # TypeScript type checking
@@ -129,10 +129,10 @@ Tests cover: payment provider flows, webhook normalization, subscription lifecyc
 |---------|-----|
 | Importing `@clerk/nextjs` directly | Use `lib/auth-provider/` abstraction |
 | Importing `stripe` directly for business logic | Use `PaymentProviderFactory.getProvider()` |
-| Using `console.log` | Use `logger.info()` / `logger.warn()` / `logger.error()` |
+| Using `console.log` | Use `Logger.info()` / `Logger.warn()` / `Logger.error()` |
 | Raw `req.json()` without validation | Parse with Zod schema from `lib/validation.ts` |
-| Querying only `externalSubscriptionId` | Also check legacy `stripeSubscriptionId` column |
-| Missing rate limiting on API route | Add `rateLimit(key, RATE_LIMIT_TIERS.API_GENERAL)` |
+| Querying only `externalSubscriptionId` | Also check `externalSubscriptionIds` JSON map for multi-provider setups |
+| Missing rate limiting on API route | Add `rateLimit(key, RATE_LIMITS.API_GENERAL)` |
 | Hardcoding currency | Use `resolveActiveCurrency()` from settings |
 | Direct `new PrismaClient()` | Use singleton from `lib/prisma.ts` |
 

@@ -148,7 +148,7 @@ export function UserSettingsTabs({
         )
       }
     ],
-    [hydratedSubscription, hydratedUser, userSettings, preformattedCreatedAt]
+    [hydratedSubscription, hydratedUser, userSettings, currentUserEmailVerified, preformattedCreatedAt]
   );
 
   const activeContent = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];

@@ -38,7 +38,7 @@ npm run dev
 - Google Analytics 4 integration
 - First-party visit tracking
 - S3/CDN file storage
-- 84+ regression tests (Vitest) and E2E tests (Playwright)
+- 90+ regression tests (Vitest) and E2E tests (Playwright)
 
 ## Tech Stack
 
@@ -48,7 +48,7 @@ npm run dev
 - Database: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
 - Styling: Tailwind CSS
 - Rich Text: TipTap
-- Email: Nodemailer
+- Email: Nodemailer or Resend
 - Validation: Zod
 - Testing: Vitest + Playwright
 - PDF: pdf-lib
@@ -70,7 +70,7 @@ Provider selection is environment-driven:
 - lib/payment/ — Payment abstraction layer with 4 provider implementations
 - components/ — React components (ui/, admin/, dashboard/, billing/, checkout/, team/)
 - prisma/ — Database schema and migrations
-- tests/ — 84+ unit tests and 3 E2E test specs
+- tests/ — 90+ unit tests and 3 E2E test specs
 - scripts/ — Operational scripts (backfill, admin, validation)
 - docs/ — Internal architecture documentation
 

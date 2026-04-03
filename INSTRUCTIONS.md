@@ -148,11 +148,11 @@ const parsed = apiSchemas.supportTicket.parse(body); // throws ZodError on inval
 
 ```typescript
 import { ApiError, handleApiError } from '@/lib/api-error';
-import { rateLimit, RATE_LIMIT_TIERS } from '@/lib/rateLimit';
+import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
-    await rateLimit('checkout', RATE_LIMIT_TIERS.CHECKOUT);
+    await rateLimit('checkout', RATE_LIMITS.CHECKOUT);
     const userId = await authService.requireUserId();
     // ... business logic
   } catch (error) {
@@ -164,12 +164,12 @@ export async function POST(req: NextRequest) {
 ### Logging
 
 ```typescript
-import { logger } from '@/lib/logger';
+import { Logger } from '@/lib/logger';
 
-logger.info('Checkout completed', { userId, planId });
-logger.warn('Payment retry failed', { attempt: 3 });
-logger.error('Webhook signature invalid', { provider: 'stripe' });
-// Never use console.log — logger auto-redacts secrets and persists to DB
+Logger.info('Checkout completed', { userId, planId });
+Logger.warn('Payment retry failed', { attempt: 3 });
+Logger.error('Webhook signature invalid', { provider: 'stripe' });
+// Never use console.log — Logger auto-redacts secrets and persists to DB
 ```
 
 ---
@@ -185,7 +185,7 @@ app/api/my-feature/route.ts
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider/service';
-import { rateLimit, RATE_LIMIT_TIERS } from '@/lib/rateLimit';
+import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { handleApiError } from '@/lib/api-error';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -196,7 +196,7 @@ const inputSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await rateLimit('my-feature', RATE_LIMIT_TIERS.API_GENERAL);
+    await rateLimit('my-feature', RATE_LIMITS.API_GENERAL);
     const userId = await authService.requireUserId();
     const body = inputSchema.parse(await req.json());
     
@@ -320,10 +320,11 @@ The gate checks both personal subscriptions and organization team plans.
 Email templates are stored in the DB and editable from `/admin/emails`. To send a templated email:
 
 ```typescript
-import { sendTemplatedEmail } from '@/lib/email-templates';
+import { sendEmail } from '@/lib/email';
 
-await sendTemplatedEmail('welcome', {
+await sendEmail({
   to: user.email,
+  templateKey: 'welcome',
   variables: {
     firstName: user.firstName,
     siteName: 'My SaaS',

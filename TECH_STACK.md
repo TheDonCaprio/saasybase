@@ -11,7 +11,7 @@
 | **Next.js** | 16.x | Full-stack React framework (App Router) | `next.config.mjs` |
 | **React** | 18.x | UI library | — |
 | **TypeScript** | 5.x | Type safety | `tsconfig.json` |
-| **Node.js** | 20+ | Runtime | — |
+| **Node.js** | 18+ | Runtime | — |
 
 ---
 
@@ -58,7 +58,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 
 | Technology | Version | Purpose | Config |
 |-----------|---------|---------|--------|
-| **Prisma** | 5.x | ORM with type-safe queries | `prisma/schema.prisma` |
+| **Prisma** | 7.x | ORM with type-safe queries | `prisma/schema.prisma`, `prisma.config.ts` |
 | **SQLite** | — | Development database (zero config) | `DATABASE_URL=file:./dev.db` |
 | **PostgreSQL** | 14+ | Production database | `DATABASE_URL=postgresql://...` |
 
@@ -108,9 +108,11 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | **Nodemailer** | 7.x | SMTP email transport |
+| **Resend** | — | API-based email transport (alternative to SMTP) |
 
 - **Dev:** MailHog (localhost:1025) or in-memory stream transport
-- **Prod:** Any SMTP provider (SendGrid, SES, Mailgun, etc.)
+- **Prod:** Any SMTP provider (SendGrid, SES, Mailgun, etc.) or Resend API
+- **Selection:** `EMAIL_PROVIDER=nodemailer` (default) or `EMAIL_PROVIDER=resend`
 - Templates stored in DB, editable from admin
 
 ---
@@ -164,7 +166,7 @@ Optional dependency: `@aws-sdk/client-s3` (in `optionalDependencies`)
 | **Playwright** | 1.x | E2E browser tests | `playwright.config.ts` |
 
 ### Test Stats
-- **84+ unit test files** covering payments, auth, subscriptions, tokens, webhooks
+- **90+ unit test files** covering payments, auth, subscriptions, tokens, webhooks
 - **3 E2E test specs** for dashboard navigation, org switching, org deletion
 
 ---

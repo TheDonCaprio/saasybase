@@ -1,6 +1,6 @@
 import React from 'react';
 import { SidebarNav } from '../../../components/dashboard/SidebarNav';
-import { faPlay, faUser, faUserShield, faBell, faLifeRing, faTicketAlt, faFlask } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faUser, faUserShield, faBell, faLifeRing, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';
@@ -25,7 +25,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Basic navigation without user-specific stats for now
   // Determine whether the current user has any NEW admin replies
   let supportBadge: string | undefined = undefined;
-  let couponBadge: string | undefined = undefined;
   let teamBadge: string | undefined = undefined;
   let pendingEmailChange: { newEmail: string; expires: string } | null = null;
   try {
@@ -49,11 +48,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       if (hasNew) {
         // For now, use 'NEW' when any admin reply exists for any ticket. This matches the per-ticket unreadReplies heuristic used elsewhere.
         supportBadge = 'NEW';
-      }
-
-      const pendingCoupons = await prisma.couponRedemption.count({ where: { userId, consumedAt: null } });
-      if (pendingCoupons > 0) {
-        couponBadge = String(pendingCoupons);
       }
 
       // This ensures the user exists in our DB and that their token balance is evaluated
@@ -90,7 +84,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const nav = [
     { href: '/dashboard', label: 'SaaSyApp', icon: faFlask },
     { href: '/dashboard/onboarding', label: 'Get Started', icon: faPlay },
-    { href: '/dashboard/coupons', label: 'Coupons', icon: faTicketAlt, badge: couponBadge },
     { href: '/dashboard/team', label: 'Team', icon: faUserShield, badge: teamBadge },
     { href: '/dashboard/support', label: 'Support', icon: faLifeRing, badge: supportBadge },
     { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },

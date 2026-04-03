@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { faFlask, faPlay, faBell, faLifeRing, faTicketAlt, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { faFlask, faPlay, faBell, faLifeRing, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
 const DashboardHeaderDrawer = dynamic(
   () => import('./dashboard/DashboardHeaderDrawer').then(mod => ({ default: mod.DashboardHeaderDrawer })),
@@ -16,7 +16,6 @@ const DashboardHeaderDrawer = dynamic(
 const dashboardNavItems = [
   { href: '/dashboard', label: 'SaaSyApp', icon: faFlask },
   { href: '/dashboard/onboarding', label: 'Get Started', icon: faPlay },
-  { href: '/dashboard/coupons', label: 'Coupons', icon: faTicketAlt },
   { href: '/dashboard/team', label: 'Team', icon: faUserShield },
   { href: '/dashboard/support', label: 'Support', icon: faLifeRing },
   { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },

@@ -298,14 +298,6 @@ export default async function PricingPage() {
               Access flexible plans for teams and solo creators. Upgrade when you need more power, or stick with a one-time pass for quick projects.
             </p>
           </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-4 text-sm text-neutral-300 shadow-[0_0_30px_-20px_rgba(0,0,0,0.9)]">
-            <div className="font-medium text-neutral-100">Have a promo code?</div>
-            <p className="text-neutral-400 mt-1">
-              Redeem it on the{' '}
-              <Link href="/dashboard/coupons" className="text-blue-400 underline underline-offset-4">dashboard coupons page</Link>{' '}
-              before checking out so it appears here automatically.
-            </p>
-          </div>
         </div>
         
         {/* Current Plan Information for Logged-in Users */}

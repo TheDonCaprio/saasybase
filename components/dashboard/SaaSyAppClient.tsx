@@ -413,18 +413,10 @@ export default function SaaSyAppClient() {
 
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_380px]">
           <section className="min-w-0 border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.75))] px-4 py-4 dark:border-b-white/10 xl:border-b-0 xl:border-r xl:px-5">
-            <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-neutral-400">Operation library</p>
-                <h3 className="mt-1 text-base font-semibold tracking-[-0.03em] text-slate-950 dark:text-white">Common actions with real token cost.</h3>
-              </div>
-            </header>
 
             <div className="overflow-hidden rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 dark:bg-white/[0.03]">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-neutral-400">
                 <span>Action</span>
-                <span className="pr-4">Cost</span>
-                <span className="text-right">Run</span>
               </div>
               <div className="divide-y divide-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))]">
                 {OPERATIONS.map((op) => (

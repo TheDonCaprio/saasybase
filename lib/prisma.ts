@@ -6,6 +6,7 @@ declare global {
 }
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const enablePrismaQueryLogs = process.env.PRISMA_QUERY_LOGS === 'true';
 
 let prisma: PrismaClient;
 
@@ -18,7 +19,7 @@ if (process.env.NODE_ENV === 'production') {
   // Development: use global variable to prevent multiple instances during hot reload
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = createPrismaClient({
-      log: ['query', 'info', 'warn', 'error'],
+      log: enablePrismaQueryLogs ? ['query', 'info', 'warn', 'error'] : ['info', 'warn', 'error'],
       errorFormat: 'pretty',
     });
   }

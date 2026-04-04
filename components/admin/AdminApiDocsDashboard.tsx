@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronDown, faChevronRight, faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 import {
   type AdminApiCatalog,
   type AdminApiEndpoint,
@@ -10,29 +12,28 @@ import {
 import {
   dashboardPanelClass,
   dashboardMutedPanelClass,
-  dashboardPillClass
 } from '../dashboard/dashboardSurfaces';
 
 const METHOD_VARIANTS: Record<string, string> = {
-  GET: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30',
-  POST: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',
-  PATCH: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
-  PUT: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30',
-  DELETE: 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+  GET: 'bg-emerald-600 !text-white',
+  POST: 'bg-blue-600 !text-white',
+  PATCH: 'bg-amber-500 !text-white',
+  PUT: 'bg-indigo-600 !text-white',
+  DELETE: 'bg-rose-600 !text-white',
 };
 
 const ACCESS_LABELS: Record<AdminApiAccessLevel, string> = {
-  admin: 'Admin only',
-  user: 'Authenticated user',
-  public: 'Public',
-  internal: 'Internal'
+  admin: 'ADMIN',
+  user: 'AUTH',
+  public: 'PUBLIC',
+  internal: 'INTERNAL',
 };
 
 const ACCESS_BADGE: Record<AdminApiAccessLevel, string> = {
-  admin: 'bg-rose-500/10 text-rose-400 border border-rose-500/30',
-  user: 'bg-sky-500/10 text-sky-400 border border-sky-500/30',
-  public: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-  internal: 'bg-violet-500/10 text-violet-400 border border-violet-500/30'
+  admin: 'bg-rose-500/15 text-rose-500 dark:text-rose-400',
+  user: 'bg-sky-500/15 text-sky-500 dark:text-sky-400',
+  public: 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400',
+  internal: 'bg-violet-500/15 text-violet-500 dark:text-violet-400',
 };
 
 const METHOD_OPTIONS = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] as const;
@@ -53,10 +54,98 @@ function matchesFilters(endpoint: AdminApiEndpoint, query: string, method: Metho
   return searchMatch && methodMatch && accessMatch;
 }
 
+function extractFirstQuotedOption(descriptor: string) {
+  const match = descriptor.match(/'([^']+)'/);
+  return match?.[1] ?? null;
+}
+
+function sampleValue(key: string, descriptor: unknown): unknown {
+  if (descriptor && typeof descriptor === 'object' && !Array.isArray(descriptor)) {
+    return Object.fromEntries(
+      Object.entries(descriptor).map(([childKey, childValue]) => [childKey, sampleValue(childKey, childValue)])
+    );
+  }
+
+  if (typeof descriptor !== 'string') {
+    return 'example';
+  }
+
+  const lowerKey = key.toLowerCase();
+  const lowerDescriptor = descriptor.toLowerCase();
+  const quoted = extractFirstQuotedOption(descriptor);
+
+  if (quoted && quoted !== 'false' && quoted !== 'true') return quoted;
+  if (lowerDescriptor.includes('boolean')) return true;
+  if (lowerDescriptor.includes('string[]')) return ['example'];
+  if (lowerKey.includes('email')) return 'user@example.com';
+  if (lowerKey.includes('password')) return 'secureP@ss1';
+  if (lowerKey.includes('token')) return 'tok_example_123';
+  if (lowerKey.includes('userid')) return 'user_123';
+  if (lowerKey.includes('planid')) return 'plan_pro';
+  if (lowerKey.includes('coupon')) return 'SAVE20';
+  if (lowerKey.includes('currency')) return 'usd';
+  if (lowerKey === 'page') return 1;
+  if (lowerKey === 'limit') return 50;
+  if (lowerKey.includes('amountoffcents') || lowerKey.includes('pricecents') || lowerKey.includes('subtotalcents')) return 2900;
+  if (lowerKey.includes('amount') || lowerKey.includes('count') || lowerKey.includes('limit')) return 1;
+  if (lowerKey.includes('date') || lowerKey.includes('expiresat') || lowerKey.includes('createdat')) return '2026-04-04T12:00:00Z';
+  if (lowerDescriptor.includes('number') || lowerDescriptor.includes('int')) return 1;
+
+  return 'example';
+}
+
+function buildGeneratedRequest(endpoint: AdminApiEndpoint) {
+  if (endpoint.example) return { title: 'Example request', data: endpoint.example };
+  if (endpoint.body) {
+    return {
+      title: 'Generated request example',
+      data: Object.fromEntries(Object.entries(endpoint.body).map(([key, value]) => [key, sampleValue(key, value)]))
+    };
+  }
+  if (endpoint.params) {
+    return {
+      title: 'Generated query example',
+      data: Object.fromEntries(Object.entries(endpoint.params).map(([key, value]) => [key, sampleValue(key, value)]))
+    };
+  }
+  return null;
+}
+
+function buildGeneratedResponse(endpoint: AdminApiEndpoint) {
+  if (endpoint.response) return { title: 'Response', data: endpoint.response };
+  if (endpoint.summary.toLowerCase().startsWith('list ')) {
+    return {
+      title: 'Generated response example',
+      data: {
+        items: [],
+        totalCount: 0,
+        _note: 'Generated fallback example. Actual collection keys vary by endpoint.'
+      }
+    };
+  }
+  if (endpoint.method === 'DELETE') {
+    return { title: 'Generated response example', data: { success: true } };
+  }
+  if (endpoint.method === 'POST' || endpoint.method === 'PATCH' || endpoint.method === 'PUT') {
+    return {
+      title: 'Generated response example',
+      data: { success: true, _note: 'Generated fallback example. Check route-specific docs for exact payloads.' }
+    };
+  }
+  if (endpoint.method === 'GET') {
+    return {
+      title: 'Generated response example',
+      data: { ok: true, _note: 'Generated fallback example. Exact GET response shape depends on the handler.' }
+    };
+  }
+  return null;
+}
+
 export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboardProps) {
   const [query, setQuery] = useState('');
   const [method, setMethod] = useState<MethodFilter>('all');
   const [access, setAccess] = useState<AccessFilter>('all');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set(catalog.categories.map(c => c.id)));
 
   const filteredCategories = useMemo(() => {
     return catalog.categories
@@ -69,162 +158,326 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
 
   const resultsCount = filteredCategories.reduce((total, category) => total + category.endpoints.length, 0);
 
+  const toggleCategory = useCallback((id: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
-      <section className={dashboardMutedPanelClass('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between')}
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-900 dark:text-neutral-100">Filter catalog</p>
-          <p className="text-xs text-slate-500 dark:text-neutral-400">
-            Narrow endpoints by method, access level, or keywords. Copy paths directly for API clients.
-          </p>
+      {/* Filter bar */}
+      <section className={dashboardMutedPanelClass('space-y-4 sm:space-y-0 sm:flex sm:items-center sm:gap-3')}>
+        <div className="relative flex-1">
+          <input
+            type="search"
+            value={query}
+            placeholder="Search endpoints..."
+            onChange={(event) => setQuery(event.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          />
+          {query.trim().length > 0 ? (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setQuery('')}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
         </div>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <div className="relative sm:w-64">
-            <input
-              type="search"
-              value={query}
-              placeholder="Search paths or descriptions"
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-            />
-            {query.trim().length > 0 ? (
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setQuery('')}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                >
-                  ×
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <select
-            value={method}
-            onChange={(event) => setMethod(event.target.value as MethodFilter)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-          >
-            <option value="all">All methods</option>
-            {METHOD_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          <select
-            value={access}
-            onChange={(event) => setAccess(event.target.value as AccessFilter)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-          >
-            <option value="all">All access levels</option>
-            <option value="admin">Admin only</option>
-            <option value="user">Authenticated user</option>
-            <option value="public">Public</option>
-            <option value="internal">Internal</option>
-          </select>
-        </div>
+        <select
+          value={method}
+          onChange={(event) => setMethod(event.target.value as MethodFilter)}
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:w-36 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+        >
+          <option value="all">All methods</option>
+          {METHOD_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <select
+          value={access}
+          onChange={(event) => setAccess(event.target.value as AccessFilter)}
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:w-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+        >
+          <option value="all">All access</option>
+          <option value="admin">Admin only</option>
+          <option value="user">Authenticated</option>
+          <option value="public">Public</option>
+          <option value="internal">Internal</option>
+        </select>
       </section>
 
       <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">
-        Showing {resultsCount} {resultsCount === 1 ? 'endpoint' : 'endpoints'} across {filteredCategories.length}{' '}
+        {resultsCount} {resultsCount === 1 ? 'endpoint' : 'endpoints'} across {filteredCategories.length}{' '}
         {filteredCategories.length === 1 ? 'category' : 'categories'}
       </p>
 
-      <div className="space-y-6">
-        {filteredCategories.map((category) => (
-          <article key={category.id} className={dashboardPanelClass('space-y-5')}>
-            <header className="space-y-2">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">{category.title}</h3>
-              <p className="text-sm text-slate-600 dark:text-neutral-300">{category.description}</p>
-            </header>
-            <div className="space-y-5">
-              {category.endpoints.map((endpoint) => (
-                <EndpointCard key={`${endpoint.method}-${endpoint.path}`} endpoint={endpoint} />
-              ))}
-            </div>
-          </article>
-        ))}
+      {/* Category accordion sections */}
+      <div className="space-y-4">
+        {filteredCategories.map((category) => {
+          const isOpen = expandedCategories.has(category.id);
+          return (
+            <section key={category.id} className={dashboardPanelClass('!p-0 overflow-hidden')}>
+              {/* Category header — clickable toggle */}
+              <button
+                type="button"
+                onClick={() => toggleCategory(category.id)}
+                className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-50 dark:hover:bg-neutral-800/40"
+              >
+                <FontAwesomeIcon
+                  icon={isOpen ? faChevronDown : faChevronRight}
+                  className="h-3 w-3 shrink-0 text-slate-400 dark:text-neutral-500"
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{category.title}</h3>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">{category.description}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                  {category.endpoints.length}
+                </span>
+              </button>
+
+              {/* Endpoint list */}
+              {isOpen ? (
+                <div className="border-t border-slate-200/70 dark:border-neutral-700/70">
+                  {category.endpoints.map((endpoint, idx) => (
+                    <EndpointRow
+                      key={`${endpoint.method}-${endpoint.path}`}
+                      endpoint={endpoint}
+                      isLast={idx === category.endpoints.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function EndpointCard({ endpoint }: { endpoint: AdminApiEndpoint }) {
-  const overrideMethodClass = METHOD_VARIANTS[endpoint.method] ?? 'bg-slate-500/10 text-slate-300 border border-slate-500/20';
+/* ------------------------------------------------------------------ */
+/*  Expandable endpoint row                                           */
+/* ------------------------------------------------------------------ */
+
+function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const methodStyle = METHOD_VARIANTS[endpoint.method] ?? 'bg-slate-600 !text-white';
   const accessBadge = ACCESS_BADGE[endpoint.access];
+  const requestExample = buildGeneratedRequest(endpoint);
+  const responseExample = buildGeneratedResponse(endpoint);
+
+  const hasDetails = !!(endpoint.params || endpoint.body || requestExample || responseExample || (endpoint.notes && endpoint.notes.length > 0) || endpoint.description || endpoint.source);
+
+  const handleCopy = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(endpoint.path).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => undefined);
+  }, [endpoint.path]);
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200/80 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-neutral-700/70 dark:bg-neutral-900/60">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className={clsx('rounded-md px-2 py-1 text-xs font-semibold tracking-wide', overrideMethodClass)}>
-            {endpoint.method}
-          </span>
-          <code className="font-mono text-sm text-indigo-500 dark:text-indigo-300">{endpoint.path}</code>
-          <button
-            type="button"
-            className={clsx(
-              dashboardPillClass,
-              'inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200'
-            )}
-            onClick={() => navigator.clipboard?.writeText(endpoint.path).catch(() => undefined)}
-          >
-            Copy
-          </button>
+    <div className={clsx(!isLast && 'border-b border-slate-100 dark:border-neutral-800')}>
+      {/* Collapsed row */}
+      <button
+        type="button"
+        onClick={() => hasDetails && setOpen(prev => !prev)}
+        className={clsx(
+          'flex w-full items-start gap-3 px-5 py-3.5 text-left transition-colors sm:items-center',
+          hasDetails && 'cursor-pointer hover:bg-slate-50/60 dark:hover:bg-neutral-800/30',
+          !hasDetails && 'cursor-default',
+        )}
+      >
+        {/* Method badge */}
+        <span className={clsx('mt-0.5 shrink-0 rounded px-2 py-0.5 text-[11px] font-bold tracking-wider sm:mt-0', methodStyle)}>
+          {endpoint.method}
+        </span>
+
+        {/* Path + summary */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <code className="break-all text-sm font-semibold text-slate-800 dark:text-neutral-100">{endpoint.path}</code>
+            <span className="text-sm text-slate-500 dark:text-neutral-400">{endpoint.summary}</span>
+          </div>
         </div>
-  <span className={clsx('inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide', accessBadge)}>
+
+        {/* Access badge + chevron */}
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={clsx('hidden rounded px-2 py-0.5 text-[10px] font-bold tracking-wider sm:inline-block', accessBadge)}>
+            {ACCESS_LABELS[endpoint.access]}
+          </span>
+          {hasDetails ? (
+            <FontAwesomeIcon
+              icon={open ? faChevronDown : faChevronRight}
+              className="h-2.5 w-2.5 text-slate-400 dark:text-neutral-500"
+            />
+          ) : null}
+        </div>
+      </button>
+
+      {/* Mobile access badge — shown below on small screens */}
+      <div className="flex items-center gap-2 px-5 pb-2 sm:hidden">
+        <span className={clsx('rounded px-2 py-0.5 text-[10px] font-bold tracking-wider', accessBadge)}>
           {ACCESS_LABELS[endpoint.access]}
         </span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium text-slate-400 transition hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+        >
+          <FontAwesomeIcon icon={copied ? faCheck : faCopy} className="h-2.5 w-2.5" />
+          {copied ? 'Copied' : 'Copy'}
+        </button>
       </div>
 
-      <div className="space-y-2 text-sm text-slate-600 dark:text-neutral-300">
-        <p className="font-medium text-slate-900 dark:text-neutral-100">{endpoint.summary}</p>
-        {endpoint.description ? <p>{endpoint.description}</p> : null}
-        {endpoint.source ? (
-          <p className="text-xs text-slate-500 dark:text-neutral-400">
-            <span className="font-semibold">Source:</span> <code className="font-mono">{endpoint.source}</code>
-          </p>
-        ) : null}
-      </div>
+      {/* Expanded details */}
+      {open ? (
+        <div className="border-t border-dashed border-slate-200/70 bg-slate-50/50 px-5 py-4 dark:border-neutral-700/50 dark:bg-neutral-900/40">
+          <div className="space-y-4">
+            {/* Copy button (desktop) + description */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1.5 text-sm">
+                {endpoint.description ? (
+                  <p className="text-slate-600 dark:text-neutral-300">{endpoint.description}</p>
+                ) : null}
+                {endpoint.source ? (
+                  <p className="text-xs text-slate-400 dark:text-neutral-500">
+                    Source: <code className="font-mono">{endpoint.source}</code>
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="hidden shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 sm:inline-flex dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+              >
+                <FontAwesomeIcon icon={copied ? faCheck : faCopy} className="h-3 w-3" />
+                {copied ? 'Copied!' : 'Copy path'}
+              </button>
+            </div>
 
-      {endpoint.params ? (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Query parameters</p>
-          <ParameterList entries={endpoint.params} />
+            {/* Params */}
+            {endpoint.params ? (
+              <ParameterSection title="Query parameters" entries={endpoint.params} />
+            ) : null}
+
+            {/* Request body */}
+            {endpoint.body ? (
+              <ParameterSection title="Request body" entries={endpoint.body} />
+            ) : null}
+
+            {/* Example request */}
+            {requestExample ? (
+              <JsonBlock title={requestExample.title} data={requestExample.data} />
+            ) : null}
+
+            {/* Example response */}
+            {responseExample ? (
+              <JsonBlock title={responseExample.title} data={responseExample.data} />
+            ) : null}
+
+            {/* Notes */}
+            {endpoint.notes && endpoint.notes.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">Notes</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-slate-500 dark:text-neutral-400">
+                  {endpoint.notes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         </div>
-      ) : null}
-
-      {endpoint.body ? (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Body schema</p>
-          <ParameterList entries={endpoint.body} />
-        </div>
-      ) : null}
-
-      {endpoint.notes && endpoint.notes.length > 0 ? (
-        <ul className="list-disc space-y-1 pl-5 text-xs text-slate-500 dark:text-neutral-400">
-          {endpoint.notes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
       ) : null}
     </div>
   );
 }
 
-function ParameterList({ entries }: { entries: Record<string, unknown> }) {
+/* ------------------------------------------------------------------ */
+/*  Parameter / body section                                          */
+/* ------------------------------------------------------------------ */
+
+function ParameterSection({ title, entries }: { title: string; entries: Record<string, unknown> }) {
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-600 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-300">
-      {Object.entries(entries).map(([key, value]) => (
-        <div key={key} className="grid grid-cols-[12.5rem_minmax(0,1fr)] items-start gap-2">
-          <span className="break-words whitespace-normal text-slate-500 dark:text-neutral-400">{key}</span>
-          <span className="min-w-0 whitespace-pre-wrap break-words text-left">
-            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
-          </span>
-        </div>
-      ))}
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">{title}</p>
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-900/80">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-neutral-800">
+              <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-500 dark:text-neutral-400">Field</th>
+              <th className="px-3 py-2 font-semibold text-slate-500 dark:text-neutral-400">Description / Type</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+            {Object.entries(entries).map(([key, value]) => (
+              <tr key={key}>
+                <td className="whitespace-nowrap px-3 py-2 font-mono font-medium text-slate-700 dark:text-neutral-200">
+                  {key}
+                </td>
+                <td className="px-3 py-2 text-slate-600 dark:text-neutral-300">
+                  {typeof value === 'string' ? (
+                    value
+                  ) : (
+                    <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed">
+                      {JSON.stringify(value, null, 2)}
+                    </pre>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  JSON code block (for example / response)                          */
+/* ------------------------------------------------------------------ */
+
+function JsonBlock({ title, data }: { title: string; data: Record<string, unknown> }) {
+  const [blockCopied, setBlockCopied] = useState(false);
+  const json = JSON.stringify(data, null, 2);
+
+  const handleBlockCopy = useCallback(() => {
+    navigator.clipboard?.writeText(json).then(() => {
+      setBlockCopied(true);
+      setTimeout(() => setBlockCopied(false), 1500);
+    }).catch(() => undefined);
+  }, [json]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">{title}</p>
+        <button
+          type="button"
+          onClick={handleBlockCopy}
+          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium text-slate-400 transition hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+        >
+          <FontAwesomeIcon icon={blockCopied ? faCheck : faCopy} className="h-2.5 w-2.5" />
+          {blockCopied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-900 p-4 text-xs leading-relaxed text-emerald-300 dark:border-neutral-700 dark:bg-neutral-950">
+        <code>{json}</code>
+      </pre>
     </div>
   );
 }

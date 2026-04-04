@@ -257,7 +257,7 @@ function AuthModalShell({
               {isSignIn ? 'Sign in to your account' : 'Create your account'}
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              {isSignIn ? 'Access your workspace, billing, and account settings.' : 'Create an account without leaving this page.'}
+              {isSignIn ? 'Access your workspace.' : 'Get access with an account'}
             </p>
           </div>
           <button

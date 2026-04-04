@@ -23,6 +23,8 @@ import {
 import { ThemeSettingsTabs } from '../../../../components/admin/theme/ThemeSettingsTabs';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPalette } from '@fortawesome/free-solid-svg-icons';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -66,6 +68,7 @@ export default async function AdminThemePage() {
     <div className="space-y-6">
       <DashboardPageHeader
         eyebrow="Theme designer"
+        eyebrowIcon={<FontAwesomeIcon icon={faPalette} />}
         title="Theme & Navigation"
       />
 

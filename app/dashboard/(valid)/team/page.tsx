@@ -4,6 +4,8 @@ import { TeamProvisioner } from '../../../../components/team/TeamProvisioner';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../../lib/route-guards';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUsers } from '@fortawesome/free-solid-svg-icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +48,7 @@ export default async function TeamDashboardPage({ searchParams }: PageProps) {
       <DashboardPageHeader
         accent="violet"
         eyebrow="Team workspace"
+        eyebrowIcon={<FontAwesomeIcon icon={faUsers} />}
         title="Manage your organization"
       />
       {inviteDeclined ? (

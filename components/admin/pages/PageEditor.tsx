@@ -34,6 +34,8 @@ import { useFormatSettings } from '../../FormatSettingsProvider';
 import { formatDate } from '../../../lib/formatDate';
 import './editor.css';
 import type { BlogCategoryDTO } from '@/lib/blog';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
 import {
   DEFAULT_IFRAME_SANDBOX,
   EmbedAlign,
@@ -1454,7 +1456,7 @@ export default function PageEditor({
     <div className="space-y-6 pb-16">
       <DashboardPageHeader
         eyebrow={mode === 'create' ? `Create ${entityNames.singularLower}` : `Edit ${entityNames.singularLower}`}
-        eyebrowIcon={mode === 'create' ? '✨' : '✏️'}
+        eyebrowIcon={<FontAwesomeIcon icon={mode === 'create' ? faPlus : faPenToSquare} />}
         title={
           mode === 'create'
             ? `Create a new ${entityNames.singularLower}`

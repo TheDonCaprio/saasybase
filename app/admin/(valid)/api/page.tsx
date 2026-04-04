@@ -1,10 +1,11 @@
 import { faCodeBranch, faGaugeHigh, faKey, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlug } from '@fortawesome/free-solid-svg-icons';
 import { requireAdminAuth } from '../../../../lib/route-guards';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import { AdminStatCard, type AdminStatCardProps } from '../../../../components/admin/AdminStatCard';
 import {
   dashboardMutedPanelClass,
-  dashboardPanelClass
 } from '../../../../components/dashboard/dashboardSurfaces';
 import AdminApiDocsDashboard from '../../../../components/admin/AdminApiDocsDashboard';
 import { getAdminApiCatalog, formatAdminApiDate } from '../../../../lib/admin-api';
@@ -24,7 +25,7 @@ export default async function AdminApiPage() {
   await requireAdminAuth('/admin/api');
 
   const catalog = await getAdminApiCatalog();
-  const { summary, authentication, rateLimiting, changelog } = catalog;
+  const { summary, rateLimiting, changelog } = catalog;
 
   const heroStats = [
     {
@@ -40,8 +41,6 @@ export default async function AdminApiPage() {
       tone: 'rose' as const
     }
   ];
-
-  const methodEntries = Object.entries(summary.methods).sort((a, b) => b[1] - a[1]);
 
   const metricCards: AdminStatCardProps[] = [
     {
@@ -75,72 +74,26 @@ export default async function AdminApiPage() {
   ];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <DashboardPageHeader
         accent="violet"
         eyebrow="Platform API"
-        eyebrowIcon="🔌"
-        title="Admin API reference hub"
+        eyebrowIcon={<FontAwesomeIcon icon={faPlug} />}
+        title="API reference"
+        description="Browse, search, and explore every endpoint available in your platform."
         stats={heroStats}
-      >
-      </DashboardPageHeader>
+      />
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((card) => (
           <AdminStatCard key={card.label} {...card} />
         ))}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <article className={dashboardPanelClass('space-y-3 lg:col-span-2')}>
-          <header className="space-y-1">
-            <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Authentication at a glance</p>
-            <p className="text-sm text-slate-600 dark:text-neutral-300">{authentication.guard}</p>
-          </header>
-          <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600 dark:text-neutral-300">
-            {authentication.notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        </article>
-        <aside className={dashboardPanelClass('space-y-3')}>
-          <header className="space-y-1">
-            <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">HTTP method coverage</p>
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Counts across catalog</p>
-          </header>
-          <ul className="space-y-2 text-sm text-slate-600 dark:text-neutral-300">
-            {methodEntries.map(([method, count]) => (
-              <li key={method} className="flex items-center justify-between">
-                <span>{method}</span>
-                <span className="font-semibold text-slate-900 dark:text-neutral-100">{count}</span>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      </section>
-
-      <section className={dashboardMutedPanelClass('space-y-3')}>
-        <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Rate limiting</p>
-        <p className="text-sm text-slate-600 dark:text-neutral-300">
-          Defaults below apply to public/user/admin endpoints. Internal endpoints under <code className="font-mono">/api/internal</code>{' '}
-          use endpoint-specific limits (and may intentionally return 404 when unauthorized); check each endpoint’s notes for the exact tier.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {rateLimiting.map((tier) => (
-            <div key={tier.tier} className="rounded-lg border border-slate-200 bg-white/80 p-4 text-sm text-slate-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{tier.tier} tier</p>
-              <p className="text-base font-semibold text-slate-900 dark:text-neutral-100">{tier.limit}</p>
-              {tier.burst ? <p className="text-xs text-slate-500 dark:text-neutral-400">Burst: {tier.burst}</p> : null}
-              {tier.notes ? <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{tier.notes}</p> : null}
-            </div>
-          ))}
-        </div>
-      </section>
-
       <AdminApiDocsDashboard catalog={catalog} />
 
       {changelog.length > 0 ? (
-        <section className={dashboardPanelClass('space-y-4')}>
+        <section className={dashboardMutedPanelClass('space-y-4')}>
           <header className="space-y-1">
             <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Changelog</p>
             <p className="text-sm text-slate-600 dark:text-neutral-300">Recent updates to the admin API surface.</p>

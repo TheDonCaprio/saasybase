@@ -3,6 +3,8 @@ import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { listBlogPostsPaginated, toBlogPostDTO } from '@/lib/blog';
 import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader';
 import SitePagesList from '@/components/admin/pages/SitePagesList';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileLines } from '@fortawesome/free-solid-svg-icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +33,7 @@ export default async function AdminBlogPostsPage() {
       <DashboardPageHeader
         accent="rose"
         eyebrow="Content"
+        eyebrowIcon={<FontAwesomeIcon icon={faFileLines} />}
         title="Blog posts"
         stats={[
           {

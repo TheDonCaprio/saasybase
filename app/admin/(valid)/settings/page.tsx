@@ -9,6 +9,8 @@ import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader'
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../../../../lib/settings';
 import { fetchModeratorPermissions } from '../../../../lib/moderator';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSliders } from '@fortawesome/free-solid-svg-icons';
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
@@ -98,6 +100,7 @@ export default async function AdminSettingsPage() {
       <DashboardPageHeader
         accent="indigo"
         eyebrow="Control"
+        eyebrowIcon={<FontAwesomeIcon icon={faSliders} />}
         title="Settings"
         stats={[
           {

@@ -3,6 +3,8 @@ import { listSitePagesPaginated, toSitePageDTO } from '../../../../lib/sitePages
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import SitePagesList from '@/components/admin/pages/SitePagesList';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileLines } from '@fortawesome/free-solid-svg-icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +33,7 @@ export default async function AdminPagesPage() {
       <DashboardPageHeader
         accent="violet"
         eyebrow="Content"
+        eyebrowIcon={<FontAwesomeIcon icon={faFileLines} />}
         title="Site pages"
         stats={[
           {

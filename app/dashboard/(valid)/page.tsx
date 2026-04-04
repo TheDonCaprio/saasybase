@@ -5,6 +5,8 @@ import SaaSyAppClient from '@/components/dashboard/SaaSyAppClient';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '@/lib/route-guards';
 import { enforceTeamWorkspaceProvisioningGuard } from '@/lib/dashboard-workspace-guard';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBolt } from '@fortawesome/free-solid-svg-icons';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -28,7 +30,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <DashboardPageHeader
         accent="violet"
         eyebrow="Demo app"
-        eyebrowIcon="⚡️"
+        eyebrowIcon={<FontAwesomeIcon icon={faBolt} />}
         title="SaaSyBase Demo App"
       />
 

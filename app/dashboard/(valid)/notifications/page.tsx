@@ -5,6 +5,8 @@ import { dashboardMutedPanelClass } from '../../../../components/dashboard/dashb
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../../lib/route-guards';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../../lib/dashboard-workspace-guard';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBell } from '@fortawesome/free-solid-svg-icons';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
@@ -53,7 +55,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
       <DashboardPageHeader
         accent="theme"
         eyebrow="Inbox"
-        eyebrowIcon="🔔"
+        eyebrowIcon={<FontAwesomeIcon icon={faBell} />}
         title="Notifications"
         actions={
           <div className="text-xs text-slate-500 dark:text-neutral-400">

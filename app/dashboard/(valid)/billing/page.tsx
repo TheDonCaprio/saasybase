@@ -17,6 +17,8 @@ import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, ge
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../../lib/dashboard-workspace-guard';
 import { buildPendingSubscriptionSectionCopy } from '../../../../lib/pending-subscription-display';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faReceipt } from '@fortawesome/free-solid-svg-icons';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -260,7 +262,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
       <DashboardPageHeader
         accent="indigo"
         eyebrow="Billing & subscription"
-        eyebrowIcon="🧾"
+        eyebrowIcon={<FontAwesomeIcon icon={faReceipt} />}
         title="Keep billing effortless"
         stats={[
           {

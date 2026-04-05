@@ -373,7 +373,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'admin',
         example: { query: { page: '1', limit: '25', search: 'jane', role: 'USER', billing: 'PAID', sortBy: 'createdAt', sortOrder: 'desc' } },
         response: {
-          users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', createdAt: '2026-01-10T08:00:00.000Z', paymentsCount: 3, subscriptions: [{ id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-01T00:00:00.000Z', plan: { id: 'plan_pro', name: 'Pro Monthly' } }], clerkData: null }],
+          users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', createdAt: '2026-01-10T08:00:00.000Z', paymentsCount: 3, _count: { payments: 3 }, subscriptions: [{ id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-01T00:00:00.000Z', plan: { id: 'plan_pro', name: 'Pro Monthly' } }], clerkData: null }],
           totalCount: 1,
           currentPage: 1,
           totalPages: 1,
@@ -582,16 +582,13 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
       {
         method: 'GET',
         path: '/api/admin/plans',
-        summary: 'List plans',
+        summary: 'List subscription plans',
         description: 'Returns all plans ordered by sortOrder ASC. Response is a JSON array (not wrapped).',
         access: 'admin',
-        notes: ['Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:list (limit 240 / 120s).'],
+        notes: ['Auth: requires admin/moderator via requireAdminOrModerator("users"). Rate limit: admin-plans:list (limit 240 / 120s).'],
         rateLimitTier: 'admin',
         example: {},
-        response: {
-          _note: 'Array of plan objects (not wrapped)',
-          _example: [{ id: 'plan_1', name: 'Pro Monthly', shortDescription: 'For growing teams', description: '<p>Rich text description</p>', priceCents: 2900, durationHours: 720, active: true, stripePriceId: 'price_123', externalPriceId: 'price_123', externalPriceIds: '{"stripe":"price_123"}', externalProductIds: '{"stripe":"prod_123"}', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, sortOrder: 1, tokenLimit: 1000, tokenName: 'tokens', supportsOrganizations: true, organizationSeatLimit: 10, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' }]
-        }
+        response: [{ id: 'plan_1', name: 'Pro Monthly', shortDescription: 'For growing teams', description: '<p>Rich text description</p>', priceCents: 2900, durationHours: 720, active: true, stripePriceId: 'price_123', externalPriceId: 'price_123', externalPriceIds: '{"stripe":"price_123"}', externalProductIds: '{"stripe":"prod_123"}', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, sortOrder: 1, tokenLimit: 1000, tokenName: 'tokens', supportsOrganizations: true, organizationSeatLimit: 10, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' }]
       },
       {
         method: 'POST',
@@ -610,21 +607,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           externalPriceId: 'string? — preferred provider-neutral price ID; empty string treated as undefined',
           stripePriceId: 'string? — legacy alias for externalPriceId',
           autoRenew: 'boolean? — default false',
-          recurringInterval: "'day' | 'week' | 'month' | 'year'? (default 'month')",
-          recurringIntervalCount: 'number? — int 1..365 (default 1)',
-          tokenLimit: 'number | null?',
-          tokenName: 'string | null? — max 100',
-          supportsOrganizations: 'boolean? — default false',
-          organizationSeatLimit: 'number | null?',
-          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | null?",
+          recurringInterval: "'day' | 'week' | 'month' | 'year'? — required when autoRenew is true",
+          recurringIntervalCount: 'number? — positive integer; default 1',
+          tokenLimit: 'number? — positive integer or null (unlimited)',
+          tokenName: 'string? — display label for tokens (e.g. "credits")',
+          supportsOrganizations: 'boolean? — when true allows this plan to be used by team workspaces',
+          organizationSeatLimit: 'number? — max members allowed in the workspace',
+          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | 'PRIVATE_FOR_USER'? — default 'SHARED_FOR_ORG'",
         },
         notes: [
-          'Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:create (limit 60 / 120s).',
-          'Validation: apiSchemas.adminPlanCreate (zod).'
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: admin-plans:create (60 / 120s).',
+          'Automatic price creation: When enabled, the handler attempts to sync the new plan to all configured providers (Stripe, Paystack, Razorpay, Paddle) and may return warnings if some providers skip creation (e.g. daily plans on Razorpay).',
         ],
         rateLimitTier: 'admin',
-        example: { name: 'Pro Monthly', priceCents: 2900, durationHours: 720, autoRenew: true, recurringInterval: 'month', tokenLimit: 1000, active: true },
-        response: { success: true, plan: { id: 'plan_new', name: 'Pro Monthly', priceCents: 2900, durationHours: 720, active: true, externalPriceId: 'price_abc123', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, scope: 'INDIVIDUAL' }, warnings: [] }
+        example: { name: 'Pro Monthly', priceCents: 2900, durationHours: 720, autoRenew: true, recurringInterval: 'month', supportsOrganizations: true, organizationSeatLimit: 10 },
+        response: { success: true, plan: { id: 'plan_new', name: 'Pro Monthly', priceCents: 2900, active: true, autoRenew: true }, warnings: [] }
       },
       {
         method: 'PATCH',

@@ -87,3 +87,4 @@ Dockerfile.dev
 
 # Ignore generated type declarations from some tools
 /*.d.ts
+prisma/dev2.db

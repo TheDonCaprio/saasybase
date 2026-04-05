@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkDatabaseConnection } from '@/lib/prisma';
-import { validateEnv, validateStripeEnv, validateClerkEnv } from '@/lib/env';
+import { AuthProviderFactory } from '@/lib/auth-provider/factory';
+import { AUTH_PROVIDER_REGISTRY } from '@/lib/auth-provider/registry';
+import { PaymentProviderFactory } from '@/lib/payment/factory';
+import { PAYMENT_PROVIDER_REGISTRY } from '@/lib/payment/registry';
+
+type ProviderHealth = {
+  active: string;
+  available: string[];
+  configured: string[];
+};
+
+type HealthReport = {
+  status: 'healthy' | 'unhealthy';
+  timestamp: string;
+  checks: {
+    environment: boolean;
+    database: boolean;
+    auth: boolean;
+    payments: boolean;
+  };
+  providers: {
+    auth: ProviderHealth;
+    payments: ProviderHealth;
+  };
+  errors: string[];
+};
 
 function extractBearer(req: NextRequest) {
   const header = req.headers.get('authorization') || '';
@@ -14,6 +39,35 @@ function isAuthorized(req: NextRequest) {
   return provided === expected;
 }
 
+function validateCoreEnv() {
+  const missing: string[] = [];
+
+  if (!process.env.DATABASE_URL?.trim()) missing.push('DATABASE_URL');
+  if (!process.env.NEXT_PUBLIC_APP_URL?.trim()) missing.push('NEXT_PUBLIC_APP_URL');
+
+  const encryptionSecret = process.env.ENCRYPTION_SECRET?.trim() || '';
+  if (!encryptionSecret) {
+    missing.push('ENCRYPTION_SECRET');
+  } else if (encryptionSecret.length < 32) {
+    throw new Error('ENCRYPTION_SECRET must be at least 32 characters');
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+  }
+}
+
+function getConfiguredPaymentProviders() {
+  return Object.entries(PAYMENT_PROVIDER_REGISTRY).flatMap(([name, config]) => {
+    try {
+      config.envVarCheck();
+      return [name];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export async function GET(req: NextRequest) {
   const isProd = process.env.NODE_ENV === 'production';
   const authorized = !isProd || isAuthorized(req);
@@ -22,28 +76,38 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: 'ok' });
   }
 
-  const health = {
+  const health: HealthReport = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     checks: {
       environment: false,
       database: false,
-      stripe: false,
-      clerk: false,
+      auth: false,
+      payments: false,
+    },
+    providers: {
+      auth: {
+        active: AuthProviderFactory.getActiveProviderName(),
+        available: Object.keys(AUTH_PROVIDER_REGISTRY),
+        configured: AuthProviderFactory.getAllConfiguredProviders().map(({ name }) => name),
+      },
+      payments: {
+        active: (process.env.PAYMENT_PROVIDER || 'stripe').toLowerCase(),
+        available: Object.keys(PAYMENT_PROVIDER_REGISTRY),
+        configured: getConfiguredPaymentProviders(),
+      },
     },
     errors: [] as string[]
   };
 
-  // Check environment variables
   try {
-    validateEnv();
+    validateCoreEnv();
     health.checks.environment = true;
   } catch (error) {
     health.checks.environment = false;
     health.errors.push(`Environment: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Check database connection
   try {
     const dbHealth = await checkDatabaseConnection();
     health.checks.database = dbHealth.healthy;
@@ -55,25 +119,22 @@ export async function GET(req: NextRequest) {
     health.errors.push(`Database: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Check Stripe configuration
   try {
-    validateStripeEnv();
-    health.checks.stripe = true;
+    AuthProviderFactory.getProvider();
+    health.checks.auth = true;
   } catch (error) {
-    health.checks.stripe = false;
-    health.errors.push(`Stripe: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    health.checks.auth = false;
+    health.errors.push(`Auth (${health.providers.auth.active}): ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Check Clerk configuration
   try {
-    validateClerkEnv();
-    health.checks.clerk = true;
+    PaymentProviderFactory.getProvider();
+    health.checks.payments = true;
   } catch (error) {
-    health.checks.clerk = false;
-    health.errors.push(`Clerk: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    health.checks.payments = false;
+    health.errors.push(`Payments (${health.providers.payments.active}): ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Overall health status
   const allHealthy = Object.values(health.checks).every(check => check);
   health.status = allHealthy ? 'healthy' : 'unhealthy';
 

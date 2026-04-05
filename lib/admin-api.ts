@@ -3,6 +3,18 @@ import { ADMIN_API_INVENTORY } from './admin-api.inventory';
 
 export type AdminApiAccessLevel = 'admin' | 'user' | 'public' | 'internal';
 
+type AdminApiJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AdminApiJsonObject
+  | AdminApiJsonValue[];
+
+interface AdminApiJsonObject {
+  [key: string]: AdminApiJsonValue;
+}
+
 export interface AdminApiEndpoint {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   path: string;
@@ -15,9 +27,9 @@ export interface AdminApiEndpoint {
   notes?: string[];
   rateLimitTier?: 'admin' | 'user' | 'public' | 'internal';
   /** Example request body (shown as JSON in docs) */
-  example?: Record<string, unknown>;
+  example?: AdminApiJsonValue;
   /** Example response payload (shown as JSON in docs) */
-  response?: Record<string, unknown>;
+  response?: AdminApiJsonValue;
 }
 
 export interface AdminApiCategory {

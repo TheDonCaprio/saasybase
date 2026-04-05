@@ -7,8 +7,8 @@ import { faChevronDown, faChevronRight, faCopy, faCheck } from '@fortawesome/fre
 import {
   type AdminApiCatalog,
   type AdminApiEndpoint,
-  type AdminApiAccessLevel
-} from '../../lib/admin-api';
+  type AdminApiAccessLevel,
+  } from '../../lib/admin-api';
 import {
   dashboardPanelClass,
   dashboardMutedPanelClass,
@@ -45,6 +45,8 @@ interface AdminApiDocsDashboardProps {
 type MethodFilter = 'all' | (typeof METHOD_OPTIONS)[number];
 
 type AccessFilter = 'all' | AdminApiAccessLevel;
+
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
 function matchesFilters(endpoint: AdminApiEndpoint, query: string, method: MethodFilter, access: AccessFilter) {
   const haystack = `${endpoint.path} ${endpoint.summary} ${endpoint.description ?? ''}`.toLowerCase();
@@ -374,7 +376,7 @@ function ParameterSection({ title, entries }: { title: string; entries: Record<s
 /*  JSON code block (for example / response)                          */
 /* ------------------------------------------------------------------ */
 
-function JsonBlock({ title, data }: { title: string; data: Record<string, unknown> }) {
+function JsonBlock({ title, data }: { title: string; data: JsonValue }) {
   const [blockCopied, setBlockCopied] = useState(false);
   const json = JSON.stringify(data, null, 2);
 

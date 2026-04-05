@@ -139,6 +139,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'POST requires authentication.',
           'GET is public (called from the email link); validates and consumes the token.',
         ],
+        example: { query: { token: 'verify_abc123', email: 'user@example.com' } },
         response: { message: 'Verification email sent' }
       },
       {
@@ -211,6 +212,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'In production, a Bearer token is required for full details.',
           'Returns 503 when any critical check fails.',
         ],
+        example: { headers: { Authorization: 'Bearer healthcheck_token' } },
         response: { status: 'healthy', timestamp: '2026-04-04T12:00:00Z', checks: { environment: true, database: true, stripe: true, clerk: true }, errors: [] }
       },
       {
@@ -246,6 +248,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Does not include other users\' internal IDs for privacy.',
         ],
         rateLimitTier: 'user',
+        example: {},
         response: { exportedAt: '2026-04-04T12:00:00Z', version: 1, profile: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe' }, security: { sessions: [{ id: 'sess_1', status: 'ACTIVE', lastActiveAt: '2026-04-04T11:58:00Z', activity: null }] }, settings: [], billing: { subscriptions: [], payments: [] }, support: [], notifications: [], organizations: { memberships: [], owned: [] } }
       },
       {
@@ -258,6 +261,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'This action is irreversible.',
           'Best-effort deletes the Clerk user too when applicable.',
         ],
+        example: {},
         response: { success: true, message: 'Account data deleted successfully' }
       },
       {
@@ -266,6 +270,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         summary: 'Get current user profile',
         description: 'Returns the authenticated user profile, token balances, current subscription summary, organization context, and invitation state.',
         access: 'user',
+        example: {},
         response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER' }, paidTokens: { tokenName: 'tokens', remaining: 100, isUnlimited: false, displayRemaining: '100' }, subscription: { planName: 'Pro', expiresAt: 'May 1, 2026', tokenName: 'tokens', tokens: { total: 1000, used: 900, remaining: 100, isUnlimited: false, displayRemaining: '100' } }, organization: null, sharedTokens: null, freeTokens: { tokenName: 'tokens', total: null, remaining: 50 }, planSource: 'PERSONAL', planActionLabel: 'Change Plan', canCreateOrganization: true, hasPendingTeamInvites: false }
       },
     ]
@@ -300,6 +305,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Clerk data enrichment is best-effort; failures return clerkData:null for that user.'
         ],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', search: 'jane', role: 'USER', billing: 'PAID', sortBy: 'createdAt', sortOrder: 'desc' } },
         response: {
           users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', createdAt: '2026-01-10T08:00:00.000Z', paymentsCount: 3, subscriptions: [{ id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-01T00:00:00.000Z', plan: { id: 'plan_pro', name: 'Pro Monthly' } }], clerkData: null }],
           totalCount: 1,
@@ -320,7 +326,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           q: 'string? — query; returns empty list when length < 2',
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("users").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { q: 'jane' },
+        response: { users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', firstName: 'Jane', lastName: 'Doe' }] }
       },
       {
         method: 'GET',
@@ -329,7 +337,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Fetches a user plus recent payments and all subscriptions (ordered newest first).',
         access: 'admin',
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("users").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { path: { userId: 'user_abc' } },
+        response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', tokenBalance: 150, createdAt: '2026-01-10T08:00:00.000Z', subscriptions: [{ id: 'sub_1', status: 'ACTIVE', plan: { id: 'plan_pro', name: 'Pro Monthly' }, createdAt: '2026-04-01T08:00:00.000Z' }], payments: [{ id: 'pay_1', amountCents: 2900, currency: 'usd', createdAt: '2026-04-01T08:00:00.000Z' }] } }
       },
       {
         method: 'PATCH',
@@ -382,6 +392,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Cannot delete the currently signed-in admin (400).'
         ],
         rateLimitTier: 'admin',
+        example: {},
         response: { success: true }
       },
       {
@@ -399,7 +410,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires admin/moderator via requireAdminOrModerator("users").',
           'Rate limit: admin-users:payments:list (limit 240 / 120s).'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { path: { userId: 'user_abc' }, query: { page: '1', limit: '25', count: 'true' } },
+        response: { payments: [{ id: 'pay_1', amount: 2900, amountFormatted: '$29.00', displayCurrency: 'USD', currency: 'usd', status: 'SUCCEEDED', createdAt: '2026-04-01T08:00:00.000Z', planName: 'Pro Monthly', paymentProvider: 'stripe', externalPaymentId: 'pi_123', externalSessionId: 'cs_123', externalRefundId: null, dashboardUrl: 'https://dashboard.stripe.com/payments/pi_123' }], totalCount: 1, currentPage: 1, totalPages: 1 }
       },
       {
         method: 'PATCH',
@@ -414,7 +427,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires ADMIN via requireAdmin() (moderators are forbidden).',
           'Rate limit: admin-users:role (limit 60 / 120s).'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { role: 'ADMIN' },
+        response: { success: true, user: { id: 'user_abc', email: 'jane@example.com', role: 'ADMIN' } }
       }
     ]
   },
@@ -446,6 +461,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Cursor format: createdAt => base64("<createdAtIso>::<id>"); amount => base64("<amountCents>::<id>"); expiresAt => payment id (server derives subscription.expiresAt).'
         ],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', search: 'jane@example.com', status: 'COMPLETED', sortBy: 'createdAt', sortOrder: 'desc' } },
         response: {
           payments: [{ id: 'pay_123', provider: 'stripe', status: 'COMPLETED', amountCents: 2900, currency: 'usd', user: { email: 'jane@example.com' }, plan: { name: 'Pro' }, createdAt: '2026-03-15T10:00:00Z' }],
           totalCount: 42
@@ -486,7 +502,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Legacy Stripe columns may still be read as migration inputs, but the route now writes provider-neutral external fields.',
           'Processes up to 100 payments per call.'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { success: true, processed: 12, updated: 9, mode: 'externalPaymentId', errors: ['Payment pay_4: Duplicate paymentIntentId pi_123 (claimed by payment pay_existing)'] }
       }
     ]
   },
@@ -503,6 +521,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:list (limit 240 / 120s).'],
         rateLimitTier: 'admin',
+        example: {},
         response: {
           _note: 'Array of plan objects (not wrapped)',
           _example: [{ id: 'plan_1', name: 'Pro Monthly', shortDescription: 'For growing teams', description: '<p>Rich text description</p>', priceCents: 2900, durationHours: 720, active: true, stripePriceId: 'price_123', externalPriceId: 'price_123', externalPriceIds: '{"stripe":"price_123"}', externalProductIds: '{"stripe":"prod_123"}', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, sortOrder: 1, tokenLimit: 1000, tokenName: 'tokens', supportsOrganizations: true, organizationSeatLimit: 10, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' }]
@@ -603,8 +622,12 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         params: {
           force: "'1' | 'true'? — when provided, deletes historical subscriptions/payments and then deletes the plan",
         },
-        notes: ['Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:delete (limit 60 / 120s).'],
+        notes: [
+          'Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:delete (limit 60 / 120s).',
+          'force is a query parameter on the DELETE request, not a JSON body field.',
+        ],
         rateLimitTier: 'admin',
+        example: { query: { force: 'true' } },
         response: { success: true, deleted: { subscriptions: ['sub_old_1'], paymentsDeleted: 1 }, force: false }
       },
       {
@@ -617,7 +640,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires ADMIN via requireAdmin(). Rate limit: admin-plans:createPrice (limit 20 / 120s).',
           'Requires payment provider configuration and auto-create enabled (PAYMENT_AUTO_CREATE=true or a provider-specific *_AUTO_CREATE flag).'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { success: true, message: 'Price created successfully', plan: { id: 'plan_1', externalPriceId: 'price_abc123' }, price: { id: 'price_abc123', amount: 2900, currency: 'USD', recurring: { interval: 'month', interval_count: 1 } }, product: { id: 'prod_123', name: 'Pro Monthly' }, activeSubscriptions: 3, warning: '3 active subscriptions will continue using the previous price. Manual migration required if desired.' }
       },
       {
         method: 'POST',
@@ -629,7 +654,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           priceId: 'string — required',
         },
         notes: ['Auth: requires ADMIN via requireAdmin(). On provider verify failure, returns 400 with error message.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { priceId: 'price_abc123' },
+        response: { id: 'price_abc123', unit_amount: 2900, currency: 'USD', recurring: { interval: 'month', intervalCount: 1 }, product: 'prod_123', type: 'recurring' }
       }
     ]
   },
@@ -656,6 +683,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Rate limit: support-tickets:read (limit 300 / 60s).'],
         rateLimitTier: 'user',
+        example: { query: { page: '1', limit: '20', status: 'OPEN', search: 'dashboard' } },
         response: { tickets: [{ id: 'ticket_1', subject: 'Need help', message: 'The dashboard is blank.', status: 'OPEN', category: 'GENERAL', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', replies: [{ id: 'reply_1', message: 'We are looking into this.', createdAt: '2026-04-04T12:05:00.000Z', user: { email: 'support@example.com', role: 'ADMIN' } }] }], totalCount: 1, currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false, nextCursor: null }
       },
       {
@@ -679,7 +707,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         summary: 'Get my support ticket',
         description: 'Fetches one ticket by id for the signed-in user, including replies.',
         access: 'user',
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { path: { ticketId: 'ticket_1' } },
+        response: { id: 'ticket_1', subject: 'Need help', message: 'The dashboard is blank.', category: 'GENERAL', status: 'OPEN', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', replies: [{ id: 'reply_1', message: 'We are looking into this.', createdAt: '2026-04-04T12:05:00.000Z', user: { email: 'support@example.com', role: 'ADMIN' } }] }
       },
       {
         method: 'PATCH',
@@ -691,7 +721,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           status: "'CLOSED' — any other status is rejected",
         },
         notes: ['Rate limit: support-tickets:update (limit 30 / 60s).'],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { status: 'CLOSED' },
+        response: { id: 'ticket_1', userId: 'user_abc', subject: 'Need help', message: 'The dashboard is blank.', category: 'GENERAL', status: 'CLOSED', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:30:00.000Z' }
       },
       {
         method: 'POST',
@@ -703,7 +735,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           message: 'string — required; trimmed; non-empty',
         },
         notes: ['Rate limit: support-tickets:reply (limit 30 / 60s).'],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { message: 'I have attached the screenshot and more details.' },
+        response: { reply: { id: 'reply_2', ticketId: 'ticket_1', userId: 'user_abc', message: 'I have attached the screenshot and more details.', createdAt: '2026-04-04T12:10:00.000Z' } }
       },
       {
         method: 'GET',
@@ -724,7 +758,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           count: "'false'? — omit totalCount",
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("support").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', status: 'OPEN', search: 'billing' } },
+        response: { tickets: [{ id: 'ticket_1', userId: 'user_abc', subject: 'Need help', message: 'The dashboard is blank.', category: 'GENERAL', status: 'OPEN', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', user: { email: 'jane@example.com', name: 'Jane Doe' }, replies: [{ id: 'reply_1', message: 'We are looking into this.', createdAt: '2026-04-04T12:05:00.000Z', user: { email: 'support@example.com', name: 'Support Agent', role: 'ADMIN' } }] }], totalCount: 1, currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false, nextCursor: null }
       },
       {
         method: 'POST',
@@ -738,7 +774,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           message: 'string — trimmed; 1..5000',
         },
         notes: ['Validation: zod schema createTicketSchema in handler.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { userId: 'user_abc', subject: 'Manual billing follow-up', message: 'We created this ticket on your behalf.', category: 'BILLING' },
+        response: { ticket: { id: 'ticket_admin_1', userId: 'user_abc', subject: 'Manual billing follow-up', message: 'We created this ticket on your behalf.', category: 'BILLING', status: 'OPEN', createdByRole: 'ADMIN', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:00:00.000Z' } }
       },
       {
         method: 'GET',
@@ -746,7 +784,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         summary: 'Get support ticket (admin)',
         description: 'Fetches a ticket by id including user and replies.',
         access: 'admin',
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { path: { ticketId: 'ticket_1' } },
+        response: { id: 'ticket_1', subject: 'Need help', message: 'The dashboard is blank.', category: 'GENERAL', status: 'OPEN', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', user: { email: 'jane@example.com', name: 'Jane Doe' }, replies: [{ id: 'reply_1', message: 'We are looking into this.', createdAt: '2026-04-04T12:05:00.000Z', user: { email: 'support@example.com', name: 'Support Agent', role: 'ADMIN' } }] }
       },
       {
         method: 'PATCH',
@@ -757,7 +797,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           status: "'OPEN' | 'IN_PROGRESS' | 'CLOSED'",
         },
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { status: 'IN_PROGRESS' },
+        response: { ticket: { id: 'ticket_1', userId: 'user_abc', subject: 'Need help', message: 'The dashboard is blank.', category: 'GENERAL', status: 'IN_PROGRESS', createdByRole: 'USER', createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:15:00.000Z' } }
       },
       {
         method: 'POST',
@@ -768,7 +810,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           message: 'string — required; trimmed; non-empty',
         },
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { message: 'We have identified the issue and deployed a fix.' },
+        response: { reply: { id: 'reply_admin_1', ticketId: 'ticket_1', userId: 'user_admin', message: 'We have identified the issue and deployed a fix.', createdAt: '2026-04-04T12:20:00.000Z' } }
       }
     ]
   },
@@ -787,6 +831,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           sync: "'1'? — force server-side sync before returning state",
         },
         rateLimitTier: 'user',
+        example: { query: { sync: '1' } },
         response: {
           ok: true,
           access: {
@@ -890,10 +935,15 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'user',
         body: {
           email: 'string — required; normalized to lowercase',
-          role: 'string? — anything containing "admin" maps to org:admin, else org:member',
+          role: 'string? — case-insensitive; anything containing "admin" maps to org:admin, else org:member',
         },
-        notes: ['Requires a provisioned workspace; otherwise returns 400.'],
-        rateLimitTier: 'user'
+        notes: [
+          'Requires a provisioned workspace; otherwise returns 400.',
+          'Request role is normalized on input, while the returned invite snapshot uses persisted uppercase enum values such as MEMBER/ADMIN.',
+        ],
+        rateLimitTier: 'user',
+        example: { email: 'teammate@example.com', role: 'member' },
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -908,7 +958,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rejects if invite email does not match viewer email (403).',
           'Rejects if seat limit reached (400).'
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { token: 'invite_token_1' },
+        response: { ok: true, activeOrganizationId: 'org_1' }
       },
       {
         method: 'POST',
@@ -922,7 +974,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         params: {
           token: 'string? — token | invitationId | id',
         },
-        rateLimitTier: 'public'
+        rateLimitTier: 'public',
+        example: { token: 'invite_token_1' },
+        response: { ok: true }
       },
       {
         method: 'POST',
@@ -933,7 +987,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           token: 'string — required (alias: invitationId)',
         },
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { token: 'invite_token_1' },
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -944,7 +1000,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           token: 'string — required (alias: invitationId)',
         },
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { token: 'invite_token_1' },
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -955,7 +1013,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           userId: 'string — required; cannot equal current userId',
         },
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { userId: 'user_member' },
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
     ]
   },
@@ -996,8 +1056,14 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           recent: "'1'? — enable recent-payment polling mode",
           since: 'number? — epoch ms; used only when recent=1 to detect a new SUCCEEDED payment created >= since',
         },
-        notes: ['Requires auth (dev fallback exists in non-production).'],
-        rateLimitTier: 'user'
+        notes: [
+          'Requires auth (dev fallback exists in non-production).',
+          'Can also accept payment_id for providers like Razorpay when session_id is unavailable.',
+          'Depending on state, may return completed=false, pending=true, already=true, or active subscription info for recent=1 polling.',
+        ],
+        rateLimitTier: 'user',
+        example: { query: { session_id: 'cs_test_123' } },
+        response: { ok: true, completed: true, topup: false, paymentId: 'pay_1', createdAt: '2026-04-05T10:00:00.000Z', plan: 'Pro Monthly' }
       },
       {
         method: 'GET',
@@ -1013,8 +1079,13 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           mode: "'payment' | 'subscription'?",
           dedupeKey: 'string? — optional; defaults to random UUID',
         },
-        notes: ['Also supports POST with JSON body using the same fields.'],
-        rateLimitTier: 'user'
+        notes: [
+          'Also supports POST with JSON body using the same fields.',
+          'Success payload varies by provider: embedded-capable providers return clientSecret/paymentIntentId, while redirect-only flows return { redirect:true, url, sessionId }.',
+        ],
+        rateLimitTier: 'user',
+        example: { query: { planId: 'plan_pro_monthly', mode: 'payment', currency: 'USD' } },
+        response: { clientSecret: 'pi_client_secret_123', paymentIntentId: 'pi_123', provider: 'stripe', amount: 2900, originalAmount: 2900, discountCents: 0, couponCode: null, email: 'jane@example.com', currency: 'USD', planName: 'Pro Monthly', metadata: { userId: 'user_abc', planId: 'plan_pro_monthly', priceId: 'price_123', checkoutMode: 'payment' } }
       },
       {
         method: 'POST',
@@ -1030,7 +1101,10 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           mode: "'payment' | 'subscription'?",
           dedupeKey: 'string? — optional',
         },
-        rateLimitTier: 'user'
+        notes: ['Success payload mirrors GET /api/checkout/embedded and may be embedded or redirect-shaped depending on provider and mode.'],
+        rateLimitTier: 'user',
+        example: { planId: 'plan_pro_monthly', mode: 'payment', currency: 'USD', couponCode: 'SAVE20' },
+        response: { clientSecret: 'pi_client_secret_123', paymentIntentId: 'pi_123', provider: 'stripe', amount: 2320, originalAmount: 2900, discountCents: 580, couponCode: 'SAVE20', email: 'jane@example.com', currency: 'USD', planName: 'Pro Monthly', metadata: { userId: 'user_abc', planId: 'plan_pro_monthly', priceId: 'price_123', checkoutMode: 'payment', couponCode: 'SAVE20', couponId: 'coupon_1', couponRedemptionId: 'red_1', inAppDiscountCents: '580', originalPriceCents: '2900' } }
       },
       {
         method: 'GET',
@@ -1045,7 +1119,14 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           provider: 'string? — used to disambiguate paystack vs others',
           redirect_status: "string? — when 'failed' returns 400",
         },
-        rateLimitTier: 'user'
+        notes: [
+          'Requires authentication.',
+          'Accepts provider callback params such as Stripe payment_intent or Paystack reference/trxref.',
+          'Returns 400 when redirect_status=failed or when the provider reports requires_payment_method.',
+        ],
+        rateLimitTier: 'user',
+        example: { query: { payment_intent: 'pi_123', provider: 'stripe' } },
+        response: { ok: true, active: true, plan: 'Pro', purchasedPlan: 'Pro' }
       },
     ]
   },
@@ -1067,6 +1148,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Paystack and Razorpay portal UX is subscription-scoped; this endpoint will look up an active subscription id to generate a management URL, otherwise returns supported=false with a message.',
         ],
         rateLimitTier: 'user',
+        example: {},
         response: { url: 'https://billing.stripe.com/session/test_123', provider: 'stripe', supported: true }
       },
       {
@@ -1083,6 +1165,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Sends cancellation notifications best-effort; failures do not block scheduling.',
         ],
         rateLimitTier: 'user',
+        example: {},
         response: { ok: true, message: 'cancellation_scheduled', expiresAt: '2026-05-01T00:00:00Z' }
       },
       {
@@ -1092,7 +1175,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description:
           'Reverts a scheduled cancel-at-period-end. If a provider subscription id exists, calls provider.undoCancelSubscription(subId) and clears local canceledAt/cancelAtPeriodEnd.',
         access: 'user',
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { ok: true, message: 'undo_succeeded', subscription: { id: 'sub_provider_1', status: 'active', cancelAtPeriodEnd: false } }
       },
       {
         method: 'GET',
@@ -1104,8 +1189,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'If local pricing fields are missing and the payment has externalSessionId, the handler attempts to hydrate subtotal/discount/couponCode from provider.getCheckoutSession().',
           'Returns 404 when paymentId does not belong to the user.',
+          'Success response is a binary PDF download, not JSON. Error responses remain JSON { error, code }.',
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { path: { paymentId: 'pay_1' } },
+        response: { contentType: 'application/pdf', contentDisposition: 'attachment; filename="invoice-pay_1.pdf"' }
       },
       {
         method: 'GET',
@@ -1117,8 +1205,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'Returns 400 when payment.status is not REFUNDED.',
           'Attempts to hydrate refund details via provider.getRefundDetails(externalPaymentId) or via session.paymentIntentId; falls back to local payment amount for full refunds.',
+          'Success response is a binary PDF download, not JSON. Error responses remain JSON { error, code }.',
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { path: { paymentId: 'pay_1' } },
+        response: { contentType: 'application/pdf', contentDisposition: 'attachment; filename="refund-pay_1.pdf"' }
       },
       {
         method: 'GET',
@@ -1132,6 +1223,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'When no personal ACTIVE subscription exists, may return organization plan context as source=organization.',
         ],
         rateLimitTier: 'user',
+        example: {},
         response: { ok: true, ownedActiveSubscriptions: [{ id: 'sub_1', planId: 'plan_pro', plan: 'Pro Monthly', family: 'solo', planAutoRenew: true, planSupportsOrganizations: false, expiresAt: '2026-05-01T00:00:00.000Z', status: 'ACTIVE' }], active: true, source: 'personal', planId: 'plan_pro', plan: 'Pro Monthly', planAutoRenew: true, planSupportsOrganizations: false, expiresAt: '2026-05-01T00:00:00.000Z', status: 'ACTIVE', pending: { id: 'sub_pending_1', plan: 'Business', planAutoRenew: true, planSupportsOrganizations: true, pendingConfirmation: true, startsAt: null, expiresAt: '2026-06-01T00:00:00.000Z', pendingSince: '2026-04-04T12:00:00.000Z' } }
       },
       {
@@ -1145,7 +1237,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           subscriptionId: 'string — required',
         },
         notes: ['Returns 404 when subscription is not found, not owned by user, or not in PENDING status.'],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { subscriptionId: 'sub_pending_1' },
+        response: { ok: true, activated: true, subscriptionId: 'sub_pending_1', startsAt: '2026-04-05T12:00:00.000Z', expiresAt: '2026-05-05T12:00:00.000Z' }
       },
       {
         method: 'GET',
@@ -1159,9 +1253,26 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Returns 409 { prorationEnabled: false } when disabled or when the preview cannot be performed safely (fallback-to-checkout).',
+          'When provider.supportsFeature("proration") is false but subscription_updates is supported, the response may instead return supportsInlineSwitch plus either a local estimate (prorationEnabled:true, isEstimate:true) or a no-preview fallback (prorationEnabled:false).',
+          'When a previous switch is still processing, returns 409 { prorationPending: true, code: "PRORATION_PENDING" }.',
           'In non-production only, may fall back to an admin user when not authenticated.',
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { query: { planId: 'plan_business' } },
+        response: {
+          prorationEnabled: true,
+          amountDue: 700,
+          currency: 'usd',
+          nextPaymentAttempt: 1772476800,
+          lineItems: [
+            { description: 'Unused time on Pro Monthly after 5 Apr 2026', amount: -2200, proration: true },
+            { description: 'Remaining time on Business Monthly after 5 Apr 2026', amount: 2900, proration: true }
+          ],
+          providerKey: 'stripe',
+          currentPlan: { id: 'plan_pro', name: 'Pro Monthly', priceCents: 2900 },
+          targetPlan: { id: 'plan_business', name: 'Business Monthly', priceCents: 5900 },
+          currentPeriodEnd: null
+        }
       },
       {
         method: 'POST',
@@ -1175,9 +1286,20 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Returns 409 when proration is disabled or when preconditions fail (no active recurring sub, same plan, missing customer/subscription ids, target plan missing provider price id).',
+          'Returns { ok: true, requiresAction: true, clientSecret, newPlan } when the provider requires SCA/3D Secure before the plan change can complete.',
+          'Returns { ok: true, scheduled: true, ... } when the client explicitly requests a cycle-end change or when the Razorpay no-captured-payments fallback schedules the switch instead.',
+          'Paystack switch-now flows can return { ok: true, pendingConfirmation: true, ... } while the replacement subscription waits for payment confirmation.',
           'Sends upgrade/downgrade notifications best-effort.',
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { planId: 'plan_business' },
+        response: {
+          ok: true,
+          newPlan: { id: 'plan_business', name: 'Business Monthly', priceCents: 5900 },
+          currentPeriodEnd: '2026-05-01T00:00:00.000Z',
+          invoiceId: 'in_123',
+          actualAmountCharged: 700
+        }
       },
       {
         method: 'GET',
@@ -1200,7 +1322,48 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           endDate: 'string? — ISO or YYYY-MM-DD; filters createdAt < endDate',
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("subscriptions").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', status: 'ACTIVE', search: 'jane@example.com', sortBy: 'createdAt', sortOrder: 'desc' } },
+        response: {
+          subscriptions: [{
+            id: 'sub_1',
+            planName: 'Pro Monthly',
+            planAutoRenew: true,
+            userName: 'Jane Doe',
+            userEmail: 'jane@example.com',
+            userId: 'user_abc',
+            status: 'ACTIVE',
+            expiresAt: '2026-05-01T00:00:00.000Z',
+            canceledAt: null,
+            createdAt: '2026-04-01T00:00:00.000Z',
+            externalSubscriptionId: 'sub_ext_123',
+            dashboardUrl: 'https://dashboard.stripe.com/subscriptions/sub_ext_123',
+            paymentProvider: 'stripe',
+            latestPayment: {
+              id: 'pay_1',
+              amountCents: 2900,
+              subtotalCents: 2900,
+              discountCents: null,
+              amountFormatted: '$29.00',
+              subtotalFormatted: '$29.00',
+              discountFormatted: null,
+              couponCode: null,
+              currency: 'usd',
+              createdAt: '2026-04-01T00:00:00.000Z',
+              externalPaymentId: 'pi_123',
+              externalSessionId: 'cs_123',
+              externalRefundId: null,
+              status: 'SUCCEEDED',
+              dashboardUrl: 'https://dashboard.stripe.com/payments/pi_123',
+              paymentProvider: 'stripe'
+            }
+          }],
+          totalCount: 1,
+          currentPage: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          nextCursor: null
+        }
       },
       {
         method: 'POST',
@@ -1213,7 +1376,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           clearPaidTokens: 'boolean? — when true, records intent to clear paid tokens on expiry (does not clear immediately)',
         },
         notes: ['Rate limit: admin-subscriptions:schedule-cancel (60 / 120s).'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { clearPaidTokens: false },
+        response: { ok: true, warning: 'Subscription scheduled for cancellation locally but provider cancellation failed. Manual cleanup may be needed on the payment provider dashboard.' }
       },
       {
         method: 'POST',
@@ -1227,7 +1392,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'For Paystack, returns 409 when the provider subscription is already terminal-cancelled and cannot be reactivated.',
           'May return 502 when provider undo fails.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { ok: true }
       },
       {
         method: 'POST',
@@ -1240,7 +1407,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           clearPaidTokens: 'boolean? — when true, clears paid tokens on force-cancel if shouldClearPaidTokensOnExpiry(...) resolves to true',
         },
         notes: ['Rate limit: admin-subscriptions:force-cancel (60 / 120s).'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { clearPaidTokens: true },
+        response: { ok: true, warning: 'Subscription cancelled locally but provider cancellation failed. Manual cleanup may be needed on the payment provider dashboard.' }
       },
       {
         method: 'POST',
@@ -1253,7 +1422,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           clearPaidTokens: 'boolean? — optional (defaults false)',
         },
         notes: ['No explicit adminRateLimit in handler.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { clearPaidTokens: true },
+        response: { ok: true }
       },
       {
         method: 'POST',
@@ -1271,7 +1442,24 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Razorpay recurring daily plans require interval_count >= 7; those are skipped with an error counter update.',
           'Expired coupons are not created on providers (providers may reject artifacts with past expiresAt).',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { scope: 'all' },
+        response: {
+          success: true,
+          result: {
+            providers: ['stripe', 'paddle'],
+            plans: { scanned: 12, updated: 4, createdPrices: 6, errors: 0, skippedNotSupported: 1 },
+            coupons: {
+              scanned: 5,
+              updated: 3,
+              createdArtifacts: 4,
+              errors: 0,
+              skippedNoNativeSupport: 0,
+              skippedExpired: 1,
+              skippedNotSupported: 0,
+            }
+          }
+        }
       },
       {
         method: 'GET',
@@ -1285,7 +1473,16 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rate limit: admin-billing:paddle-config (60 / 60s).',
           'Returns 200 with a structured { issues: [...] } payload even when misconfigured (for dashboard display).',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: {
+          provider: 'paddle',
+          apiBaseUrl: 'https://sandbox-api.paddle.com',
+          env: { apiKeySet: true, webhookSecretSet: true },
+          apiReachable: true,
+          issues: [],
+          probe: { usedPriceId: 'pri_123', usedCustomerEmail: 'paddle-config-check+1712313600000@example.com' }
+        }
       },
     ]
   },
@@ -1313,6 +1510,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rate limit: admin-orgs:list (240 / 120s).',
         ],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', status: 'SOFT_CAP', search: 'acme', sortBy: 'members', sortOrder: 'desc' } },
         response: {
           data: [{ id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, billingEmail: 'billing@acme.com', plan: { id: 'plan_business', name: 'Business' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, activeMembers: 6, pendingInvites: 2, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }],
           totalCount: 1,
@@ -1333,6 +1531,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rate limit: admin-orgs:get (240 / 120s).',
         ],
         rateLimitTier: 'admin',
+        example: { path: { orgId: 'org_1' } },
         response: {
           organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', billingEmail: 'billing@acme.com', plan: { id: 'plan_business', name: 'Business' }, owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, ownerExemptFromCaps: true, stats: { activeMembers: 6, totalMembers: 6, pendingInvites: 2 }, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }
         }
@@ -1378,6 +1577,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 404 when organization does not exist.',
         ],
         rateLimitTier: 'admin',
+        example: { path: { orgId: 'org_1' } },
         response: {
           organization: { id: 'org_1', name: 'Acme Workspace' },
           members: [{ id: 'membership_1', userId: 'user_member', role: 'MEMBER', status: 'ACTIVE', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 50, memberTokenUsageWindowStart: '2026-04-04T00:00:00.000Z', user: { id: 'user_member', name: 'John Member', email: 'john@example.com', role: 'USER' }, createdAt: '2026-04-02T09:00:00.000Z', updatedAt: '2026-04-04T09:00:00.000Z' }],
@@ -1397,6 +1597,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 when membership does not belong to orgId or when attempting to remove the owner.',
         ],
         rateLimitTier: 'admin',
+        example: { path: { orgId: 'org_1', membershipId: 'membership_1' } },
         response: { success: true, message: 'Member removed successfully' }
       },
       {
@@ -1431,6 +1632,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 404 when organization does not exist.',
         ],
         rateLimitTier: 'admin',
+        example: { path: { orgId: 'org_1' } },
         response: { success: true, message: 'Organization deleted successfully' }
       },
     ]
@@ -1457,6 +1659,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['When cursor is invalid, returns 400 { error: "Invalid cursor" }.'],
         rateLimitTier: 'user',
+        example: { query: { page: '1', limit: '20', read: 'false', type: 'BILLING' } },
         response: {
           notifications: [{ id: 'notif_1', title: 'Payment received', message: 'Your subscription payment succeeded.', type: 'BILLING', url: '/dashboard/billing', read: false, createdAt: '2026-04-04T12:00:00.000Z' }],
           totalCount: 1,
@@ -1480,6 +1683,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Marks all unread notifications as read for the signed-in user.',
         access: 'user',
         rateLimitTier: 'user',
+        example: {},
         response: { success: true }
       },
       {
@@ -1489,6 +1693,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Marks a single notification read if it belongs to the signed-in user. Returns { updated: 0|1 }.',
         access: 'user',
         rateLimitTier: 'user',
+        example: { path: { id: 'notif_1' } },
         response: { updated: 1 }
       },
       {
@@ -1498,6 +1703,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'POST alias for PATCH /api/notifications/[id]/read.',
         access: 'user',
         rateLimitTier: 'user',
+        example: { path: { id: 'notif_1' } },
         response: { updated: 1 }
       },
       {
@@ -1516,6 +1722,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("notifications").'],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', status: 'UNREAD', search: 'maintenance' } },
         response: {
           items: [{ id: 'notif_1', title: 'Maintenance notice', message: 'Scheduled maintenance at 02:00 UTC.', type: 'GENERAL', read: false, userEmail: 'jane@example.com', createdAt: '2026-04-04T12:00:00.000Z' }],
           totalCount: 1,
@@ -1562,6 +1769,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Auth: requires ADMIN via requireAdmin().'],
         rateLimitTier: 'admin',
+        example: { query: { active: 'true' } },
         response: { templates: [{ id: 'tmpl_1', name: 'Welcome email', key: 'welcome_email', description: 'Sent after registration', subject: 'Welcome to {{siteName}}', htmlBody: '<p>Hello {{firstName}}</p>', textBody: 'Hello {{firstName}}', variables: '{"firstName":"Recipient first name"}', active: true, createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-04T00:00:00.000Z' }] }
       },
       {
@@ -1593,6 +1801,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Returns 404 when templateId does not exist.'],
         rateLimitTier: 'admin',
+        example: { path: { templateId: 'tmpl_1' } },
         response: { template: { id: 'tmpl_1', name: 'Welcome email', key: 'welcome_email', description: 'Sent after registration', subject: 'Welcome to {{siteName}}', htmlBody: '<p>Hello {{firstName}}</p>', textBody: 'Hello {{firstName}}', variables: '{"firstName":"Recipient first name"}', active: true, createdAt: '2026-04-04T00:00:00.000Z', updatedAt: '2026-04-04T00:00:00.000Z' } }
       },
       {
@@ -1621,6 +1830,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Deletes a stored template by id.',
         access: 'admin',
         rateLimitTier: 'admin',
+        example: { path: { templateId: 'tmpl_1' } },
         response: { success: true }
       },
       {
@@ -1631,6 +1841,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires ADMIN via requireAdmin().'],
         rateLimitTier: 'admin',
+        example: {},
         response: { success: true, created: 8, skipped: 12, message: 'Created 8 templates, skipped 12 existing templates' }
       },
       {
@@ -1672,7 +1883,13 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rate limit: admin-providers:read (limit 60 / 60s).',
           'On rate limit, returns 429 with Retry-After; if rate limiter is unavailable returns 503.'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: {
+          activeProvider: 'stripe',
+          activeCurrency: 'USD',
+          providers: [{ id: 'stripe', displayName: 'Stripe', description: 'Global card and wallet payments', logoUrl: '/payments/stripe.svg', features: ['checkout', 'subscriptions', 'webhooks'], supportedCurrencies: ['USD', 'EUR'], docsUrl: 'https://docs.stripe.com', configured: true, isActive: true, envVarStatus: [{ key: 'STRIPE_SECRET_KEY', label: 'Secret key', isSet: true, isPublic: false }, { key: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', label: 'Publishable key', isSet: true, isPublic: true }], webhookSecretSet: true }]
+        }
       }
     ]
   },
@@ -1697,7 +1914,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           count: "'false'? — when 'false', omit status totals"
         },
         notes: ['Auth: requires ADMIN via requireAdmin().'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '20', status: 'published', sortBy: 'publishedAt', sortOrder: 'desc', search: 'pricing' } },
+        response: { pages: [{ id: 'page_1', slug: 'pricing', title: 'Pricing', description: 'Pricing overview', content: '<h1>Pricing</h1>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:00:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null }], totalCount: 1, page: 1, pageSize: 20, publishedCount: 1, draftCount: 0, trashedCount: 0, systemCount: 0, totalPageCount: 1, nextCursor: null }
       },
       {
         method: 'POST',
@@ -1731,6 +1950,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires ADMIN via requireAdmin().', 'Returns 404 when the page does not exist.'],
         rateLimitTier: 'admin',
+        example: { path: { id: 'page_1' } },
         response: { page: { id: 'page_1', slug: 'pricing', title: 'Pricing', description: 'Pricing overview', content: '<h1>Pricing</h1>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:00:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null } }
       },
       {
@@ -1780,6 +2000,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Auth: requires ADMIN via requireAdmin().'],
         rateLimitTier: 'admin',
+        example: { title: 'Pricing refresh', noIndex: false },
         response: { page: { id: 'page_1', slug: 'pricing', title: 'Pricing v2', description: 'Pricing overview', content: '<h1>Pricing</h1>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null } }
       },
       {
@@ -1790,6 +2011,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires ADMIN via requireAdmin().'],
         rateLimitTier: 'admin',
+        example: { path: { id: 'page_1' } },
         response: { trashed: 1 }
       },
       {
@@ -1803,7 +2025,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           ids: 'string[] — min 1'
         },
         notes: ['Auth: requires ADMIN via requireAdmin().', 'On validation error returns 400 { error: "Invalid request payload" }.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { action: 'trash', ids: ['page_1', 'page_2'] },
+        response: { action: 'trash', affected: 2 }
       },
       {
         method: 'GET',
@@ -1825,6 +2049,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Response key is pages (contains post DTOs).'
         ],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '20', status: 'published', sortBy: 'publishedAt', sortOrder: 'desc', search: 'launch' } },
         response: { pages: [{ id: 'post_1', slug: 'launch-post', title: 'Launch post', description: 'Launch recap', content: '<p>Hello world</p>', published: true, system: false, publishedAt: '2026-04-01T00:00:00.000Z', trashedAt: null, createdAt: '2026-03-31T00:00:00.000Z', updatedAt: '2026-04-01T00:00:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null, categories: [{ id: 'cat_1', slug: 'news', title: 'News', description: null, postCount: 1 }] }], totalCount: 1, page: 1, pageSize: 20, publishedCount: 1, draftCount: 0, trashedCount: 0, systemCount: 0, totalPageCount: 1, nextCursor: null }
       },
       {
@@ -1860,6 +2085,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").', 'Returns 404 when the post does not exist.'],
         rateLimitTier: 'admin',
+        example: { path: { id: 'post_1' } },
         response: { page: { id: 'post_1', slug: 'launch-post', title: 'Launch post', description: 'Launch recap', content: '<p>Hello world</p>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:00:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null, categories: [{ id: 'cat_1', slug: 'news', title: 'News', description: null, postCount: 0 }] } }
       },
       {
@@ -1885,6 +2111,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
         rateLimitTier: 'admin',
+        example: { title: 'Launch post edited', categoryIds: ['cat_1'] },
         response: { page: { id: 'post_1', slug: 'launch-post', title: 'Launch post edited', description: 'Launch recap', content: '<p>Hello world</p>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null, categories: [] } }
       },
       {
@@ -1910,6 +2137,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
         rateLimitTier: 'admin',
+        example: { published: false, metaTitle: 'Launch post' },
         response: { page: { id: 'post_1', slug: 'launch-post', title: 'Launch post edited', description: 'Launch recap', content: '<p>Hello world</p>', published: true, system: false, publishedAt: '2026-04-04T12:00:00.000Z', trashedAt: null, createdAt: '2026-04-04T12:00:00.000Z', updatedAt: '2026-04-04T12:05:00.000Z', metaTitle: null, metaDescription: null, canonicalUrl: null, noIndex: false, ogTitle: null, ogDescription: null, ogImage: null, categories: [] } }
       },
       {
@@ -1920,6 +2148,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'admin',
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
         rateLimitTier: 'admin',
+        example: { path: { id: 'post_1' } },
         response: { trashed: 1 }
       },
       {
@@ -1933,7 +2162,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           ids: 'string[] — min 1'
         },
         notes: ['Auth: requires ADMIN via requireAdmin().', 'On validation error returns 400 { error: "Invalid request payload" }.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { action: 'restore', ids: ['post_1', 'post_2'] },
+        response: { action: 'restore', affected: 2 }
       },
       {
         method: 'GET',
@@ -1941,7 +2172,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         summary: 'List blog categories',
         access: 'admin',
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { categories: [{ id: 'cat_1', slug: 'product-updates', title: 'Product updates', description: 'Launch notes and release summaries', postCount: 4 }] }
       },
       {
         method: 'POST',
@@ -1954,7 +2187,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           description: 'string? | null — max 280'
         },
         notes: ['Returns 201 on success.', 'Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { title: 'Product updates', slug: 'product-updates', description: 'Launch notes and release summaries' },
+        response: { category: { id: 'cat_1', slug: 'product-updates', title: 'Product updates', description: 'Launch notes and release summaries', postCount: 0 } }
       },
       {
         method: 'PATCH',
@@ -1967,7 +2202,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           description: 'string? | null — max 280'
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { title: 'Announcements' },
+        response: { category: { id: 'cat_1', slug: 'product-updates', title: 'Announcements', description: 'Launch notes and release summaries', postCount: 4 } }
       },
       {
         method: 'DELETE',
@@ -1975,7 +2212,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         summary: 'Delete blog category',
         access: 'admin',
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("blog").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { path: { id: 'cat_1' } },
+        response: { success: true }
       }
     ]
   },
@@ -2007,6 +2246,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'nextCursor is the last coupon id when a full page is returned.',
         ],
         rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', search: 'SAVE', access: 'active', status: 'published', sortBy: 'createdAt', sortOrder: 'desc' } },
         response: { coupons: [{ id: 'coupon_1', code: 'SAVE20', description: 'Spring promo', percentOff: 20, amountOffCents: null, currency: null, duration: 'once', durationInMonths: null, minimumPurchaseCents: null, active: true, maxRedemptions: 100, redemptionCount: 5, startsAt: null, endsAt: null, createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-01T00:00:00.000Z', pendingRedemptions: 0, eligiblePlans: [{ id: 'plan_pro', name: 'Pro' }] }], totalCount: 1, currentPage: 1, pageSize: 50, hasNextPage: false, hasPreviousPage: false, nextCursor: null }
       },
       {
@@ -2054,7 +2294,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 for unsupported changes (code/discount changes), invalid dates, or empty updates.',
           'When active is changed, handler syncs provider promotion state best-effort.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { description: 'Spring promo', active: false, maxRedemptions: 200 },
+        response: { coupon: { id: 'coupon_1', code: 'SAVE20', description: 'Spring promo', percentOff: 20, amountOffCents: null, currency: null, duration: 'once', durationInMonths: null, minimumPurchaseCents: null, active: false, maxRedemptions: 200, redemptionCount: 5, startsAt: null, endsAt: null, createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-05T12:00:00.000Z', pendingRedemptions: 0, eligiblePlans: [{ id: 'plan_pro', name: 'Pro Monthly' }] } }
       },
       {
         method: 'DELETE',
@@ -2070,7 +2312,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 { requiresForce:true } when coupon has redemptions and force is not provided.',
           'Returns 404 when couponId does not exist.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { force: 'true' } },
+        response: { success: true, forced: true }
       },
     ]
   },
@@ -2104,7 +2348,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Cursor sortValue: amount uses amountCents; expiresAt uses subscription.expiresAt ISO; createdAt uses createdAt ISO.',
           'When cursor is used, totalCount is not computed.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', search: 'Lifetime', status: 'SUCCEEDED', access: 'ACTIVE', sortBy: 'createdAt', sortOrder: 'desc' } },
+        response: { purchases: [{ id: 'pay_1', planName: 'Lifetime Pro', userName: 'Jane Doe', userEmail: 'jane@example.com', userId: 'user_abc', amountCents: 9900, amountFormatted: '$99.00', subtotalCents: 11900, subtotalFormatted: '$119.00', discountCents: 2000, discountFormatted: '$20.00', couponCode: 'WELCOME20', currency: 'usd', status: 'SUCCEEDED', createdAt: '2026-04-04T10:00:00.000Z', externalPaymentId: 'pi_123', externalSessionId: 'cs_123', dashboardUrl: 'https://dashboard.stripe.com/payments/pi_123', paymentProvider: 'stripe', subscription: { id: 'sub_1', status: 'ACTIVE', externalSubscriptionId: 'sub_ext_123', expiresAt: '2027-04-04T10:00:00.000Z' } }], totalCount: 1, currentPage: 1, totalPages: 1, hasNextPage: false, nextCursor: null }
       },
       {
         method: 'POST',
@@ -2121,7 +2367,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 when action is not refund, when payment status is not SUCCEEDED, or when provider refund fails.',
           'Returns 404 when payment id is not found.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { clearPaidTokens: true },
+        response: { success: true }
       },
       {
         method: 'POST',
@@ -2138,7 +2386,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 when there is no subscription for the payment or the subscription is not ACTIVE.',
           'Returns 404 when payment id is not found.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { clearPaidTokens: false },
+        response: { success: true }
       },
     ]
   },
@@ -2157,9 +2407,12 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           limit: 'number? — default 20',
           cursor: 'string? — storage cursor',
           search: 'string? — filters by filename/key',
+          scope: "'file' | 'logo' | 'blog'? — default 'file'",
         },
         notes: ['Auth: requires ADMIN via requireAdmin().'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { scope: 'file', limit: '20', search: 'hero-banner' } },
+        response: { files: [{ url: 'https://cdn.example.com/admin/hero-banner-1234abcd.webp', filename: 'hero-banner-1234abcd.webp', size: 184321, uploadedAt: '2026-04-04T10:00:00.000Z', key: 'file/hero-banner-1234abcd.webp' }], pagination: { limit: 20, hasMore: false, nextCursor: null, total: 1 } }
       },
       {
         method: 'POST',
@@ -2176,7 +2429,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Max size: 2MB; returns 413 when exceeded.',
           'Returns 429 with Retry-After on rate limit; returns 503 if rate limiter is unavailable.'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { scope: 'file' }, headers: { 'x-filename': 'hero-banner.webp', 'x-mimetype': 'image/webp' } },
+        response: { url: 'https://cdn.example.com/admin/hero-banner-1234abcd.webp' }
       },
       {
         method: 'DELETE',
@@ -2188,7 +2443,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           key: 'string? — file key (body or query param)',
         },
         notes: ['Auth: requires ADMIN via requireAdmin().', 'Returns 400 when key is missing.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { key: 'file/hero-banner-1234abcd.webp' },
+        response: { success: true }
       },
       {
         method: 'POST',
@@ -2197,7 +2454,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'This endpoint is deprecated and returns 410 with a message pointing to /api/admin/file/upload.',
         access: 'admin',
         notes: ['Returns 410 Gone.'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { error: 'This endpoint has moved to /api/admin/file/upload. Please update your client to use the new URL.' }
       },
       {
         method: 'POST',
@@ -2214,7 +2473,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Allowed mimes: image/jpeg, image/jpg, image/png, image/gif, image/webp.',
           'Max size: 5MB.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { formData: { file: 'hero-banner.jpg' } },
+        response: { url: '/uploads/1712227200000-a1b2c3d4.jpg', filename: '1712227200000-a1b2c3d4.jpg', size: 184321, type: 'image/jpeg' }
       },
     ]
   },
@@ -2235,6 +2496,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 429 with Retry-After on rate limit; returns 503 if rate limiter is unavailable.',
         ],
         rateLimitTier: 'admin',
+        example: {},
         response: {
           headerLinks: [{ label: 'Pricing', href: '/pricing' }],
           footerLinks: [{ label: 'Privacy', href: '/privacy' }],
@@ -2298,7 +2560,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           endDate: 'string? — YYYY-MM-DD (exclusive, UTC 00:00)',
         },
         notes: ['Auth: requires ADMIN via requireAdmin().'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '50', level: 'error', sortBy: 'createdAt', sortOrder: 'desc' } },
+        response: { logs: [{ id: 'log_1', level: 'error', message: 'Failed to send email', meta: { templateId: 'tmpl_1' }, context: { job: 'email_queue' }, createdAt: '2026-04-04T10:00:00.000Z', createdAtFormatted: 'Apr 4, 2026, 10:00 AM', createdAtRelative: '2 minutes ago', createdAtDisplay: 'Apr 4, 2026, 10:00 AM • 2 minutes ago' }], total: 1, page: 1, pageCount: 1, limit: 50, sortBy: 'createdAt', sortOrder: 'desc' }
       },
       {
         method: 'DELETE',
@@ -2307,7 +2571,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Deletes all system logs and returns the number cleared. When the SystemLog model is not available, returns cleared=0.',
         access: 'admin',
         notes: ['Auth: requires ADMIN via requireAdmin().'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { success: true, cleared: 142 }
       },
       {
         method: 'GET',
@@ -2332,7 +2598,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires requireAdminOrModerator(), then enforces actor.role===ADMIN (403 otherwise).',
           'Response includes availableActionGroups and previousCursor/nextCursor.',
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { page: '1', limit: '25', actorRole: 'ADMIN', actionGroup: 'users', sortBy: 'createdAt', sortOrder: 'desc' } },
+        response: { entries: [{ id: 'act_1', action: 'users.updateRole', actor: { id: 'user_admin', name: 'Admin User', email: 'admin@example.com', role: 'ADMIN' }, actorRole: 'ADMIN', target: { id: 'user_abc', name: 'Jane Doe', email: 'jane@example.com', role: 'USER' }, targetType: 'USER', details: { role: 'ADMIN' }, createdAt: '2026-04-04T10:00:00.000Z' }], totalCount: 1, nextCursor: null, previousCursor: null, pageInfo: { totalCount: 1, hasNextPage: false, hasPreviousPage: false }, availableActionGroups: ['users', 'plans', 'settings'], availableActions: ['users.updateRole', 'settings.update'] }
       },
       {
         method: 'DELETE',
@@ -2341,7 +2609,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Deletes audit log entries and returns deletedCount. Moderators are forbidden.',
         access: 'admin',
         notes: ['Auth: requires admin role (moderators are forbidden).'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: {},
+        response: { ok: true, deletedCount: 87 }
       },
     ]
   },
@@ -2365,6 +2635,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Response includes X-RateLimit-Limit / Remaining / Reset headers on success.'
         ],
         rateLimitTier: 'admin',
+        example: { query: { key: 'SITE_NAME' } },
         response: { key: 'SITE_NAME', value: 'SaaSyBase' }
       },
       {
@@ -2412,7 +2683,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Returns all settings stored for the current Clerk user.',
         access: 'user',
         notes: ['Auth: Clerk auth(); returns 401 when userId is missing.'],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { settings: [{ id: 'uset_1', key: 'TIMEZONE', value: 'America/New_York' }, { id: 'uset_2', key: 'EMAIL_NOTIFICATIONS', value: 'true' }] }
       },
       {
         method: 'PATCH',
@@ -2425,7 +2698,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           value: 'unknown'
         },
         notes: ['Returns 400 { error: "Setting not editable" } when key is not whitelisted.'],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { key: 'TIMEZONE', value: 'America/New_York' },
+        response: { success: true, setting: { id: 'uset_1', key: 'TIMEZONE', value: 'America/New_York' } }
       },
       {
         method: 'GET',
@@ -2438,7 +2713,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Public endpoint (no auth).',
           'Response: { ok: true, oneTimeRenewalResetsTokens: boolean } on success; { ok: false, error } with status 500 on failure.'
         ],
-        rateLimitTier: 'public'
+        rateLimitTier: 'public',
+        example: {},
+        response: { ok: true, oneTimeRenewalResetsTokens: false, recurringRenewalResetsTokens: true }
       }
     ]
   },
@@ -2468,7 +2745,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           "bucket=auto chooses: active personal subscription → paid; else active workspace membership → shared; else free.",
           'On insufficient funds, returns 409 { error: "insufficient_tokens", required, available, bucket }.',
         ],
-        rateLimitTier: 'internal'
+        rateLimitTier: 'internal',
+        example: { userId: 'user_abc', amount: 25, bucket: 'shared', feature: 'image_generation', organizationId: 'org_1', requestId: 'req_123' },
+        response: { ok: true, userId: 'user_abc', amount: 25, bucket: 'shared', organizationId: 'org_1', warnings: [{ code: 'soft_cap_exceeded', message: 'Member has exceeded their shared token cap (SOFT mode).', cap: 100, usageBefore: 90, usageAfter: 115 }], sharedCap: { strategy: 'SOFT', cap: 100, usageBefore: 90, usageAfter: 115, remainingBefore: 10, remainingAfter: 0, windowStart: '2026-04-04T00:00:00.000Z', resetIntervalHours: 24 }, balances: { paid: 400, free: 50, sharedPool: 975 } }
       },
       {
         method: 'GET',
@@ -2483,7 +2762,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 404 when the user id is not present in the local database.',
           'Response includes permissions for admins/moderators (used to hide/show admin navigation).' 
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER' }, paidTokens: { tokenName: 'tokens', remaining: 100, isUnlimited: false, displayRemaining: '100' }, subscription: { planName: 'Pro', expiresAt: 'May 1, 2026', tokenName: 'tokens', tokens: { total: 1000, used: 900, remaining: 100, isUnlimited: false, displayRemaining: '100' } }, organization: null, sharedTokens: null, freeTokens: { tokenName: 'tokens', total: null, remaining: 50 }, planSource: 'PERSONAL', planActionLabel: 'Change Plan', canCreateOrganization: true, hasPendingTeamInvites: false }
       },
       {
         method: 'GET',
@@ -2496,7 +2777,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires a Clerk session (requireUser()).',
           'When in grace, response includes expiresAt, graceEndsAt, graceHours, and plan metadata.'
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { inGrace: true, graceHours: 72, expiresAt: '2026-04-02T00:00:00.000Z', graceEndsAt: '2026-04-05T00:00:00.000Z', plan: { name: 'Business', supportsOrganizations: true, autoRenew: true } }
       },
       {
         method: 'POST',
@@ -2509,7 +2792,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires a Clerk session (requireUser()).',
           'Failures are treated as non-fatal and returned as { ok: false, error } (status may still be 200).' 
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { ok: true, clearedPaidTokens: false, reason: 'still_in_grace' }
       },
       {
         method: 'POST',
@@ -2522,7 +2807,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: attempts requireUser(); if the check fails (including unauthenticated), the endpoint returns { valid: true, error? } and logs a warning (non-fatal by design).',
           'When cleanup runs, it only deactivates organizations whose owners are beyond grace.'
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: { activeOrgId: 'org_1' },
+        response: { valid: false, reason: 'org_expired', message: 'Organization access has expired.', clearActiveOrg: true, activeOrgReason: 'active_org_provider_missing' }
       },
       {
         method: 'POST',
@@ -2536,7 +2823,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 when email is missing or not verified.',
           'Returns 500 on Clerk lookup failures or email send failures.'
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { ok: true, sent: true }
       },
       {
         method: 'DELETE',
@@ -2550,7 +2839,122 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'This does not delete the Clerk identity; it deletes local database records only.',
           'Returns 500 { error } when deletion fails.'
         ],
-        rateLimitTier: 'user'
+        rateLimitTier: 'user',
+        example: {},
+        response: { success: true, message: 'Account data deleted successfully' }
+      },
+    ]
+  },
+  {
+    id: 'sessions',
+    title: 'Sessions & security',
+    description: 'Inspect and revoke active auth sessions for the signed-in user when the active auth provider supports session management.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/sessions/[sessionId]',
+        summary: 'Get session detail',
+        description: 'Returns a single session summary for the signed-in user.',
+        access: 'user',
+        notes: [
+          'Auth: requires a signed-in session.',
+          'Returns 501 when the active auth provider does not support session management.',
+          'Returns 404 when the session id is not one of the current user sessions.'
+        ],
+        rateLimitTier: 'user',
+        example: { path: { sessionId: 'sess_1' } },
+        response: { id: 'sess_1', status: 'ACTIVE', lastActiveAt: '2026-04-05T11:58:00.000Z', latestActivity: 'Viewed billing settings' }
+      },
+      {
+        method: 'POST',
+        path: '/api/sessions/[sessionId]/revoke',
+        summary: 'Revoke one session',
+        description: 'Revokes a specific session belonging to the signed-in user.',
+        access: 'user',
+        notes: [
+          'Auth: requires a signed-in session.',
+          'Returns 501 when the active auth provider does not support session management.',
+          'Returns 403 when the session id is not owned by the current user.'
+        ],
+        rateLimitTier: 'user',
+        example: { path: { sessionId: 'sess_1' } },
+        response: { revoked: true }
+      },
+      {
+        method: 'POST',
+        path: '/api/sessions/revoke-others',
+        summary: 'Revoke all other sessions',
+        description: 'Revokes every session for the signed-in user except an optional keepSessionId.',
+        access: 'user',
+        body: {
+          keepSessionId: 'string? — current session id to preserve while revoking the rest',
+        },
+        notes: [
+          'Auth: requires a signed-in session.',
+          'Returns 501 when the active auth provider does not support session management or cannot enumerate sessions.'
+        ],
+        rateLimitTier: 'user',
+        example: { keepSessionId: 'sess_current' },
+        response: { revoked: ['sess_old_1', 'sess_old_2'], failed: [] }
+      },
+    ]
+  },
+  {
+    id: 'dashboard-utilities',
+    title: 'Dashboard utilities',
+    description: 'Signed-in user helpers for redeemed coupons and payment history shown in the dashboard UI.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/dashboard/coupons',
+        summary: 'List my redeemed coupons',
+        description: 'Lists coupon redemptions for the current user with eligibility and formatted date fields.',
+        access: 'user',
+        params: {
+          page: 'number? — default 1',
+          limit: 'number? — default 20, max 100',
+          cursor: 'string? — coupon redemption cursor id',
+          count: "'false'? — omit totalCount",
+          search: 'string? — matches coupon code or description',
+          unusedOnly: 'booleanish? — only return active, unconsumed redemptions',
+        },
+        notes: ['Auth: requires a signed-in session.'],
+        rateLimitTier: 'user',
+        example: { query: { page: '1', limit: '20', search: 'WELCOME', unusedOnly: 'true' } },
+        response: { coupons: [{ id: 'red_1', couponId: 'coupon_1', code: 'WELCOME20', description: '20% off first purchase', percentOff: 20, amountOffCents: null, redeemedAt: '2026-04-05T10:00:00.000Z', redeemedAtFormatted: 'Apr 5, 2026, 10:00 AM', consumedAt: null, consumedAtFormatted: null, startsAt: null, startsAtFormatted: null, endsAt: '2026-05-01T00:00:00.000Z', endsAtFormatted: 'May 1, 2026', active: true, currentlyActive: true, eligiblePlans: [{ id: 'plan_pro', name: 'Pro' }] }], totalCount: 1, currentPage: 1, pageSize: 20, hasNextPage: false, hasPreviousPage: false, nextCursor: null }
+      },
+      {
+        method: 'POST',
+        path: '/api/dashboard/coupons',
+        summary: 'Redeem coupon',
+        description: 'Redeems a coupon for the current user after validating activity, date window, limits, and duplicate redemption state.',
+        access: 'user',
+        body: {
+          code: 'string — required coupon code',
+        },
+        notes: ['Auth: requires a signed-in session.'],
+        rateLimitTier: 'user',
+        example: { code: 'WELCOME20' },
+        response: { redemption: { id: 'red_1', couponId: 'coupon_1', code: 'WELCOME20', description: '20% off first purchase', percentOff: 20, amountOffCents: null, redeemedAt: '2026-04-05T10:00:00.000Z', redeemedAtFormatted: 'Apr 5, 2026, 10:00 AM', consumedAt: null, consumedAtFormatted: null, startsAt: null, startsAtFormatted: null, endsAt: '2026-05-01T00:00:00.000Z', endsAtFormatted: 'May 1, 2026', active: true, currentlyActive: true, stripePromotionCodeId: 'promo_123', eligiblePlans: [{ id: 'plan_pro', name: 'Pro' }] } }
+      },
+      {
+        method: 'GET',
+        path: '/api/dashboard/payments',
+        summary: 'List my payments',
+        description: 'Returns the signed-in user payment history with formatted amounts, optional count totals, and cursor pagination.',
+        access: 'user',
+        params: {
+          page: 'number? — default 1',
+          limit: 'number? — default 50, max 100',
+          status: "string? — 'ALL' or payment status; PENDING matches PENDING + PENDING_SUBSCRIPTION",
+          search: 'string? — matches payment id or subscription plan name',
+          cursor: 'string? — base64("<createdAtIso>::<id>")',
+          count: "'false'? — omit totalCount and use current page totals only",
+        },
+        notes: ['Auth: requires a signed-in session.'],
+        rateLimitTier: 'user',
+        example: { query: { page: '1', limit: '20', status: 'SUCCEEDED', search: 'Pro Monthly' } },
+        response: { payments: [{ id: 'pay_1', amountCents: 2900, subtotalCents: 2900, discountCents: null, couponCode: null, currency: 'usd', amountFormatted: '$29.00', subtotalFormatted: '$29.00', discountFormatted: null, status: 'SUCCEEDED', createdAt: '2026-04-05T10:00:00.000Z', subscription: { id: 'sub_1', status: 'ACTIVE', startedAt: '2026-04-05T10:00:00.000Z', expiresAt: '2026-05-05T10:00:00.000Z', plan: { name: 'Pro Monthly', durationHours: 720, tokenLimit: 1000, tokenName: 'tokens' } }, plan: { id: 'plan_pro', name: 'Pro Monthly', tokenLimit: 1000, tokenName: 'tokens' } }], totalCount: 1, totalSpent: 2900, totalSpentFormatted: '$29.00', currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false, nextCursor: null }
       },
     ]
   },
@@ -2569,7 +2973,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           period: "AdminAnalyticsPeriod? — default '30d'"
         },
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("analytics").'],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { period: '30d' } },
+        response: { period: '30d', startDate: '2026-03-05T00:00:00.000Z', endDate: '2026-04-04T23:59:59.999Z', revenue: { total: 12450, currentPeriod: 2450, previousPeriod: 1980, daily: 120, yesterday: 95, growth: 23.74, mrr: 9800, arr: 117600, chartData: [{ date: '2026-04-01', revenue: 120 }, { date: '2026-04-02', revenue: 90 }] }, users: { total: 840, active: 312, currentPeriod: 54, previousPeriod: 43, growth: 25.58, growthData: [{ date: '2026-04-01', users: 4 }, { date: '2026-04-02', users: 3 }], today: 2, thisWeek: 11 }, subscriptions: { total: 225, active: 184, pending: 9, canceled: 32, currentPeriod: 18, previousPeriod: 15, growth: 20, conversionRate: 26.79, churnRate: 4.8, chartData: [{ date: '2026-04-01', subscriptions: 2 }, { date: '2026-04-02', subscriptions: 1 }] }, plans: [{ id: 'plan_pro', name: 'Pro', revenue: 7800, users: 96, percentage: 62.65 }], features: [{ name: 'AI credits', usage: 1240, users: 180, adoptionRate: 57.69 }], visits: { total: 18400, currentPeriod: 2400, previousPeriod: 2100, growth: 14.29, uniqueVisitors: 1310, bounceRate: 38.4, countries: [{ country: 'United States', visits: 1200, percentage: 50 }], pages: [{ path: '/pricing', views: 840, percentage: 35 }] }, charts: { revenue: [{ date: '2026-04-01', revenue: 120 }], subscriptions: [{ date: '2026-04-01', subscriptions: 2 }], users: [{ date: '2026-04-01', users: 4 }] } }
       },
       {
         method: 'GET',
@@ -2593,7 +2999,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 400 for invalid filters or invalid group.',
           'May return 503 when Google Analytics configuration is missing.'
         ],
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { period: '30d', country: 'United States', deviceType: 'desktop' } },
+        response: { period: '30d', filters: { period: '30d' }, range: { start: '2026-03-05', end: '2026-04-04', days: 31 }, totals: { visits: 2400, uniqueVisitors: 1310, pageViews: 3600, newUsers: 410, engagedSessions: 1420, engagementRate: 59.17, averageSessionDurationSeconds: 142 }, derived: { dailyVisits: 77.42, uniqueVisitorShare: 54.58, newUserShare: 17.08, engagedSessionShare: 59.17 }, charts: { visits: [{ date: '2026-04-01', value: 82 }], pageViews: [{ date: '2026-04-01', value: 129 }], granularity: 'daily' }, breakdowns: { countries: [{ name: 'United States', visits: 1200, share: 50 }], pages: [{ path: '/pricing', views: 840, share: 35 }], devices: [{ type: 'desktop', sessions: 1400, share: 58.33 }], referrers: [{ label: '(direct)', sessions: 900, share: 37.5 }], events: [{ name: 'page_view', count: 3600 }] }, filterOptions: { countries: ['United States'], pages: ['/pricing'], deviceTypes: ['desktop', 'mobile', 'tablet'] } }
       },
       {
         method: 'GET',
@@ -2606,7 +3014,9 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           pageNumber: 'number? — default 1',
           pageSize: 'number? — default 25, max 100'
         },
-        rateLimitTier: 'admin'
+        rateLimitTier: 'admin',
+        example: { query: { group: 'devices', pageNumber: '1', pageSize: '25' } },
+        response: { rows: [{ label: 'desktop', count: 1400, percentage: 58.33 }, { label: 'mobile', count: 900, percentage: 37.5 }], totalRows: 3, totalMetricValue: 2400, page: 1, pageSize: 25, hasMore: false }
       }
     ]
   }

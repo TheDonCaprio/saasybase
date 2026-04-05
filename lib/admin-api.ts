@@ -3444,58 +3444,6 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
       },
     ]
   },
-  {
-    id: 'debug',
-    title: 'Debug & dev-only helpers',
-    description: 'Non-production helper endpoints gated by ENABLE_DEBUG_ROUTES=true. These are not stable public contracts and should stay disabled in production.',
-    endpoints: [
-      {
-        method: 'POST',
-        path: '/api/_debug/trigger-log',
-        summary: 'Insert a debug system log row',
-        description: 'Creates a synthetic system log entry for testing log surfaces and alerting in non-production.',
-        access: 'admin',
-        notes: [
-          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
-          'Auth: requires admin/moderator via requireAdminOrModerator().',
-          'Returns 404 when debug routes are disabled.',
-        ],
-        rateLimitTier: 'admin',
-        example: {},
-        response: { ok: true, id: 'log_debug_1' }
-      },
-      {
-        method: 'POST',
-        path: '/api/_debug/trigger-logger',
-        summary: 'Emit a logger error entry',
-        description: 'Writes a synthetic logger error event for testing logger persistence and alerting in non-production.',
-        access: 'admin',
-        notes: [
-          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
-          'Auth: requires admin/moderator via requireAdminOrModerator().',
-          'Returns 404 when debug routes are disabled.',
-        ],
-        rateLimitTier: 'admin',
-        example: {},
-        response: { ok: true }
-      },
-      {
-        method: 'GET',
-        path: '/api/mock-session',
-        summary: 'Generate a mock checkout session id',
-        description: 'Returns a fake checkout session id and a matching confirm URL for local debugging when debug routes are enabled.',
-        access: 'admin',
-        notes: [
-          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
-          'Auth: requires ADMIN via requireAdmin().',
-          'Returns 404 both when disabled and when auth fails.',
-        ],
-        rateLimitTier: 'admin',
-        example: {},
-        response: { mockSessionId: 'cs_test_mock_1712320000000', testUrl: '/api/checkout/confirm?session_id=cs_test_mock_1712320000000', note: 'Debug mock session helper' }
-      },
-    ]
-  }
 ];
 
 const RATE_LIMITS: AdminApiRateLimit[] = [

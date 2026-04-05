@@ -238,6 +238,72 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
       },
       {
         method: 'GET',
+        path: '/api/settings/format',
+        summary: 'Read public format preferences',
+        description: 'Returns the global date/time formatting mode and optional timezone used by unauthenticated UI surfaces.',
+        access: 'public',
+        notes: ['Public endpoint (no auth). Returns 500 { ok:false, error } when format settings cannot be loaded.'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { ok: true, mode: 'short', timezone: 'America/New_York' }
+      },
+      {
+        method: 'GET',
+        path: '/api/site-info',
+        summary: 'Read site branding info',
+        description: 'Returns the configured site name and default token label for lightweight client-side branding and copy.',
+        access: 'public',
+        notes: ['Public endpoint (no auth). Falls back to NEXT_PUBLIC_SITE_NAME or SaaSyBase when the site name setting is unavailable.'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { siteName: 'SaaSyBase', tokenLabel: 'tokens' }
+      },
+      {
+        method: 'GET',
+        path: '/api/plan-preview',
+        summary: 'Deprecated plan preview placeholder',
+        description: 'Placeholder route that currently always returns 404 and does not expose plan preview data.',
+        access: 'public',
+        notes: ['Public endpoint (no auth). Success is not implemented.'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'GET',
+        path: '/api/billing/test',
+        summary: 'Deprecated billing test placeholder',
+        description: 'Legacy billing test endpoint that is intentionally disabled and always returns 404.',
+        access: 'public',
+        notes: ['Public endpoint (no auth). Success is not implemented.'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'POST',
+        path: '/api/fix-status',
+        summary: 'Deprecated status fix placeholder',
+        description: 'Legacy mutation endpoint that is intentionally disabled and always returns 404.',
+        access: 'public',
+        notes: ['Public endpoint (no auth). Success is not implemented.'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'GET',
+        path: '/api/minimal',
+        summary: 'Minimal health stub',
+        description: 'Returns a minimal success payload used for smoke testing the route layer.',
+        access: 'public',
+        notes: ['Public endpoint (no auth).'],
+        rateLimitTier: 'public',
+        example: {},
+        response: { ok: true, message: 'Minimal API working' }
+      },
+      {
+        method: 'GET',
         path: '/api/user/export-account-data',
         summary: 'Download account data',
         description: 'Streams a JSON export of all user-owned data: profile, security sessions, settings, billing, support history, notifications, and organizations.',
@@ -1428,6 +1494,29 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
       },
       {
         method: 'POST',
+        path: '/api/admin/subscriptions/[id]/edit',
+        summary: 'Edit subscription state and billing date',
+        description:
+          'Edits a subscription locally, with optional provider-state verification for reactivation, expiry, billing date changes, and clearing scheduled cancellation.',
+        access: 'admin',
+        body: {
+          status: '"ACTIVE" | "EXPIRED"? — optional desired local status',
+          expiresAt: 'string? — ISO billing date override',
+          allowLocalOverride: 'boolean? — allow local-only changes when provider state differs or cannot be fetched',
+          clearScheduledCancellation: 'boolean? — clears cancel-at-period-end locally and attempts provider undo when applicable',
+        },
+        notes: [
+          'Auth: requires admin/moderator via requireAdminOrModerator("subscriptions").',
+          'Rate limit: admin-subscriptions:edit (60 / 120s).',
+          'Returns 409 when provider state conflicts with the requested edit unless allowLocalOverride is true.',
+          'Returns 502 when provider verification fails and local override is not enabled.',
+        ],
+        rateLimitTier: 'admin',
+        example: { status: 'ACTIVE', expiresAt: '2026-05-15T00:00:00.000Z', allowLocalOverride: true, clearScheduledCancellation: true },
+        response: { ok: true, warning: 'Saved a local billing date that differs from stripe\'s current period end.', subscription: { id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-15T00:00:00.000Z', canceledAt: null, cancelAtPeriodEnd: false } }
+      },
+      {
+        method: 'POST',
         path: '/api/admin/billing/sync',
         summary: 'Sync billing catalog (admin)',
         description:
@@ -2536,6 +2625,86 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         example: { headerLinks: [{ label: 'Pricing', href: '/pricing' }], footerLinks: [{ label: 'Privacy', href: '/privacy' }], footerText: 'Built with SaaSyBase', customCss: '.hero { letter-spacing: -0.02em; }', customHead: '<meta name="theme-color" content="#0f172a" />', customBody: '<script>window.__themeLoaded=true;</script>', colorPalette: { light: { accentPrimary: '#c75b12' }, dark: { accentPrimary: '#f59e0b' } } },
         response: { headerLinks: [{ label: 'Pricing', href: '/pricing' }], footerLinks: [{ label: 'Privacy', href: '/privacy' }], footerText: 'Built with SaaSyBase', customCss: '.hero { letter-spacing: -0.02em; }', customHead: '<meta name="theme-color" content="#0f172a" />', customBody: '<script>window.__themeLoaded=true;</script>', legacySnippet: '', colorPalette: { light: { accentPrimary: '#c75b12' }, dark: { accentPrimary: '#f59e0b' } } }
       },
+      {
+        method: 'GET',
+        path: '/api/admin/theme/export',
+        summary: 'Export theme settings',
+        description: 'Exports theme-managed settings as a downloadable JSON snapshot, including defaults for theme keys not yet persisted in the database.',
+        access: 'admin',
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: admin-theme:export (10 / 120s).',
+          'Response is JSON with Content-Disposition attachment headers for download.',
+        ],
+        rateLimitTier: 'admin',
+        example: {},
+        response: { _meta: { type: 'saasybase-theme', version: 1, exportedAt: '2026-04-05T12:00:00.000Z', count: 42 }, settings: { FOOTER_TEXT: 'Built with SaaSyBase', CUSTOM_CSS: '.hero { letter-spacing: -0.02em; }', HEADER_LINKS: '[{"label":"Pricing","href":"/pricing"}]' } }
+      },
+      {
+        method: 'POST',
+        path: '/api/admin/theme/import',
+        summary: 'Import theme settings',
+        description: 'Imports a previously exported theme snapshot, ignoring non-theme keys and clearing the settings cache afterward.',
+        access: 'admin',
+        body: {
+          _meta: { type: '"saasybase-theme" — required', version: '1 — required' },
+          settings: 'Record<string, string> — theme settings from /api/admin/theme/export',
+        },
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: admin-theme:import (5 / 120s).',
+          'Returns 400 for invalid envelopes, empty imports, or when no valid theme keys are present.',
+        ],
+        rateLimitTier: 'admin',
+        example: { _meta: { type: 'saasybase-theme', version: 1 }, settings: { FOOTER_TEXT: 'Built with SaaSyBase', CUSTOM_CSS: '.hero { letter-spacing: -0.02em; }' } },
+        response: { imported: 2, skipped: 0 }
+      },
+    ]
+  },
+  {
+    id: 'maintenance',
+    title: 'Maintenance & operations (admin)',
+    description: 'Operational helpers for internal cache inspection and cleanup tasks.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/admin/maintenance/discounted-subscription-price-cache',
+        summary: 'Inspect discounted subscription price cache',
+        description: 'Returns aggregate stats for discounted subscription price cache entries, including stale pending rows, aged ready rows, and invalid payloads.',
+        access: 'admin',
+        params: {
+          pendingOlderThanMinutes: 'number|string? — stale pending threshold; default 10, min 1, max 1440',
+          readyOlderThanDays: 'number|string? — old ready threshold; default 90, min 1, max 3650',
+        },
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: 30 / 60s per admin for stats reads.',
+          'Scans up to 5000 settings keys with the discounted_subscription_price_v1: prefix.',
+        ],
+        rateLimitTier: 'admin',
+        example: { query: { pendingOlderThanMinutes: '15', readyOlderThanDays: '120' } },
+        response: { stats: { prefix: 'discounted_subscription_price_v1:', total: 18, pending: 3, ready: 12, stalePending: 1, oldReady: 4, invalid: 2, scanned: 18 }, thresholds: { pendingOlderThanMinutes: 15, readyOlderThanDays: 120 }, limits: { maxScan: 5000 } }
+      },
+      {
+        method: 'POST',
+        path: '/api/admin/maintenance/discounted-subscription-price-cache',
+        summary: 'Clean discounted subscription price cache',
+        description: 'Deletes invalid or expired discounted subscription cache entries. Dry-run mode is enabled by default.',
+        access: 'admin',
+        body: {
+          pendingOlderThanMinutes: 'number|string? — stale pending threshold; default 10',
+          readyOlderThanDays: 'number|string? — old ready threshold; default 90',
+          dryRun: 'boolean? — default true; when false, matching keys are deleted',
+        },
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: 10 / 60s per admin for cleanup runs.',
+          'Returns both the action summary and post-cleanup stats.',
+        ],
+        rateLimitTier: 'admin',
+        example: { pendingOlderThanMinutes: 15, readyOlderThanDays: 120, dryRun: false },
+        response: { dryRun: false, scanned: 18, wouldDelete: 7, deleted: 7, thresholds: { pendingOlderThanMinutes: 15, readyOlderThanDays: 120 }, reasons: { stalePending: 1, oldReady: 4, invalid: 2 }, statsAfter: { prefix: 'discounted_subscription_price_v1:', total: 11, pending: 2, ready: 9, stalePending: 0, oldReady: 0, invalid: 0, scanned: 11 } }
+      },
     ]
   },
   {
@@ -2637,6 +2806,41 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'admin',
         example: { query: { key: 'SITE_NAME' } },
         response: { key: 'SITE_NAME', value: 'SaaSyBase' }
+      },
+      {
+        method: 'GET',
+        path: '/api/admin/settings/export',
+        summary: 'Export settings snapshot',
+        description: 'Exports all non-theme settings as a downloadable JSON snapshot, merging known defaults with database overrides.',
+        access: 'admin',
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: admin-settings:export (10 / 120s).',
+          'Theme-managed keys are excluded from this export.',
+          'Response is JSON with Content-Disposition attachment headers for download.',
+        ],
+        rateLimitTier: 'admin',
+        example: {},
+        response: { _meta: { type: 'saasybase-settings', version: 1, exportedAt: '2026-04-05T12:00:00.000Z', count: 128, dbCount: 63, includesDefaults: true, excludesTheme: true, themeExcludedCount: 42 }, settings: { SITE_NAME: 'SaaSyBase', SUPPORT_EMAIL: 'support@example.com', DEFAULT_CURRENCY: 'USD' } }
+      },
+      {
+        method: 'POST',
+        path: '/api/admin/settings/import',
+        summary: 'Import settings snapshot',
+        description: 'Imports a previously exported settings snapshot, skipping theme-managed keys and clearing the settings cache afterward.',
+        access: 'admin',
+        body: {
+          _meta: { type: '"saasybase-settings" — required', version: '1 — required' },
+          settings: 'Record<string, string> — non-theme settings from /api/admin/settings/export',
+        },
+        notes: [
+          'Auth: requires ADMIN via requireAdmin().',
+          'Rate limit: admin-settings:import (5 / 120s).',
+          'Returns 400 for invalid envelopes, empty imports, or when the payload exceeds 2000 settings.',
+        ],
+        rateLimitTier: 'admin',
+        example: { _meta: { type: 'saasybase-settings', version: 1 }, settings: { SITE_NAME: 'SaaSyBase', SUPPORT_EMAIL: 'support@example.com' } },
+        response: { imported: 2, skippedTheme: 0 }
       },
       {
         method: 'POST',
@@ -2812,6 +3016,40 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         response: { valid: false, reason: 'org_expired', message: 'Organization access has expired.', clearActiveOrg: true, activeOrgReason: 'active_org_provider_missing' }
       },
       {
+        method: 'GET',
+        path: '/api/internal/payment-scripts',
+        summary: 'Resolve active payment provider scripts',
+        description: 'Returns the active payment provider and the client-side script definitions that should be injected for checkout flows.',
+        access: 'internal',
+        notes: ['Used by PaymentProviderScripts to decide which provider assets to load. Returns { scripts: [] } when the active provider config is missing.'],
+        rateLimitTier: 'internal',
+        example: {},
+        response: { provider: 'stripe', scripts: [{ src: 'https://js.stripe.com/v3/', strategy: 'afterInteractive' }] }
+      },
+      {
+        method: 'POST',
+        path: '/api/internal/track-visit',
+        summary: 'Record a visit log entry',
+        description: 'Stores a visit log row for analytics/tracking. In production it requires INTERNAL_API_TOKEN; in non-production it requires X-Internal-API: true.',
+        access: 'internal',
+        body: {
+          sessionId: 'string — required session identifier',
+          ip: 'string? — visitor IP address',
+          userAgent: 'string? — request user agent',
+          country: 'string? — visitor country',
+          referrer: 'string? — referring URL/path',
+          path: 'string — required visited path',
+        },
+        notes: [
+          'Production authorization: Authorization: Bearer INTERNAL_API_TOKEN; unauthorized requests return 404.',
+          'Non-production authorization: X-Internal-API: true; unauthorized requests return 401.',
+          'If VisitLog does not exist yet, the route creates the table and retries the insert once.',
+        ],
+        rateLimitTier: 'internal',
+        example: { sessionId: 'sess_123', ip: '203.0.113.10', userAgent: 'Mozilla/5.0', country: 'US', referrer: 'https://google.com', path: '/pricing' },
+        response: { success: true }
+      },
+      {
         method: 'POST',
         path: '/api/user/welcome',
         summary: 'Send welcome email (idempotent)',
@@ -2896,6 +3134,50 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'user',
         example: { keepSessionId: 'sess_current' },
         response: { revoked: ['sess_old_1', 'sess_old_2'], failed: [] }
+      },
+      {
+        method: 'GET',
+        path: '/api/recent-sessions',
+        summary: 'Deprecated recent sessions placeholder',
+        description: 'Placeholder route that currently always returns 404 instead of a recent-session listing.',
+        access: 'user',
+        notes: ['Requires no request body. Success is not implemented.'],
+        rateLimitTier: 'user',
+        example: {},
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'POST',
+        path: '/api/sessions/[sessionId]',
+        summary: 'Deprecated session detail alias',
+        description: 'Legacy POST alias for the session detail route that currently returns 404 and performs no action.',
+        access: 'user',
+        notes: ['Success is not implemented.'],
+        rateLimitTier: 'user',
+        example: { path: { sessionId: 'sess_1' } },
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'GET',
+        path: '/api/sessions/[sessionId]/revoke',
+        summary: 'Deprecated session revoke alias',
+        description: 'Legacy GET alias for session revoke that currently returns 404 and performs no revocation.',
+        access: 'user',
+        notes: ['Success is not implemented.'],
+        rateLimitTier: 'user',
+        example: { path: { sessionId: 'sess_1' } },
+        response: { error: 'Not found' }
+      },
+      {
+        method: 'GET',
+        path: '/api/sessions/revoke-others',
+        summary: 'Deprecated revoke-others alias',
+        description: 'Legacy GET alias for revoke-others that currently returns 404 and performs no revocation.',
+        access: 'user',
+        notes: ['Success is not implemented.'],
+        rateLimitTier: 'user',
+        example: {},
+        response: { error: 'Not found' }
       },
     ]
   },
@@ -3018,6 +3300,190 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         example: { query: { group: 'devices', pageNumber: '1', pageSize: '25' } },
         response: { rows: [{ label: 'desktop', count: 1400, percentage: 58.33 }, { label: 'mobile', count: 900, percentage: 37.5 }], totalRows: 3, totalMetricValue: 2400, page: 1, pageSize: 25, hasMore: false }
       }
+    ]
+  },
+  {
+    id: 'webhooks',
+    title: 'Webhook ingress',
+    description: 'Inbound webhook endpoints for payments and auth providers. All payment webhooks enforce signature verification and shared routing behavior.',
+    endpoints: [
+      {
+        method: 'POST',
+        path: '/api/webhooks/payments',
+        summary: 'Unified payments webhook router',
+        description: 'Accepts Stripe, Paystack, Paddle, or Razorpay webhook payloads and routes them to the matching provider based on signature headers.',
+        access: 'public',
+        body: {
+          event: 'provider-specific webhook payload — raw JSON body is required for signature verification',
+        },
+        notes: [
+          'Signature header auto-detection: stripe-signature, x-paystack-signature, paddle-signature, x-razorpay-signature.',
+          'Shared payment webhook responses: 400 missing/invalid signature, 413 payload too large, 429 rate limited, 499 aborted, 503 rate limiter unavailable.',
+          'Successful responses return the resolved provider key in routed.',
+        ],
+        rateLimitTier: 'public',
+        example: { headers: { 'stripe-signature': 't=1712320000,v1=signature' }, body: { id: 'evt_123', type: 'checkout.session.completed' } },
+        response: { received: true, routed: 'stripe' }
+      },
+      {
+        method: 'POST',
+        path: '/api/webhooks/stripe',
+        summary: 'Stripe webhook ingress',
+        description: 'Provider-specific Stripe webhook endpoint that routes Stripe payloads and also tolerates Paystack signatures for legacy compatibility.',
+        access: 'public',
+        body: {
+          event: 'Stripe webhook event payload — raw JSON body is required',
+        },
+        notes: [
+          'Primary signature header: stripe-signature.',
+          'Also accepts x-paystack-signature due to shared legacy routing behavior in this endpoint.',
+        ],
+        rateLimitTier: 'public',
+        example: { headers: { 'stripe-signature': 't=1712320000,v1=signature' }, body: { id: 'evt_123', type: 'invoice.payment_succeeded' } },
+        response: { received: true, routed: 'stripe' }
+      },
+      {
+        method: 'POST',
+        path: '/api/webhooks/paystack',
+        summary: 'Paystack webhook ingress',
+        description: 'Provider-specific Paystack webhook endpoint that routes Paystack payloads and also tolerates Stripe signatures for legacy compatibility.',
+        access: 'public',
+        body: {
+          event: 'Paystack webhook event payload — raw JSON body is required',
+        },
+        notes: [
+          'Primary signature header: x-paystack-signature.',
+          'Also accepts stripe-signature due to shared legacy routing behavior in this endpoint.',
+        ],
+        rateLimitTier: 'public',
+        example: { headers: { 'x-paystack-signature': 'signature' }, body: { event: 'charge.success', data: { reference: 'pay_ref_123' } } },
+        response: { received: true, routed: 'paystack' }
+      },
+      {
+        method: 'POST',
+        path: '/api/webhooks/paddle',
+        summary: 'Paddle webhook ingress',
+        description: 'Provider-specific Paddle webhook endpoint that validates paddle-signature and routes standardized events through the payment service.',
+        access: 'public',
+        body: {
+          event: 'Paddle webhook event payload — raw JSON body is required',
+        },
+        notes: ['Primary signature header: paddle-signature.'],
+        rateLimitTier: 'public',
+        example: { headers: { 'paddle-signature': 'ts=1712320000;h1=signature' }, body: { event_type: 'transaction.completed', data: { id: 'txn_123' } } },
+        response: { received: true, routed: 'paddle' }
+      },
+      {
+        method: 'POST',
+        path: '/api/webhooks/clerk',
+        summary: 'Clerk webhook ingress',
+        description: 'Processes Clerk-signed auth, user, organization, membership, and invite events, synchronizing local records and welcome-email side effects.',
+        access: 'public',
+        body: {
+          type: 'string — Clerk event type such as user.created or organizationMembership.created',
+          data: 'object — provider-specific Clerk payload',
+        },
+        notes: [
+          'Signature headers may be provided as clerk-signature, x-clerk-signature, svix-signature, or webhook-signature.',
+          'Unsigned requests are rejected by default in all environments unless ALLOW_UNSIGNED_CLERK_WEBHOOKS=true in non-production.',
+          'Organization, membership, and invite events can return specialized sync results such as organizationId, membershipId, inviteId, accepted, expired, or deleted.',
+        ],
+        rateLimitTier: 'public',
+        example: { headers: { 'svix-signature': 'v1,signature' }, body: { type: 'user.created', data: { id: 'user_123', email_addresses: [{ email_address: 'jane@example.com' }] } } },
+        response: { ok: true, sent: true }
+      },
+      {
+        method: 'POST',
+        path: '/api/stripe/webhook',
+        summary: 'Legacy Stripe webhook alias',
+        description: 'Legacy Stripe webhook endpoint that uses the shared payment webhook router with route label legacy-stripe and supports Stripe or Paystack signatures.',
+        access: 'public',
+        body: {
+          event: 'Stripe or Paystack webhook payload — raw JSON body is required',
+        },
+        notes: [
+          'Primary signature headers: stripe-signature or x-paystack-signature.',
+          'Successful responses return the resolved provider in routed.',
+        ],
+        rateLimitTier: 'public',
+        example: { headers: { 'stripe-signature': 't=1712320000,v1=signature' }, body: { id: 'evt_legacy_123', type: 'checkout.session.completed' } },
+        response: { received: true, routed: 'stripe' }
+      },
+    ]
+  },
+  {
+    id: 'cron',
+    title: 'Cron & lifecycle jobs',
+    description: 'Privileged maintenance endpoints intended for scheduled jobs and internal automation.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/cron/process-expiry',
+        summary: 'Process subscription expiry and org cleanup',
+        description: 'Expires outdated subscriptions, clears paid tokens after the natural-expiry grace window, and dismantles organizations whose owners no longer have valid team access.',
+        access: 'internal',
+        notes: [
+          'Authorization: production requires Bearer token matching CRON_PROCESS_EXPIRY_TOKEN, CRON_SECRET, CRON_TOKEN, or INTERNAL_API_TOKEN.',
+          'Non-production also allows X-Internal-API: true.',
+          'Returns 404 instead of 401 for unauthorized production requests to reduce endpoint discovery.',
+          'Rate limit: 2 requests / minute per client IP.',
+        ],
+        rateLimitTier: 'internal',
+        example: { headers: { Authorization: 'Bearer cron_secret_token' } },
+        response: { success: true, timestamp: '2026-04-05T12:00:00.000Z', results: { expiredSubscriptions: 3, clearedPaidTokenUsers: 2, dismantledOrganizations: 1, errors: [] } }
+      },
+    ]
+  },
+  {
+    id: 'debug',
+    title: 'Debug & dev-only helpers',
+    description: 'Non-production helper endpoints gated by ENABLE_DEBUG_ROUTES=true. These are not stable public contracts and should stay disabled in production.',
+    endpoints: [
+      {
+        method: 'POST',
+        path: '/api/_debug/trigger-log',
+        summary: 'Insert a debug system log row',
+        description: 'Creates a synthetic system log entry for testing log surfaces and alerting in non-production.',
+        access: 'admin',
+        notes: [
+          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
+          'Auth: requires admin/moderator via requireAdminOrModerator().',
+          'Returns 404 when debug routes are disabled.',
+        ],
+        rateLimitTier: 'admin',
+        example: {},
+        response: { ok: true, id: 'log_debug_1' }
+      },
+      {
+        method: 'POST',
+        path: '/api/_debug/trigger-logger',
+        summary: 'Emit a logger error entry',
+        description: 'Writes a synthetic logger error event for testing logger persistence and alerting in non-production.',
+        access: 'admin',
+        notes: [
+          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
+          'Auth: requires admin/moderator via requireAdminOrModerator().',
+          'Returns 404 when debug routes are disabled.',
+        ],
+        rateLimitTier: 'admin',
+        example: {},
+        response: { ok: true }
+      },
+      {
+        method: 'GET',
+        path: '/api/mock-session',
+        summary: 'Generate a mock checkout session id',
+        description: 'Returns a fake checkout session id and a matching confirm URL for local debugging when debug routes are enabled.',
+        access: 'admin',
+        notes: [
+          'Disabled unless NODE_ENV is not production and ENABLE_DEBUG_ROUTES=true.',
+          'Auth: requires ADMIN via requireAdmin().',
+          'Returns 404 both when disabled and when auth fails.',
+        ],
+        rateLimitTier: 'admin',
+        example: {},
+        response: { mockSessionId: 'cs_test_mock_1712320000000', testUrl: '/api/checkout/confirm?session_id=cs_test_mock_1712320000000', note: 'Debug mock session helper' }
+      },
     ]
   }
 ];

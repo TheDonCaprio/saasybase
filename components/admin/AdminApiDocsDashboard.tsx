@@ -54,91 +54,14 @@ function matchesFilters(endpoint: AdminApiEndpoint, query: string, method: Metho
   return searchMatch && methodMatch && accessMatch;
 }
 
-function extractFirstQuotedOption(descriptor: string) {
-  const match = descriptor.match(/'([^']+)'/);
-  return match?.[1] ?? null;
+function getRequestExample(endpoint: AdminApiEndpoint) {
+  if (!endpoint.example) return null;
+  return { title: 'Example request', data: endpoint.example };
 }
 
-function sampleValue(key: string, descriptor: unknown): unknown {
-  if (descriptor && typeof descriptor === 'object' && !Array.isArray(descriptor)) {
-    return Object.fromEntries(
-      Object.entries(descriptor).map(([childKey, childValue]) => [childKey, sampleValue(childKey, childValue)])
-    );
-  }
-
-  if (typeof descriptor !== 'string') {
-    return 'example';
-  }
-
-  const lowerKey = key.toLowerCase();
-  const lowerDescriptor = descriptor.toLowerCase();
-  const quoted = extractFirstQuotedOption(descriptor);
-
-  if (quoted && quoted !== 'false' && quoted !== 'true') return quoted;
-  if (lowerDescriptor.includes('boolean')) return true;
-  if (lowerDescriptor.includes('string[]')) return ['example'];
-  if (lowerKey.includes('email')) return 'user@example.com';
-  if (lowerKey.includes('password')) return 'secureP@ss1';
-  if (lowerKey.includes('token')) return 'tok_example_123';
-  if (lowerKey.includes('userid')) return 'user_123';
-  if (lowerKey.includes('planid')) return 'plan_pro';
-  if (lowerKey.includes('coupon')) return 'SAVE20';
-  if (lowerKey.includes('currency')) return 'usd';
-  if (lowerKey === 'page') return 1;
-  if (lowerKey === 'limit') return 50;
-  if (lowerKey.includes('amountoffcents') || lowerKey.includes('pricecents') || lowerKey.includes('subtotalcents')) return 2900;
-  if (lowerKey.includes('amount') || lowerKey.includes('count') || lowerKey.includes('limit')) return 1;
-  if (lowerKey.includes('date') || lowerKey.includes('expiresat') || lowerKey.includes('createdat')) return '2026-04-04T12:00:00Z';
-  if (lowerDescriptor.includes('number') || lowerDescriptor.includes('int')) return 1;
-
-  return 'example';
-}
-
-function buildGeneratedRequest(endpoint: AdminApiEndpoint) {
-  if (endpoint.example) return { title: 'Example request', data: endpoint.example };
-  if (endpoint.body) {
-    return {
-      title: 'Generated request example',
-      data: Object.fromEntries(Object.entries(endpoint.body).map(([key, value]) => [key, sampleValue(key, value)]))
-    };
-  }
-  if (endpoint.params) {
-    return {
-      title: 'Generated query example',
-      data: Object.fromEntries(Object.entries(endpoint.params).map(([key, value]) => [key, sampleValue(key, value)]))
-    };
-  }
-  return null;
-}
-
-function buildGeneratedResponse(endpoint: AdminApiEndpoint) {
-  if (endpoint.response) return { title: 'Response', data: endpoint.response };
-  if (endpoint.summary.toLowerCase().startsWith('list ')) {
-    return {
-      title: 'Generated response example',
-      data: {
-        items: [],
-        totalCount: 0,
-        _note: 'Generated fallback example. Actual collection keys vary by endpoint.'
-      }
-    };
-  }
-  if (endpoint.method === 'DELETE') {
-    return { title: 'Generated response example', data: { success: true } };
-  }
-  if (endpoint.method === 'POST' || endpoint.method === 'PATCH' || endpoint.method === 'PUT') {
-    return {
-      title: 'Generated response example',
-      data: { success: true, _note: 'Generated fallback example. Check route-specific docs for exact payloads.' }
-    };
-  }
-  if (endpoint.method === 'GET') {
-    return {
-      title: 'Generated response example',
-      data: { ok: true, _note: 'Generated fallback example. Exact GET response shape depends on the handler.' }
-    };
-  }
-  return null;
+function getResponseExample(endpoint: AdminApiEndpoint) {
+  if (!endpoint.response) return null;
+  return { title: 'Response', data: endpoint.response };
 }
 
 export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboardProps) {
@@ -276,8 +199,8 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
   const [copied, setCopied] = useState(false);
   const methodStyle = METHOD_VARIANTS[endpoint.method] ?? 'bg-slate-600 !text-white';
   const accessBadge = ACCESS_BADGE[endpoint.access];
-  const requestExample = buildGeneratedRequest(endpoint);
-  const responseExample = buildGeneratedResponse(endpoint);
+  const requestExample = getRequestExample(endpoint);
+  const responseExample = getResponseExample(endpoint);
 
   const hasDetails = !!(endpoint.params || endpoint.body || requestExample || responseExample || (endpoint.notes && endpoint.notes.length > 0) || endpoint.description || endpoint.source);
 

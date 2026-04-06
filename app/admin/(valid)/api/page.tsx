@@ -26,6 +26,7 @@ export default async function AdminApiPage() {
 
   const catalog = await getAdminApiCatalog();
   const { summary, rateLimiting, changelog } = catalog;
+  const latestChangelogEntry = changelog[0] ?? null;
 
   const heroStats = [
     {
@@ -45,8 +46,8 @@ export default async function AdminApiPage() {
   const metricCards: AdminStatCardProps[] = [
     {
       label: 'Auth model',
-      value: 'Clerk + internal token',
-      helper: 'Admin/user via Clerk session; internal via Bearer token',
+      value: 'Provider-aware + internal token',
+      helper: 'Admin/user via active auth provider session; internal via Bearer token',
       icon: faKey,
       accent: 'theme'
     },
@@ -66,8 +67,8 @@ export default async function AdminApiPage() {
     },
     {
       label: 'Version',
-      value: changelog[0]?.version ?? 'Current',
-      helper: changelog[0] ? `Updated ${formatAdminApiDate(changelog[0].releasedAt)}` : 'Latest updates applied',
+      value: latestChangelogEntry?.version ?? 'Current',
+      helper: latestChangelogEntry ? `Updated ${formatAdminApiDate(latestChangelogEntry.releasedAt)}` : 'Latest updates applied',
       icon: faCodeBranch,
       accent: 'theme'
     }
@@ -82,7 +83,13 @@ export default async function AdminApiPage() {
         title="API reference"
         description="Browse, search, and explore every endpoint available in your platform."
         stats={heroStats}
-      />
+      >
+        {latestChangelogEntry ? (
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+            Last updated: Version {latestChangelogEntry.version} on {formatAdminApiDate(latestChangelogEntry.releasedAt)}
+          </p>
+        ) : null}
+      </DashboardPageHeader>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((card) => (
@@ -96,7 +103,7 @@ export default async function AdminApiPage() {
         <section className={dashboardMutedPanelClass('space-y-4')}>
           <header className="space-y-1">
             <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Changelog</p>
-            <p className="text-sm text-slate-600 dark:text-neutral-300">Recent updates to the admin API surface.</p>
+            <p className="text-sm text-slate-600 dark:text-neutral-300">Recent platform and documentation updates reflected in this reference.</p>
           </header>
           <ul className="space-y-3">
             {changelog.map((entry) => (

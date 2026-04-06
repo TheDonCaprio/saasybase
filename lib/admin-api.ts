@@ -155,6 +155,25 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         response: { message: 'Verification email sent' }
       },
       {
+        method: 'GET',
+        path: '/api/auth/verify-email',
+        summary: 'Complete email verification link',
+        description: 'Consumes a verification token from the email link and redirects to sign-in or dashboard depending on the verification flow outcome.',
+        access: 'public',
+        params: {
+          token: 'string — required; raw verification token from the email link',
+          email: 'string — required; email being verified or confirmed',
+        },
+        notes: [
+          'Public endpoint reached from the email link.',
+          'Success returns an HTTP redirect rather than a JSON payload.',
+          'Expired or invalid tokens redirect to a sign-in or dashboard error state.'
+        ],
+        rateLimitTier: 'public',
+        example: { query: { token: 'verify_abc123', email: 'user@example.com' } },
+        response: { redirect: '/sign-in?verification=success' }
+      },
+      {
         method: 'POST',
         path: '/api/auth/forgot-password',
         summary: 'Request password reset',
@@ -906,6 +925,10 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         params: {
           sync: "'1'? — force server-side sync before returning state",
         },
+        notes: [
+          'providerOrganizationId is the canonical backing-provider org identifier when one exists.',
+          'clerkOrganizationId is retained only as a legacy compatibility alias and may be null even when providerOrganizationId is present.'
+        ],
         rateLimitTier: 'user',
         example: { query: { sync: '1' } },
         response: {
@@ -1004,6 +1027,25 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         }
       },
       {
+        method: 'PATCH',
+        path: '/api/team/members/cap-override',
+        summary: 'Override a member shared-token cap',
+        description: 'Lets the workspace owner set or clear a per-member shared-token cap override, then returns refreshed team dashboard state.',
+        access: 'user',
+        body: {
+          userId: 'string — required member user id',
+          capOverride: 'number | null — positive integer to set, null or 0 to clear',
+        },
+        notes: [
+          'Auth: requires an authenticated session and owner access to the active workspace.',
+          'Returns 403 when the caller is not the org owner.',
+          'Returns 404 when the target user is not a member of the workspace.'
+        ],
+        rateLimitTier: 'user',
+        example: { userId: 'user_member_1', capOverride: 150 },
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', memberTokenCap: 250, memberCapStrategy: 'SOFT', members: [{ userId: 'user_member_1', effectiveMemberCap: 150, memberTokenCapOverride: 150, memberTokenUsage: 25 }] } }
+      },
+      {
         method: 'POST',
         path: '/api/team/invite',
         summary: 'Invite a member',
@@ -1016,10 +1058,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'Requires a provisioned workspace; otherwise returns 400.',
           'Request role is normalized on input, while the returned invite snapshot uses persisted uppercase enum values such as MEMBER/ADMIN.',
+          'In response payloads, clerkOrganizationId is a legacy compatibility alias for older Clerk-based consumers; prefer providerOrganizationId.'
         ],
         rateLimitTier: 'user',
         example: { email: 'teammate@example.com', role: 'member' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -1063,35 +1106,47 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           token: 'string — required (alias: invitationId)',
         },
+        notes: [
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
+          'clerkOrganizationId is included only as a legacy compatibility alias for older consumers.'
+        ],
         rateLimitTier: 'user',
         example: { token: 'invite_token_1' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
         path: '/api/team/invite/revoke',
         summary: 'Revoke invite',
-        description: 'Revokes an invite in Clerk (best-effort) and expires the local invite. Requires owner workspace.',
+        description: 'Attempts provider-level invite revocation when supported, then expires the local invite. Requires owner workspace.',
         access: 'user',
         body: {
           token: 'string — required (alias: invitationId)',
         },
+        notes: [
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
+          'clerkOrganizationId is preserved only as a legacy compatibility alias for older Clerk-shaped clients.'
+        ],
         rateLimitTier: 'user',
         example: { token: 'invite_token_1' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
         path: '/api/team/members/remove',
         summary: 'Remove a member',
-        description: 'Removes a member from the Clerk organization and updates local membership. Owner-only.',
+        description: 'Removes a member from the backing auth-provider organization when supported and updates local membership. Owner-only.',
         access: 'user',
         body: {
           userId: 'string — required; cannot equal current userId',
         },
+        notes: [
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
+          'clerkOrganizationId is preserved only as a legacy compatibility alias for older Clerk-shaped clients.'
+        ],
         rateLimitTier: 'user',
         example: { userId: 'user_member' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_clerk_1', clerkOrganizationId: 'org_clerk_1', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
     ]
   },
@@ -1723,7 +1778,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         method: 'DELETE',
         path: '/api/admin/organizations/[orgId]/delete',
         summary: 'Delete organization',
-        description: 'Deletes an organization and related records. Attempts to delete the backing Clerk organization first when present (best-effort).',
+        description: 'Deletes an organization and related records. Attempts to delete the backing auth-provider organization first when present (best-effort).',
         access: 'admin',
         notes: [
           'Auth: requires admin section access via requireAdminSectionAccess("organizations").',
@@ -2981,6 +3036,107 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER' }, paidTokens: { tokenName: 'tokens', remaining: 100, isUnlimited: false, displayRemaining: '100' }, subscription: { planName: 'Pro', expiresAt: 'May 1, 2026', tokenName: 'tokens', tokens: { total: 1000, used: 900, remaining: 100, isUnlimited: false, displayRemaining: '100' } }, organization: null, sharedTokens: null, freeTokens: { tokenName: 'tokens', total: null, remaining: 50 }, planSource: 'PERSONAL', planActionLabel: 'Change Plan', canCreateOrganization: true, hasPendingTeamInvites: false }
       },
       {
+        method: 'PATCH',
+        path: '/api/user/profile',
+        summary: 'Update current user profile',
+        description: 'Updates the authenticated user name and/or email address. Providers that require verification-backed email changes may return a pending state instead of applying the new email immediately.',
+        access: 'user',
+        body: {
+          name: 'string? — full name; normalized and validated when provided',
+          firstName: 'string? — optional when using split-name input',
+          lastName: 'string? — optional when using split-name input',
+          email: 'string? — new email address; uniqueness checked before update or pending verification',
+        },
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Returns 409 when the requested email is already in use.',
+          'For providers that stage email changes behind verification, the response can include emailChangePending=true until the verification link is completed.',
+          'The current implementation supports deferred email changes for NextAuth password accounts.'
+        ],
+        rateLimitTier: 'user',
+        example: { name: 'Jane Doe', email: 'jane.new@example.com' },
+        response: { user: { id: 'user_abc', name: 'Jane Doe', email: 'jane@example.com' }, verificationRequired: true, emailChangePending: true, pendingEmail: 'jane.new@example.com' }
+      },
+      {
+        method: 'GET',
+        path: '/api/user/active-org',
+        summary: 'Get active workspace selection',
+        description: 'Returns the organizations the user belongs to and the currently selected active organization for providers or clients that use the app-managed workspace cookie.',
+        access: 'user',
+        notes: [
+          'Auth: requires an authenticated session.',
+          'If the active-org cookie points at a workspace the user no longer belongs to, the cookie is cleared and activeOrgId is returned as null.',
+          'Providers with native organization switching may not rely on this endpoint, but it remains useful for app-managed workspace selection flows.'
+        ],
+        rateLimitTier: 'user',
+        example: {},
+        response: { activeOrgId: 'org_1', organizations: [{ id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', role: 'OWNER', isOwner: true, planName: 'Business' }] }
+      },
+      {
+        method: 'POST',
+        path: '/api/user/active-org',
+        summary: 'Set active workspace selection',
+        description: 'Stores the active organization id in an httpOnly cookie or clears it to switch back to the personal workspace.',
+        access: 'user',
+        body: {
+          orgId: 'string | null — target organization id; null clears the active workspace',
+        },
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Returns 403 when the user is not an active member of the requested organization.'
+        ],
+        rateLimitTier: 'user',
+        example: { orgId: 'org_1' },
+        response: { activeOrgId: 'org_1' }
+      },
+      {
+        method: 'POST',
+        path: '/api/user/change-password',
+        summary: 'Change password',
+        description: 'Changes the current user password after verifying the existing password, then revokes other sessions by bumping tokenVersion and deleting stored sessions.',
+        access: 'user',
+        body: {
+          currentPassword: 'string — required',
+          newPassword: 'string — required; must satisfy password policy',
+        },
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Password-based accounts only; social-login-only users receive a 400 explaining that they must use forgot-password.',
+          'Rate limited per user.'
+        ],
+        rateLimitTier: 'user',
+        example: { currentPassword: 'oldSecureP@ss1', newPassword: 'newSecureP@ss2' },
+        response: { message: 'Password changed successfully' }
+      },
+      {
+        method: 'DELETE',
+        path: '/api/user/pending-email-change',
+        summary: 'Cancel pending email change',
+        description: 'Cancels a pending NextAuth email-change verification flow for the current user.',
+        access: 'user',
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Only supported when AUTH_PROVIDER=nextauth; other auth providers return 400.'
+        ],
+        rateLimitTier: 'user',
+        example: {},
+        response: { ok: true }
+      },
+      {
+        method: 'GET',
+        path: '/api/user/sessions',
+        summary: 'List current user sessions',
+        description: 'Returns the authenticated user sessions from the active auth provider, normalized for the account security UI.',
+        access: 'user',
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Works with both NextAuth and Clerk through the auth abstraction.'
+        ],
+        rateLimitTier: 'user',
+        example: {},
+        response: [{ id: 'sess_1', status: 'active', lastActiveAt: '2026-04-05T11:58:00.000Z', latestActivity: 'Viewed dashboard', isCurrent: true }]
+      },
+      {
         method: 'GET',
         path: '/api/user/grace-status',
         summary: 'Check paid-token expiry grace window',
@@ -3024,6 +3180,28 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'user',
         example: { activeOrgId: 'org_1' },
         response: { valid: false, reason: 'org_expired', message: 'Organization access has expired.', clearActiveOrg: true, activeOrgReason: 'active_org_provider_missing' }
+      },
+      {
+        method: 'POST',
+        path: '/api/user/spend-tokens',
+        summary: 'Spend tokens for user actions',
+        description: 'Atomically deducts tokens from the best available user bucket (paid, shared, or free) and records usage for app-level features.',
+        access: 'user',
+        body: {
+          amount: 'number | string — required; positive integer <= 100000',
+          bucket: "'auto' | 'paid' | 'free' | 'shared'? — default 'auto'",
+          feature: 'string? — free-form feature label for logging and analytics',
+          organizationId: 'string? — target workspace id when spending from shared balance',
+          requestId: 'string? — opaque request label for audit/logging',
+        },
+        notes: [
+          'Auth: requires an authenticated session.',
+          'Rate limited under the general API limiter.',
+          'Returns 409 with error="insufficient_tokens" when the chosen bucket cannot satisfy the spend.'
+        ],
+        rateLimitTier: 'user',
+        example: { amount: 25, bucket: 'shared', feature: 'image_generation', organizationId: 'org_1', requestId: 'req_123' },
+        response: { ok: true, userId: 'user_abc', amount: 25, bucket: 'shared', organizationId: 'org_1', warnings: [{ code: 'soft_cap_exceeded', message: 'Member has exceeded their shared token cap (SOFT mode).', cap: 100, usageBefore: 90, usageAfter: 115 }], sharedCap: { strategy: 'SOFT', cap: 100, usageBefore: 90, usageAfter: 115, remainingBefore: 10, remainingAfter: 0, windowStart: '2026-04-04T00:00:00.000Z', resetIntervalHours: 24 }, balances: { paid: 400, free: 50, sharedPool: 975 } }
       },
       {
         method: 'GET',

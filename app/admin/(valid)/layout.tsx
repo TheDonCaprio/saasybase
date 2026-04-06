@@ -118,7 +118,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ].filter(group => group.items.length > 0);
 
   return (
-    <div className="-mx-6 lg:mx-0 lg:flex lg:gap-3 min-h-screen">
+    <div className="min-h-screen w-full overflow-x-clip lg:flex lg:gap-3">
       {/* Desktop Sidebar */}
       {/* Desktop Sidebar Placeholder (to keep layout in place) */}
       <div className="hidden lg:block w-64 flex-shrink-0" />
@@ -139,7 +139,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </aside>
       
-      <main className="relative flex-1 min-w-0 px-3 py-2 sm:px-4 lg:px-4 lg:py-3 max-w-none w-full">
+      <main className="relative flex-1 min-w-0 w-full max-w-none px-3 py-3 sm:px-4 lg:px-4 lg:py-3">
   {demoReadOnlyMode && <DemoReadOnlyNotice scope="admin" />}
   {/* background gradients removed here - using root-level gradient in app/layout.tsx instead */}
         <div className="relative space-y-6 w-full">

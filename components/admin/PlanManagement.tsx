@@ -897,7 +897,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                         />
                         <div>
                           <div className="text-sm font-medium text-slate-900 dark:text-neutral-100">Auto-renew</div>
-                          <p className="text-xs text-slate-600 mt-1 dark:text-neutral-400">Charge on a recurring basis and ignore duration hours.</p>
+                          <p className="text-xs text-slate-600 mt-1 dark:text-neutral-400">Charge on a recurring basis and set billing interval.</p>
                         </div>
                       </label>
                     </div>

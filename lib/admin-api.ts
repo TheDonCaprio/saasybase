@@ -244,7 +244,16 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns 503 when any critical check fails.',
         ],
         example: { headers: { Authorization: 'Bearer healthcheck_token' } },
-        response: { status: 'healthy', timestamp: '2026-04-04T12:00:00Z', checks: { environment: true, database: true, stripe: true, clerk: true }, errors: [] }
+        response: {
+          status: 'healthy',
+          timestamp: '2026-04-04T12:00:00Z',
+          checks: { environment: true, database: true, auth: true, payments: true },
+          providers: {
+            auth: { active: 'nextauth', available: ['nextauth', 'clerk'], configured: ['nextauth'] },
+            payments: { active: 'stripe', available: ['stripe', 'paystack', 'paddle', 'razorpay'], configured: ['stripe'] },
+          },
+          errors: []
+        }
       },
       {
         method: 'POST',
@@ -580,6 +589,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Auth: requires admin/moderator via requireAdminOrModerator("transactions").',
+          'Rate limit: admin-refund (limit 10 / 60s).',
           'Validation: body is validated by apiSchemas.refund (zod).',
           'This handler issues full refunds only (no amount parameter).'
         ],
@@ -3009,8 +3019,8 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           requestId: 'string? — opaque request label for audit logs (not idempotency)',
         },
         notes: [
-          'Auth: production requires Authorization: Bearer INTERNAL_API_TOKEN; unauthenticated calls return 404 to avoid endpoint discovery.',
-          'Non-prod: accepts X-Internal-API: true for dev convenience.',
+          'Auth: production requires Authorization: Bearer INTERNAL_API_TOKEN and returns 404 for unauthorized calls to reduce endpoint discovery.',
+          'Non-prod: also accepts X-Internal-API: true for dev convenience; unauthorized calls return 401 { error: "Unauthorized" }.',
           "bucket=auto chooses: active personal subscription → paid; else active workspace membership → shared; else free.",
           'On insufficient funds, returns 409 { error: "insufficient_tokens", required, available, bucket }.',
         ],
@@ -3026,7 +3036,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Returns the authenticated user profile and a detailed view of paid/free/shared token balances, plus subscription and workspace plan context when available.',
         access: 'user',
         notes: [
-          'Auth: requires a Clerk session (requireUser()).',
+          'Auth: requires an authenticated session.',
           'Returns 401 { error: "Unauthorized" } when not authenticated.',
           'Returns 404 when the user id is not present in the local database.',
           'Response includes permissions for admins/moderators (used to hide/show admin navigation).' 
@@ -3144,7 +3154,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Computes whether the current user is within the configured natural-expiry grace window after a subscription ends. Used to keep access and/or cleanup UX consistent.',
         access: 'user',
         notes: [
-          'Auth: requires a Clerk session (requireUser()).',
+          'Auth: requires an authenticated session.',
           'When in grace, response includes expiresAt, graceEndsAt, graceHours, and plan metadata.'
         ],
         rateLimitTier: 'user',
@@ -3159,7 +3169,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Runs a lightweight server-side check that may clear paid tokens after natural expiry grace has elapsed. Intended to be safe to call periodically from the client.',
         access: 'user',
         notes: [
-          'Auth: requires a Clerk session (requireUser()).',
+          'Auth: requires an authenticated session.',
           'Failures are treated as non-fatal and returned as { ok: false, error } (status may still be 200).' 
         ],
         rateLimitTier: 'user',
@@ -3632,12 +3642,22 @@ const RATE_LIMITS: AdminApiRateLimit[] = [
 
 const CHANGELOG = [
   {
+    version: '2026.04',
+    releasedAt: '2026-04-06T00:00:00.000Z',
+    notes: [
+      'Audited curated request, response, and auth notes against the live route handlers and corrected drift.',
+      'Updated shared authentication guidance to describe provider-aware sessions instead of Clerk-specific behavior.',
+      'Refreshed health, refund, and internal token-spend entries to match current response shapes, rate limits, and auth outcomes.',
+      'This changelog now tracks API-reference changes only; broader product release notes belong in the app changelog.'
+    ]
+  },
+  {
     version: '2026.02',
     releasedAt: '2026-02-07T00:00:00.000Z',
     notes: [
       'Added internal server-to-server token spend endpoint (POST /api/internal/spend-tokens).',
       'Added user token spend endpoint for SaaSyApp (POST /api/user/spend-tokens).',
-      'Dashboard: /dashboard now hosts SaaSyApp (real token spend); editor moved to /dashboard/editor.',
+      'Expanded token-spend coverage in the reference to distinguish browser and server-to-server callers.',
       'Expanded curated docs for token/account endpoints to reduce inventory drift.',
       'Hardened legacy admin upload endpoint (admin auth + rate limiting).',
       'API docs UI: body schema rows wrap cleanly on narrow screens.'
@@ -3811,10 +3831,10 @@ export async function getAdminApiCatalog(): Promise<AdminApiCatalog> {
     categories,
     authentication: {
       guard:
-        'Access is determined per endpoint: admin endpoints require a Clerk session with role "ADMIN"; user endpoints require an authenticated Clerk session; public endpoints are unauthenticated; internal endpoints require a server-to-server Bearer token.',
+        'Access is determined per endpoint: admin endpoints require an authenticated session whose resolved role is ADMIN, or moderator access where the handler explicitly allows it; user endpoints require an authenticated session from the active auth provider; public endpoints are unauthenticated; internal endpoints require a server-to-server Bearer token.',
       notes: [
-        'Dashboard requests automatically forward Clerk session cookies.',
-        'Admin helpers utilise `requireAdminAuth`, which returns 401 when no session is present and 403 for non-admins.',
+        'Dashboard requests automatically forward the active auth-provider session cookies.',
+        'The /admin/api page itself uses requireAdminAuth() and redirects unauthenticated users to sign-in or non-admins to /access-denied; API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
         'User-scoped endpoints validate the requester against the resource owner and will return 403 when mismatched.',
         'Internal endpoints (e.g. /api/internal/*) are intended for server-to-server calls: use Authorization: Bearer <INTERNAL_API_TOKEN>. In non-prod environments, some internal endpoints also accept X-Internal-API: true for local tooling.',
         'Some internal endpoints intentionally respond with 404 when unauthorized to reduce endpoint discovery.'

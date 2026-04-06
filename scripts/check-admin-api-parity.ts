@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
+function normalizeApiPath(value: string): string {
+  return value.replace(/\?.*$/, '');
+}
+
 function extractCuratedKeys(text: string): Set<string> {
   const keys = new Set<string>();
 
@@ -10,7 +14,7 @@ function extractCuratedKeys(text: string): Set<string> {
   const re = /method:\s*'([A-Z]+)'\s*,\s*\n\s*path:\s*'([^']+)'/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
-    keys.add(`${match[1]} ${match[2]}`);
+    keys.add(`${match[1]} ${normalizeApiPath(match[2])}`);
   }
 
   return keys;
@@ -24,10 +28,15 @@ function extractInventoryKeys(text: string): string[] {
   const re = /"method"\s*:\s*"([A-Z]+)"[\s\S]*?"path"\s*:\s*"([^"]+)"/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
-    keys.push(`${match[1]} ${match[2]}`);
+    keys.push(`${match[1]} ${normalizeApiPath(match[2])}`);
   }
 
   return keys;
+}
+
+function extractAuthenticationSection(text: string): string | null {
+  const match = text.match(/getAdminApiCatalog\(\): Promise<AdminApiCatalog> \{[\s\S]*?authentication:\s*\{([\s\S]*?)\n\s*\},\n\s*rateLimiting:/);
+  return match ? match[1] : null;
 }
 
 function main() {
@@ -49,6 +58,19 @@ function main() {
 
   const curated = extractCuratedKeys(curatedText);
   const invKeys = extractInventoryKeys(inventoryText);
+  const inventoryKeySet = new Set(invKeys);
+
+  const missingFromInventory = Array.from(curated)
+    .filter((key) => !inventoryKeySet.has(key))
+    .sort();
+
+  if (missingFromInventory.length > 0) {
+    console.error(`Admin API docs parity check failed: ${missingFromInventory.length} curated endpoint(s) are missing from inventory.`);
+    for (const key of missingFromInventory) {
+      console.error(key);
+    }
+    process.exit(1);
+  }
 
   const remaining = invKeys
     .filter((key) => key.includes(' /api/admin/') && !curated.has(key))
@@ -62,7 +84,20 @@ function main() {
     process.exit(1);
   }
 
-  console.log('Admin API docs parity check passed (all /api/admin endpoints are curated).');
+  const authSection = extractAuthenticationSection(curatedText);
+  if (!authSection) {
+    console.error('Admin API docs parity check failed: could not locate authentication section.');
+    process.exit(1);
+  }
+
+  const forbiddenAuthPhrases = ['Clerk session', 'Clerk session cookies'];
+  const authPhrase = forbiddenAuthPhrases.find((phrase) => authSection.includes(phrase));
+  if (authPhrase) {
+    console.error(`Admin API docs parity check failed: authentication copy still hardcodes provider-specific phrasing (${authPhrase}).`);
+    process.exit(1);
+  }
+
+  console.log('Admin API docs parity check passed (inventory coverage and shared auth copy are in sync).');
 }
 
 main();

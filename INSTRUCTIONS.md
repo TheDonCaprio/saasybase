@@ -37,6 +37,9 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 | `npm run typecheck` | TypeScript type checking |
 | `npm run lint` | ESLint |
 | `npm run prisma:studio` | Visual database browser |
+| `npm run check:admin-api-parity` | Verify curated admin API docs match discovered routes |
+| `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
+| `npm run ops:reencrypt-payment-authorizations` | Re-encrypt stored payment authorizations |
 
 ---
 
@@ -45,8 +48,8 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 ```
 ├── app/                  # Next.js 16 App Router
 │   ├── api/              # API routes (REST endpoints)
-│   ├── admin/            # Admin dashboard pages
-│   ├── dashboard/        # User dashboard pages
+│   ├── admin/            # Admin pages; real routes live under `(valid)/`
+│   ├── dashboard/        # User dashboard pages; real routes live under `(valid)/`
 │   ├── auth/             # Auth pages (NextAuth flow)
 │   ├── blog/             # Blog pages
 │   ├── checkout/         # Payment checkout flow
@@ -65,8 +68,9 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 ├── lib/                  # Server-side business logic
 │   ├── auth-provider/    # Auth abstraction (Clerk / NextAuth)
 │   ├── payment/          # Payment abstraction (Stripe / Paystack / Paddle / Razorpay)
-│   ├── emails/           # Email logic
-│   └── utils/            # Shared utilities
+│   ├── email.ts          # Transactional email sending
+│   ├── email-templates.ts# Email template rendering and variables
+│   └── ...               # Settings, subscriptions, notifications, teams, tokens, etc.
 ├── hooks/                # App-level React hooks
 ├── types/                # TypeScript type definitions
 ├── utils/                # Client-side utilities
@@ -214,7 +218,7 @@ export async function POST(req: NextRequest) {
 ### New Dashboard Page
 
 ```
-app/dashboard/my-feature/page.tsx
+app/dashboard/(valid)/my-feature/page.tsx
 ```
 
 The page will automatically inherit the dashboard layout (sidebar, auth check, etc.).
@@ -222,7 +226,7 @@ The page will automatically inherit the dashboard layout (sidebar, auth check, e
 ### New Admin Page
 
 ```
-app/admin/my-feature/page.tsx
+app/admin/(valid)/my-feature/page.tsx
 ```
 
 Admin routes are protected by middleware — only ADMIN and allowed MODERATOR roles can access.
@@ -380,7 +384,7 @@ Key groups in `.env.local`:
 | Core | `DATABASE_URL`, `NEXT_PUBLIC_APP_URL` | Required |
 | Auth | `AUTH_PROVIDER`, `CLERK_*` or `AUTH_SECRET` | Pick one provider |
 | Payments | `PAYMENT_PROVIDER`, `STRIPE_*` or others | Pick one provider |
-| Email | `SMTP_*`, `EMAIL_FROM`, `SUPPORT_EMAIL` | For transactional email |
+| Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | `EMAIL_PROVIDER` defaults to `nodemailer`; Resend ignores `SMTP_*` |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN` | Required for production |
 | Storage | `LOGO_STORAGE`, `AWS_*` | Optional S3/CDN |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Optional GA4 |

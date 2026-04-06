@@ -20,9 +20,10 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 1. [Tech Stack](#tech-stack)
 2. [Project Structure](#project-structure)
 3. [Quick Start](#quick-start)
-4. [Authentication](#authentication)
-5. [Admin Setup](#admin-setup)
-6. [Payment Providers](#payment-providers)
+4. [Core Scripts](#core-scripts)
+5. [Authentication](#authentication)
+6. [Admin Setup](#admin-setup)
+7. [Payment Providers](#payment-providers)
    - [Stripe](#stripe)
    - [Paystack](#paystack)
    - [Paddle](#paddle)
@@ -30,37 +31,37 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
    - [Provider Feature Matrix](#provider-feature-matrix)
    - [Currency System](#currency-system)
    - [Adding New Providers](#adding-new-providers)
-7. [Token System](#token-system)
-8. [Team Plans & Organizations](#team-plans--organizations)
-9. [Feature Gating](#feature-gating)
-10. [Coupon System](#coupon-system)
-11. [Blog & CMS](#blog--cms)
-12. [Site Pages](#site-pages)
-13. [Theming & Branding](#theming--branding)
-14. [Email Templates](#email-templates)
-15. [Notifications](#notifications)
-16. [Support Tickets](#support-tickets)
-17. [Contact Page](#contact-page)
-18. [Invoice & Refund Receipts](#invoice--refund-receipts)
-19. [Webhooks](#webhooks)
-20. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
-21. [File & Logo Storage (S3)](#file--logo-storage-s3)
-22. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
-23. [Visit Tracking](#visit-tracking)
-24. [Maintenance Mode](#maintenance-mode)
-25. [Session Activity](#session-activity)
-26. [Moderator Roles](#moderator-roles)
-27. [Rate Limiting](#rate-limiting)
-28. [Logging & Audit Trail](#logging--audit-trail)
-29. [Security](#security)
-30. [Dark Mode](#dark-mode)
-31. [Testing](#testing)
-32. [Admin Dashboard Overview](#admin-dashboard-overview)
-33. [User Dashboard Overview](#user-dashboard-overview)
-34. [Production Setup](#production-setup)
-35. [Self-hosted Deployments](#self-hosted-deployments)
-36. [Environment Variable Reference](#environment-variable-reference)
-37. [Demo Read-Only Mode](#demo-read-only-mode)
+8. [Token System](#token-system)
+9. [Team Plans & Organizations](#team-plans--organizations)
+10. [Feature Gating](#feature-gating)
+11. [Coupon System](#coupon-system)
+12. [Blog & CMS](#blog--cms)
+13. [Site Pages](#site-pages)
+14. [Theming & Branding](#theming--branding)
+15. [Email Templates](#email-templates)
+16. [Notifications](#notifications)
+17. [Support Tickets](#support-tickets)
+18. [Contact Page](#contact-page)
+19. [Invoice & Refund Receipts](#invoice--refund-receipts)
+20. [Webhooks](#webhooks)
+21. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
+22. [File & Logo Storage (S3)](#file--logo-storage-s3)
+23. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
+24. [Visit Tracking](#visit-tracking)
+25. [Maintenance Mode](#maintenance-mode)
+26. [Session Activity](#session-activity)
+27. [Moderator Roles](#moderator-roles)
+28. [Rate Limiting](#rate-limiting)
+29. [Logging & Audit Trail](#logging--audit-trail)
+30. [Security](#security)
+31. [Dark Mode](#dark-mode)
+32. [Testing](#testing)
+33. [Admin Dashboard Overview](#admin-dashboard-overview)
+34. [User Dashboard Overview](#user-dashboard-overview)
+35. [Production Setup](#production-setup)
+36. [Self-hosted Deployments](#self-hosted-deployments)
+37. [Environment Variable Reference](#environment-variable-reference)
+38. [Demo Read-Only Mode](#demo-read-only-mode)
 
 ---
 
@@ -114,7 +115,7 @@ saasybase/
 │   │   └── webhook-router.ts # Unified webhook routing
 │   ├── email.ts            # Email sending (Nodemailer / Resend)
 │   ├── email-templates.ts  # 27 built-in email templates
-│   ├── settings.ts         # Admin settings system (60+ keys)
+│   ├── settings.ts         # Admin settings system (50+ keys)
 │   ├── features.ts         # Feature gating registry
 │   └── ...                 # Tokens, teams, coupons, notifications, etc.
 ├── prisma/
@@ -126,6 +127,20 @@ saasybase/
 ├── ops/                    # Production operations (indexes, runbooks)
 └── .env.example            # Full environment variable template
 ```
+
+### Route groups and URLs
+
+The repo uses Next.js route groups to keep admin and dashboard layouts isolated without changing the browser URL.
+
+- Files under `app/admin/(valid)/...` are served under `/admin/...`.
+- Files under `app/dashboard/(valid)/...` are served under `/dashboard/...`.
+- `app/admin/[...slug]/page.tsx` and `app/dashboard/[...slug]/page.tsx` exist as fallback catch-all routes, so the filesystem is intentionally more complex than the public URL structure.
+
+Examples:
+
+- `app/admin/(valid)/theme/page.tsx` renders `/admin/theme`
+- `app/dashboard/(valid)/team/page.tsx` renders `/dashboard/team`
+- `app/admin/(valid)/api/page.tsx` renders `/admin/api`
 
 > **Tip for vibecoders:** Most of your custom app code will go in `app/dashboard/` (user-facing pages), `components/` (UI), and `lib/` (business logic). The payment, auth, and admin infrastructure is already built — you're extending it, not rebuilding it.
 
@@ -165,6 +180,29 @@ With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`
 | `npm run dev:full` | Dev server + Stripe CLI listener in parallel |
 
 > **Env validation:** A `validate-env.js` script runs automatically before `dev` and `build` via npm predev/prebuild hooks. It checks for required variables and logs warnings for missing optional ones.
+
+## Core Scripts
+
+These are the commands most people actually need when working on or operating the project.
+
+| Command | When to use it |
+|---|---|
+| `npm run dev` | Start the local app |
+| `npm run dev:turbo` | Faster local startup with Turbopack |
+| `npm run build` | Production build |
+| `npm run start` | Run the production build locally |
+| `npm run typecheck` | Validate TypeScript before a deploy or PR |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run Vitest unit/integration tests |
+| `npm run test:e2e` | Run Playwright end-to-end tests |
+| `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
+| `npm run prisma:migrate` | Create and apply a local Prisma migration |
+| `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
+| `npm run check:admin-api-parity` | Verify curated admin API docs stay in sync with discovered routes |
+| `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
+| `npm run ops:reencrypt-payment-authorizations` | Re-encrypt stored payment authorizations after key rotation or crypto changes |
+
+If you are new to the repo, the normal local loop is: `npm install` → `npx prisma db seed` → `npm run dev`.
 
 ---
 
@@ -262,7 +300,7 @@ Key differences from Clerk:
 ### Development (automatic)
 
 1. Set `DEV_ADMIN_ID` in `.env.local` to your auth provider user ID.
-2. Delete your user from the DB (if already created) via `npx prisma studio`.
+2. Delete your user from the DB (if already created) via `npm run prisma:studio`.
 3. Sign in again — you are automatically created with `role = ADMIN`.
 
 > ⚠️ This is disabled in production (`NODE_ENV === 'production'`). Never rely on it outside local dev.
@@ -277,11 +315,12 @@ For a fresh local database, run `npx prisma db seed` to create the initial admin
 ```sql
 UPDATE "User" SET role = 'ADMIN' WHERE id = 'user_xxxxxxxxxxxxx';
 ```
-**Option 2 — Direct SQL (most secure)**
 
-For a fresh production databse, `npx prisma db seed` also lets you set up the initial admin user.
+**Option 2 — Seed the first admin user**
 
-> 💡 Find your Clerk user ID in the Clerk dashboard, or your DB user ID via `npx prisma studio`.
+For a fresh production database, `npx prisma db seed` also lets you set up the initial admin user before opening the app to real traffic.
+
+> 💡 With Clerk, you can find the provider user ID in the Clerk dashboard. With either auth provider, you can inspect the local DB via `npm run prisma:studio`.
 
 ---
 
@@ -574,7 +613,7 @@ When a user belongs to a team plan, the organization has its own token system:
 
 Team subscriptions provision managed organizations and keep them in sync with billing status.
 
-- **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to Clerk (if using Clerk). In practice, that means an active team plan whose plan has `supportsOrganizations: true` and is not in a proration-pending state.
+- **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to the active auth provider when that provider supports organization primitives. In practice, that means an active team plan whose plan has `supportsOrganizations: true` and is not in a proration-pending state.
 - **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses, the helper dismantles the organization and clears member access.
 - **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, and provisioning refresh.
 - **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
@@ -897,7 +936,14 @@ Run this periodically (hourly or daily) to:
 - Dismantle "zombie" organizations whose owner's subscription has lapsed.
 - Process the subscription queue for batch operations.
 
-**In production**, unauthorized requests return `404`. Configure `CRON_PROCESS_EXPIRY_TOKEN` and send it as a Bearer token.
+**In production**, unauthorized requests return `404`. The route accepts any one of these bearer tokens:
+
+- `CRON_PROCESS_EXPIRY_TOKEN`
+- `CRON_SECRET`
+- `CRON_TOKEN`
+- `INTERNAL_API_TOKEN`
+
+In non-production, the route also accepts `X-Internal-API: true` for local tooling.
 
 **Example cron command (cPanel / shell):**
 ```bash
@@ -909,7 +955,7 @@ curl -fsS -m 60 \
 
 ### Lazy expiry check
 
-As a fallback, `app/dashboard/layout.tsx` calls `getCurrentUserWithFallback()` → `ensureUserExists()` on every dashboard visit. This runs a lightweight on-access check that expires stale subscriptions and resets monthly free tokens without requiring the cron job to have run.
+As a fallback, `app/dashboard/(valid)/layout.tsx` calls `getCurrentUserWithFallback()` → `ensureUserExists()` on every dashboard visit. This runs a lightweight on-access check that expires stale subscriptions and resets monthly free tokens without requiring the cron job to have run.
 
 ---
 
@@ -1006,7 +1052,7 @@ The app includes a DB-backed maintenance mode that can be toggled from the admin
 
 The app tracks user session activity with device/browser detection and IP-based geolocation.
 
-- **User page:** `/dashboard/activity` — view active sessions with browser, device, location, and last-active timestamps
+- **User experience:** Session and security controls are surfaced in the unified profile hub at `/dashboard/profile` under the "Security & Data" tab. The legacy `/dashboard/account` route redirects there.
 - **Session tracking:** `lib/session-activity.ts` parses User-Agent for browser name/version and device type (desktop/mobile/tablet)
 - **Geolocation:** Uses `IPINFO_LITE_TOKEN` for IP lookups when configured, falls back to `country.is` (free, no API key needed). Results are cached for 24 hours.
 - **Session revocation:** Users can revoke individual sessions (when using an auth provider that supports it)
@@ -1020,7 +1066,7 @@ In addition to `ADMIN`, the app supports a **Moderator** role with configurable 
 
 - **Admin config:** `/admin/moderation` — enable/disable which dashboard sections a moderator can access.
 - **Sections available:** `users`, `transactions`, `purchases`, `subscriptions`, `support`, `notifications`, `blog`, `analytics`, `traffic`, `organizations`.
-- **Moderator activity log:** `/admin/moderator-activity` — tracks all moderator actions.
+- **Moderator activity log:** The moderation page at `/admin/moderation` includes the action timeline. `/admin/moderator-activity` is kept as a legacy redirect to that page.
 - **Lib:** `lib/moderator.ts` / `lib/moderator-shared.ts` — `MODERATOR_SECTIONS`, access checking helpers.
 - **API:** `/api/admin/moderator-actions/route.ts`
 
@@ -1069,7 +1115,7 @@ A production-safe logging system that replaces raw `console.log` throughout the 
 The `AdminActionLog` model records all admin/moderator actions:
 
 - **Fields:** actor, target user, action type, details, timestamp
-- **Viewable at:** `/admin/moderator-activity`
+- **Viewable at:** `/admin/moderation` (the legacy `/admin/moderator-activity` route redirects there)
 
 ---
 
@@ -1165,7 +1211,7 @@ The admin dashboard (`/admin`) is organized into logical groups:
 
 ### Notable Admin Features
 
-- **Admin API Docs** (`/admin/api`) — auto-generated API inventory from `lib/admin-api.inventory.ts`
+- **Admin API Docs** (`/admin/api`) — curated API reference backed by the auto-discovered inventory in `lib/admin-api.inventory.ts`
 - **Maintenance Tools** (`/admin/maintenance`) — cleanup, repair utilities, and maintenance mode toggle
 - **System Logs** (`/admin/logs`) — persisted WARN/ERROR logs with filtering
 - **One-Time Plans** (`/admin/one-time-plans`) — manage non-recurring plan offerings
@@ -1184,9 +1230,8 @@ The user dashboard (`/dashboard`) provides users with a full self-service experi
 | **Billing** | `/dashboard/billing` | Payment management, manage subscription |
 | **Transactions** | `/dashboard/transactions` | Payment history |
 | **Team** | `/dashboard/team` | Team management (invites, members, settings) |
-| **Profile** | `/dashboard/profile` | Edit name, avatar, and profile info |
-| **Account** | `/dashboard/account` | Password changes, email updates, account deletion |
-| **Activity** | `/dashboard/activity` | Session history with device/location tracking |
+| **Profile** | `/dashboard/profile` | Unified account hub for profile details, preferences, session security, export, and account deletion |
+| **Account** | `/dashboard/account` | Legacy redirect to `/dashboard/profile` |
 | **Settings** | `/dashboard/settings` | Preferences (email notifications, timezone, etc.) |
 | **Notifications** | `/dashboard/notifications` | In-app notification center |
 | **Support** | `/dashboard/support` | Support ticket creation and history |
@@ -1248,6 +1293,7 @@ SEND_ADMIN_BILLING_EMAILS="true"
 
 Notes:
 
+- If `EMAIL_PROVIDER` is unset, the app defaults to `nodemailer`.
 - Use `EMAIL_PROVIDER="nodemailer"` for SMTP delivery. In local development, the default SMTP values can point at MailHog.
 - Use `EMAIL_PROVIDER="resend"` with `RESEND_API_KEY` set. The `SMTP_*` variables are ignored in that mode.
 
@@ -1258,7 +1304,12 @@ GET /api/health
 Authorization: Bearer <HEALTHCHECK_TOKEN>
 ```
 
-Returns database connectivity, environment validation (Stripe, Clerk), and runtime diagnostics. Without the token, returns a minimal public response.
+Returns database connectivity, environment validation, active auth/payment provider diagnostics, and runtime health checks. Without authorization, it returns a minimal public response.
+
+Auth token resolution:
+
+- Uses `HEALTHCHECK_TOKEN` when set.
+- Falls back to `INTERNAL_API_TOKEN` if `HEALTHCHECK_TOKEN` is unset.
 
 ### Vercel deployment
 
@@ -1436,7 +1487,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET`, `NEXTAUTH_SECRET` | Choose Clerk or NextAuth |
 | Auth OAuth | `GITHUB_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` | NextAuth OAuth providers |
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
-| Payment prices | `PAYMENT_PRICE_*`, `SUBSCRIPTION_PRICE_*` | One-time and recurring plan price IDs |
+| Payment catalog | `PAYMENT_AUTO_CREATE`, provider credentials, DB `PlanPrice` records | Seeded plans no longer require manual `PAYMENT_PRICE_*` or `SUBSCRIPTION_PRICE_*` env vars |
 | Payment config | `PAYMENT_AUTO_CREATE`, `PAYMENTS_CURRENCY` | Catalog sync and currency |
 | Currency settings | `DEFAULT_CURRENCY` | DB-backed admin setting used by payment currency resolution |
 | Currency | `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider currency overrides |
@@ -1464,7 +1515,7 @@ DEMO_READ_ONLY_MODE="true"
 When enabled:
 
 - `POST`, `PUT`, `PATCH`, and `DELETE` requests to `/api/*` are blocked with `403`.
-- Auth and webhook writes remain allowed (`/api/auth/*`, `/api/webhooks/*`, `/api/stripe/webhook`) so sign-in and provider callbacks still work.
+- The write-method exemptions are exactly `/api/auth/*`, `/api/webhooks/*`, and `/api/stripe/webhook`, so sign-in and provider callbacks still work.
 - A read-only modal appears after entering admin or dashboard, and blocked actions trigger an informational toast.
 
 Recommended setup:

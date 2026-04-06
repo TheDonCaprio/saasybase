@@ -16,7 +16,7 @@
 - Integrating with the token system, feature gating, and auth
 
 **Key files to know:**
-- `app/dashboard/layout.tsx` — Dashboard layout with sidebar nav
+- `app/dashboard/(valid)/layout.tsx` — Dashboard layout with sidebar nav and workspace chrome
 - `components/ui/` — Modal, Toast, Pagination, ListFilters, Stat, etc.
 - `lib/auth-provider/service.ts` — `authService` singleton for auth
 - `lib/api-error.ts` — `ApiError` and `handleApiError()` for API routes
@@ -26,8 +26,8 @@
 - `lib/featureGate.tsx` — Server-side feature gate component
 
 **Rules:**
-- Always use `authService.requireUserId()` in protected API routes
-- Always wrap API route bodies in try/catch with `handleApiError(error)`
+- For user-scoped protected API routes, use `authService.requireUserId()`; for admin/moderator routes, use the dedicated guard helpers already used by that area.
+- Follow the existing error-handling style in the target area: many routes use `handleApiError(error)`, while others use specialized auth/error helpers such as `toAuthGuardErrorResponse()`.
 - Validate all input with Zod schemas
 - Rate-limit public endpoints
 - Reuse existing UI components before creating new ones
@@ -154,7 +154,7 @@
 - `components/admin/` — Admin-specific components
 - `components/dashboard/` — Dashboard-specific components
 - `lib/admin-api.ts` — Admin API helpers
-- `lib/settings.ts` — Settings system (60+ configurable keys)
+- `lib/settings.ts` — Settings system (50+ configurable keys)
 - `lib/blog.ts` — Blog CRUD operations
 - `lib/sitePages.ts` — Site page management
 - `lib/notifications.ts` — Notification system

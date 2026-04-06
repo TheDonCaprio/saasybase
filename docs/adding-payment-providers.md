@@ -353,7 +353,7 @@ Point each provider’s webhook configuration to the same URL:
 1. Decide your provider's signature header name (example: `x-your-provider-signature`).
 2. Add a new entry to the routing config in the payments webhook route:
 
-- [pro-app/app/api/webhooks/payments/route.ts](pro-app/app/api/webhooks/payments/route.ts)
+- [app/api/webhooks/payments/route.ts](app/api/webhooks/payments/route.ts)
 
 That entry should specify:
 - `signatureHeader`

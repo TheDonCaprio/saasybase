@@ -14,7 +14,7 @@ type InventoryEndpoint = {
   source: string;
 };
 
-const METHOD_RE = /export\s+async\s+function\s+(GET|POST|PATCH|PUT|DELETE)\b/g;
+const METHOD_RE = /export\s+(?:async\s+function\s+(GET|POST|PATCH|PUT|DELETE)\b|const\s+(GET|POST|PATCH|PUT|DELETE)\s*=)/g;
 
 function walk(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -128,7 +128,7 @@ function main() {
     const methods = new Set<InventoryEndpoint['method']>();
     let match: RegExpExecArray | null;
     while ((match = METHOD_RE.exec(text))) {
-      methods.add(match[1] as InventoryEndpoint['method']);
+      methods.add((match[1] || match[2]) as InventoryEndpoint['method']);
     }
 
     if (methods.size === 0) continue;

@@ -49,6 +49,7 @@ Use the internal, server-to-server spend endpoint for secure backend integration
 
 - `POST /api/internal/spend-tokens`
 - **Authentication**: Requires `Authorization: Bearer <INTERNAL_API_TOKEN>`.
+- **Non-production convenience**: local tooling may also use `X-Internal-API: true`.
 - **Rate limiting**: High throughput allowed.
 
 **Body**:

@@ -304,12 +304,14 @@ app/dashboard/
       ├── support/          # Support tickets
       ├── notifications/    # User notifications
       ├── coupons/          # Redeemed coupons
-      ├── activity/         # Activity log
+  ├── account/          # Legacy redirect to profile
       ├── settings/         # User preferences
       └── onboarding/       # Guided setup wizard
 ```
 
 As with admin, `(valid)` is a route group only. URLs remain `/dashboard/...`.
+
+Session activity and device/security controls are surfaced inside the unified profile experience rather than a standalone `/dashboard/activity` route.
 
 ---
 

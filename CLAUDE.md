@@ -49,8 +49,8 @@ Most features are **already wired and ready to go**. The user's job is to build 
 | Prisma schema | `prisma/schema.prisma` |
 | Middleware (auth) | `proxy.ts` → `lib/auth-provider/middleware.ts` |
 | Root layout | `app/layout.tsx` |
-| Dashboard layout | `app/dashboard/layout.tsx` |
-| Admin layout | `app/admin/layout.tsx` |
+| Dashboard layout | `app/dashboard/(valid)/layout.tsx` |
+| Admin layout | `app/admin/(valid)/layout.tsx` |
 | Webhook ingress | `app/api/webhooks/payments/route.ts` (auto-detects provider) |
 
 ---
@@ -70,10 +70,10 @@ The build system exposes `AUTH_PROVIDER` as `NEXT_PUBLIC_AUTH_PROVIDER` automati
 
 ## How to Add a New Feature
 
-1. **API Route:** Create in `app/api/your-feature/route.ts`. Use `authService.requireUserId()` for auth, `rateLimit()` for throttling, Zod for validation, `handleApiError()` for errors.
+1. **API Route:** Create in `app/api/your-feature/route.ts`. For user-scoped endpoints use `authService.requireUserId()`; for admin/moderator endpoints reuse the established guard helpers. Add rate limiting, Zod validation, and follow the existing error-handling style in that area.
 2. **Server Logic:** Add business logic in `lib/your-feature.ts`. Use `prisma` from `lib/prisma.ts`.
 3. **UI Component:** Add to `components/your-feature/`. Use existing UI primitives from `components/ui/`.
-4. **Page:** Add to `app/dashboard/your-feature/page.tsx` for user pages, `app/admin/your-feature/page.tsx` for admin pages.
+4. **Page:** Add to `app/dashboard/(valid)/your-feature/page.tsx` for user pages, `app/admin/(valid)/your-feature/page.tsx` for admin pages.
 5. **Tests:** Add regression tests in `tests/your-feature.test.ts` using Vitest.
 
 ---
@@ -119,7 +119,7 @@ Tests cover: payment provider flows, webhook normalization, subscription lifecyc
 - **Prod:** PostgreSQL (set `DATABASE_URL`).
 - **Migrations:** `npx prisma migrate dev --name <name>`
 - **Seed:** `npx prisma db seed` (interactive admin email/password prompt)
-- **Studio:** `npx prisma studio` (visual DB browser)
+- **Studio:** `npm run prisma:studio` (visual DB browser with the repo Prisma config)
 
 ---
 
@@ -168,4 +168,4 @@ Spending order: paid → shared → free (configurable via `bucket` parameter).
 Use `FeatureGate` server component or `isProFeature()` check. Gates automatically check both personal subscriptions AND organization team plans.
 
 ### Settings System
-60+ configurable settings stored in the `Setting` model. Read with `getSetting(key, default)`. 5-second in-memory cache. Covers site branding, token policies, theme colors, blog config, pricing layout, and more.
+50+ configurable settings stored in the `Setting` model. Read with `getSetting(key, default)`. 5-second in-memory cache. Covers site branding, token policies, theme colors, blog config, pricing layout, and more.

@@ -408,7 +408,28 @@ export const ADMIN_API_INVENTORY: AdminApiInventoryEndpoint[] = [
     "source": "app/api/admin/plans/route.ts"
   },
   {
+    "method": "POST",
+    "path": "/api/admin/plans",
+    "access": "admin",
+    "summary": "Auto-discovered endpoint for /api/admin/plans",
+    "source": "app/api/admin/plans/route.ts"
+  },
+  {
     "method": "DELETE",
+    "path": "/api/admin/plans/[planId]",
+    "access": "admin",
+    "summary": "Auto-discovered endpoint for /api/admin/plans/[planId]",
+    "source": "app/api/admin/plans/[planId]/route.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/plans/[planId]",
+    "access": "admin",
+    "summary": "Auto-discovered endpoint for /api/admin/plans/[planId]",
+    "source": "app/api/admin/plans/[planId]/route.ts"
+  },
+  {
+    "method": "PUT",
     "path": "/api/admin/plans/[planId]",
     "access": "admin",
     "summary": "Auto-discovered endpoint for /api/admin/plans/[planId]",

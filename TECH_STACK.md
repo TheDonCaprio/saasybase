@@ -58,9 +58,11 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 
 | Technology | Version | Purpose | Config |
 |-----------|---------|---------|--------|
-| **Prisma** | 7.x | ORM with type-safe queries | `prisma/schema.prisma`, `prisma.config.ts` |
+| **Prisma** | 7.x | ORM with type-safe queries | `prisma/schema.prisma` |
 | **SQLite** | — | Development database (zero config) | `DATABASE_URL=file:./dev.db` |
 | **PostgreSQL** | 14+ | Production database | `DATABASE_URL=postgresql://...` |
+
+`prisma.config.ts` is present in the repo for Prisma tooling/seed configuration, but `prisma/schema.prisma` remains the primary schema and migration source of truth.
 
 ---
 
@@ -78,7 +80,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 - Adjusted `md` breakpoint: `1025px`
 - Extra font size: `xxs` (`0.6rem`)
 - Dark mode via class strategy (`html.light` / `html.dark`)
-- 60+ CSS custom properties for theme colors (generated server-side)
+- 50+ CSS custom properties for theme colors (generated server-side)
 
 ---
 
@@ -121,7 +123,7 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| **TanStack React Query** | 5.x | Installed dependency, not currently the primary app-wide client data layer |
+| **React Server Components + route handlers** | Next.js 16 | Primary server-first data-loading model |
 | **Zod** | 3.x | Schema validation for API inputs and form data |
 
 ---
@@ -131,7 +133,6 @@ Paystack, Paddle, and Razorpay use REST APIs directly (no SDK dependency).
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | **pdf-lib** | 1.x | Server-side PDF generation (invoices, refund receipts) |
-| **@react-pdf/renderer** | 3.x | Installed compatibility dependency; not the primary invoice/refund rendering path |
 
 ---
 
@@ -203,10 +204,7 @@ Optional dependencies: `dompurify`, `jsdom` (in `optionalDependencies`)
 |-----------|---------|
 | **date-fns** | Date formatting and manipulation |
 | **file-type** | File MIME type detection |
-| **glob** | Installed for script/archive tooling; not a core runtime primitive |
-| **puppeteer** | Optional browser automation dependency; not part of the current main app flow |
 | **react-easy-crop** | Image cropping UI |
-| **re-resizable** | Installed dependency, not currently a major documented UI primitive |
 
 ---
 

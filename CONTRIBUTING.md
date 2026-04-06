@@ -16,6 +16,8 @@ npm run dev
 
 If you need to skip admin creation, run `npx prisma db seed -- --skip-admin`.
 
+For database inspection, prefer `npm run prisma:studio` so Prisma uses the repo's checked-in config.
+
 ---
 
 ## Workflow
@@ -118,10 +120,10 @@ Quick checklist:
 
 ## Adding a New Admin Section
 
-1. Create page in `app/admin/my-section/page.tsx`
+1. Create page in `app/admin/(valid)/my-section/page.tsx`
 2. Add API routes in `app/api/admin/my-section/route.ts`
 3. Add the section to moderator permissions in `lib/moderator-shared.ts` (MODERATOR_SECTIONS)
-4. Log admin actions to `AdminActionLog` via `lib/admin-api.ts`
+4. Log admin actions to `AdminActionLog` using the existing admin action helpers for that area
 5. Add navigation entry in the admin layout
 
 ---
@@ -152,7 +154,7 @@ Before submitting a PR that touches auth, payments, or user data:
 
 - [ ] Input validated with Zod schemas
 - [ ] Rate limiting applied to new endpoints
-- [ ] Auth check present (`authService.requireUserId()`)
+- [ ] Appropriate auth/role check present for the route type (`authService.requireUserId()`, `requireAdmin()`, `requireAdminOrModerator()`, etc.)
 - [ ] No sensitive data in logs (use `Logger` which auto-redacts)
 - [ ] Error responses don't leak internal details in production
 - [ ] Webhook signatures verified before processing

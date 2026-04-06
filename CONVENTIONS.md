@@ -37,7 +37,7 @@
 | Test files | `kebab-case.test.ts` | `stripe-webhook.test.ts` |
 | E2E test files | `kebab-case.spec.ts` | `dashboard-navigation-smoke.spec.ts` |
 | API route files | `route.ts` | `app/api/checkout/route.ts` |
-| Layout files | `layout.tsx` | `app/dashboard/layout.tsx` |
+| Layout files | `layout.tsx` | `app/dashboard/(valid)/layout.tsx` |
 | Page files | `page.tsx` | `app/pricing/page.tsx` |
 | Config files | Standard names | `next.config.mjs`, `tailwind.config.ts` |
 
@@ -81,7 +81,7 @@ export function MyInteractiveWidget() {
 ### API Routes
 
 ```typescript
-// Standard structure:
+// Standard user-scoped structure:
 export async function GET(req: NextRequest) {
   try {
     await rateLimit(key, tier);
@@ -93,6 +93,8 @@ export async function GET(req: NextRequest) {
   }
 }
 ```
+
+For admin or moderator endpoints, reuse the established guard helpers for that area instead of forcing `authService.requireUserId()` everywhere.
 
 ### Database Queries
 
@@ -150,8 +152,9 @@ Logger.error('External service failed', error);
 | `GA_` | Analytics config | `GA_PROPERTY_ID` |
 | `DEV_` | Dev-only helpers | `DEV_ADMIN_ID` |
 | `SEED_` | Seeding config | `SEED_ADMIN_EMAIL` |
-| `PAYMENT_PRICE_` | One-time plan price IDs | `PAYMENT_PRICE_24H` |
-| `SUBSCRIPTION_PRICE_` | Recurring plan price IDs | `SUBSCRIPTION_PRICE_1M` |
+| `PAYMENT_` | Payment provider selection and shared catalog config | `PAYMENT_PROVIDER`, `PAYMENT_AUTO_CREATE` |
+
+Seeded plans no longer rely on manual `PAYMENT_PRICE_*` or `SUBSCRIPTION_PRICE_*` environment variables in the standard setup. Provider price IDs are stored in the database and synced through the catalog flow.
 
 ---
 

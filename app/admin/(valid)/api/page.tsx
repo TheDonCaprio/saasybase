@@ -102,8 +102,8 @@ export default async function AdminApiPage() {
       {changelog.length > 0 ? (
         <section className={dashboardMutedPanelClass('space-y-4')}>
           <header className="space-y-1">
-            <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Changelog</p>
-            <p className="text-sm text-slate-600 dark:text-neutral-300">Recent platform and documentation updates reflected in this reference.</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">API changelog</p>
+            <p className="text-sm text-slate-600 dark:text-neutral-300">Recent API contract and reference updates reflected on this page.</p>
           </header>
           <ul className="space-y-3">
             {changelog.map((entry) => (

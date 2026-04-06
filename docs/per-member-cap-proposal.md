@@ -53,7 +53,7 @@ Store per-member overrides and rolling counters:
 
 3. **Dashboard (workspace members)**
    - Extend `AccountMenu`, `DashboardHeaderDrawer`, and `AdminHeaderDrawer` badges to show "Workspace cap: X tokens" when `profile.sharedTokens.cap` is set.
-   - Inside dashboard hero cards (`app/dashboard/activity`, `/plan`, `/profile`), render helper text `Workspace cap per member: X tokens (soft/hard)` using `planDisplay.memberCapSummary`.
+   - Inside dashboard surfaces such as `/dashboard/profile` and `/dashboard/plan`, render helper text `Workspace cap per member: X tokens (soft/hard)` using `planDisplay.memberCapSummary`.
 
 ## Enforcement Hooks
 1. **Token Credit Events (Stripe webhooks, manual grants)**

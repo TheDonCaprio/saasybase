@@ -122,7 +122,7 @@ await setSetting(SETTING_KEYS.SITE_NAME, 'My SaaS');
 const settings = await getSettings([SETTING_KEYS.SITE_NAME, SETTING_KEYS.SITE_LOGO]);
 ```
 
-60+ setting keys cover: site branding, token policies, theme colors, blog config, pricing layout, header/footer, email settings, moderator permissions, and more.
+50+ setting keys cover: site branding, token policies, theme colors, blog config, pricing layout, header/footer, email settings, moderator permissions, and more.
 
 **Cache:** 5-second TTL prevents redundant DB reads within a single request cycle.
 
@@ -334,7 +334,7 @@ const css = `
   html.light {
     --bg-primary: ${colorPalette.light.bgPrimary};
     --accent-primary: ${colorPalette.light.accentPrimary};
-    /* 60+ tokens */
+    /* 50+ tokens */
   }
   html.dark {
     --bg-primary: ${colorPalette.dark.bgPrimary};

@@ -1,5 +1,7 @@
 # Legacy Stripe Field Deprecation Plan
 
+> Status: migration tracker. Core models are complete; only Coupon compatibility fields remain under observation as of March 2026.
+
 This document outlines the migration strategy to move from Stripe-specific field names to generic provider-agnostic names.
 
 ## Status Update (March 2026)

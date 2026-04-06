@@ -362,6 +362,8 @@ PAYMENT_AUTO_CREATE="true"
 
 When enabled, saving a plan without a provider price ID will auto-create catalog objects for configured payment providers where supported.
 
+In the admin plan creation modal, the manual provider price ID field is intentionally treated as an advanced override and appears at the bottom of the form. Leave it blank for the normal flow. Fill it only when you are importing an existing provider catalog entry, migrating legacy plans, or operating with auto-create disabled.
+
 ### Plan Recurring Interval
 
 Admin plans support `recurringInterval` (`day`, `week`, `month`, `year`) and `recurringIntervalCount` (cadence multiplier, e.g. `month` + `2` = billed every 2 months) when `autoRenew` is enabled.

@@ -1164,7 +1164,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       <div>
                         <span className="text-sm text-neutral-100 font-medium">Enable organization access</span>
                         <p className="text-xs text-neutral-400 mt-1">
-                          When enabled this plan provisions a shared workspace, syncs it to Clerk, and unlocks the team dashboard.
+                          When enabled this plan provisions a shared workspace, syncs it to Clerk (if enabled), and unlocks the team dashboard.
                         </p>
                       </div>
                     </label>

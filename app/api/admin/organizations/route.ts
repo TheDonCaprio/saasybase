@@ -117,9 +117,9 @@ export async function GET(request: NextRequest) {
         take,
         include: {
           owner: { select: { id: true, name: true, email: true } },
-          plan: { select: { id: true, name: true } },
+          plan: { select: { id: true, name: true, tokenLimit: true, organizationTokenPoolStrategy: true } },
           memberships: {
-            select: { status: true },
+            select: { status: true, sharedTokenBalance: true, memberTokenUsage: true },
             take: 200
           },
           invites: {
@@ -134,6 +134,20 @@ export async function GET(request: NextRequest) {
     const payload = organizations.map((org) => {
       const activeMembers = org.memberships.filter((m) => m.status === 'ACTIVE').length;
       const pendingInvites = org.invites.filter((invite) => invite.status === 'PENDING').length;
+      const effectiveTokenPoolStrategy = org.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+        || org.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+        ? 'ALLOCATED_PER_MEMBER'
+        : 'SHARED_FOR_ORG';
+      const planTokenLimit = typeof org.plan?.tokenLimit === 'number' ? org.plan.tokenLimit : null;
+      const effectiveTokenBalance = effectiveTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+        ? org.memberships
+          .filter((membership) => membership.status === 'ACTIVE')
+          .reduce((sum, membership) => {
+            const actualBalance = Math.max(0, Number(membership.sharedTokenBalance ?? 0));
+            const usage = Math.max(0, Number(membership.memberTokenUsage ?? 0));
+            return sum + (actualBalance > 0 || planTokenLimit == null ? actualBalance : Math.max(0, planTokenLimit - usage));
+          }, 0)
+        : Math.max(0, Number(org.tokenBalance ?? 0));
       return {
         id: org.id,
         name: org.name,
@@ -141,11 +155,11 @@ export async function GET(request: NextRequest) {
         owner: org.owner ? { id: org.owner.id, name: org.owner.name, email: org.owner.email } : null,
         billingEmail: org.billingEmail,
         plan: org.plan ? { id: org.plan.id, name: org.plan.name } : null,
-        tokenBalance: org.tokenBalance,
+        tokenBalance: effectiveTokenBalance,
         memberTokenCap: org.memberTokenCap,
         memberCapStrategy: org.memberCapStrategy,
         memberCapResetIntervalHours: org.memberCapResetIntervalHours,
-        tokenPoolStrategy: org.tokenPoolStrategy,
+        tokenPoolStrategy: effectiveTokenPoolStrategy,
         seatLimit: org.seatLimit,
         activeMembers,
         pendingInvites,

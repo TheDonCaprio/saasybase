@@ -23,6 +23,10 @@ type OrganizationDetail = {
   stats: { activeMembers: number; pendingInvites: number; totalMembers: number };
 };
 
+function formatTokenPoolStrategyLabel(strategy: string | null) {
+  return strategy === 'ALLOCATED_PER_MEMBER' ? 'Per-member allocation' : 'Shared pool';
+}
+
 type Props = {
   orgId: string;
   initialName: string;
@@ -40,7 +44,6 @@ type FormState = {
   memberTokenCap: string;
   memberCapStrategy: string;
   memberCapResetIntervalHours: string;
-  tokenPoolStrategy: string;
   ownerExemptFromCaps: boolean;
 };
 
@@ -52,7 +55,6 @@ const DEFAULT_FORM_STATE: FormState = {
   memberTokenCap: '',
   memberCapStrategy: 'DISABLED',
   memberCapResetIntervalHours: '',
-  tokenPoolStrategy: 'SHARED_FOR_ORG',
   ownerExemptFromCaps: false
 };
 
@@ -92,7 +94,6 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
             memberTokenCap: org.memberTokenCap != null ? String(org.memberTokenCap) : '',
             memberCapStrategy: org.memberCapStrategy ?? 'DISABLED',
             memberCapResetIntervalHours: org.memberCapResetIntervalHours != null ? String(org.memberCapResetIntervalHours) : '',
-            tokenPoolStrategy: org.tokenPoolStrategy ?? 'SHARED_FOR_ORG',
             ownerExemptFromCaps: org.ownerExemptFromCaps ?? false
           });
         }
@@ -116,6 +117,10 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
   }, []);
 
   const currentBalance = detail?.tokenBalance ?? initialTokenBalance;
+  const resolvedTokenPoolStrategy = detail?.tokenPoolStrategy ?? null;
+  const isAllocatedPerMember = resolvedTokenPoolStrategy === 'ALLOCATED_PER_MEMBER';
+  const canAdjustOrgBalance = !loading && resolvedTokenPoolStrategy === 'SHARED_FOR_ORG';
+  const disableMemberCapControls = loading || isAllocatedPerMember;
 
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -130,7 +135,6 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
         memberTokenCap: formState.memberTokenCap.trim() === '' ? null : Number(formState.memberTokenCap),
         memberCapStrategy: formState.memberCapStrategy,
         memberCapResetIntervalHours: formState.memberCapResetIntervalHours.trim() === '' ? null : Number(formState.memberCapResetIntervalHours),
-        tokenPoolStrategy: formState.tokenPoolStrategy,
         ownerExemptFromCaps: formState.ownerExemptFromCaps
       };
 
@@ -213,15 +217,26 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
               <p className="text-xs text-slate-500 dark:text-neutral-400">{summaryItems.stats}</p>
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-xs uppercase text-slate-500 dark:text-neutral-500">Token balance</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-neutral-500">
+                {isAllocatedPerMember ? 'Allocated balance total' : 'Token balance'}
+              </p>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatNumber(currentBalance)}</p>
-              <button
-                type="button"
-                className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                onClick={() => setShowAdjustModal(true)}
-              >
-                Adjust tokens
-              </button>
+              <p className="text-xs text-slate-500 dark:text-neutral-400">{formatTokenPoolStrategyLabel(resolvedTokenPoolStrategy)}</p>
+              {isAllocatedPerMember ? (
+                <p className="text-xs text-slate-500 dark:text-neutral-400">
+                  Per-member workspaces store balances on memberships. Org-level token adjustments are disabled here.
+                </p>
+              ) : canAdjustOrgBalance ? (
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  onClick={() => setShowAdjustModal(true)}
+                >
+                  Adjust tokens
+                </button>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-neutral-400">Loading token policy…</p>
+              )}
             </div>
           </section>
 
@@ -276,7 +291,7 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
                 value={formState.memberCapStrategy}
                 onChange={(e) => handleChange('memberCapStrategy', e.target.value)}
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
-                disabled={loading}
+                disabled={disableMemberCapControls}
               >
                 <option value="DISABLED">Disabled</option>
                 <option value="SOFT">Soft</option>
@@ -291,7 +306,7 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
                 value={formState.memberTokenCap}
                 onChange={(e) => handleChange('memberTokenCap', e.target.value)}
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
-                disabled={loading}
+                disabled={disableMemberCapControls}
               />
             </label>
             <label className="space-y-2">
@@ -302,24 +317,17 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
                 value={formState.memberCapResetIntervalHours}
                 onChange={(e) => handleChange('memberCapResetIntervalHours', e.target.value)}
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
-                disabled={loading}
+                disabled={disableMemberCapControls}
               />
             </label>
+            {isAllocatedPerMember ? (
+              <p className="md:col-span-3 text-xs text-slate-500 dark:text-neutral-400">
+                Member caps only apply to shared org pools, so these settings stay disabled while the workspace uses per-member allocation.
+              </p>
+            ) : null}
           </section>
 
           <section className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm text-slate-600 dark:text-neutral-300">Token pool strategy</span>
-              <select
-                value={formState.tokenPoolStrategy}
-                onChange={(e) => handleChange('tokenPoolStrategy', e.target.value)}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
-                disabled={loading}
-              >
-                <option value="SHARED_FOR_ORG">Shared for org</option>
-                <option value="ALLOCATED_PER_MEMBER">Allocated per member</option>
-              </select>
-            </label>
             <div className="flex items-center gap-3 pt-6">
               <label className="flex items-center gap-3 cursor-pointer group">
                 <input

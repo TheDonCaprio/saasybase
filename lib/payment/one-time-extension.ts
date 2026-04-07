@@ -1,7 +1,7 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
 import { shouldClearPaidTokensOnRenewal } from '../paidTokens';
-import { creditOrganizationSharedTokens } from '../teams';
+import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens, resetAllocatedPerMemberTokens } from '../teams';
 import { updateSubscriptionLastPaymentAmount } from '../payments';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import { getDefaultTokenLabel } from '../settings';
@@ -60,17 +60,34 @@ export async function processOneTimeNonRecurringExtension(params: {
         if (params.planToUse.tokenLimit) {
             const isTeamPlan = params.planToUse.supportsOrganizations === true;
             if (isTeamPlan && params.organizationContext?.role === 'OWNER') {
-                if (shouldResetTokensOnOneTimeRenewal) {
-                    await tx.organization.update({
-                        where: { id: params.organizationContext.organization.id },
-                        data: { tokenBalance: params.planToUse.tokenLimit },
-                    });
+                const strategy = (params.organizationContext.organization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
+                if (strategy === 'ALLOCATED_PER_MEMBER') {
+                    if (shouldResetTokensOnOneTimeRenewal) {
+                        await resetAllocatedPerMemberTokens({
+                            organizationId: params.organizationContext.organization.id,
+                            amount: params.planToUse.tokenLimit,
+                            tx,
+                        });
+                    } else {
+                        await creditAllocatedPerMemberTokens({
+                            organizationId: params.organizationContext.organization.id,
+                            amount: params.planToUse.tokenLimit,
+                            tx,
+                        });
+                    }
                 } else {
-                    await creditOrganizationSharedTokens({
-                        organizationId: params.organizationContext.organization.id,
-                        amount: params.planToUse.tokenLimit,
-                        tx
-                    });
+                    if (shouldResetTokensOnOneTimeRenewal) {
+                        await tx.organization.update({
+                            where: { id: params.organizationContext.organization.id },
+                            data: { tokenBalance: params.planToUse.tokenLimit },
+                        });
+                    } else {
+                        await creditOrganizationSharedTokens({
+                            organizationId: params.organizationContext.organization.id,
+                            amount: params.planToUse.tokenLimit,
+                            tx
+                        });
+                    }
                 }
             } else if (!isTeamPlan && shouldResetTokensOnOneTimeRenewal) {
                 await tx.user.update({

@@ -1,6 +1,6 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
-import { creditOrganizationSharedTokens } from '../teams';
+import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens, resetAllocatedPerMemberTokens } from '../teams';
 import type { Prisma } from '@/lib/prisma-client';
 import type { StandardizedInvoice } from './types';
 import { toError } from '../runtime-guards';
@@ -16,6 +16,7 @@ type InvoicePaymentDbSubShape = {
     plan: {
         tokenLimit: number | null;
         supportsOrganizations: boolean | null;
+        organizationTokenPoolStrategy?: string | null;
     };
 };
 
@@ -29,6 +30,7 @@ type InvoicePaidOrchestrationSubscriptionShape = InvoicePaymentDbSubShape & {
         autoRenew: boolean;
         tokenLimit: number | null;
         supportsOrganizations: boolean | null;
+        organizationTokenPoolStrategy?: string | null;
     };
 };
 
@@ -259,15 +261,24 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
 
         const tokenLimit = params.dbSub.plan?.tokenLimit;
         const planSupportsOrganizations = params.dbSub.plan?.supportsOrganizations === true;
+        const poolStrategy = (params.dbSub.plan?.organizationTokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
 
         if (isLikelyInitialSubscriptionCharge && tokenLimit && tokenLimit > 0) {
             const tokensToGrant = tokenLimit;
             if (params.resolvedOrganizationId && planSupportsOrganizations) {
-                await creditOrganizationSharedTokens({
-                    organizationId: params.resolvedOrganizationId,
-                    amount: tokensToGrant,
-                    tx,
-                });
+                if (poolStrategy === 'ALLOCATED_PER_MEMBER') {
+                    await creditAllocatedPerMemberTokens({
+                        organizationId: params.resolvedOrganizationId,
+                        amount: tokensToGrant,
+                        tx,
+                    });
+                } else {
+                    await creditOrganizationSharedTokens({
+                        organizationId: params.resolvedOrganizationId,
+                        amount: tokensToGrant,
+                        tx,
+                    });
+                }
             } else if (planSupportsOrganizations) {
                 Logger.info('Deferred team token allocation until workspace provisioning (invoice initial charge)', {
                     subscriptionId: params.subscriptionId,
@@ -289,13 +300,22 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                 priorSuccessfulPaymentsForSubscription,
                 tokensToGrant,
                 resolvedOrganizationId: params.resolvedOrganizationId,
+                poolStrategy,
             });
         } else if (!isLikelyInitialSubscriptionCharge && tokenLimit && tokenLimit > 0 && params.shouldResetTokensOnRenewal) {
             if (params.resolvedOrganizationId && planSupportsOrganizations) {
-                await tx.organization.update({
-                    where: { id: params.resolvedOrganizationId },
-                    data: { tokenBalance: tokenLimit },
-                });
+                if (poolStrategy === 'ALLOCATED_PER_MEMBER') {
+                    await resetAllocatedPerMemberTokens({
+                        organizationId: params.resolvedOrganizationId,
+                        amount: tokenLimit,
+                        tx,
+                    });
+                } else {
+                    await tx.organization.update({
+                        where: { id: params.resolvedOrganizationId },
+                        data: { tokenBalance: tokenLimit },
+                    });
+                }
                 // Also zero out any personal paid tokens since the org resets
                 await tx.user.update({
                     where: { id: params.dbSub.userId },
@@ -323,14 +343,23 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                 tokenLimit,
                 resolvedOrganizationId: params.resolvedOrganizationId,
                 planSupportsOrganizations,
+                poolStrategy,
             });
         } else if (!isLikelyInitialSubscriptionCharge && tokenLimit && tokenLimit > 0 && !params.shouldResetTokensOnRenewal) {
             if (params.resolvedOrganizationId && planSupportsOrganizations) {
-                await creditOrganizationSharedTokens({
-                    organizationId: params.resolvedOrganizationId,
-                    amount: tokenLimit,
-                    tx,
-                });
+                if (poolStrategy === 'ALLOCATED_PER_MEMBER') {
+                    await creditAllocatedPerMemberTokens({
+                        organizationId: params.resolvedOrganizationId,
+                        amount: tokenLimit,
+                        tx,
+                    });
+                } else {
+                    await creditOrganizationSharedTokens({
+                        organizationId: params.resolvedOrganizationId,
+                        amount: tokenLimit,
+                        tx,
+                    });
+                }
             } else if (planSupportsOrganizations) {
                 Logger.info('Deferred team token increment until workspace provisioning (invoice renewal)', {
                     subscriptionId: params.subscriptionId,
@@ -353,6 +382,7 @@ export async function recordInvoicePaymentAndApplyTokens<TSub extends InvoicePay
                 tokenLimit,
                 resolvedOrganizationId: params.resolvedOrganizationId,
                 planSupportsOrganizations,
+                poolStrategy,
             });
         } else {
             Logger.info('Skipping token grant/reset from subscription invoice payment', {

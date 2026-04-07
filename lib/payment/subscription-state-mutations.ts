@@ -4,7 +4,7 @@ import { Logger } from '../logger';
 import { toError } from '../runtime-guards';
 import { shouldClearPaidTokensOnRenewal } from '../paidTokens';
 import { syncOrganizationBillingMetadata } from '../organization-billing-metadata';
-import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../teams';
+import { creditOrganizationSharedTokens, resetOrganizationSharedTokens, resetAllocatedPerMemberTokens } from '../teams';
 import { resolveSubscriptionWebhookMutationPlan } from './subscription-webhook-state';
 
 type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{ include: { plan: true } }>;
@@ -117,8 +117,13 @@ export async function applySubscriptionWebhookUpdate(params: {
             const tokenLimit = typeof updatedSub.plan?.tokenLimit === 'number' ? updatedSub.plan.tokenLimit : null;
             if (tokenLimit !== null) {
                 if (updatedSub.organizationId) {
-                    await resetOrganizationSharedTokens({ organizationId: updatedSub.organizationId });
-                    await creditOrganizationSharedTokens({ organizationId: updatedSub.organizationId, amount: tokenLimit });
+                    const strategy = (updatedSub.plan?.organizationTokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
+                    if (strategy === 'ALLOCATED_PER_MEMBER') {
+                        await resetAllocatedPerMemberTokens({ organizationId: updatedSub.organizationId, amount: tokenLimit });
+                    } else {
+                        await resetOrganizationSharedTokens({ organizationId: updatedSub.organizationId });
+                        await creditOrganizationSharedTokens({ organizationId: updatedSub.organizationId, amount: tokenLimit });
+                    }
                 } else {
                     await prisma.user.update({ where: { id: updatedSub.userId }, data: { tokenBalance: tokenLimit } });
                 }

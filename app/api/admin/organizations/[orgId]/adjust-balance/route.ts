@@ -35,8 +35,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ or
     const reason = typeof reasonRaw === 'string' && reasonRaw.trim().length > 0 ? reasonRaw.trim() : undefined;
 
     const result = await prisma.$transaction(async (tx) => {
-      const before = await tx.organization.findUnique({ where: { id: orgId }, select: { tokenBalance: true, name: true } });
+      const before = await tx.organization.findUnique({
+        where: { id: orgId },
+        select: {
+          tokenBalance: true,
+          name: true,
+          tokenPoolStrategy: true,
+          plan: { select: { organizationTokenPoolStrategy: true } },
+        },
+      });
       if (!before) throw new Error('Organization not found');
+      const effectiveTokenPoolStrategy = before.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+        || (before.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase() === 'ALLOCATED_PER_MEMBER'
+        ? 'ALLOCATED_PER_MEMBER'
+        : 'SHARED_FOR_ORG';
+      if (effectiveTokenPoolStrategy === 'ALLOCATED_PER_MEMBER') {
+        throw new Error('Token balance adjustments are only available for shared-pool organizations. Adjust per-member balances through billing or member-level tooling.');
+      }
 
       const proposed = before.tokenBalance + amount;
       if (proposed < 0 && !force) {
@@ -64,7 +79,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ or
   } catch (err: unknown) {
     const e = toError(err);
     Logger.error('Admin adjust org balance failed', { error: e.message });
-    const msg = e.message?.includes('negative') ? e.message : 'Failed to adjust organization balance';
+    const msg = e.message?.includes('negative') || e.message?.includes('only available for shared-pool organizations')
+      ? e.message
+      : 'Failed to adjust organization balance';
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

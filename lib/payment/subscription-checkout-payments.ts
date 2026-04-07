@@ -1,7 +1,7 @@
 import type { Prisma } from '@/lib/prisma-client';
 import { Logger } from '../logger';
 import { prisma } from '../prisma';
-import { creditOrganizationSharedTokens } from '../teams';
+import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens } from '../teams';
 import { toError } from '../runtime-guards';
 import { updateSubscriptionLastPaymentAmount } from '../payments';
 import type { OrganizationPlanContext } from '../user-plan-context';
@@ -93,17 +93,35 @@ async function applySubscriptionCheckoutTokens(
 
     try {
         if (planSupportsOrganizations && organizationContext?.role === 'OWNER') {
-            if (shouldResetOnRenewal) {
-                await tx.organization.update({
-                    where: { id: organizationContext.organization.id },
-                    data: { tokenBalance: tokensToGrant }
-                });
+            const strategy = (organizationContext.organization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
+            if (strategy === 'ALLOCATED_PER_MEMBER') {
+                if (shouldResetOnRenewal) {
+                    const { resetAllocatedPerMemberTokens } = await import('../teams');
+                    await resetAllocatedPerMemberTokens({
+                        organizationId: organizationContext.organization.id,
+                        amount: tokensToGrant,
+                        tx,
+                    });
+                } else {
+                    await creditAllocatedPerMemberTokens({
+                        organizationId: organizationContext.organization.id,
+                        amount: tokensToGrant,
+                        tx,
+                    });
+                }
             } else {
-                await creditOrganizationSharedTokens({
-                    organizationId: organizationContext.organization.id,
-                    amount: tokensToGrant,
-                    tx,
-                });
+                if (shouldResetOnRenewal) {
+                    await tx.organization.update({
+                        where: { id: organizationContext.organization.id },
+                        data: { tokenBalance: tokensToGrant }
+                    });
+                } else {
+                    await creditOrganizationSharedTokens({
+                        organizationId: organizationContext.organization.id,
+                        amount: tokensToGrant,
+                        tx,
+                    });
+                }
             }
         } else if (planSupportsOrganizations) {
             Logger.info('Deferred team token allocation until workspace provisioning (subscription checkout)', {

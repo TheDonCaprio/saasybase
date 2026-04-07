@@ -106,7 +106,10 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
       ? record.plan.organizationSeatLimit
       : null;
 
-  const strategy = ((record.tokenPoolStrategy || record.plan?.organizationTokenPoolStrategy || 'SHARED_FOR_ORG') as string).toUpperCase();
+  const strategy = (
+    record.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    || record.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+  ) ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG';
   const orgCap = typeof record.memberTokenCap === 'number' ? record.memberTokenCap : null;
   const capStrategy = (record.memberCapStrategy || 'SOFT').toUpperCase();
   const capsDisabled = capStrategy === 'DISABLED';
@@ -129,8 +132,17 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
       capReset != null &&
       (windowStartMs == null || nowMs - windowStartMs >= capReset * 60 * 60 * 1000);
     const usage = windowExpired ? 0 : Math.max(0, membership.memberTokenUsage ?? 0);
-    const remaining = effectiveCap == null ? poolBalance : Math.max(0, effectiveCap - usage);
-    const sharedTokenBalance = Math.min(poolBalance, remaining);
+
+    let sharedTokenBalance: number;
+    if (strategy === 'ALLOCATED_PER_MEMBER') {
+      const actualAllocatedBalance = Math.max(0, Number(membership.sharedTokenBalance ?? 0));
+      sharedTokenBalance = actualAllocatedBalance > 0 || planTokenLimit == null
+        ? actualAllocatedBalance
+        : Math.max(0, planTokenLimit - usage);
+    } else {
+      const remaining = effectiveCap == null ? poolBalance : Math.max(0, effectiveCap - usage);
+      sharedTokenBalance = Math.min(poolBalance, remaining);
+    }
 
     return {
       id: membership.id,

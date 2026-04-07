@@ -6,6 +6,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TeamMembersListProps {
   members: TeamDashboardMember[];
+  tokenPoolStrategy: string;
   currentUserId: string;
   busyAction: string | null;
   canManageMembers: boolean;
@@ -14,7 +15,7 @@ interface TeamMembersListProps {
   tokenLabel?: string;
 }
 
-export function TeamMembersList({ members, currentUserId, busyAction, canManageMembers, onRemove, onSetCapOverride, tokenLabel }: TeamMembersListProps) {
+export function TeamMembersList({ members, tokenPoolStrategy, currentUserId, busyAction, canManageMembers, onRemove, onSetCapOverride, tokenLabel }: TeamMembersListProps) {
   const [editingCapFor, setEditingCapFor] = useState<string | null>(null);
   const [capInputValue, setCapInputValue] = useState<string>('');
   const [memberToRemove, setMemberToRemove] = useState<TeamDashboardMember | null>(null);
@@ -24,6 +25,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
   }
 
   const label = (tokenLabel || 'tokens').toLowerCase();
+  const isSharedPoolStrategy = tokenPoolStrategy === 'SHARED_FOR_ORG';
 
   const handleCapEdit = (member: TeamDashboardMember) => {
     setEditingCapFor(member.userId);
@@ -69,7 +71,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
         const capLabel = member.effectiveMemberCap != null ? `${member.effectiveMemberCap.toLocaleString()} ${label}` : 'Unlimited';
         const overrideActive = member.memberTokenCapOverride != null && !member.ownerExemptFromCaps;
         const usageLabel = `${member.memberTokenUsage.toLocaleString()} ${label}`;
-        const sharedLabel = `${member.sharedTokenBalance.toLocaleString()} ${label}`;
+        const balanceLabel = `${member.sharedTokenBalance.toLocaleString()} ${label}`;
         const isEditingCap = editingCapFor === member.userId;
 
         return (
@@ -85,13 +87,15 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
                 </p>
                 <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-neutral-400">
                   <span>
-                    Shared balance: <strong className="text-slate-900 dark:text-neutral-100">{sharedLabel}</strong>
+                    {isSharedPoolStrategy ? 'Shared balance' : 'Allocated balance'}: <strong className="text-slate-900 dark:text-neutral-100">{balanceLabel}</strong>
                   </span>
-                  <span>
-                    Cap: <strong className="text-slate-900 dark:text-neutral-100">{capLabel}</strong>
-                    {member.ownerExemptFromCaps ? <span className="ml-1 rounded bg-emerald-100 px-1 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">owner exempt</span> : null}
-                    {overrideActive ? <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">override</span> : null}
-                  </span>
+                  {isSharedPoolStrategy ? (
+                    <span>
+                      Cap: <strong className="text-slate-900 dark:text-neutral-100">{capLabel}</strong>
+                      {member.ownerExemptFromCaps ? <span className="ml-1 rounded bg-emerald-100 px-1 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">owner exempt</span> : null}
+                      {overrideActive ? <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">override</span> : null}
+                    </span>
+                  ) : null}
                   <span>
                     Usage: <strong className="text-slate-900 dark:text-neutral-100">{usageLabel}</strong>
                   </span>
@@ -107,7 +111,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
                   >
                     {disableRemoval ? 'Owner' : isRemoving ? 'Removing…' : 'Remove'}
                   </button>
-                  {!isViewer && (
+                  {!isViewer && isSharedPoolStrategy && (
                     <button
                       onClick={() => isEditingCap ? setEditingCapFor(null) : handleCapEdit(member)}
                       disabled={isSavingCap}
@@ -121,7 +125,7 @@ export function TeamMembersList({ members, currentUserId, busyAction, canManageM
             </div>
 
             {/* Inline cap-override editor */}
-            {isEditingCap && (
+            {isSharedPoolStrategy && isEditingCap && (
               <div className="mt-3 flex items-end gap-2 border-t border-slate-100 pt-3 dark:border-neutral-700/60">
                 <div className="flex-1">
                   <label className="text-xs font-medium text-slate-600 dark:text-neutral-300">

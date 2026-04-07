@@ -39,9 +39,14 @@ type Props = {
   onClose: () => void;
 };
 
+function formatTokenPoolStrategyLabel(strategy: string | null | undefined) {
+  return strategy === 'ALLOCATED_PER_MEMBER' ? 'Allocated tokens' : 'Shared tokens';
+}
+
 export function OrganizationMembersModal({ orgId, orgName, onClose }: Props) {
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [invites, setInvites] = useState<InviteRecord[]>([]);
+  const [tokenPoolStrategy, setTokenPoolStrategy] = useState<string>('SHARED_FOR_ORG');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -68,6 +73,7 @@ export function OrganizationMembersModal({ orgId, orgName, onClose }: Props) {
         if (cancelled) return;
         setMembers(Array.isArray(json?.members) ? json.members : []);
         setInvites(Array.isArray(json?.invites) ? json.invites : []);
+        setTokenPoolStrategy(json?.organization?.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER' ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load members';
         setError(message);
@@ -123,7 +129,7 @@ export function OrganizationMembersModal({ orgId, orgName, onClose }: Props) {
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-neutral-800">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Members · {orgName}</h2>
-            <p className="text-sm text-slate-500 dark:text-neutral-400">Full roster including pending invites</p>
+            <p className="text-sm text-slate-500 dark:text-neutral-400">Full roster including pending invites · {formatTokenPoolStrategyLabel(tokenPoolStrategy)}</p>
           </div>
           <button onClick={onClose} className="text-2xl text-slate-400 hover:text-slate-600 dark:text-neutral-400 dark:hover:text-white" aria-label="Close members modal">
             ×
@@ -158,7 +164,7 @@ export function OrganizationMembersModal({ orgId, orgName, onClose }: Props) {
                           {member.role}
                         </div>
                         <div>
-                          <span className="block font-semibold text-slate-700 dark:text-neutral-300">Shared Tokens</span>
+                          <span className="block font-semibold text-slate-700 dark:text-neutral-300">{formatTokenPoolStrategyLabel(tokenPoolStrategy)}</span>
                           {formatNumber(member.sharedTokenBalance)}
                         </div>
                         <div>
@@ -196,7 +202,7 @@ export function OrganizationMembersModal({ orgId, orgName, onClose }: Props) {
                       <tr>
                         <th className="px-4 py-3">Member</th>
                         <th className="px-4 py-3">Role</th>
-                        <th className="px-4 py-3">Shared tokens</th>
+                        <th className="px-4 py-3">{formatTokenPoolStrategyLabel(tokenPoolStrategy)}</th>
                         <th className="px-4 py-3">Cap override</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3 text-right">Actions</th>

@@ -3,7 +3,7 @@ import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { notifyExpiredSubscriptions, sendBillingNotification } from './notifications';
 import { syncOrganizationEligibilityForUser } from './organization-access';
-import { creditOrganizationSharedTokens } from './teams';
+import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens } from './teams';
 import { getDefaultTokenLabel } from './settings';
 import {
   buildAdminLikePermissions,
@@ -240,7 +240,7 @@ export async function activatePendingSubscriptions(
       // This prevents abandoned checkout placeholders from granting access.
       payments: { some: { status: 'SUCCEEDED' } },
     },
-    include: { plan: true },
+    include: { plan: true, organization: { select: { tokenPoolStrategy: true } } },
   });
 
   // Find PENDING subscriptions that have ended (need to expire and notify)
@@ -312,11 +312,24 @@ export async function activatePendingSubscriptions(
       if (tokenLimit > 0) {
         await prisma.$transaction(async (tx) => {
           if (pending.organizationId) {
-            await creditOrganizationSharedTokens({
-              organizationId: pending.organizationId,
-              amount: tokenLimit,
-              tx,
-            });
+            const poolStrategy = (
+              pending.plan?.organizationTokenPoolStrategy
+              || pending.organization?.tokenPoolStrategy
+              || 'SHARED_FOR_ORG'
+            ).toUpperCase();
+            if (poolStrategy === 'ALLOCATED_PER_MEMBER') {
+              await creditAllocatedPerMemberTokens({
+                organizationId: pending.organizationId,
+                amount: tokenLimit,
+                tx,
+              });
+            } else {
+              await creditOrganizationSharedTokens({
+                organizationId: pending.organizationId,
+                amount: tokenLimit,
+                tx,
+              });
+            }
           } else {
             await tx.user.update({
               where: { id: userId },

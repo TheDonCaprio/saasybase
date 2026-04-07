@@ -24,6 +24,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ org
         id: true,
         name: true,
         tokenBalance: true,
+        tokenPoolStrategy: true,
+        plan: {
+          select: {
+            tokenLimit: true,
+            organizationTokenPoolStrategy: true,
+          },
+        },
         memberTokenCap: true,
         memberCapStrategy: true,
         memberCapResetIntervalHours: true,
@@ -44,6 +51,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ org
     }
 
     const poolBalance = Math.max(0, Number(organization.tokenBalance ?? 0));
+    const tokenPoolStrategy = organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      ? 'ALLOCATED_PER_MEMBER'
+      : 'SHARED_FOR_ORG';
+    const planTokenLimit = typeof organization.plan?.tokenLimit === 'number' ? organization.plan.tokenLimit : null;
     const capResetHours =
       typeof organization.memberCapResetIntervalHours === 'number' ? organization.memberCapResetIntervalHours : null;
 
@@ -63,7 +75,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ org
 
       const usage = windowExpired ? 0 : Math.max(0, Number(membership.memberTokenUsage ?? 0));
       const remaining = effectiveCap == null ? poolBalance : Math.max(0, effectiveCap - usage);
-      const sharedTokenBalance = Math.min(poolBalance, remaining);
+      const sharedTokenBalance = tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+        ? (() => {
+          const actualBalance = Math.max(0, Number(membership.sharedTokenBalance ?? 0));
+          return actualBalance > 0 || planTokenLimit == null ? actualBalance : Math.max(0, planTokenLimit - usage);
+        })()
+        : Math.min(poolBalance, remaining);
 
       return {
         id: membership.id,
@@ -100,7 +117,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ org
       createdAt: invite.createdAt.toISOString(),
     }));
 
-    return NextResponse.json({ organization: { id: organization.id, name: organization.name }, members, invites });
+    return NextResponse.json({
+      organization: { id: organization.id, name: organization.name, tokenPoolStrategy },
+      members,
+      invites,
+    });
   } catch (error) {
     Logger.error('Failed to load organization members', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: 'Failed to load organization members' }, { status: 500 });

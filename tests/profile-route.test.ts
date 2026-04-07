@@ -34,7 +34,7 @@ vi.mock('../lib/moderator', () => ({
 const userPlanContextMock = vi.hoisted(() => ({
   getEffectiveMemberTokenCap: vi.fn(() => null),
   getMemberCapStrategy: vi.fn(() => null),
-  getMemberSharedTokenBalance: vi.fn(() => null),
+  getMemberSharedTokenBalance: vi.fn<[], number | null>(() => null),
   getPlanScope: vi.fn((orgId?: string | null) => (orgId ? 'WORKSPACE' : 'PERSONAL')),
   getOrganizationPlanContext: vi.fn<[], Promise<unknown>>(async () => null),
   getSubscriptionScopeFilter: vi.fn((scope: 'PERSONAL' | 'WORKSPACE') => (scope === 'WORKSPACE'
@@ -283,6 +283,88 @@ describe('GET /api/user/profile', () => {
     expect(body.organization?.planName).toBe('Team Plus');
     expect(body.organization?.tokenName).toBe('team credits');
     expect(body.planActionLabel).toBe('Change Plan');
+  });
+
+  it('reports the effective workspace token strategy in the profile payload', async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      email: 'member@capriofiles.com',
+      name: 'Member',
+      role: 'USER',
+      tokenBalance: 0,
+      freeTokenBalance: 0,
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    userPlanContextMock.getMemberSharedTokenBalance.mockReturnValueOnce(98);
+    userPlanContextMock.getOrganizationPlanContext.mockResolvedValueOnce({
+      role: 'MEMBER',
+      effectivePlan: {
+        id: 'plan_team_plus',
+        name: 'Team Plus',
+        shortDescription: null,
+        description: null,
+        priceCents: 3000,
+        durationHours: 720,
+        autoRenew: true,
+        recurringInterval: 'month',
+        tokenLimit: 100,
+        tokenName: 'exports',
+        organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+      },
+      organization: {
+        id: 'org_1',
+        name: 'Caprio Workspace',
+        slug: 'caprio',
+        ownerUserId: 'owner_1',
+        seatLimit: 5,
+        tokenBalance: 0,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        memberTokenCap: null,
+        memberCapStrategy: 'DISABLED',
+        memberCapResetIntervalHours: null,
+        ownerExemptFromCaps: false,
+        planId: 'plan_team',
+        plan: {
+          id: 'plan_team',
+          name: 'Team',
+          shortDescription: null,
+          description: null,
+          priceCents: 0,
+          durationHours: 720,
+          autoRenew: true,
+          recurringInterval: 'month',
+          tokenLimit: 100,
+          tokenName: 'exports',
+          organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+        },
+      },
+      membership: {
+        id: 'membership_1',
+        role: 'MEMBER',
+        status: 'ACTIVE',
+        sharedTokenBalance: 0,
+        memberTokenCapOverride: null,
+        memberTokenUsageWindowStart: null,
+        memberTokenUsage: 2,
+      },
+    });
+
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      expiresAt: new Date('2031-02-03T04:05:06.000Z'),
+    });
+
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.organization?.tokenPoolStrategy).toBe('ALLOCATED_PER_MEMBER');
+    expect(body.sharedTokens).toEqual({
+      tokenName: 'exports',
+      remaining: 98,
+      cap: null,
+      strategy: null,
+    });
   });
 
   it('keeps the existing email active until a new email is verified', async () => {

@@ -16,7 +16,7 @@ export const commonSchemas = {
   paymentId: z.string().min(1).max(100),
   couponCode: z.string().regex(/^[A-Za-z0-9-]{3,64}$/),
   planRecurringInterval: z.enum(['day', 'week', 'month', 'year']),
-  organizationTokenPoolStrategy: z.literal('SHARED_FOR_ORG'),
+  organizationTokenPoolStrategy: z.enum(['SHARED_FOR_ORG', 'ALLOCATED_PER_MEMBER']),
 
   // Pagination
   pagination: z.object({

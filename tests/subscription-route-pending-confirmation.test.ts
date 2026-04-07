@@ -9,7 +9,7 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const syncOrganizationEligibilityForUserMock = vi.hoisted(() => vi.fn(async () => undefined));
-const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn(async () => null));
+const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/auth', () => ({
@@ -60,6 +60,37 @@ describe('GET /api/subscription pending confirmation', () => {
       startsAt: new Date('2026-03-17T11:45:00.000Z').toISOString(),
       expiresAt: new Date('2026-03-18T11:45:00.000Z').toISOString(),
       pendingSince: new Date('2026-03-17T11:45:00.000Z').toISOString(),
+    });
+  });
+
+  it('returns the organization token pool strategy from the active workspace context', async () => {
+    getOrganizationPlanContextMock.mockResolvedValueOnce({
+      role: 'OWNER',
+      organization: {
+        id: 'org_1',
+        name: 'Acme Team',
+        tokenBalance: 0,
+        tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+        plan: {
+          name: 'Team Pro',
+          organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+        },
+      },
+    });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.active).toBe(true);
+    expect(body.source).toBe('organization');
+    expect(body.organization).toEqual({
+      id: 'org_1',
+      name: 'Acme Team',
+      role: 'OWNER',
+      tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+      tokenBalance: 0,
     });
   });
 });

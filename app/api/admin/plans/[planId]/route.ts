@@ -182,6 +182,20 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       );
     }
 
+    if (
+      organizationTokenPoolStrategyProvided
+      && existingPlan.supportsOrganizations
+      && payload.organizationTokenPoolStrategy !== existingPlan.organizationTokenPoolStrategy
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Token pool strategy cannot be changed after plan creation. Duplicate or recreate the plan instead.',
+        },
+        { status: 400 }
+      );
+    }
+
     const shortDescriptionValue = shortDescriptionProvided
       ? (typeof payload.shortDescription === 'string' ? payload.shortDescription : null)
       : undefined;
@@ -809,11 +823,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
       if (organizationSeatLimitProvided) {
         updateData.organizationSeatLimit = payload.organizationSeatLimit ?? null;
       }
-      if (
-        organizationTokenPoolStrategyProvided ||
-        !existingPlan.organizationTokenPoolStrategy ||
-        existingPlan.organizationTokenPoolStrategy !== 'SHARED_FOR_ORG'
-      ) {
+      if (!existingPlan.organizationTokenPoolStrategy) {
         updateData.organizationTokenPoolStrategy = 'SHARED_FOR_ORG';
       }
     } else {

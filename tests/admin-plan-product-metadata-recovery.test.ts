@@ -250,4 +250,42 @@ describe('PUT /api/admin/plans/[planId] product metadata sync', () => {
       expect.anything()
     );
   });
+
+  it('rejects token pool strategy changes for existing team plans', async () => {
+    prismaMock.plan.findUnique.mockResolvedValueOnce({
+      id: 'plan_team_1',
+      name: 'Team Pro',
+      shortDescription: 'Original summary',
+      description: null,
+      durationHours: 24,
+      priceCents: 1200,
+      active: true,
+      sortOrder: 1,
+      externalPriceId: 'plan_rzp_current',
+      externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_current' }),
+      externalProductIds: JSON.stringify({ razorpay: 'item_rzp_live' }),
+      autoRenew: true,
+      recurringInterval: 'month',
+      recurringIntervalCount: 1,
+      tokenLimit: 100,
+      tokenName: 'tokens',
+      supportsOrganizations: true,
+      organizationSeatLimit: 10,
+      organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      scope: 'TEAM',
+    });
+
+    const req = new NextRequest('http://localhost/api/admin/plans/plan_team_1', {
+      method: 'PUT',
+      body: JSON.stringify({ organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const res = await PUT(req, { params: Promise.resolve({ planId: 'plan_team_1' }) });
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toContain('Token pool strategy cannot be changed after plan creation');
+    expect(prismaMock.plan.update).not.toHaveBeenCalled();
+  });
 });

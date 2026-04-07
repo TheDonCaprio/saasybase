@@ -410,7 +410,9 @@ export function DashboardHeaderDrawer({
                                     {profile.organization ? ` (${profile.organization.name})` : ''}
                                   </span>
                                   <p className="text-[11px] text-neutral-400">
-                                    {profile.sharedTokens.cap != null
+                                    {profile.organization?.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+                                      ? 'Allocated to you in this workspace'
+                                      : profile.sharedTokens.cap != null
                                       ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
                                       : profile.sharedTokens.strategy === 'DISABLED'
                                       ? 'Member caps disabled'

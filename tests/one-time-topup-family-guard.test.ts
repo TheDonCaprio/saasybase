@@ -15,9 +15,13 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const creditOrganizationSharedTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
+const creditAllocatedPerMemberTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('../lib/teams', () => ({ creditOrganizationSharedTokens: creditOrganizationSharedTokensMock }));
+vi.mock('../lib/teams', () => ({
+  creditOrganizationSharedTokens: creditOrganizationSharedTokensMock,
+  creditAllocatedPerMemberTokens: creditAllocatedPerMemberTokensMock,
+}));
 vi.mock('../lib/notifications', () => ({ sendBillingNotification: vi.fn(), sendAdminNotificationEmail: vi.fn() }));
 vi.mock('../lib/settings', () => ({ getDefaultTokenLabel: vi.fn(async () => 'tokens') }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
@@ -39,7 +43,7 @@ function createCheckoutSession(id: string): ProcessOneTimeTopupInput['session'] 
 function createResolvedOrganizationContext(): ResolvedOrganizationContext {
   return {
     role: 'OWNER',
-    organization: { id: 'org_db_1', name: 'Team Org' },
+    organization: { id: 'org_db_1', name: 'Team Org', tokenPoolStrategy: 'SHARED_FOR_ORG' },
     membership: null,
   } as ResolvedOrganizationContext;
 }
@@ -110,5 +114,36 @@ describe('processOneTimeRecurringTopup plan-family guard', () => {
         data: expect.not.objectContaining({ tokenBalance: expect.anything() }),
       })
     );
+  });
+
+  it('credits each active member when workspace top-up uses ALLOCATED_PER_MEMBER', async () => {
+    const allocatedContext = {
+      ...createResolvedOrganizationContext(),
+      organization: { id: 'org_db_1', name: 'Team Org', tokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+    } as ResolvedOrganizationContext;
+
+    await processOneTimeRecurringTopup({
+      userId: 'user_1',
+      planToUse: {
+        id: 'plan_team',
+        name: 'Team Topup',
+        tokenLimit: 30,
+        supportsOrganizations: true,
+      } as ProcessOneTimeTopupInput['planToUse'],
+      resolvedAmountCents: 900,
+      resolvedSubtotalCents: 900,
+      resolvedDiscountCents: 0,
+      couponCode: null,
+      session: createCheckoutSession('sess_3'),
+      finalPaymentIntent: 'pi_3',
+      providerKey: 'stripe',
+      mergeIdMap: () => null,
+      resolveOrganizationContext: vi.fn(async () => allocatedContext),
+    });
+
+    expect(creditAllocatedPerMemberTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org_db_1', amount: 30 })
+    );
+    expect(creditOrganizationSharedTokensMock).not.toHaveBeenCalled();
   });
 });

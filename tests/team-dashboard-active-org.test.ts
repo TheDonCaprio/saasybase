@@ -134,4 +134,84 @@ describe('fetchTeamDashboardState active organization resolution', () => {
       }),
     ]);
   });
+
+  it('prefers the attached team plan token strategy when the organization row still has the legacy shared default', async () => {
+    accessSummaryMock.mockResolvedValue({
+      allowed: true,
+      kind: 'OWNER',
+      subscription: { id: 'sub_1' },
+      plan: { id: 'plan_team' },
+    });
+
+    prismaMock.organization.findFirst.mockResolvedValue({
+      id: 'org_1',
+      clerkOrganizationId: 'provider_org_1',
+      name: 'Acme',
+      slug: 'acme',
+      ownerUserId: 'user_1',
+      planId: 'plan_team',
+      seatLimit: 5,
+      tokenBalance: 150,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+      memberTokenCap: null,
+      memberCapStrategy: null,
+      memberCapResetIntervalHours: null,
+      ownerExemptFromCaps: false,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      plan: {
+        id: 'plan_team',
+        name: 'Team',
+        tokenName: 'exports',
+        tokenLimit: 150,
+        organizationSeatLimit: 5,
+        organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+        supportsOrganizations: true,
+      },
+      memberships: [
+        {
+          id: 'membership_owner',
+          userId: 'user_1',
+          role: 'OWNER',
+          status: 'ACTIVE',
+          createdAt: new Date('2024-01-01T00:00:00.000Z'),
+          memberTokenCapOverride: null,
+          memberTokenUsage: 0,
+          memberTokenUsageWindowStart: null,
+          sharedTokenBalance: 0,
+          user: {
+            id: 'user_1',
+            name: 'Owner User',
+            email: 'owner@example.com',
+            imageUrl: null,
+          },
+        },
+        {
+          id: 'membership_member',
+          userId: 'user_2',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          createdAt: new Date('2024-01-02T00:00:00.000Z'),
+          memberTokenCapOverride: null,
+          memberTokenUsage: 0,
+          memberTokenUsageWindowStart: null,
+          sharedTokenBalance: 0,
+          user: {
+            id: 'user_2',
+            name: 'Two User',
+            email: 'two@example.com',
+            imageUrl: null,
+          },
+        },
+      ],
+      invites: [],
+    });
+
+    const state = await fetchTeamDashboardState('user_1', { activeOrganizationId: 'org_1' });
+
+    expect(state.organization?.tokenPoolStrategy).toBe('ALLOCATED_PER_MEMBER');
+    expect(state.organization?.members).toEqual([
+      expect.objectContaining({ userId: 'user_1', sharedTokenBalance: 150 }),
+      expect.objectContaining({ userId: 'user_2', sharedTokenBalance: 150 }),
+    ]);
+  });
 });

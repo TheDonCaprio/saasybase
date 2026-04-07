@@ -169,24 +169,49 @@ export function getEffectiveMemberTokenCap(context: OrganizationPlanContext | nu
 
 export function getMemberSharedTokenBalance(context: OrganizationPlanContext | null): number | null {
   if (!context) return null;
-  const poolBalance = Math.max(0, Number(context.organization.tokenBalance ?? 0));
-  const cap = getEffectiveMemberTokenCap(context);
-  if (cap == null) {
-    return poolBalance;
-  }
 
+  const strategy = (
+    context.effectivePlan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    || context.organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    || context.organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+  )
+    ? 'ALLOCATED_PER_MEMBER'
+    : 'SHARED_FOR_ORG';
   const membership = context.membership;
+  const planTokenLimit = typeof context.effectivePlan?.tokenLimit === 'number'
+    ? context.effectivePlan.tokenLimit
+    : typeof context.organization.plan?.tokenLimit === 'number'
+      ? context.organization.plan.tokenLimit
+      : null;
   const resetHours = typeof context.organization.memberCapResetIntervalHours === 'number'
     ? context.organization.memberCapResetIntervalHours
     : null;
-
   const now = Date.now();
   const windowStartMs = membership?.memberTokenUsageWindowStart ? membership.memberTokenUsageWindowStart.getTime() : null;
   const windowExpired =
     resetHours != null &&
     (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
-
   const usage = windowExpired ? 0 : Math.max(0, Number(membership?.memberTokenUsage ?? 0));
+
+  // ALLOCATED_PER_MEMBER: each member has their own balance stored on the membership.
+  if (strategy === 'ALLOCATED_PER_MEMBER') {
+    const actualBalance = Math.max(0, Number(membership?.sharedTokenBalance ?? 0));
+    if (actualBalance > 0 || planTokenLimit == null) {
+      return actualBalance;
+    }
+
+    // Older workspaces can still have zeroed member rows even though the active
+    // plan now allocates tokens per member. Use the effective plan allowance as
+    // a display fallback until a write path persists the individual balance.
+    return Math.max(0, planTokenLimit - usage);
+  }
+
+  // SHARED_FOR_ORG (default): pool balance with optional per-member cap logic.
+  const poolBalance = Math.max(0, Number(context.organization.tokenBalance ?? 0));
+  const cap = getEffectiveMemberTokenCap(context);
+  if (cap == null) {
+    return poolBalance;
+  }
   const remainingCap = Math.max(0, cap - usage);
   return Math.min(poolBalance, remainingCap);
 }
@@ -207,7 +232,7 @@ export type PlanDisplay = {
   tokenStatHelper: string;
   tokenLimit: number | null;
   isUnlimitedPersonalPlan: boolean;
-  tokenPoolStrategy: 'SHARED_FOR_ORG' | null;
+  tokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' | null;
   sharedTokenBalance: number | null;
   workspace?: {
     id: string;
@@ -290,17 +315,26 @@ export function buildPlanDisplay(params: {
   let tokenStatHelper: string;
 
   if (sharedTokenBalance != null) {
-    tokenStatValue = `${numberFormatter.format(sharedTokenBalance)} shared`;
-    const strategyLabel = (memberCapStrategy ?? 'SOFT').toLowerCase();
-    let capHelper: string;
-    if (memberCap != null) {
-      capHelper = `Workspace cap per member: ${memberCapLabel} ${tokenLower} (${strategyLabel} mode)`;
-    } else if (memberCapStrategy === 'DISABLED') {
-      capHelper = 'Workspace member caps disabled';
+    const poolStrategy = (
+      organizationContext?.effectivePlan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext?.organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext?.organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    ) ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG';
+    tokenStatValue = `${numberFormatter.format(sharedTokenBalance)} ${poolStrategy === 'ALLOCATED_PER_MEMBER' ? 'allocated' : 'shared'}`;
+    if (poolStrategy === 'ALLOCATED_PER_MEMBER') {
+      tokenStatHelper = `Allocated to you by ${organizationContext!.organization.name}.`;
     } else {
-      capHelper = '';
+      const strategyLabel = (memberCapStrategy ?? 'SOFT').toLowerCase();
+      let capHelper: string;
+      if (memberCap != null) {
+        capHelper = `Workspace cap per member: ${memberCapLabel} ${tokenLower} (${strategyLabel} mode)`;
+      } else if (memberCapStrategy === 'DISABLED') {
+        capHelper = 'Workspace member caps disabled';
+      } else {
+        capHelper = '';
+      }
+      tokenStatHelper = capHelper ? `Managed by ${organizationContext!.organization.name}. ${capHelper}` : `Managed by ${organizationContext!.organization.name}.`;
     }
-    tokenStatHelper = capHelper ? `Managed by ${organizationContext!.organization.name}. ${capHelper}` : `Managed by ${organizationContext!.organization.name}.`;
   } else {
     tokenStatValue = `${formattedPaidBalance} paid • ${formattedFreeBalance} free`;
     if (isUnlimitedPersonalPlan) {
@@ -335,11 +369,18 @@ export function buildPlanDisplay(params: {
         ? 'Auto-renew enabled.'
         : 'Renew manually when needed.';
   } else if (organizationContext) {
+    const workspaceTokenPoolStrategy = (
+      organizationContext.effectivePlan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    ) ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG';
     statusHelper =
       organizationContext.role === 'OWNER'
         ? `${organizationContext.organization.name} workspace plan.`
         : `${organizationContext.organization.name} covers your Pro access.`;
-    statusHelper += ' Shared token pool available.';
+    statusHelper += workspaceTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      ? ' Per-member token allocation available.'
+      : ' Shared token pool available.';
   } else {
     statusHelper = 'Upgrade to unlock premium features.';
   }
@@ -349,6 +390,13 @@ export function buildPlanDisplay(params: {
     (organizationContext ? `${organizationContext.effectivePlan?.name ?? organizationContext.organization.plan?.name ?? 'Team Plan'} (Workspace)` : 'Free Tier');
 
   const statusValue = subscription ? 'Active subscription' : organizationContext ? 'Workspace access' : 'Free tier';
+  const workspaceTokenPoolStrategy = organizationContext
+    ? ((
+      organizationContext.effectivePlan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    ) ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG')
+    : null;
 
   return {
     planName,
@@ -360,7 +408,7 @@ export function buildPlanDisplay(params: {
     tokenStatHelper,
     tokenLimit,
     isUnlimitedPersonalPlan,
-    tokenPoolStrategy: organizationContext ? 'SHARED_FOR_ORG' : null,
+    tokenPoolStrategy: workspaceTokenPoolStrategy,
     sharedTokenBalance,
     workspace,
     memberCapSummary: organizationContext

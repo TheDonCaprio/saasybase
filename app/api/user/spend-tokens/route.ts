@@ -37,6 +37,8 @@ async function resolveSharedContext(params: {
       organizationId: string;
       membershipId: string | null;
       poolBalance: number;
+      tokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
+      memberAllocatedBalance: number;
       effectiveMemberCap: number | null;
       memberCapStrategy: 'SOFT' | 'HARD' | 'DISABLED';
       memberCapResetIntervalHours: number | null;
@@ -77,12 +79,14 @@ async function resolveSharedContext(params: {
       memberTokenCapOverride: true,
       memberTokenUsageWindowStart: true,
       memberTokenUsage: true,
+      sharedTokenBalance: true,
       organization: {
         select: {
           id: true,
           clerkOrganizationId: true,
           ownerUserId: true,
           tokenBalance: true,
+          tokenPoolStrategy: true,
           memberTokenCap: true,
           memberCapStrategy: true,
           memberCapResetIntervalHours: true,
@@ -111,6 +115,7 @@ async function resolveSharedContext(params: {
         id: true,
         ownerUserId: true,
         tokenBalance: true,
+        tokenPoolStrategy: true,
         invites: { select: { id: true, status: true } },
         ownerExemptFromCaps: true,
       },
@@ -120,11 +125,15 @@ async function resolveSharedContext(params: {
       return { ok: false, status: 400, error: 'no_shared_context' };
     }
 
+    const ownedStrategy = (ownedOrganization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase() as 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
+
     return {
       ok: true,
       organizationId: ownedOrganization.id,
       membershipId: null,
       poolBalance: Math.max(0, Number(ownedOrganization.tokenBalance ?? 0)),
+      tokenPoolStrategy: ownedStrategy,
+      memberAllocatedBalance: 0,
       effectiveMemberCap: null,
       memberCapStrategy: 'DISABLED',
       memberCapResetIntervalHours: null,
@@ -156,6 +165,8 @@ async function resolveSharedContext(params: {
   }
 
   const poolBalance = Math.max(0, Number(membership.organization.tokenBalance ?? 0));
+  const memberStrategy = (membership.organization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase() as 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
+  const memberAllocatedBalance = Math.max(0, Number(membership.sharedTokenBalance ?? 0));
 
   const capStrategy = (membership.organization.memberCapStrategy || 'SOFT').toString().toUpperCase();
   const normalizedStrategy = (capStrategy === 'HARD' || capStrategy === 'DISABLED' ? capStrategy : 'SOFT') as
@@ -184,6 +195,8 @@ async function resolveSharedContext(params: {
     organizationId: membership.organization.id,
     membershipId: membership.id,
     poolBalance,
+    tokenPoolStrategy: memberStrategy,
+    memberAllocatedBalance,
     effectiveMemberCap,
     memberCapStrategy: normalizedStrategy,
     memberCapResetIntervalHours: reset,
@@ -194,12 +207,20 @@ async function resolveSharedContext(params: {
 
 function getAvailableSharedTokens(shared: {
   poolBalance: number;
+  tokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
+  memberAllocatedBalance: number;
   effectiveMemberCap: number | null;
   memberCapStrategy: 'SOFT' | 'HARD' | 'DISABLED';
   memberCapResetIntervalHours: number | null;
   memberTokenUsage: number;
   memberTokenUsageWindowStart: Date | null;
 }): number {
+  // ALLOCATED_PER_MEMBER: use the member's individual balance directly
+  if (shared.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER') {
+    return Math.max(0, shared.memberAllocatedBalance);
+  }
+
+  // SHARED_FOR_ORG (default)
   const poolBalance = Math.max(0, Number(shared.poolBalance ?? 0));
   const cap = shared.effectiveMemberCap;
   const resetHours = shared.memberCapResetIntervalHours;
@@ -383,104 +404,150 @@ export async function POST(req: NextRequest) {
           // At this point sharedContext is guaranteed ok (guarded above).
           const shared = sharedContext as Extract<NonNullable<typeof sharedContext>, { ok: true }>;
 
-          const poolBalance = shared.poolBalance;
-          const cap = shared.effectiveMemberCap;
-          const resetHours = shared.memberCapResetIntervalHours;
-          const now = Date.now();
-          const windowStartMs = shared.memberTokenUsageWindowStart ? shared.memberTokenUsageWindowStart.getTime() : null;
-          const windowExpired =
-            resetHours != null &&
-            (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
-          const usage = windowExpired ? 0 : Math.max(0, shared.memberTokenUsage);
-          const remainingCap = cap == null ? null : Math.max(0, cap - usage);
+          if (shared.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER') {
+            // ALLOCATED_PER_MEMBER: deduct from the member's individual sharedTokenBalance
+            const memberBalance = shared.memberAllocatedBalance;
 
-          const usageAfter = usage + amount;
-          const remainingAfter = cap == null ? null : Math.max(0, cap - usageAfter);
+            if (amount > memberBalance) {
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: 'insufficient_tokens',
+                  bucket: 'shared',
+                  required: amount,
+                  available: memberBalance,
+                  tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+                },
+              };
+            }
 
-          sharedCap = {
-            strategy: shared.memberCapStrategy,
-            cap,
-            usageBefore: usage,
-            usageAfter,
-            remainingBefore: remainingCap,
-            remainingAfter,
-            windowStart: windowExpired
-              ? null
-              : shared.memberTokenUsageWindowStart
-                ? shared.memberTokenUsageWindowStart.toISOString()
-                : null,
-            resetIntervalHours: resetHours,
-          };
+            if (shared.membershipId) {
+              const updated = await tx.organizationMembership.updateMany({
+                where: { id: shared.membershipId, status: 'ACTIVE', sharedTokenBalance: { gte: amount } },
+                data: { sharedTokenBalance: { decrement: amount } },
+              });
 
-          const softCapExceeded = shared.memberCapStrategy === 'SOFT' && cap != null && usageAfter > cap;
-          if (softCapExceeded) {
-            warnings = [
-              {
-                code: 'soft_cap_exceeded',
-                message: 'Member has exceeded their shared token cap (SOFT mode).',
-                cap,
-                usageBefore: usage,
-                usageAfter,
-              },
-            ];
-          }
+              if (!updated.count) {
+                return {
+                  status: 409,
+                  body: {
+                    ok: false,
+                    error: 'insufficient_tokens',
+                    bucket: 'shared',
+                    required: amount,
+                    available: memberBalance,
+                    tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+                  },
+                };
+              }
+            } else {
+              return {
+                status: 400,
+                body: { ok: false, error: 'no_membership_for_allocated_strategy' },
+              };
+            }
+          } else {
+            // SHARED_FOR_ORG (default): deduct from organization pool with cap logic
+            const poolBalance = shared.poolBalance;
+            const cap = shared.effectiveMemberCap;
+            const resetHours = shared.memberCapResetIntervalHours;
+            const now = Date.now();
+            const windowStartMs = shared.memberTokenUsageWindowStart ? shared.memberTokenUsageWindowStart.getTime() : null;
+            const windowExpired =
+              resetHours != null &&
+              (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
+            const usage = windowExpired ? 0 : Math.max(0, shared.memberTokenUsage);
+            const remainingCap = cap == null ? null : Math.max(0, cap - usage);
 
-          const hardCapEnabled = shared.memberCapStrategy === 'HARD' && cap != null;
-          const capAvailable = cap == null ? poolBalance : Math.min(poolBalance, remainingCap ?? 0);
-          const spendAllowedByCap = hardCapEnabled ? amount <= capAvailable : amount <= poolBalance;
+            const usageAfter = usage + amount;
+            const remainingAfter = cap == null ? null : Math.max(0, cap - usageAfter);
 
-          if (!spendAllowedByCap) {
-            return {
-              status: 409,
-              body: {
-                ok: false,
-                error: 'insufficient_tokens',
-                bucket: 'shared',
-                required: amount,
-                available: hardCapEnabled ? capAvailable : poolBalance,
-                poolAvailable: poolBalance,
-                memberCap: cap,
-                memberUsage: usage,
-                memberRemainingCap: remainingCap,
-                capStrategy: shared.memberCapStrategy,
-              },
+            sharedCap = {
+              strategy: shared.memberCapStrategy,
+              cap,
+              usageBefore: usage,
+              usageAfter,
+              remainingBefore: remainingCap,
+              remainingAfter,
+              windowStart: windowExpired
+                ? null
+                : shared.memberTokenUsageWindowStart
+                  ? shared.memberTokenUsageWindowStart.toISOString()
+                  : null,
+              resetIntervalHours: resetHours,
             };
-          }
 
-          const updated = await tx.organization.updateMany({
-            where: { id: shared.organizationId, tokenBalance: { gte: amount } },
-            data: { tokenBalance: { decrement: amount } },
-          });
+            const softCapExceeded = shared.memberCapStrategy === 'SOFT' && cap != null && usageAfter > cap;
+            if (softCapExceeded) {
+              warnings = [
+                {
+                  code: 'soft_cap_exceeded',
+                  message: 'Member has exceeded their shared token cap (SOFT mode).',
+                  cap,
+                  usageBefore: usage,
+                  usageAfter,
+                },
+              ];
+            }
 
-          if (!updated.count) {
-            return {
-              status: 409,
-              body: {
-                ok: false,
-                error: 'insufficient_tokens',
-                bucket: 'shared',
-                required: amount,
-                available: hardCapEnabled ? capAvailable : poolBalance,
-                poolAvailable: poolBalance,
-                memberCap: cap,
-                memberUsage: usage,
-                memberRemainingCap: remainingCap,
-                capStrategy: shared.memberCapStrategy,
-              },
-            };
-          }
+            const hardCapEnabled = shared.memberCapStrategy === 'HARD' && cap != null;
+            const capAvailable = cap == null ? poolBalance : Math.min(poolBalance, remainingCap ?? 0);
+            const spendAllowedByCap = hardCapEnabled ? amount <= capAvailable : amount <= poolBalance;
 
-          // Update per-member usage window tracking.
-          const nextWindowStart = windowExpired || !shared.memberTokenUsageWindowStart ? new Date() : shared.memberTokenUsageWindowStart;
-          const usageUpdate = windowExpired
-            ? { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: amount }
-            : { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: { increment: amount } };
+            if (!spendAllowedByCap) {
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: 'insufficient_tokens',
+                  bucket: 'shared',
+                  required: amount,
+                  available: hardCapEnabled ? capAvailable : poolBalance,
+                  poolAvailable: poolBalance,
+                  memberCap: cap,
+                  memberUsage: usage,
+                  memberRemainingCap: remainingCap,
+                  capStrategy: shared.memberCapStrategy,
+                },
+              };
+            }
 
-          if (shared.membershipId) {
-            await tx.organizationMembership.updateMany({
-              where: { id: shared.membershipId, status: 'ACTIVE' },
-              data: usageUpdate,
+            const updated = await tx.organization.updateMany({
+              where: { id: shared.organizationId, tokenBalance: { gte: amount } },
+              data: { tokenBalance: { decrement: amount } },
             });
+
+            if (!updated.count) {
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: 'insufficient_tokens',
+                  bucket: 'shared',
+                  required: amount,
+                  available: hardCapEnabled ? capAvailable : poolBalance,
+                  poolAvailable: poolBalance,
+                  memberCap: cap,
+                  memberUsage: usage,
+                  memberRemainingCap: remainingCap,
+                  capStrategy: shared.memberCapStrategy,
+                },
+              };
+            }
+
+            // Update per-member usage window tracking.
+            const nextWindowStart = windowExpired || !shared.memberTokenUsageWindowStart ? new Date() : shared.memberTokenUsageWindowStart;
+            const usageUpdate = windowExpired
+              ? { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: amount }
+              : { memberTokenUsageWindowStart: nextWindowStart, memberTokenUsage: { increment: amount } };
+
+            if (shared.membershipId) {
+              await tx.organizationMembership.updateMany({
+                where: { id: shared.membershipId, status: 'ACTIVE' },
+                data: usageUpdate,
+              });
+            }
           }
         }
 

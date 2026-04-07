@@ -590,13 +590,21 @@ When a user belongs to a team plan, the organization has its own token system:
 
 | Field | Purpose |
 |---|---|
-| `Organization.tokenBalance` | Shared token pool for the team |
-| `Organization.tokenPoolStrategy` | Strategy for pool management (default: `SHARED_FOR_ORG`) |
-| `Organization.memberTokenCap` | Maximum tokens any single member can consume |
-| `Organization.memberCapStrategy` | `SOFT` (warn) or `HARD` (block) enforcement |
-| `Organization.memberCapResetIntervalHours` | How often member usage windows reset |
+| `Organization.tokenBalance` | Shared workspace balance used by `SHARED_FOR_ORG` workspaces |
+| `Organization.tokenPoolStrategy` | Workspace token mode: `SHARED_FOR_ORG` or `ALLOCATED_PER_MEMBER` |
+| `Organization.memberTokenCap` | Optional per-member limit for shared-pool workspaces |
+| `Organization.memberCapStrategy` | `SOFT`, `HARD`, or `DISABLED` enforcement for shared-pool workspaces |
+| `Organization.memberCapResetIntervalHours` | How often shared-pool member usage windows reset |
+| `OrganizationMembership.sharedTokenBalance` | Per-member allocated balance used by `ALLOCATED_PER_MEMBER` workspaces |
 | `OrganizationMembership.memberTokenUsage` | Per-member usage tracking within the window |
 | `OrganizationMembership.memberTokenCapOverride` | Per-member cap exception |
+
+SaaSyBase now supports two distinct team token strategies:
+
+- `SHARED_FOR_ORG`: the workspace has one shared balance and optional per-member cap rules.
+- `ALLOCATED_PER_MEMBER`: each active member gets their own balance on `OrganizationMembership.sharedTokenBalance`, and shared-pool cap management is hidden in the dashboard because it does not apply.
+
+Token grants, renewals, one-time top-ups, and pending-activation flows all branch on the effective team strategy.
 
 ### Other Internal Endpoints
 
@@ -616,8 +624,10 @@ When a user belongs to a team plan, the organization has its own token system:
 Team subscriptions provision managed organizations and keep them in sync with billing status.
 
 - **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to the active auth provider when that provider supports organization primitives. In practice, that means an active team plan whose plan has `supportsOrganizations: true` and is not in a proration-pending state.
+- **Token strategies:** Team plans can use either a shared workspace pool or allocated-per-member balances. The effective dashboard strategy follows the attached team plan so older organizations with legacy defaults still render correctly.
+- **Member entitlements:** When a workspace uses `ALLOCATED_PER_MEMBER`, joining members receive the plan token allowance in their membership balance, renewals reset those balances, and top-ups/extensions credit each active member instead of the org pool.
 - **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses, the helper dismantles the organization and clears member access.
-- **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, and provisioning refresh.
+- **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, provisioning refresh, strategy-aware balance labels, and shared-pool cap controls that only appear when the workspace actually uses `SHARED_FOR_ORG`.
 - **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
 - **API routes:** `/api/team/invite`, `/api/team/invite/revoke`, `/api/team/members/remove`, `/api/team/summary`, `/api/team/provision`, `/api/team/settings`.
 - **Clerk webhook sync:** `organization.*`, `organizationMembership.*`, and `organizationInvitation.*` events are handled in `/api/webhooks/clerk` to keep Prisma and Clerk in sync.
@@ -629,7 +639,7 @@ Plan {
   scope              String  @default("INDIVIDUAL") // "INDIVIDUAL" or "TEAM"
   supportsOrganizations  Boolean @default(false)
   organizationSeatLimit  Int?
-  organizationTokenPoolStrategy String? @default("SHARED_FOR_ORG")
+  organizationTokenPoolStrategy String? @default("SHARED_FOR_ORG") // or "ALLOCATED_PER_MEMBER"
   minSeats / maxSeats / seatPriceCents  // Seat-based pricing
 }
 ```

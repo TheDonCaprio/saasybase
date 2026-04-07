@@ -272,6 +272,8 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
 
   const tokenLabel = (organization?.planTokenName?.trim() || 'tokens').toLowerCase();
   const tokenLabelTitle = tokenLabel.charAt(0).toUpperCase() + tokenLabel.slice(1);
+  const isSharedPoolStrategy = organization?.tokenPoolStrategy === 'SHARED_FOR_ORG';
+  const tokenPoolLabel = isSharedPoolStrategy ? 'Shared pool' : 'Per-member allocation';
 
   useEffect(() => {
     setState(initialState);
@@ -521,8 +523,8 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
           <div className={dashboardMutedPanelClass('p-4 text-sm text-slate-600 dark:text-neutral-300')}>
             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Token pool</p>
             <div className="flex items-center justify-between">
-              <p className="text-base font-semibold text-slate-900 dark:text-neutral-100">{organization.tokenPoolStrategy}</p>
-              {isOwner && (
+              <p className="text-base font-semibold text-slate-900 dark:text-neutral-100">{tokenPoolLabel}</p>
+              {isOwner && isSharedPoolStrategy && (
                 <button
                   onClick={() => setShowCapsModal(true)}
                   className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
@@ -558,6 +560,7 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
           </div>
           <TeamMembersList
             members={organization.members}
+            tokenPoolStrategy={organization.tokenPoolStrategy}
             currentUserId={viewer.id}
             busyAction={busyAction}
             canManageMembers={canManageMembers}
@@ -607,17 +610,19 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
         </section>
       </div>
 
+      {organization && isSharedPoolStrategy && (
+        <SharedTokenCapsModal
+          isOpen={showCapsModal}
+          onClose={() => setShowCapsModal(false)}
+          organization={organization}
+          onUpdateCaps={handleUpdateCaps}
+          busyAction={busyAction}
+          tokenLabel={tokenLabel}
+          tokenLabelTitle={tokenLabelTitle}
+        />
+      )}
       {organization && (
         <>
-          <SharedTokenCapsModal
-            isOpen={showCapsModal}
-            onClose={() => setShowCapsModal(false)}
-            organization={organization}
-            onUpdateCaps={handleUpdateCaps}
-            busyAction={busyAction}
-            tokenLabel={tokenLabel}
-            tokenLabelTitle={tokenLabelTitle}
-          />
           <InviteTeammatesModal
             isOpen={showInviteModal}
             onClose={() => {

@@ -1,6 +1,6 @@
 import { prisma } from '../prisma';
 import { Logger } from '../logger';
-import { creditOrganizationSharedTokens } from '../teams';
+import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens } from '../teams';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import { getDefaultTokenLabel } from '../settings';
 import { toError } from '../runtime-guards';
@@ -38,7 +38,7 @@ export async function processOneTimeRecurringTopup(params: {
         ? organizationContext
         : null;
 
-    let topupDestination: 'user_balance' | 'workspace_shared' | null = null;
+    let topupDestination: 'user_balance' | 'workspace_shared' | 'workspace_per_member' | null = null;
     let topupWorkspaceId: string | null = null;
 
     await prisma.$transaction(async (tx) => {
@@ -85,12 +85,22 @@ export async function processOneTimeRecurringTopup(params: {
 
             if (workspaceTopupContext) {
                 topupWorkspaceId = workspaceTopupContext.organization.id;
-                await creditOrganizationSharedTokens({
-                    organizationId: workspaceTopupContext.organization.id,
-                    amount: tokensAdded,
-                    tx,
-                });
-                topupDestination = 'workspace_shared';
+                const strategy = (workspaceTopupContext.organization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
+                if (strategy === 'ALLOCATED_PER_MEMBER') {
+                    await creditAllocatedPerMemberTokens({
+                        organizationId: workspaceTopupContext.organization.id,
+                        amount: tokensAdded,
+                        tx,
+                    });
+                    topupDestination = 'workspace_per_member';
+                } else {
+                    await creditOrganizationSharedTokens({
+                        organizationId: workspaceTopupContext.organization.id,
+                        amount: tokensAdded,
+                        tx,
+                    });
+                    topupDestination = 'workspace_shared';
+                }
             }
         }
     });

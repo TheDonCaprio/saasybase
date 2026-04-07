@@ -47,6 +47,10 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
+function formatTokenPoolStrategyLabel(strategy: string | null) {
+  return strategy === 'ALLOCATED_PER_MEMBER' ? 'Per-member allocation' : 'Shared pool';
+}
+
 type PageInfo = {
   page: number;
   limit: number;
@@ -272,6 +276,9 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                     <div>
                       <span className="font-semibold text-slate-900 dark:text-neutral-100">{formatNumber(org.tokenBalance)}</span> tokens
                     </div>
+                    <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                      {formatTokenPoolStrategyLabel(org.tokenPoolStrategy)}
+                    </div>
                     {org.pendingInvites > 0 && (
                       <div>
                         <span className="font-semibold text-slate-900 dark:text-neutral-100">{formatNumber(org.pendingInvites)}</span> invites
@@ -316,7 +323,7 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-900 dark:text-neutral-50">{formatNumber(org.tokenBalance)}</div>
-                        <div className="text-xs text-slate-500 dark:text-neutral-400">{org.tokenPoolStrategy ?? 'SHARED_FOR_ORG'}</div>
+                        <div className="text-xs text-slate-500 dark:text-neutral-400">{formatTokenPoolStrategyLabel(org.tokenPoolStrategy)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-900 dark:text-neutral-50">{org.memberTokenCap ?? 'Unlimited'}</div>

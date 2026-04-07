@@ -49,6 +49,16 @@ type Identifiers = {
 	organizationSlug?: string | null;
 };
 
+const VALID_TOKEN_POOL_STRATEGIES = new Set(['SHARED_FOR_ORG', 'ALLOCATED_PER_MEMBER']);
+
+function normalizeTokenPoolStrategy(strategy?: string | null) {
+	const normalized = strategy?.trim().toUpperCase();
+	if (!normalized || !VALID_TOKEN_POOL_STRATEGIES.has(normalized)) {
+		return null;
+	}
+	return normalized as 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
+}
+
 function coerceDate(value?: Date | string | number | null): Date | null {
 	if (!value) return null;
 	if (value instanceof Date) return value;
@@ -132,13 +142,14 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 		const existing = await prisma.organization.findUnique({ where: { clerkOrganizationId: providerOrganizationId } });
 		if (existing) {
 			const updateData: Record<string, unknown> = {};
+			const normalizedTokenPoolStrategy = normalizeTokenPoolStrategy(snapshot.tokenPoolStrategy);
 			if (snapshot.name) updateData.name = snapshot.name;
 			if (snapshot.slug) updateData.slug = snapshot.slug;
 			if (snapshot.ownerUserId) updateData.ownerUserId = snapshot.ownerUserId;
 			if (snapshot.billingEmail !== undefined) updateData.billingEmail = snapshot.billingEmail;
 			if (snapshot.planId !== undefined) updateData.planId = snapshot.planId;
 			if (snapshot.seatLimit !== undefined && snapshot.seatLimit !== null) updateData.seatLimit = snapshot.seatLimit;
-			updateData.tokenPoolStrategy = 'SHARED_FOR_ORG';
+			if (normalizedTokenPoolStrategy) updateData.tokenPoolStrategy = normalizedTokenPoolStrategy;
 			// Set tokenBalance if provided in snapshot
 			if (snapshot.tokenBalance !== undefined && snapshot.tokenBalance !== null) {
 				updateData.tokenBalance = snapshot.tokenBalance;
@@ -166,7 +177,7 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 				billingEmail: snapshot.billingEmail ?? null,
 				planId: snapshot.planId ?? null,
 				seatLimit: snapshot.seatLimit ?? null,
-				tokenPoolStrategy: 'SHARED_FOR_ORG',
+				tokenPoolStrategy: normalizeTokenPoolStrategy(snapshot.tokenPoolStrategy) ?? 'SHARED_FOR_ORG',
 				// Initialize tokenBalance from snapshot, default to 0 if not provided
 				tokenBalance: snapshot.tokenBalance ?? 0,
 			},
@@ -372,9 +383,31 @@ export async function markInviteAccepted(token: string, userId?: string) {
 export async function provisionMemberEntitlements(userId: string, organizationId: string | undefined | null) {
 	if (!userId || !organizationId) return null;
 
-	// Fixed Pool Strategy: We do NOT add tokens when a member joins.
+	const db = getDB();
+	const org = await db.organization.findUnique({
+		where: { id: organizationId },
+		select: {
+			tokenPoolStrategy: true,
+			plan: { select: { tokenLimit: true } },
+		},
+	});
+
+	if (!org) return null;
+
+	const strategy = (org.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase();
+	if (strategy === 'ALLOCATED_PER_MEMBER') {
+		const tokenLimit = typeof org.plan?.tokenLimit === 'number' ? org.plan.tokenLimit : 0;
+		if (tokenLimit > 0) {
+			await db.organizationMembership.updateMany({
+				where: { userId, organizationId, status: 'ACTIVE' },
+				data: { sharedTokenBalance: tokenLimit },
+			});
+			return 'ALLOCATED_PER_MEMBER';
+		}
+	}
+
+	// SHARED_FOR_ORG (default): We do NOT add tokens when a member joins.
 	// The organization token limit is determined solely by the plan.
-	// This function is kept for future entitlements (e.g. per-user feature flags).
 	return 'SKIPPED_FIXED_POOL';
 }
 
@@ -406,9 +439,52 @@ export async function resetOrganizationSharedTokens(opts: { organizationId: stri
 			where: { id: organizationId },
 			data: { tokenBalance: 0 },
 		});
+		// Also reset per-member balances for ALLOCATED_PER_MEMBER strategy
+		await db.organizationMembership.updateMany({
+			where: { organizationId, status: 'ACTIVE' },
+			data: { sharedTokenBalance: 0 },
+		});
 		return true;
 	} catch (err: unknown) {
 		Logger.warn('resetOrganizationSharedTokens failed', { organizationId, error: toError(err).message });
+		return false;
+	}
+}
+
+/**
+ * Credit tokens to all active members for ALLOCATED_PER_MEMBER strategy.
+ * Each active member receives `amount` tokens added to their sharedTokenBalance.
+ */
+export async function creditAllocatedPerMemberTokens(opts: { organizationId: string; amount: number; tx?: Prisma.TransactionClient }) {
+	const { organizationId, amount, tx } = opts;
+	if (!organizationId || !Number.isFinite(amount) || amount <= 0) {
+		return false;
+	}
+	const db = getDB(tx);
+	const result = await db.organizationMembership.updateMany({
+		where: { organizationId, status: 'ACTIVE' },
+		data: { sharedTokenBalance: { increment: amount } },
+	});
+	Logger.info('creditAllocatedPerMemberTokens', { organizationId, amount, membersUpdated: result.count });
+	return true;
+}
+
+/**
+ * Reset per-member balances and re-credit for ALLOCATED_PER_MEMBER strategy (renewal).
+ */
+export async function resetAllocatedPerMemberTokens(opts: { organizationId: string; amount: number; tx?: Prisma.TransactionClient }) {
+	const { organizationId, amount, tx } = opts;
+	if (!organizationId) return false;
+	const db = getDB(tx);
+	try {
+		await db.organizationMembership.updateMany({
+			where: { organizationId, status: 'ACTIVE' },
+			data: { sharedTokenBalance: amount },
+		});
+		Logger.info('resetAllocatedPerMemberTokens', { organizationId, newBalance: amount });
+		return true;
+	} catch (err: unknown) {
+		Logger.warn('resetAllocatedPerMemberTokens failed', { organizationId, error: toError(err).message });
 		return false;
 	}
 }

@@ -49,6 +49,17 @@ import { POST } from '../app/api/user/spend-tokens/route';
 describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getAuthSafeMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_clerk_123' });
+
+    txMock.user.findUnique.mockReset();
+    txMock.user.updateMany.mockReset();
+    txMock.subscription.findFirst.mockReset();
+    txMock.organizationMembership.findFirst.mockReset();
+    txMock.organizationMembership.updateMany.mockReset();
+    txMock.organization.findFirst.mockReset();
+    txMock.organization.updateMany.mockReset();
+    txMock.organization.findUnique.mockReset();
+    txMock.featureUsageLog.create.mockReset();
 
     txMock.user.findUnique
       .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 0, freeTokenBalance: 0 })
@@ -220,7 +231,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
     const res = await POST(req);
     const body = await res.json();
 
-    expect(res.status).toBe(200);
+    expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body).toMatchObject({
       ok: true,
       bucket: 'free',
@@ -319,5 +330,63 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       amount: 3,
     });
     expect(txMock.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('spends from member allocation when the workspace uses ALLOCATED_PER_MEMBER', async () => {
+    txMock.user.findUnique.mockReset();
+    txMock.user.findUnique
+      .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 0, freeTokenBalance: 0 })
+      .mockResolvedValueOnce({ tokenBalance: 0, freeTokenBalance: 0 });
+
+    txMock.subscription.findFirst.mockReset();
+    txMock.subscription.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'sub_owner_1' });
+
+    txMock.organizationMembership.findFirst.mockResolvedValueOnce({
+      id: 'membership_alloc_1',
+      organizationId: 'org_db_1',
+      memberTokenCapOverride: null,
+      memberTokenUsageWindowStart: null,
+      memberTokenUsage: 0,
+      sharedTokenBalance: 25,
+      organization: {
+        id: 'org_db_1',
+        clerkOrganizationId: 'org_clerk_123',
+        ownerUserId: 'owner_1',
+        tokenBalance: 500,
+        tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+        memberTokenCap: 10,
+        memberCapStrategy: 'HARD',
+        memberCapResetIntervalHours: null,
+        ownerExemptFromCaps: false,
+        invites: [],
+      },
+    });
+
+    txMock.organizationMembership.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 7, bucket: 'shared', feature: 'allocated-shared-spend' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      bucket: 'shared',
+      amount: 7,
+      organizationId: 'org_db_1',
+    });
+
+    expect(txMock.organizationMembership.updateMany).toHaveBeenCalledWith({
+      where: { id: 'membership_alloc_1', status: 'ACTIVE', sharedTokenBalance: { gte: 7 } },
+      data: { sharedTokenBalance: { decrement: 7 } },
+    });
+    expect(txMock.organization.updateMany).not.toHaveBeenCalled();
   });
 });

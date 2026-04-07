@@ -87,6 +87,13 @@ export async function GET() {
   const sharedTokenBalance = getMemberSharedTokenBalance(organizationContext);
   const memberTokenCap = getEffectiveMemberTokenCap(organizationContext);
   const memberCapStrategy = getMemberCapStrategy(organizationContext);
+  const workspaceTokenPoolStrategy = organizationContext
+    ? ((organizationContext.effectivePlan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+      || organizationContext.organization.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER')
+        ? 'ALLOCATED_PER_MEMBER'
+        : 'SHARED_FOR_ORG')
+    : null;
   const organizationTokenName = organizationPlan?.tokenName?.trim() || defaultTokenLabel;
   const planSource = organizationContext ? 'ORGANIZATION' : subscription ? 'PERSONAL' : 'FREE';
   const hasPaidOrganizationPlan = organizationContext ? Number(organizationPlan?.priceCents ?? 0) > 0 : false;
@@ -167,7 +174,7 @@ export async function GET() {
           planName: organizationPlan?.name || 'Workspace Plan',
           tokenName: organizationTokenName,
           expiresAt: organizationExpiresAt,
-          tokenPoolStrategy: organizationContext.organization.tokenPoolStrategy,
+          tokenPoolStrategy: workspaceTokenPoolStrategy,
           memberTokenCap: organizationContext.organization.memberTokenCap,
           memberCapStrategy: organizationContext.organization.memberCapStrategy,
           memberCapResetIntervalHours: organizationContext.organization.memberCapResetIntervalHours,

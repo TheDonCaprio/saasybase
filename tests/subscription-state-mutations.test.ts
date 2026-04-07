@@ -17,9 +17,12 @@ vi.mock('../lib/organization-billing-metadata', () => ({
 vi.mock('../lib/teams', () => ({
   creditOrganizationSharedTokens: vi.fn(async () => undefined),
   resetOrganizationSharedTokens: vi.fn(async () => undefined),
+  creditAllocatedPerMemberTokens: vi.fn(async () => undefined),
+  resetAllocatedPerMemberTokens: vi.fn(async () => undefined),
 }));
 
-import { markSubscriptionActive } from '../lib/payment/subscription-state-mutations';
+import { applySubscriptionWebhookUpdate, markSubscriptionActive } from '../lib/payment/subscription-state-mutations';
+import { resetAllocatedPerMemberTokens } from '../lib/teams';
 
 describe('markSubscriptionActive', () => {
   beforeEach(() => {
@@ -53,5 +56,53 @@ describe('markSubscriptionActive', () => {
         }),
       }),
     );
+  });
+
+  it('resets per-member balances on team plan changes using ALLOCATED_PER_MEMBER', async () => {
+    const nextExpiresAt = new Date('2026-05-01T00:00:00.000Z');
+
+    prismaMock.subscription.update.mockResolvedValueOnce({
+      id: 'sub_team_1',
+      userId: 'user_1',
+      organizationId: 'org_1',
+      plan: {
+        id: 'plan_team_2',
+        autoRenew: true,
+        tokenLimit: 120,
+        supportsOrganizations: true,
+        organizationSeatLimit: 8,
+        organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+      },
+    });
+
+    const result = await applySubscriptionWebhookUpdate({
+      dbSub: {
+        id: 'sub_team_1',
+        userId: 'user_1',
+        status: 'ACTIVE',
+        expiresAt: new Date('2026-04-01T00:00:00.000Z'),
+        canceledAt: null,
+        cancelAtPeriodEnd: false,
+        planId: 'plan_team_1',
+        organizationId: 'org_1',
+        plan: {
+          id: 'plan_team_1',
+          autoRenew: true,
+          tokenLimit: 80,
+          supportsOrganizations: true,
+          organizationSeatLimit: 5,
+          organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+        },
+      } as never,
+      effectiveStatus: 'ACTIVE',
+      effectiveExpiresAt: nextExpiresAt,
+      nextCancelAtPeriodEnd: false,
+      nextCanceledAt: null,
+      nextPlanId: 'plan_team_2',
+      syncOrganizationEligibilityForUser: vi.fn(async () => undefined),
+    });
+
+    expect(result.plan.organizationTokenPoolStrategy).toBe('ALLOCATED_PER_MEMBER');
+    expect(resetAllocatedPerMemberTokens).toHaveBeenCalledWith({ organizationId: 'org_1', amount: 120 });
   });
 });

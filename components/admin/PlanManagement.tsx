@@ -72,7 +72,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'createdAt' | 'priceCents' | 'tokenLimit'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; active: boolean; sortOrder: number; externalPriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' };
+  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; active: boolean; sortOrder: number; externalPriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' };
   const [form, setForm] = useState<Form>({
     name: '',
     shortDescription: '',
@@ -345,7 +345,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       tokenName: plan.tokenName || '',
       supportsOrganizations: plan.supportsOrganizations === true,
       organizationSeatLimit: plan.organizationSeatLimit == null ? '' : String(plan.organizationSeatLimit),
-      organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      organizationTokenPoolStrategy: (plan.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER' ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG'),
     });
     setAdvancedBillingOverrideOpen(false);
     setPriceDisplay((plan.priceCents / 100).toFixed(2));
@@ -399,7 +399,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       tokenName: plan.tokenName || '',
       supportsOrganizations: plan.supportsOrganizations === true,
       organizationSeatLimit: plan.organizationSeatLimit == null ? '' : String(plan.organizationSeatLimit),
-      organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      organizationTokenPoolStrategy: (plan.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER' ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG'),
     });
     setAdvancedBillingOverrideOpen(false);
     setPriceDisplay((plan.priceCents / 100).toFixed(2));
@@ -419,7 +419,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
           !form.supportsOrganizations || form.organizationSeatLimit === ''
             ? null
             : Number(form.organizationSeatLimit),
-        organizationTokenPoolStrategy: form.supportsOrganizations ? 'SHARED_FOR_ORG' : null,
+        organizationTokenPoolStrategy: form.supportsOrganizations ? form.organizationTokenPoolStrategy : null,
       };
       if (editingPlanId) {
         const res = await fetch(`/api/admin/plans/${editingPlanId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -604,7 +604,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                     {plan.supportsOrganizations ? (
                       <span className="rounded-full bg-violet-100 px-2 py-1 text-violet-700 dark:bg-violet-500/10 dark:text-violet-100">
                         Seats: {plan.organizationSeatLimit != null ? formatNumber(plan.organizationSeatLimit) : 'Unlimited'} ·{' '}
-                        {plan.supportsOrganizations ? 'Shared pool' : '—'}
+                        {plan.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER' ? 'Per-member' : 'Shared pool'}
                       </span>
                     ) : null}
                   </div>
@@ -748,7 +748,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       {plan.supportsOrganizations ? (
                         <div className="text-xs text-violet-500 dark:text-violet-200">
                           Seats: {plan.organizationSeatLimit != null ? formatNumber(plan.organizationSeatLimit) : 'Unlimited'} ·{' '}
-                          {plan.supportsOrganizations ? 'Shared pool' : '—'}
+                          {plan.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER' ? 'Per-member' : 'Shared pool'}
                         </div>
                       ) : null}
                     </div>
@@ -1186,10 +1186,19 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
 
                       <div>
                         <label className="block text-sm text-neutral-300 mb-1">Token pool strategy</label>
-                        <div className="w-full p-2.5 bg-neutral-900 border border-neutral-800 rounded text-neutral-200 text-sm">
-                          Shared workspace pool (default)
-                        </div>
-                        <p className="text-xs text-neutral-400 mt-1">Tokens always flow into a shared workspace pool for team plans.</p>
+                        <select
+                          value={form.organizationTokenPoolStrategy}
+                          onChange={(e) => setForm({ ...form, organizationTokenPoolStrategy: e.target.value as Form['organizationTokenPoolStrategy'] })}
+                          className="w-full p-2.5 bg-neutral-900 border border-neutral-800 rounded text-neutral-200 text-sm"
+                        >
+                          <option value="SHARED_FOR_ORG">Shared workspace pool</option>
+                          <option value="ALLOCATED_PER_MEMBER">Allocated per member</option>
+                        </select>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {form.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+                            ? 'Each member receives their own token allocation equal to the plan token limit.'
+                            : 'Each member spends from a shared organization token pool with a combined limit.'}
+                        </p>
                       </div>
                     </div>
                   </div>

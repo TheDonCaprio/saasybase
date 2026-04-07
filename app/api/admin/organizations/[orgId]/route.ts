@@ -9,8 +9,8 @@ import type { Prisma } from '@/lib/prisma-client';
 
 const adminOrganizationInclude = {
   owner: { select: { id: true, name: true, email: true } },
-  plan: { select: { id: true, name: true } },
-  memberships: { select: { id: true, status: true } },
+  plan: { select: { id: true, name: true, tokenLimit: true, organizationTokenPoolStrategy: true } },
+  memberships: { select: { id: true, status: true, sharedTokenBalance: true, memberTokenUsage: true } },
   invites: { select: { id: true, status: true } }
 } satisfies Prisma.OrganizationInclude;
 
@@ -18,7 +18,24 @@ type AdminOrganizationRecord = Prisma.OrganizationGetPayload<{
   include: typeof adminOrganizationInclude;
 }>;
 
+const VALID_TOKEN_POOL_STRATEGIES = new Set(['SHARED_FOR_ORG', 'ALLOCATED_PER_MEMBER']);
+
 function buildOrgPayload(org: AdminOrganizationRecord) {
+  const effectiveTokenPoolStrategy = org.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    || org.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    ? 'ALLOCATED_PER_MEMBER'
+    : 'SHARED_FOR_ORG';
+  const planTokenLimit = typeof org.plan?.tokenLimit === 'number' ? org.plan.tokenLimit : null;
+  const effectiveTokenBalance = effectiveTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+    ? org.memberships
+      .filter((membership) => membership.status === 'ACTIVE')
+      .reduce((sum, membership) => {
+        const actualBalance = Math.max(0, Number(membership.sharedTokenBalance ?? 0));
+        const usage = Math.max(0, Number(membership.memberTokenUsage ?? 0));
+        return sum + (actualBalance > 0 || planTokenLimit == null ? actualBalance : Math.max(0, planTokenLimit - usage));
+      }, 0)
+    : Math.max(0, Number(org.tokenBalance ?? 0));
+
   return {
     id: org.id,
     name: org.name,
@@ -26,11 +43,11 @@ function buildOrgPayload(org: AdminOrganizationRecord) {
     billingEmail: org.billingEmail,
     plan: org.plan ? { id: org.plan.id, name: org.plan.name } : null,
     owner: org.owner ? { id: org.owner.id, name: org.owner.name, email: org.owner.email } : null,
-    tokenBalance: org.tokenBalance,
+    tokenBalance: effectiveTokenBalance,
     memberTokenCap: org.memberTokenCap,
     memberCapStrategy: org.memberCapStrategy,
     memberCapResetIntervalHours: org.memberCapResetIntervalHours,
-    tokenPoolStrategy: org.tokenPoolStrategy,
+    tokenPoolStrategy: effectiveTokenPoolStrategy,
     seatLimit: org.seatLimit,
     ownerExemptFromCaps: org.ownerExemptFromCaps,
     stats: {
@@ -84,6 +101,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ o
     if (!rl.allowed) {
       const retryAfterSeconds = Math.max(0, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
+    }
+
+    const existingOrganization = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { id: true, tokenPoolStrategy: true }
+    });
+
+    if (!existingOrganization) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
     const body = asRecord(await request.json()) ?? {};
@@ -167,11 +193,12 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ o
 
     if (typeof body.tokenPoolStrategy === 'string') {
       const normalized = body.tokenPoolStrategy.trim().toUpperCase();
-      if (normalized.length === 0) {
-        return NextResponse.json({ error: 'Token pool strategy cannot be empty' }, { status: 400 });
+      if (!VALID_TOKEN_POOL_STRATEGIES.has(normalized)) {
+        return NextResponse.json({ error: 'Invalid token pool strategy' }, { status: 400 });
       }
-      data.tokenPoolStrategy = normalized;
-      changes.tokenPoolStrategy = normalized;
+      if (normalized !== existingOrganization.tokenPoolStrategy) {
+        return NextResponse.json({ error: 'Token pool strategy cannot be changed on an existing organization' }, { status: 400 });
+      }
     }
 
     if (body.hasOwnProperty('ownerExemptFromCaps')) {

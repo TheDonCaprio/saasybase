@@ -104,6 +104,11 @@ export async function GET() {
         response.expiresAt = sub.expiresAt;
         response.status = sub.status;
       } else if (organizationPlan) {
+        const organizationTokenPoolStrategy = (
+          organizationPlan.organization.tokenPoolStrategy
+          || organizationPlan.organization.plan?.organizationTokenPoolStrategy
+          || 'SHARED_FOR_ORG'
+        ).toUpperCase();
         response.active = true;
         response.source = 'organization';
         response.plan = organizationPlan.organization.plan?.name ?? 'Team Plan';
@@ -111,7 +116,7 @@ export async function GET() {
           id: organizationPlan.organization.id,
           name: organizationPlan.organization.name,
           role: organizationPlan.role,
-          tokenPoolStrategy: 'SHARED_FOR_ORG',
+          tokenPoolStrategy: organizationTokenPoolStrategy,
           tokenBalance: organizationPlan.organization.tokenBalance ?? 0,
         };
       } else {

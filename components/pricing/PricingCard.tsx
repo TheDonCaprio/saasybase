@@ -1139,11 +1139,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 shadow-sm transition dark:border-white/5 dark:bg-white/[0.03]">
 
-
-
-        
           <div className="grid gap-3">
             {features.map((feature) => (
               <div
@@ -1157,7 +1153,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
               </div>
             ))}
           </div>
-        </div>
+
 
       </div>
 

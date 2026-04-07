@@ -1,6 +1,8 @@
 import './globals.css';
 import './clerk-overrides.css';
+import '@fortawesome/fontawesome-svg-core/styles.css';
 import React from 'react';
+import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';
 import AppAuthProvider from '../components/AppAuthProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';
 import { ToastContainer } from '../components/ui/Toast';
@@ -33,6 +35,8 @@ import TwitterLoader from '../components/twitter/TwitterLoader';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
+
+fontAwesomeConfig.autoAddCss = false;
 
 export const metadata = {
   title: process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME],

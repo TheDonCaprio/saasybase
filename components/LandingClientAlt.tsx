@@ -308,14 +308,14 @@ function DemoActionIconButton({
 function DashboardDemo() {
   const [demoView, setDemoView] = useState<DemoView>('finance');
   const [transitioning, setTransitioning] = useState(false);
-  const [tiltEnabled, setTiltEnabled] = useState(false);
+  const tiltDisabledRef = useRef(false);
   const tiltRef = useRef<HTMLDivElement>(null);
   const tiltInnerRef = useRef<HTMLDivElement>(null);
   const viewIdxRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setTiltEnabled(!shouldDisableLandingDemoTilt(window.navigator.userAgent));
+    tiltDisabledRef.current = shouldDisableLandingDemoTilt(window.navigator.userAgent);
   }, []);
 
   // auto-cycle views
@@ -360,7 +360,7 @@ function DashboardDemo() {
 
   // 3D tilt — direct DOM update to avoid per-mousemove re-renders
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!tiltEnabled) return;
+    if (tiltDisabledRef.current) return;
     const rect = tiltRef.current?.getBoundingClientRect();
     if (!rect || !tiltInnerRef.current) return;
     const dxRaw = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
@@ -371,7 +371,7 @@ function DashboardDemo() {
     tiltInnerRef.current.style.transform = `perspective(450px) rotateX(${dy * -2.2}deg) rotateY(${dx * 2.2}deg) scale(1)`;
   };
   const handleMouseLeave = () => {
-    if (!tiltEnabled) return;
+    if (tiltDisabledRef.current) return;
     if (tiltInnerRef.current) {
       tiltInnerRef.current.style.transition = 'transform 260ms ease-out';
       tiltInnerRef.current.style.transform = 'perspective(450px) rotateX(0deg) rotateY(0deg) scale(1)';
@@ -399,8 +399,8 @@ function DashboardDemo() {
   return (
     <div
       ref={tiltRef}
-      onMouseMove={tiltEnabled ? handleMouseMove : undefined}
-      onMouseLeave={tiltEnabled ? handleMouseLeave : undefined}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       style={{ position: 'relative', maxWidth: 1220, margin: '0 auto' }}
     >
       {/* outward ambient glow */}
@@ -413,11 +413,11 @@ function DashboardDemo() {
       {/* 3D tilt wrapper */}
       <div ref={tiltInnerRef} className="lp-dd-tilt" style={{
         position: 'relative', zIndex: 1,
-        transition: tiltEnabled ? 'transform 260ms ease-out' : undefined,
-        willChange: tiltEnabled ? 'transform' : undefined,
-        transformStyle: tiltEnabled ? 'preserve-3d' : undefined,
-        backfaceVisibility: tiltEnabled ? 'hidden' : undefined,
-        WebkitBackfaceVisibility: tiltEnabled ? 'hidden' : undefined,
+        transition: 'transform 260ms ease-out',
+        willChange: 'transform',
+        transformStyle: 'preserve-3d',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
       }}>
         <div style={{
           borderRadius: 16, overflow: 'hidden',
@@ -465,7 +465,7 @@ function DashboardDemo() {
             {/* sidebar */}
             <nav className="lp-dd-sidebar" style={{ width: 190, background: 'var(--lp-dd-sidebar-bg)', borderRight: '1px solid var(--lp-dd-sidebar-border)', padding: '12px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden', boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.04)' }}>
               {/* Brand */}
-              <div style={{ padding: '0 14px 10px', fontSize: 13, fontWeight: 700, color: 'var(--lp-dd-brand)', letterSpacing: 0.3 }}>SaasyBase</div>
+
               {/* ADMIN section label */}
               <div style={{ padding: '2px 14px 3px', fontSize: 9, fontWeight: 700, color: 'var(--lp-dd-col-hdr)', letterSpacing: 1, textTransform: 'uppercase' }}>ADMIN</div>
               {/* Overview */}

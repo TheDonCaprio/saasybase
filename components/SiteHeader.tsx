@@ -39,20 +39,50 @@ export function SiteHeader({
   layout: HeaderLayoutSettings;
 }) {
   const [isSticky, setIsSticky] = useState(false);
+  const [headerBlurPx, setHeaderBlurPx] = useState<number | null>(null);
+  const [stickyHeaderBlurPx, setStickyHeaderBlurPx] = useState<number | null>(null);
   const stickyActive = layout.stickyEnabled && isSticky;
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const syncBlurValues = () => {
+      const computedStyle = window.getComputedStyle(root);
+      const readBlur = (variableName: string) => {
+        const rawValue = computedStyle.getPropertyValue(variableName).trim();
+        const numericValue = Number.parseFloat(rawValue);
+        return Number.isFinite(numericValue) ? numericValue : null;
+      };
+
+      setHeaderBlurPx(readBlur('--theme-header-blur'));
+      setStickyHeaderBlurPx(readBlur('--theme-sticky-header-blur'));
+    };
+
+    syncBlurValues();
+
+    const observer = new MutationObserver(syncBlurValues);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const stickyStyles = stickyActive
     ? {
         backgroundColor: 'var(--theme-sticky-header-bg)',
         color: 'var(--theme-sticky-header-text)',
-        backdropFilter: 'blur(var(--theme-sticky-header-blur))',
+        backdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
+        WebkitBackdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
         borderBottom: 'var(--theme-sticky-header-border-width) solid var(--theme-sticky-header-border)',
         boxShadow: 'var(--theme-sticky-header-shadow)',
       }
     : {
         backgroundColor: 'var(--theme-header-bg)',
         color: 'var(--theme-header-text)',
-        backdropFilter: 'blur(var(--theme-header-blur))',
+        backdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
+        WebkitBackdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
         borderBottom: 'var(--theme-header-border-width) solid var(--theme-header-border)',
         boxShadow: 'var(--theme-header-shadow)',
       };

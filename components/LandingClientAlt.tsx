@@ -68,13 +68,6 @@ const FAKE_USERS = [
   { email: 'liam@demo.com',   name: 'Liam Walker',     role: 'USER',  plan: 'Business', status: 'Active', joined: 'Nov 28, 2025', payments: 33, avatarBg: '#10b981' },
 ];
 
-const USER_STATS = [
-  { label: 'TOTAL USERS',        value: '19', sub: '+5 in 7 days',           faIcon: faUsers,       iconBg: 'rgba(59,130,246,0.18)',  iconColor: '#3b82f6' },
-  { label: 'NEW USERS TODAY',    value: '2', sub: '7 this month',            faIcon: faArrowsRotate,iconBg: 'rgba(16,185,129,0.18)', iconColor: '#10b981' },
-  { label: 'TEAM ADMINS',        value: '2', sub: 'Users with admin role',   faIcon: faUsers,       iconBg: 'rgba(139,92,246,0.18)', iconColor: '#8b5cf6' },
-  { label: 'RENEWALS IN 14 DAYS',value: '4', sub: 'Upcoming expirations',    faIcon: faTicket,      iconBg: 'rgba(251,191,36,0.18)', iconColor: '#d97706' },
-];
-
 const FINANCE_SUBMENU = [
   { label: 'Transactions',   view: 'finance' as DemoView | null, badge: 122, icon: faFileLines },
   { label: 'One-Time Sales', view: null,                          badge: null, icon: faDollarSign },
@@ -139,13 +132,6 @@ const TECH_STACK_ICONS: Array<
   { label: 'Vitest', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.93 4H22l-6.24 16h-3.07L18.93 4Z" fill="#FBBF24"/><path d="M8.24 4h3.07l4.46 16h-3.07L8.24 4Z" fill="#A3E635"/><path d="M2 4h3.07l6.24 16H8.24L2 4Z" fill="#84CC16"/></svg>' },
   { label: 'Zod', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3068B7"/><path d="M7.5 8.2h9.1v1.8l-6.2 6h6.2v1.8H7.3V16l6.16-6H7.5V8.2Z" fill="white"/></svg>' },
   { label: 'Nodemailer', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="#10B981"/><path d="m6.5 8.5 5.5 4 5.5-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15h8" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>' },
-];
-
-const STATS = [
-  { label: 'MRR',           value: '$14,280', sub: '+12% this month',    faIcon: faDollarSign,  gradColor: '#10b981' },
-  { label: 'Active Users',  value: '1,204',   sub: '↑ 38 new today',     faIcon: faUsers,       gradColor: '#3b82f6' },
-  { label: 'Subscriptions', value: '847',     sub: '91% retention',      faIcon: faArrowsRotate,gradColor: '#8b5cf6' },
-  { label: 'Open Tickets',  value: '7',       sub: 'avg < 2hr response',  faIcon: faTicket,      gradColor: '#f59e0b' },
 ];
 
 const PROVIDER_NAMES = ['stripe', 'razorpay', 'paystack', 'paddle'];
@@ -231,8 +217,9 @@ function RoleBadge({ role }: { role: 'USER' | 'ADMIN' }) {
       background: isAdmin ? 'rgba(99,102,241,0.15)' : 'rgba(107,114,128,0.12)',
       color: isAdmin ? '#818cf8' : 'rgba(156,163,175,1)',
       border: `1px solid ${isAdmin ? 'rgba(99,102,241,0.35)' : 'rgba(107,114,128,0.2)'}`,
-      borderRadius: 5, fontSize: 9, fontWeight: 700, padding: '2px 7px',
-      letterSpacing: 0.4, display: 'inline-block',
+      borderRadius: 5, fontSize: 8, lineHeight: 1, fontWeight: 700, padding: '2px 6px',
+      letterSpacing: 0.32, display: 'inline-flex', alignItems: 'center', minHeight: 18,
+      justifySelf: 'start', width: 'fit-content', maxWidth: 'fit-content',
     }}>{role}</span>
   );
 }
@@ -246,8 +233,8 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = map[status] ?? map.PENDING;
   return (
-    <span style={{ background: s.bg, color: s.text, borderRadius: 6, fontSize: 11, fontWeight: 600, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, display: 'inline-block' }} />
+    <span style={{ background: s.bg, color: s.text, borderRadius: 999, fontSize: 9.5, lineHeight: 1, fontWeight: 700, padding: '3px 7px', display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap', justifySelf: 'start', width: 'fit-content', maxWidth: 'fit-content' }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.dot, display: 'inline-block', flexShrink: 0 }} />
       {status}
     </span>
   );
@@ -386,6 +373,9 @@ function DashboardDemo() {
 
   const paidUsers = FAKE_USERS.filter((u) => u.plan !== 'None');
   const freeUsers = FAKE_USERS.filter((u) => u.plan === 'None');
+  const adminUsers = FAKE_USERS.filter((u) => u.role === 'ADMIN');
+  const successfulTransactions = FAKE_TRANSACTIONS.filter((tx) => tx.status === 'SUCCEEDED');
+  const refundedTransactions = FAKE_TRANSACTIONS.filter((tx) => tx.status === 'REFUNDED');
 
   const visitsToday = 982;
   const visitsYesterday = 935;
@@ -526,46 +516,27 @@ function DashboardDemo() {
             {/* ── Finance / Transactions view ── */}
             {demoView === 'finance' && (
               <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                {/* Gradient page banner */}
-                <div style={{ margin: '12px 14px 0', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--lp-dd-banner-border-users)', flexShrink: 0 }}>
-                <div style={{ background: 'var(--lp-dd-banner-bg-users)', padding: '12px 14px 14px' }}>
-                  <div className="lp-dd-banner-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <span style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '4px 10px', fontSize: 10, color: 'rgba(255,255,255,0.75)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />
-                        <FontAwesomeIcon icon={faCreditCard} style={{ width: 10, color: '#6366f1' }} />
-                        <span style={{ marginLeft: 6, fontWeight: 700, letterSpacing: 0.2, color: '#6366f1' }}>Finances</span>
-                      </span>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--lp-dd-banner-title)', letterSpacing: -0.5 }}>Transactions</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>Total Revenue</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--lp-dd-banner-chip-num)', lineHeight: 1.3 }}>$14,280</div>
-                      </div>
-                      <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>This Month</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--lp-dd-banner-free-num)', lineHeight: 1.3 }}>+12%</div>
-                      </div>
-                    </div>
-                  </div>
+                <div style={{ margin: '12px 14px 0' }}>
+                  <DashboardPageHeader
+                    eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Finances</span>}
+                    eyebrowIcon={<FontAwesomeIcon icon={faCreditCard} />}
+                    title="Transactions"
+                    description="Track payments, refunds, and provider activity in one stream."
+                    copyClassName="space-y-1"
+                    descriptionClassName="text-[13px] leading-5"
+                    stats={[
+                      { label: 'Succeeded', value: successfulTransactions.length.toLocaleString('en-US'), helper: 'Captured payments' },
+                      { label: 'Refunded', value: refundedTransactions.length.toLocaleString('en-US'), helper: 'Requires review' },
+                    ]}
+                    className="p-4"
+                  />
                 </div>
-                </div>
-                {/* 4 stat cards (match real app styling) */}
-                <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 10px', flexShrink: 0 }}>
-                  {STATS.map((stat) => (
-                    <AdminStatCard
-                      key={stat.label}
-                      label={stat.label}
-                      value={stat.value}
-                      helper={stat.sub}
-                      icon={stat.faIcon}
-                      accent="theme"
-                      size="compact"
-                      className="rounded-xl"
-                    />
-                  ))}
-                </div>
+                <section className="grid grid-cols-2 gap-3 px-4 pt-3 lg:grid-cols-4">
+                  <AdminStatCard label="Net revenue" value="$14,280" helper="This month" icon={faDollarSign} accent="theme" size="compact" />
+                  <AdminStatCard label="Growth" value="+12%" helper="vs last month" icon={faArrowsRotate} accent="theme" size="compact" />
+                  <AdminStatCard label="Refund rate" value="4.8%" helper="Lower than target" icon={faGaugeHigh} accent="theme" size="compact" />
+                  <AdminStatCard label="Payments" value="847" helper="Processed this month" icon={faCreditCard} accent="theme" size="compact" />
+                </section>
                 {/* Transactions table */}
                 <div style={{ padding: '0 14px 10px' }}>
                   <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
@@ -655,48 +626,27 @@ function DashboardDemo() {
             {/* ── Users view ── */}
             {demoView === 'users' && (
               <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                {/* Gradient page banner */}
-                <div style={{ margin: '12px 14px 0', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--lp-dd-banner-border)', flexShrink: 0 }}>
-                <div style={{ background: 'var(--lp-dd-banner-bg)', padding: '12px 14px 14px' }}>
-                  <div className="lp-dd-banner-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <span style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '4px 10px', fontSize: 10, color: 'rgba(255,255,255,0.75)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                        <FontAwesomeIcon icon={faUsers} style={{ width: 10, color: '#10b981' }} />
-                        <span style={{ marginLeft: 6, fontWeight: 700, letterSpacing: 0.2, color: '#10b981' }}>Accounts</span>
-                      </span>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--lp-dd-banner-title)', letterSpacing: -0.5 }}>User management</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', minWidth: 110 }}>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>Active Paid Accounts</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-chip-num)', lineHeight: 1.2, marginTop: 1 }}>{paidUsers.length}</div>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-sub)' }}>1 renewal in 14 days</div>
-                      </div>
-                      <div style={{ border: '1px solid var(--lp-dd-banner-chip-border)', borderRadius: 8, padding: '5px 11px', minWidth: 80 }}>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-label)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>Free Users</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--lp-dd-banner-free-num)', lineHeight: 1.2, marginTop: 1 }}>{freeUsers.length}</div>
-                        <div style={{ fontSize: 8, color: 'var(--lp-dd-banner-chip-sub)' }}>0 new yesterday</div>
-                      </div>
-                    </div>
-                  </div>
+                <div style={{ margin: '12px 14px 0' }}>
+                  <DashboardPageHeader
+                    eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Accounts</span>}
+                    eyebrowIcon={<FontAwesomeIcon icon={faUsers} />}
+                    title="User management"
+                    description="Review roles, plans, and renewal pressure across the customer base."
+                    copyClassName="space-y-1"
+                    descriptionClassName="text-[13px] leading-5"
+                    stats={[
+                      { label: 'Paid users', value: paidUsers.length.toLocaleString('en-US'), helper: 'Revenue-bearing accounts' },
+                      { label: 'Admins', value: adminUsers.length.toLocaleString('en-US'), helper: 'Elevated access' },
+                    ]}
+                    className="p-4"
+                  />
                 </div>
-                </div>
-                {/* 4 stat cards (match real app styling) */}
-                <div className="lp-dd-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, padding: '12px 14px 4px', flexShrink: 0 }}>
-                  {USER_STATS.map((s) => (
-                    <AdminStatCard
-                      key={s.label}
-                      label={s.label}
-                      value={s.value}
-                      helper={s.sub}
-                      icon={s.faIcon}
-                      accent="theme"
-                      size="compact"
-                      className="rounded-xl"
-                    />
-                  ))}
-                </div>
+                <section className="grid grid-cols-2 gap-3 px-4 pt-3 lg:grid-cols-4">
+                  <AdminStatCard label="Total users" value="19" helper="All-time accounts" icon={faUsers} accent="theme" size="compact" />
+                  <AdminStatCard label="Active paid accounts" value={paidUsers.length.toLocaleString('en-US')} helper="1 renewal in 14 days" icon={faArrowsRotate} accent="theme" size="compact" />
+                  <AdminStatCard label="Free users" value={freeUsers.length.toLocaleString('en-US')} helper="0 new yesterday" icon={faGauge} accent="theme" size="compact" />
+                  <AdminStatCard label="Renewals" value="4" helper="Next 14 days" icon={faTicket} accent="theme" size="compact" />
+                </section>
                 {/* User table */}
                 <div style={{ padding: '8px 14px 10px' }}>
                   <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
@@ -786,10 +736,13 @@ function DashboardDemo() {
             {demoView === 'overview' && (
               <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
                 <div className="space-y-4 p-4">
-                  <DashboardPageHeader
-                    eyebrow="Operations center"
+                    <DashboardPageHeader
+                    eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Operations center</span>}
                     eyebrowIcon={<FontAwesomeIcon icon={faGear} />}
                     title="Control room"
+                    description="Keep an eye on traffic, support load, and revenue health at a glance."
+                    copyClassName="space-y-1"
+                    descriptionClassName="text-[13px] leading-5"
                     stats={[
                       { label: 'Visits today', value: visitsToday.toLocaleString('en-US'), helper: `vs ${visitsYesterday.toLocaleString('en-US')} yesterday` },
                       { label: 'Open tickets', value: openTickets.toLocaleString('en-US'), helper: `${inProgressTickets.toLocaleString('en-US')} in progress` },
@@ -1039,6 +992,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-card-bg:      rgba(255,255,255,.03);
           --lp-card-hover:   rgba(99,102,241,.07);
           --lp-card-bdr-h:   rgba(99,102,241,.4);
+          --lp-feature-card-bg: rgba(18,22,30,.78);
+          --lp-feature-card-hover: rgba(24,30,40,.88);
           --lp-metric-num:   #e0e7ff;
           --lp-chip-border:  rgba(255,255,255,.1);
           --lp-chip-bg:      rgba(255,255,255,.04);
@@ -1121,6 +1076,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-card-bg:      rgba(0,0,0,.02);
           --lp-card-hover:   rgba(99,102,241,.05);
           --lp-card-bdr-h:   rgba(99,102,241,.35);
+          --lp-feature-card-bg: rgba(255,255,255,.96);
+          --lp-feature-card-hover: rgba(250,250,252,.98);
           --lp-metric-num:   #1e1b4b;
           --lp-chip-border:  rgba(0,0,0,.12);
           --lp-chip-bg:      rgba(0,0,0,.03);
@@ -1634,12 +1591,13 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-section-h2 { font-size:clamp(1.6rem,3.5vw,2.4rem); font-weight:800; letter-spacing:-.8px;
           color:var(--lp-text1); margin-bottom:12px; }
         .lp-section-sub { font-size:15px; color:var(--lp-text3); max-width:650px; margin:0 auto; line-height:1.7; }
+        .lp-section-sub-sm { font-size:14px; line-height:1.65; }
 
         /* Feature cards */
         .lp-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; margin-top:40px; }
         .lp-feature-card {
           display:flex; align-items:flex-start; gap:14px;
-          background:var(--lp-card-bg); border:1px solid var(--lp-border2);
+          background:var(--lp-feature-card-bg); border:1px solid var(--lp-border2);
           border-radius:14px; padding:18px; text-align:left;
           transition:border-color .2s, background .2s, transform .2s;
           animation:lpFadeUp .7s ease both;
@@ -1664,16 +1622,13 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,0) 72%);
           pointer-events:none;
         }
-        .lp-feature-card:hover { border-color:var(--lp-card-bdr-h); background:var(--lp-card-hover); transform:translateY(-2px); }
+        .lp-feature-card:hover { border-color:var(--lp-card-bdr-h); background:var(--lp-feature-card-hover); transform:translateY(-2px); }
         .lp-feature-icon {
           width:44px; height:44px; border-radius:10px; margin:0;
           background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));
           border:1px solid rgba(99,102,241,.16);
           display:flex; align-items:center; justify-content:center;
           color:#818cf8; font-size:16px; flex-shrink:0;
-        }
-        .lp-feature-card-auth {
-          background:linear-gradient(160deg, rgba(99,102,241,.08) 0%, rgba(255,255,255,.03) 44%, rgba(79,70,229,.05) 100%);
         }
         .lp-feature-card-auth::before {
           background:linear-gradient(180deg, #6366f1, #818cf8);
@@ -1683,9 +1638,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-color:rgba(99,102,241,.2);
           color:#a5b4fc;
         }
-        .lp-feature-card-tests {
-          background:linear-gradient(160deg, rgba(14,165,233,.08) 0%, rgba(255,255,255,.03) 44%, rgba(6,182,212,.05) 100%);
-        }
         .lp-feature-card-tests::before {
           background:linear-gradient(180deg, #0ea5e9, #06b6d4);
         }
@@ -1693,9 +1645,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:linear-gradient(135deg, rgba(14,165,233,.16), rgba(6,182,212,.08));
           border-color:rgba(14,165,233,.18);
           color:#67e8f9;
-        }
-        .lp-feature-card-security {
-          background:linear-gradient(160deg, rgba(16,185,129,.07) 0%, rgba(255,255,255,.03) 44%, rgba(52,211,153,.05) 100%);
         }
         .lp-feature-card-security::before {
           background:linear-gradient(180deg, #10b981, #34d399);
@@ -1705,9 +1654,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-color:rgba(16,185,129,.18);
           color:#6ee7b7;
         }
-        .lp-feature-card-meter {
-          background:linear-gradient(160deg, rgba(245,158,11,.08) 0%, rgba(255,255,255,.03) 44%, rgba(249,115,22,.05) 100%);
-        }
         .lp-feature-card-meter::before {
           background:linear-gradient(180deg, #f59e0b, #f97316);
         }
@@ -1715,18 +1661,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:linear-gradient(135deg, rgba(245,158,11,.16), rgba(249,115,22,.08));
           border-color:rgba(245,158,11,.2);
           color:#fbbf24;
-        }
-        .light .lp-root .lp-feature-card-auth {
-          background:linear-gradient(160deg, rgba(99,102,241,.05) 0%, rgba(255,255,255,.94) 44%, rgba(79,70,229,.03) 100%);
-        }
-        .light .lp-root .lp-feature-card-tests {
-          background:linear-gradient(160deg, rgba(14,165,233,.05) 0%, rgba(255,255,255,.94) 44%, rgba(6,182,212,.03) 100%);
-        }
-        .light .lp-root .lp-feature-card-security {
-          background:linear-gradient(160deg, rgba(16,185,129,.04) 0%, rgba(255,255,255,.94) 44%, rgba(52,211,153,.03) 100%);
-        }
-        .light .lp-root .lp-feature-card-meter {
-          background:linear-gradient(160deg, rgba(245,158,11,.04) 0%, rgba(255,255,255,.94) 44%, rgba(249,115,22,.03) 100%);
         }
         .lp-feature-title { font-size:13.5px; font-weight:700; color:var(--lp-text1); margin-bottom:6px; }
         .lp-feature-desc  { font-size:12px; color:var(--lp-text4); line-height:1.65; }
@@ -2270,7 +2204,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     tone: 'auth',
                   },
                   {
-                    value: 'Over 240 tests',
+                    value: 'Over 300 tests',
                     copy: 'Regression coverage for webhooks, resurrection, proration, expiry, org access, and checkout flows.',
                     meta: 'Regression coverage',
                     tone: 'tests',
@@ -2407,7 +2341,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           <div style={{ textAlign: 'center' }}>
           <div className="lp-section-tag">What ships on day one</div>
           <h2 className="lp-section-h2">Launch with billing, users, and ops already working.</h2>
-          <p className="lp-section-sub" style={{ marginBottom: 40 }}>
+          <p className="lp-section-sub lp-section-sub-sm" style={{ marginBottom: 40 }}>
             Skip months of stitching tools together. SaaSyBase gives you the admin surface, payment visibility, and operational control a real SaaS product needs from the start.
           </p>
           </div>
@@ -2447,7 +2381,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           {[
             { num: 47, label: 'built-in API routes',   suffix: '+' },
             { num: 4,  label: 'payment providers',      suffix: '' },
-            { num: 244, label: 'regression tests',      suffix: '' },
+            { num: 300, label: 'regression tests',      suffix: '' },
             { num: 0,  label: 'config headaches',       suffix: '' },
           ].map((m, i) => (
             <div key={i} className="lp-metric-item">
@@ -2463,7 +2397,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         <section style={{ textAlign: 'center', marginBottom: 0 }}>
           <div className="lp-section-tag">What&apos;s included</div>
           <h2 className="lp-section-h2">Everything. Wired up. Ready to go.</h2>
-          <p className="lp-section-sub">
+          <p className="lp-section-sub lp-section-sub-sm">
             Don&apos;t waste weeks piecing together auth, payments, and billing. It&apos;s all here and it all works together.
           </p>
           <div className="lp-feature-grid">

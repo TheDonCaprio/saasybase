@@ -342,9 +342,6 @@ export default function AnalyticsDashboard({
               </h2>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{rangeLabel}</p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-neutral-400">
-              Benchmarked automatically against the previous period so trends surface instantly.
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {periodOptions.map((option) => (

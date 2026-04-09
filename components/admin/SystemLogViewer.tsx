@@ -255,7 +255,7 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
             onRefresh={() => fetchPage(currentPage)}
             placeholder="Search logs by message or level..."
             additionalButton={{
-              label: isClearing ? 'Clearing…' : 'Clear logs',
+              label: isClearing ? 'Clearing…' : 'Clear',
               onClick: clearLogs,
               disabled: isClearing
             }}

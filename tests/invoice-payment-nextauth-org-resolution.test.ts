@@ -5,10 +5,16 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const creditOrganizationSharedTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
+const creditAllocatedPerMemberTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
+const resetAllocatedPerMemberTokensMock = vi.hoisted(() => vi.fn(async () => undefined));
 const updateSubscriptionLastPaymentAmountMock = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('../lib/teams', () => ({ creditOrganizationSharedTokens: creditOrganizationSharedTokensMock }));
+vi.mock('../lib/teams', () => ({
+  creditOrganizationSharedTokens: creditOrganizationSharedTokensMock,
+  creditAllocatedPerMemberTokens: creditAllocatedPerMemberTokensMock,
+  resetAllocatedPerMemberTokens: resetAllocatedPerMemberTokensMock,
+}));
 vi.mock('../lib/payments', () => ({ updateSubscriptionLastPaymentAmount: updateSubscriptionLastPaymentAmountMock }));
 vi.mock('../lib/payment/invoice-payment-state-updates', () => ({ applyInvoicePaymentStateUpdates: vi.fn(async ({ dbSub }) => dbSub) }));
 vi.mock('../lib/payment/invoice-payment-expiry-refresh', () => ({ refreshInvoicePaymentSubscriptionExpiry: vi.fn(async ({ dbSub }) => ({ dbSub, refreshedExpiresAt: null })) }));
@@ -196,5 +202,159 @@ describe('invoice payment org resolution for NextAuth', () => {
         amount: 100,
       })
     );
+  });
+
+  it('increments per-member balances on renewal when the team plan uses allocated-per-member tokens', async () => {
+    prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
+      const tx = {
+        payment: {
+          findUnique: vi.fn(async () => null),
+          count: vi.fn(async () => 1),
+          create: vi.fn(async (args) => ({ id: 'pay_alloc_renew_1', externalPaymentId: args.data.externalPaymentId })),
+        },
+        user: {
+          update: vi.fn(async () => undefined),
+        },
+        organization: {
+          update: vi.fn(async () => undefined),
+        },
+      };
+      type TransactionClient = typeof tx;
+      return (cb as (tx: TransactionClient) => unknown)(tx);
+    });
+
+    await recordInvoicePaymentAndApplyTokens({
+      dbSub: {
+        id: 'sub_db_alloc_1',
+        userId: 'user_1',
+        planId: 'plan_team_alloc',
+        plan: { tokenLimit: 75, supportsOrganizations: true, organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+      },
+      invoice: createInvoice({
+        id: 'inv_alloc_renew_1',
+        amountPaid: 5000,
+        subtotal: 5000,
+        amountDiscount: 0,
+        billingReason: 'subscription_recurring',
+      }),
+      paymentIntentId: 'pi_alloc_renew_1',
+      subscriptionId: 'sub_provider_alloc_1',
+      resolvedOrganizationId: 'org_alloc_1',
+      shouldResetTokensOnRenewal: false,
+      providerKey: 'stripe',
+      mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => value ?? null,
+    });
+
+    expect(creditAllocatedPerMemberTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org_alloc_1',
+        amount: 75,
+      })
+    );
+    expect(creditOrganizationSharedTokensMock).not.toHaveBeenCalled();
+  });
+
+  it('still follows renewal policy before expiry-grace cleanup has run for allocated-per-member recurring plans', async () => {
+    prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
+      const tx = {
+        payment: {
+          findUnique: vi.fn(async () => null),
+          count: vi.fn(async () => 1),
+          create: vi.fn(async (args) => ({ id: 'pay_alloc_grace_1', externalPaymentId: args.data.externalPaymentId })),
+        },
+        user: {
+          update: vi.fn(async () => undefined),
+        },
+        organization: {
+          update: vi.fn(async () => undefined),
+        },
+      };
+      type TransactionClient = typeof tx;
+      return (cb as (tx: TransactionClient) => unknown)(tx);
+    });
+
+    // This locks down the current semantics: even if expiry cleanup has not run yet
+    // because the workspace is still inside the natural-expiry grace window, the
+    // recurring renewal path uses only the renewal policy for token handling.
+    await recordInvoicePaymentAndApplyTokens({
+      dbSub: {
+        id: 'sub_db_alloc_grace_1',
+        userId: 'user_1',
+        planId: 'plan_team_alloc',
+        plan: { tokenLimit: 75, supportsOrganizations: true, organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+      },
+      invoice: createInvoice({
+        id: 'inv_alloc_grace_1',
+        amountPaid: 5000,
+        subtotal: 5000,
+        amountDiscount: 0,
+        billingReason: 'subscription_recurring',
+      }),
+      paymentIntentId: 'pi_alloc_grace_1',
+      subscriptionId: 'sub_provider_alloc_grace_1',
+      resolvedOrganizationId: 'org_alloc_1',
+      shouldResetTokensOnRenewal: false,
+      providerKey: 'stripe',
+      mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => value ?? null,
+    });
+
+    expect(creditAllocatedPerMemberTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org_alloc_1',
+        amount: 75,
+      })
+    );
+    expect(resetAllocatedPerMemberTokensMock).not.toHaveBeenCalled();
+    expect(creditOrganizationSharedTokensMock).not.toHaveBeenCalled();
+  });
+
+  it('resets per-member balances on renewal when reset-on-renewal is enabled for allocated-per-member plans', async () => {
+    prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
+      const tx = {
+        payment: {
+          findUnique: vi.fn(async () => null),
+          count: vi.fn(async () => 1),
+          create: vi.fn(async (args) => ({ id: 'pay_alloc_reset_1', externalPaymentId: args.data.externalPaymentId })),
+        },
+        user: {
+          update: vi.fn(async () => undefined),
+        },
+        organization: {
+          update: vi.fn(async () => undefined),
+        },
+      };
+      type TransactionClient = typeof tx;
+      return (cb as (tx: TransactionClient) => unknown)(tx);
+    });
+
+    await recordInvoicePaymentAndApplyTokens({
+      dbSub: {
+        id: 'sub_db_alloc_reset_1',
+        userId: 'user_1',
+        planId: 'plan_team_alloc',
+        plan: { tokenLimit: 75, supportsOrganizations: true, organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+      },
+      invoice: createInvoice({
+        id: 'inv_alloc_reset_1',
+        amountPaid: 5000,
+        subtotal: 5000,
+        amountDiscount: 0,
+        billingReason: 'subscription_recurring',
+      }),
+      paymentIntentId: 'pi_alloc_reset_1',
+      subscriptionId: 'sub_provider_alloc_reset_1',
+      resolvedOrganizationId: 'org_alloc_1',
+      shouldResetTokensOnRenewal: true,
+      providerKey: 'stripe',
+      mergeIdMap: (_existing: unknown, _key: string, value?: string | null) => value ?? null,
+    });
+
+    expect(resetAllocatedPerMemberTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org_alloc_1',
+        amount: 75,
+      })
+    );
+    expect(creditOrganizationSharedTokensMock).not.toHaveBeenCalled();
   });
 });

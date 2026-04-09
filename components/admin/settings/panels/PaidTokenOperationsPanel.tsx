@@ -160,7 +160,7 @@ export function PaidTokenOperationsPanel() {
           />
           <div>
             <div className="text-sm font-medium">Reset paid tokens on expiry — recurring plans</div>
-            <div className="text-sm text-slate-600">When enabled, paid tokens are cleared when a recurring subscription expires (cancelled/ended).</div>
+            <div className="text-sm text-slate-600">When enabled, paid tokens are cleared after the natural-expiry (and grace window) ends.</div>
           </div>
         </label>
 

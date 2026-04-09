@@ -204,7 +204,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
     () => [
       {
         id: 'branding',
-        label: 'Brand & Messaging',
+        label: 'Branding',
         icon: faPalette,
         description: 'Logos, site name, and announcement banner',
         content: (
@@ -220,7 +220,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       },
       {
         id: 'operations',
-        label: 'Operational Controls',
+        label: 'Operations',
         icon: faCog,
         description: 'Maintenance, free quotas, and support touchpoints',
         content: (
@@ -267,7 +267,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       },
       {
         id: 'payments',
-        label: 'Payment Providers',
+        label: 'Payments',
         icon: faCreditCard,
         description: 'View and configure payment gateway integrations',
         content: (
@@ -278,7 +278,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       },
       {
         id: 'formatting',
-        label: 'Locale & Scheduling',
+        label: 'Locale',
         icon: faClock,
         description: 'Date formatting presets and timezone defaults',
         content: (
@@ -291,7 +291,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       },
       {
         id: 'permissions',
-        label: 'Roles & Access',
+        label: 'Roles',
         icon: faShieldAlt,
         description: 'Configure what moderators can manage inside admin tools',
         content: (
@@ -348,7 +348,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       },
       {
         id: 'system',
-        label: 'System Status',
+        label: 'System',
         icon: faServer,
         description: 'Runtime environment, integrations, and infrastructure snapshot',
         content: (

@@ -11,6 +11,10 @@ const TEAM_SUB_STATUSES_STRICT = ['ACTIVE', 'PENDING', 'PAST_DUE'] as const;
 type ClerkMembershipRole = 'org:admin' | 'org:member';
 type ClerkErrorEntry = { meta?: { paramName?: string }; message?: string };
 
+function normalizeTeamTokenPoolStrategy(strategy?: string | null): 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' {
+  return strategy?.toUpperCase() === 'ALLOCATED_PER_MEMBER' ? 'ALLOCATED_PER_MEMBER' : 'SHARED_FOR_ORG';
+}
+
 type AllowedOrgSubscription = Awaited<ReturnType<typeof getActiveTeamSubscription>>;
 
 type OwnerTeamAccess = {
@@ -512,8 +516,8 @@ async function recreateClerkOrganization(params: {
   userId: string;
   planId: string;
   desiredSeatLimit: number | null;
+  desiredStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
 }) {
-  const desiredStrategy = 'SHARED_FOR_ORG';
   const slugSeed = params.existing.slug || slugify(`${params.existing.name}-${params.userId.slice(-5)}`);
   let createdOrganization: AuthOrganization | null = null;
   let attempt = 0;
@@ -528,7 +532,7 @@ async function recreateClerkOrganization(params: {
         publicMetadata: {
           planId: params.planId,
           seatLimit: params.desiredSeatLimit,
-          tokenPoolStrategy: desiredStrategy,
+          tokenPoolStrategy: params.desiredStrategy,
         },
       });
     } catch (err: unknown) {
@@ -567,7 +571,7 @@ async function recreateClerkOrganization(params: {
       slug: createdOrganization.slug ?? params.existing.slug,
       planId: params.planId,
       seatLimit: params.desiredSeatLimit ?? undefined,
-      tokenPoolStrategy: desiredStrategy,
+      tokenPoolStrategy: params.desiredStrategy,
     },
   });
 
@@ -594,13 +598,13 @@ async function recreateClerkOrganization(params: {
 }
 
 
-async function updateOrganizationMetadataIfNeeded(orgId: string, params: { planId?: string | null; seatLimit?: number | null }) {
+async function updateOrganizationMetadataIfNeeded(orgId: string, params: { planId?: string | null; seatLimit?: number | null; tokenPoolStrategy?: string | null }) {
   await prisma.organization.update({
     where: { id: orgId },
     data: {
       planId: params.planId ?? null,
       seatLimit: params.seatLimit ?? null,
-      tokenPoolStrategy: 'SHARED_FOR_ORG',
+      tokenPoolStrategy: normalizeTeamTokenPoolStrategy(params.tokenPoolStrategy),
     },
   });
 }
@@ -671,7 +675,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
   const isNextAuthProvider = providerName === 'nextauth';
   const plan = activeOwnerSubscription.plan;
   const desiredSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
-  const desiredStrategy = 'SHARED_FOR_ORG';
+  const desiredStrategy = normalizeTeamTokenPoolStrategy(plan.organizationTokenPoolStrategy);
 
   // Fetch user details including token balance to handle migration
   const owner = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, tokenBalance: true } });
@@ -724,16 +728,24 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
     if (!activeSub) return;
     if (!hasSuccessfulPayment) return;
 
-    await prisma.organization.update({
-      where: { id: params.organizationId },
-      data: { tokenBalance: planTokenLimit },
-    });
+    if (desiredStrategy === 'ALLOCATED_PER_MEMBER') {
+      await prisma.organizationMembership.updateMany({
+        where: { organizationId: params.organizationId, status: 'ACTIVE' },
+        data: { sharedTokenBalance: planTokenLimit },
+      });
+    } else {
+      await prisma.organization.update({
+        where: { id: params.organizationId },
+        data: { tokenBalance: planTokenLimit },
+      });
+    }
 
     Logger.info('Reconciled missing team tokens during provisioning', {
       userId,
       organizationId: params.organizationId,
       planId: plan.id,
       tokensSetTo: planTokenLimit,
+      tokenPoolStrategy: desiredStrategy,
     });
   }
 
@@ -750,6 +762,7 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
         await updateOrganizationMetadataIfNeeded(existing.id, {
           planId: plan.id,
           seatLimit: desiredSeatLimit,
+          tokenPoolStrategy: desiredStrategy,
         });
       }
     } else {
@@ -764,11 +777,13 @@ export async function ensureTeamOrganization(userId: string, orgName?: string) {
           userId,
           planId: plan.id,
           desiredSeatLimit,
+          desiredStrategy,
         });
       } else if (needsMetadataUpdate) {
         await updateOrganizationMetadataIfNeeded(existing.id, {
           planId: plan.id,
           seatLimit: desiredSeatLimit,
+          tokenPoolStrategy: desiredStrategy,
         });
 
         if (existing.clerkOrganizationId) {

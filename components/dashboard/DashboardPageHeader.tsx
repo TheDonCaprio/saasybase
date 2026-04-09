@@ -18,6 +18,8 @@ export interface DashboardPageHeaderProps {
 	eyebrowIcon?: ReactNode;
 	title: ReactNode;
 	description?: ReactNode;
+	copyClassName?: string;
+	descriptionClassName?: string;
 	actions?: ReactNode;
 	actionsAlign?: 'left' | 'right';
 	stats?: DashboardPageHeaderStat[];
@@ -145,6 +147,8 @@ export function DashboardPageHeader({
 	eyebrowIcon,
 	title,
 	description,
+	copyClassName,
+	descriptionClassName,
 	actions,
 	actionsAlign = 'left',
 	stats,
@@ -173,10 +177,10 @@ export function DashboardPageHeader({
 						</div>
 					) : null}
 
-					<div className="space-y-2">
+					<div className={cx('space-y-2', copyClassName)}>
 						<h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl dark:text-neutral-50">{title}</h1>
 						{description ? (
-							<p className="text-sm text-slate-600 dark:text-neutral-200/80">{description}</p>
+							<p className={cx('text-sm text-slate-600 dark:text-neutral-200/80', descriptionClassName)}>{description}</p>
 						) : null}
 					</div>
 

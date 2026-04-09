@@ -17,6 +17,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   organizationMembership: {
     aggregate: vi.fn(),
+    updateMany: vi.fn(async () => ({ count: 1 })),
   },
   payment: {
     findFirst: vi.fn(),
@@ -48,7 +49,7 @@ describe('ensureTeamOrganization billing backfill', () => {
       .mockResolvedValueOnce({
         id: 'sub_active',
         userId: 'user_1',
-        plan: { id: 'plan_team', tokenLimit: 100, organizationSeatLimit: 5, supportsOrganizations: true },
+        plan: { id: 'plan_team', tokenLimit: 100, organizationSeatLimit: 5, supportsOrganizations: true, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' },
       })
       .mockResolvedValueOnce({ id: 'sub_active' });
     prismaMock.organization.findFirst.mockResolvedValue({
@@ -94,5 +95,47 @@ describe('ensureTeamOrganization billing backfill', () => {
     );
 
     expect(prismaMock.organization.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('preserves allocated-per-member strategy and reconciles member balances instead of the org pool', async () => {
+    prismaMock.subscription.findFirst.mockReset();
+    prismaMock.subscription.findFirst
+      .mockResolvedValueOnce({
+        id: 'sub_active',
+        userId: 'user_1',
+        plan: {
+          id: 'plan_team_alloc',
+          tokenLimit: 120,
+          organizationSeatLimit: 5,
+          supportsOrganizations: true,
+          organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+        },
+      })
+      .mockResolvedValueOnce({ id: 'sub_active' });
+    prismaMock.organization.findFirst.mockResolvedValueOnce({
+      id: 'org_1',
+      ownerUserId: 'user_1',
+      planId: 'plan_team_alloc_old',
+      seatLimit: 4,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+    });
+    prismaMock.organization.findUnique
+      .mockResolvedValueOnce({ id: 'org_1', tokenBalance: 0 })
+      .mockResolvedValueOnce({ id: 'org_1' });
+
+    await ensureTeamOrganization('user_1');
+
+    expect(prismaMock.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: {
+        planId: 'plan_team_alloc',
+        seatLimit: 5,
+        tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+      },
+    });
+    expect(prismaMock.organizationMembership.updateMany).toHaveBeenCalledWith({
+      where: { organizationId: 'org_1', status: 'ACTIVE' },
+      data: { sharedTokenBalance: 120 },
+    });
   });
 });

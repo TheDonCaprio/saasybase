@@ -45,6 +45,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../lib/paidTokenCleanup';
 import { syncOrganizationEligibilityForUser } from '../lib/organization-access';
 import * as settings from '../lib/settings';
+import { resetOrganizationSharedTokens } from '../lib/teams';
 
 type EligibilityResult = Awaited<ReturnType<typeof syncOrganizationEligibilityForUser>>;
 
@@ -105,6 +106,49 @@ describe('Natural expiry grace', () => {
     expect(res.cleared).toBe(false);
     expect(res.reason).toBe('policy_no_clear');
     expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it('clears allocated-per-member team balances after grace when the expiry setting is enabled', async () => {
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_team_expired',
+      status: 'CANCELLED',
+      expiresAt: new Date(Date.now() - 48 * 3600 * 1000),
+      clearPaidTokensOnExpiry: false,
+      plan: { autoRenew: true, supportsOrganizations: true, organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+    });
+    prismaMock.subscription.findMany.mockResolvedValueOnce([
+      { organizationId: 'org_alloc_1' },
+    ]);
+    prismaMock.organization.findMany.mockResolvedValueOnce([
+      { id: 'org_alloc_1' },
+    ]);
+    vi.mocked(settings.shouldResetPaidTokensOnExpiryForPlanAutoRenew).mockResolvedValueOnce(true);
+
+    const res = await maybeClearPaidTokensAfterNaturalExpiryGrace({ userId: 'user_1', graceHours: 24 });
+
+    expect(res.cleared).toBe(true);
+    expect(res.reason).toBe('cleared');
+    expect(resetOrganizationSharedTokens).toHaveBeenCalledWith({ organizationId: 'org_alloc_1' });
+  });
+
+  it('does not clear allocated-per-member team balances after grace when the expiry setting is disabled', async () => {
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_team_expired',
+      status: 'CANCELLED',
+      expiresAt: new Date(Date.now() - 48 * 3600 * 1000),
+      clearPaidTokensOnExpiry: false,
+      plan: { autoRenew: true, supportsOrganizations: true, organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER' },
+    });
+    vi.mocked(settings.shouldResetPaidTokensOnExpiryForPlanAutoRenew).mockResolvedValueOnce(false);
+
+    const res = await maybeClearPaidTokensAfterNaturalExpiryGrace({ userId: 'user_1', graceHours: 24 });
+
+    expect(res.cleared).toBe(false);
+    expect(res.reason).toBe('policy_no_clear');
+    expect(resetOrganizationSharedTokens).not.toHaveBeenCalled();
+    expect(prismaMock.organization.findMany).not.toHaveBeenCalled();
   });
 
   it('does not dismantle orgs during grace when syncing eligibility', async () => {

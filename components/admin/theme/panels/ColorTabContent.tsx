@@ -992,9 +992,14 @@ export function ColorTabContent({
                     style={{
                       backgroundColor: colors.bgSecondary,
                       background: `linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
-                      border: `1px solid ${colors.borderPrimary}`,
+                      borderStyle: 'solid',
+                      borderColor: colors.borderPrimary,
+                      borderWidth: '1px',
+                      borderLeftWidth: `${statCardAccentLeft}px`,
+                      borderLeftColor: colors.accentPrimary,
                       borderRadius: `${surfaceRadius}px`,
-                      borderTop: `${statCardAccentTop}px solid ${colors.accentPrimary}`,
+                      borderTopWidth: `${statCardAccentTop}px`,
+                      borderTopColor: colors.accentPrimary,
                       boxShadow: `0 12px ${clampInt(colors.cardShadowBlur, 0, 80, 24)}px ${clampInt(colors.cardShadowSpread, -80, 80, -18)}px ${colors.cardShadow}`,
                     }}
                   >

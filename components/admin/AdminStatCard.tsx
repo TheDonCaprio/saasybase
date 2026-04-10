@@ -67,8 +67,6 @@ export function AdminStatCard({ label, value, helper, footer, icon, accent = 'th
     ? {
         borderTopWidth: 'var(--theme-stat-card-accent-top)',
         borderTopColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
-        borderLeftWidth: 'var(--theme-stat-card-accent-left)',
-        borderLeftColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
       }
     : undefined;
   const labelClass = isCompact
@@ -96,8 +94,26 @@ export function AdminStatCard({ label, value, helper, footer, icon, accent = 'th
       )}
       style={themeEdgeStyle}
     >
-      <div className={clsx('pointer-events-none absolute inset-0 opacity-75', palette.overlay)} />
-      <div className="relative flex items-start justify-between gap-2">
+      {accent === 'theme' ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-[1]"
+            style={{
+              width: 'var(--theme-stat-card-accent-left)',
+              backgroundColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-[1]"
+            style={{
+              height: 'var(--theme-stat-card-accent-top)',
+              backgroundColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
+            }}
+          />
+        </>
+      ) : null}
+      <div className={clsx('pointer-events-none absolute inset-0 z-0 opacity-75', palette.overlay)} />
+      <div className="relative z-[2] flex items-start justify-between gap-2">
         <div>
           <p className={labelClass}>{label}</p>
           <p className={valueClass}>{value}</p>
@@ -111,7 +127,7 @@ export function AdminStatCard({ label, value, helper, footer, icon, accent = 'th
       </div>
 
       {footer ? (
-        <div className="pt-2">
+        <div className="relative z-[2] pt-2">
           <p className="text-xs text-slate-500 dark:text-neutral-400">{footer}</p>
         </div>
       ) : null}

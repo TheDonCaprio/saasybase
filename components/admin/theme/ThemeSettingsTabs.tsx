@@ -194,6 +194,7 @@ export function ThemeSettingsTabs({
       );
       const surfaceRadiusPx = Math.max(0, Math.min(32, Math.round(Number.isFinite(t.surfaceRadius) ? t.surfaceRadius : 16)));
       const statCardAccentTopPx = Math.max(0, Math.min(8, Math.round(Number.isFinite(t.statCardAccentTop) ? t.statCardAccentTop : 0)));
+      const statCardAccentLeftPx = Math.max(0, Math.min(8, Math.round(Number.isFinite(t.statCardAccentLeft) ? t.statCardAccentLeft : 0)));
       const fontFamily = resolveThemeFontStack(t.fontFamily);
 
       const cssToken = (name: string, hex: string) => {
@@ -271,6 +272,7 @@ export function ThemeSettingsTabs({
         `  --theme-sticky-header-shadow: 0 12px ${stickyHeaderShadowBlurPx}px ${stickyHeaderShadowSpreadPx}px rgb(${stickyHeaderShadow.rgb} / ${fmtAlpha(stickyHeaderShadow.a)});`,
         `  --theme-surface-radius: ${surfaceRadiusPx}px;`,
         `  --theme-stat-card-accent-top: ${statCardAccentTopPx}px;`,
+        `  --theme-stat-card-accent-left: ${statCardAccentLeftPx}px;`,
         `  --theme-page-gradient-from: rgb(${pageFrom.rgb} / ${fmtAlpha(pageFrom.a)});`,
         `  --theme-page-gradient-via: rgb(${pageVia.rgb} / ${fmtAlpha(pageVia.a)});`,
         `  --theme-page-gradient-to: rgb(${pageTo.rgb} / ${fmtAlpha(pageTo.a)});`,

@@ -96,7 +96,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       
       {/* Desktop Sidebar (Fixed) */}
       <aside
-        className="hidden lg:flex flex-col w-64 bg-[color:var(--theme-sidebar-bg)] fixed left-0 top-0 h-screen border-r border-[color:var(--theme-sidebar-border)] z-30"
+        className="theme-shadow-sidebar hidden lg:flex flex-col w-64 bg-[color:var(--theme-sidebar-bg)] fixed left-0 top-0 h-screen border-r border-[color:var(--theme-sidebar-border)] z-30"
       >
         {/* Spacer for header (approximating dynamic header height) */}
         <div className="h-16 flex-shrink-0" />

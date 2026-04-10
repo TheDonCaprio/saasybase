@@ -2177,7 +2177,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </h1>
 
               <p className="lp-hero-sub">
-                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 240+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
+                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 300+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
               </p>
 
               <div className="lp-cta-row">
@@ -2362,7 +2362,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               { icon: faShield, label: 'Secure logger with secret redaction' },
               { icon: faBolt, label: 'Edge cases tested before you launch' },
               { icon: faLock, label: 'Provider-agnostic auth and billing adapters' },
-              { icon: faChartLine, label: '240+ regression tests across critical flows' },
+              { icon: faChartLine, label: '300+ regression tests across critical flows' },
               { icon: faTriangleExclamation, label: 'Rate limits, request IDs, sanitized errors' },
               { icon: faBuilding, label: 'Dual-column compatibility for safe migrations' },
               { icon: faCreditCard, label: 'Proration, retries, refunds, and lifecycle states' },

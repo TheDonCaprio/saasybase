@@ -308,7 +308,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
                   <div
                     key={section}
                     className={cx(
-                      'rounded-2xl border p-5 shadow-sm transition-colors',
+                      'rounded-[var(--theme-surface-radius)] border p-5 shadow-sm transition-colors',
                       enabled
                         ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-100'
                         : 'border-slate-200 bg-white text-slate-700 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200'
@@ -353,7 +353,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
         description: 'Runtime environment, integrations, and infrastructure snapshot',
         content: (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm dark:border-neutral-700 dark:from-neutral-900 dark:to-neutral-950">
+            <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm dark:border-neutral-700 dark:from-neutral-900 dark:to-neutral-950">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Operational snapshot</h3>
@@ -375,7 +375,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
               <SystemBadge label="Node env" value={nodeEnv} tone="slate" />
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
+              <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
                 <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Application runtime</h3>
                 <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-3">
                   <SystemBadge label="Auth" value={runtimeSnapshot.authProvider} tone="violet" />
@@ -386,7 +386,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
                   <SystemBadge label="Timezone" value={runtimeSnapshot.timezone} tone="slate" />
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
+              <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
                 <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Machine profile</h3>
                 <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-3">
                   <SystemBadge label="Platform" value={runtimeSnapshot.platform} tone="slate" />
@@ -398,7 +398,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
+            <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
               <EnvironmentSettingsList
                 settings={environmentSettings}
                 title="Platform configuration"
@@ -436,7 +436,8 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
             id="settings-tab-select"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full appearance-none rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 shadow-lg focus:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.45))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:text-neutral-100"
+            className="w-full appearance-none rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] px-4 py-3.5 pr-10 text-sm font-semibold text-slate-900 focus:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.45))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:text-neutral-100"
+            style={{ boxShadow: 'var(--theme-tabs-shadow)' }}
           >
             {tabs.map((tab) => (
               <option key={tab.id} value={tab.id}>
@@ -458,11 +459,11 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
 
       {/* Desktop: Horizontal tabs */}
       <div
-        className="relative hidden md:flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
+        className="relative hidden md:flex overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] transition-shadow"
+        style={{ boxShadow: 'var(--theme-tabs-shadow)' }}
         role="tablist"
         aria-label="Admin settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -487,7 +488,8 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
       <div
         role="tabpanel"
         aria-labelledby={`${activeContent.id}-tab`}
-        className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6 dark:border-neutral-800 dark:bg-neutral-950/60"
+        className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-panel-rgb)_/_calc(var(--surface-panel-a)*0.88))] p-4 sm:p-6"
+        style={{ boxShadow: 'var(--theme-panel-shadow)' }}
       >
         {activeContent.content}
       </div>

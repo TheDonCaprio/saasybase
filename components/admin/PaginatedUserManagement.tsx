@@ -223,7 +223,7 @@ export function PaginatedUserManagement({
 
   return (
     <div className="space-y-6">
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={search}
           onSearchChange={(v) => handleFilterChange(v)}
@@ -240,7 +240,7 @@ export function PaginatedUserManagement({
         />
       </div>
 
-      <div className={dashboardMutedPanelClass('flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs sm:text-sm text-slate-600 dark:text-neutral-300')}>
+      <div className={dashboardMutedPanelClass('flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-neutral-300')}>
         <span>
           Showing {numberFormatter.format(users.length)} of {numberFormatter.format(totalCount)} accounts
         </span>
@@ -264,11 +264,11 @@ export function PaginatedUserManagement({
           </div>
         ) : (
           <>
-            <div className="lg:hidden space-y-4 p-4 sm:p-5">
+            <div className="lg:hidden space-y-3 p-3 sm:p-4">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-indigo-500/40"
+                  className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 sm:p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-indigo-500/40"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0 space-y-1">

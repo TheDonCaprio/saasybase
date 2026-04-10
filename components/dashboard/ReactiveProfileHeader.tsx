@@ -44,13 +44,13 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
     : fallbackUser.imageUrl;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-      <div className="flex items-start gap-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 dark:bg-neutral-700">
+    <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+      <div className="flex items-start gap-5">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 dark:bg-neutral-700">
           {displayImage ? (
             // Use raw <img> here; Image optimization isn't required for profile avatars.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={displayImage} alt="Profile" className="w-16 h-16 rounded-full" />
+            <img src={displayImage} alt="Profile" className="h-14 w-14 rounded-full" />
           ) : (
             <span className="text-xl font-bold">
               {(displayName || displayEmail || 'U').charAt(0).toUpperCase()}
@@ -58,7 +58,7 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
           )}
         </div>
         
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-2.5">
           <div className="flex items-center gap-3">
             <div className="text-lg font-medium text-slate-900 dark:text-neutral-100">
               {displayName}
@@ -66,7 +66,7 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
           </div>
           <div className="text-slate-500 dark:text-neutral-400">{displayEmail}</div>
           
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 text-sm md:grid-cols-3">
             <div>
               <div className="text-slate-500 dark:text-neutral-500">Member Since</div>
                 <div className="font-medium text-slate-800 dark:text-neutral-100">
@@ -87,7 +87,7 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
             </div>
           </div>
           
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-3.5 flex items-center gap-3">
             <ClerkProfileButtons defaultName={fallbackUser.name} defaultEmail={fallbackUser.email} />
           </div>
         </div>

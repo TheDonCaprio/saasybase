@@ -412,7 +412,7 @@ export function ActiveSessionsList() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="lg:p-6 p-3 sm:p-4">
+      <div className="p-3 sm:p-4 lg:p-4 xl:p-5">
         <div className="text-sm text-neutral-500">Loading session data...</div>
       </div>
     );
@@ -420,7 +420,7 @@ export function ActiveSessionsList() {
 
   if (!user) {
     return (
-      <div className="lg:p-6 p-3 sm:p-4">
+      <div className="p-3 sm:p-4 lg:p-4 xl:p-5">
         <div className="text-sm text-neutral-500">Please sign in to view sessions.</div>
       </div>
     );
@@ -451,7 +451,7 @@ export function ActiveSessionsList() {
   }
 
   return (
-    <div className="lg:p-6 p-3 sm:p-4">
+    <div className="p-3 sm:p-4 lg:p-4 xl:p-5">
       <div className="flex justify-between items-center gap-3 mb-3">
         <div className="flex items-center gap-1">
           <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">
@@ -506,7 +506,7 @@ export function ActiveSessionsList() {
             }
             
             return (
-              <div key={session.id} className={`${dashboardCardClass('p-4')} transition-all hover:border-neutral-300 dark:hover:border-neutral-600 ${
+              <div key={session.id} className={`${dashboardCardClass('p-3 sm:p-4')} transition-all hover:border-neutral-300 dark:hover:border-neutral-600 ${
                 isCurrentSession
                   ? 'border-blue-500/60 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-950/20'
                   : 'border-slate-200/80 bg-white dark:border-neutral-800 dark:bg-neutral-900/70'
@@ -583,7 +583,7 @@ export function ActiveSessionsList() {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-2.5 flex items-center gap-2">
                   {isCurrentSession ? (
                     <div className="text-sm text-neutral-400">This is your current session</div>
                   ) : !supportsSessionManagement ? (
@@ -595,7 +595,7 @@ export function ActiveSessionsList() {
                           setTargetSessionId(session.id);
                           setConfirmOpen(true);
                         }}
-                        className="text-sm text-red-400 hover:text-white px-3 py-1 rounded border border-neutral-700"
+                        className="rounded-full border border-neutral-700 px-2.5 py-1 text-[13px] text-red-400 hover:text-white"
                       >
                         Sign out
                       </button>

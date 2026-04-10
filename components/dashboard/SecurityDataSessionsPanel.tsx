@@ -87,7 +87,7 @@ export function SecurityDataSessionsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className={dashboardPanelClass('space-y-4')}>
+      <div className={dashboardPanelClass('space-y-4 p-3 sm:p-4')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Current session</h3>
@@ -112,7 +112,7 @@ export function SecurityDataSessionsPanel() {
         </dl>
       </div>
 
-      <div className={dashboardPanelClass('space-y-4 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-4 p-3 sm:p-4')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Active sessions</h3>
           <span className={dashboardPillClass('text-blue-600 dark:text-blue-200')}>
@@ -126,11 +126,11 @@ export function SecurityDataSessionsPanel() {
           Manage your signed-in devices. Revoke access if something looks unfamiliar.
         </p>
         {loading ? (
-          <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-5 text-sm text-slate-500 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-400">
+          <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-4 text-sm text-slate-500 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-400">
             Loading session data...
           </div>
         ) : (
-          <div className="-mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
+          <div className="-mx-3 -mb-3 sm:-mx-4 sm:-mb-4">
             <ActiveSessionsList />
           </div>
         )}

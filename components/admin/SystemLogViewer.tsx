@@ -243,7 +243,7 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
 
   return (
     <div className="space-y-6">
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <div className="space-y-4">
           
           <ListFilters
@@ -286,7 +286,7 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300'
+          'flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-xs text-neutral-600 sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -312,9 +312,9 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
               const isOpen = !!expanded[log.id];
               const metaPayload = log.meta && log.context ? { meta: log.meta, context: log.context } : log.meta ?? log.context;
               return (
-                <article key={log.id} className="space-y-3 px-4 py-4 sm:px-6 sm:py-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 space-y-2">
+                <article key={log.id} className="space-y-2.5 px-3 py-3 sm:px-4 sm:py-4">
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={clsx('inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide', badgeStyle)}>
                           {levelLabel}
@@ -335,7 +335,7 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
                       <button
                         type="button"
                         onClick={() => navigator.clipboard?.writeText(log.id)}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-100 dark:hover:bg-neutral-900"
                         title="Copy ID"
                       >
                         Copy ID
@@ -343,7 +343,7 @@ export function SystemLogViewer({ initialLogs, initialTotal, pageSize = 50 }: Pr
                       <button
                         type="button"
                         onClick={() => setExpanded((s) => ({ ...s, [log.id]: !s[log.id] }))}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-100 dark:hover:bg-neutral-900"
                       >
                         {isOpen ? 'Collapse' : 'Expand'}
                       </button>

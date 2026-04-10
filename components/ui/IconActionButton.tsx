@@ -28,6 +28,7 @@ export default function IconActionButton({
   inactiveColor = 'emerald',
   color = 'indigo',
   disabled = false,
+  size = 'default',
 }: {
   onClick?: () => void;
   title?: string;
@@ -39,10 +40,13 @@ export default function IconActionButton({
   inactiveColor?: ColorKey;
   color?: ColorKey; // used when variant === 'default'
   disabled?: boolean;
+  size?: 'default' | 'compact';
 }) {
   const chosenColor: ColorKey = variant === 'conditional' ? (active ? activeColor : inactiveColor) : color;
+  const sizingClasses = size === 'compact' ? 'w-8 h-8' : 'w-9 h-9';
+  const iconSizingClasses = size === 'compact' ? 'w-3 h-3' : 'w-3.5 h-3.5';
   const disabledClasses =
-    'inline-flex items-center justify-center rounded-full w-9 h-9 text-slate-500 bg-slate-100 shadow-sm transition opacity-70 cursor-not-allowed dark:bg-neutral-800/50 dark:text-neutral-400';
+    `inline-flex items-center justify-center rounded-full ${sizingClasses} text-slate-500 bg-slate-100 shadow-sm transition opacity-70 cursor-not-allowed dark:bg-neutral-800/50 dark:text-neutral-400`;
 
   return (
     <button
@@ -51,9 +55,9 @@ export default function IconActionButton({
       title={title}
       aria-label={ariaLabel}
       disabled={disabled}
-      className={disabled ? disabledClasses : `inline-flex items-center justify-center rounded-full w-9 h-9 text-actual-white shadow-sm transition ${bgClasses[chosenColor]}`}
+      className={disabled ? disabledClasses : `inline-flex items-center justify-center rounded-full ${sizingClasses} text-actual-white shadow-sm transition ${bgClasses[chosenColor]}`}
     >
-      <FontAwesomeIcon icon={icon} className="w-3.5 h-3.5" />
+      <FontAwesomeIcon icon={icon} className={iconSizingClasses} />
     </button>
   );
 }

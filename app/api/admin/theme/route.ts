@@ -113,6 +113,15 @@ const clampInt = (value: unknown, min: number, max: number, fallback: number): n
   return rounded;
 };
 
+const sanitizeThemeFontFamily = (
+  value: unknown,
+  fallback: ThemeColorTokens['fontFamily'],
+): ThemeColorTokens['fontFamily'] => {
+  return value === 'material' || value === 'fluent' || value === 'apple' || value === 'system'
+    ? value
+    : fallback;
+};
+
 /** Bake a legacy 0-1 opacity value into the hex alpha channel. */
 const bakeOpacity = (hex: string, opacity: number): string => {
   if (opacity >= 1) return hex;
@@ -175,6 +184,14 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
 
   const lightHeaderShadowFallback = l.headerShadow ?? '#00000014';
   const darkHeaderShadowFallback = d.headerShadow ?? '#00000014';
+  const lightPanelShadowFallback = l.panelShadow ?? l.cardShadow ?? '#00000012';
+  const darkPanelShadowFallback = d.panelShadow ?? d.cardShadow ?? '#00000012';
+  const lightCardShadowFallback = l.cardShadow ?? '#00000014';
+  const darkCardShadowFallback = d.cardShadow ?? '#00000014';
+  const lightTabsShadowFallback = l.tabsShadow ?? lightCardShadowFallback;
+  const darkTabsShadowFallback = d.tabsShadow ?? darkCardShadowFallback;
+  const lightSidebarShadowFallback = l.sidebarShadow ?? lightPanelShadowFallback ?? lightHeaderShadowFallback;
+  const darkSidebarShadowFallback = d.sidebarShadow ?? darkPanelShadowFallback ?? darkHeaderShadowFallback;
   const lightStickyHeaderShadowFallback = l.stickyHeaderShadow ?? lightHeaderShadowFallback;
   const darkStickyHeaderShadowFallback = d.stickyHeaderShadow ?? darkHeaderShadowFallback;
 
@@ -210,6 +227,7 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerBorderWidth: clampInt(lightIn.headerBorderWidth, 0, 4, l.headerBorderWidth ?? 1),
       headerMenuFontSize: clampInt(lightIn.headerMenuFontSize, 10, 20, l.headerMenuFontSize ?? 14),
       headerMenuFontWeight: clampInt(lightIn.headerMenuFontWeight, 300, 800, l.headerMenuFontWeight ?? 400),
+      fontFamily: sanitizeThemeFontFamily(lightIn.fontFamily, l.fontFamily ?? 'system'),
       stickyHeaderBg: sanitizeHex(lightIn.stickyHeaderBg, lightStickyBgFallback),
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(lightIn.stickyHeaderBlur, 0, 40, l.stickyHeaderBlur ?? 14),
@@ -223,6 +241,30 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerShadow: sanitizeHex(lightIn.headerShadow, lightHeaderShadowFallback),
       headerShadowBlur: clampInt(lightIn.headerShadowBlur, 0, 80, l.headerShadowBlur ?? 30),
       headerShadowSpread: clampInt(lightIn.headerShadowSpread, -80, 80, l.headerShadowSpread ?? -22),
+      surfaceRadius: clampInt(lightIn.surfaceRadius, 0, 32, l.surfaceRadius ?? 16),
+      statCardAccentTop: clampInt(lightIn.statCardAccentTop, 0, 8, l.statCardAccentTop ?? 0),
+      panelShadow: sanitizeHex(lightIn.panelShadow, lightPanelShadowFallback),
+      panelShadowBlur: clampInt(lightIn.panelShadowBlur, 0, 80, l.panelShadowBlur ?? l.cardShadowBlur ?? 18),
+      panelShadowSpread: clampInt(lightIn.panelShadowSpread, -80, 80, l.panelShadowSpread ?? l.cardShadowSpread ?? -18),
+      cardShadow: sanitizeHex(lightIn.cardShadow, lightCardShadowFallback),
+      cardShadowBlur: clampInt(lightIn.cardShadowBlur, 0, 80, l.cardShadowBlur ?? 24),
+      cardShadowSpread: clampInt(lightIn.cardShadowSpread, -80, 80, l.cardShadowSpread ?? -18),
+      tabsShadow: sanitizeHex(lightIn.tabsShadow, lightTabsShadowFallback),
+      tabsShadowBlur: clampInt(lightIn.tabsShadowBlur, 0, 80, l.tabsShadowBlur ?? l.cardShadowBlur ?? 24),
+      tabsShadowSpread: clampInt(lightIn.tabsShadowSpread, -80, 80, l.tabsShadowSpread ?? l.cardShadowSpread ?? -18),
+      sidebarShadow: sanitizeHex(lightIn.sidebarShadow, lightSidebarShadowFallback),
+      sidebarShadowBlur: clampInt(
+        lightIn.sidebarShadowBlur,
+        0,
+        80,
+        l.sidebarShadowBlur ?? l.panelShadowBlur ?? l.cardShadowBlur ?? 18,
+      ),
+      sidebarShadowSpread: clampInt(
+        lightIn.sidebarShadowSpread,
+        -80,
+        80,
+        l.sidebarShadowSpread ?? l.panelShadowSpread ?? l.cardShadowSpread ?? -18,
+      ),
       stickyHeaderShadow: sanitizeHex(lightIn.stickyHeaderShadow, lightStickyHeaderShadowFallback),
       stickyHeaderShadowBlur: clampInt(
         lightIn.stickyHeaderShadowBlur,
@@ -275,6 +317,7 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerBorderWidth: clampInt(darkIn.headerBorderWidth, 0, 4, d.headerBorderWidth ?? 1),
       headerMenuFontSize: clampInt(darkIn.headerMenuFontSize, 10, 20, d.headerMenuFontSize ?? 14),
       headerMenuFontWeight: clampInt(darkIn.headerMenuFontWeight, 300, 800, d.headerMenuFontWeight ?? 400),
+      fontFamily: sanitizeThemeFontFamily(darkIn.fontFamily, d.fontFamily ?? 'system'),
       stickyHeaderBg: sanitizeHex(darkIn.stickyHeaderBg, darkStickyBgFallback),
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: clampInt(darkIn.stickyHeaderBlur, 0, 40, d.stickyHeaderBlur ?? 14),
@@ -288,6 +331,30 @@ const sanitizePalette = (input: unknown): ThemeColorPalette => {
       headerShadow: sanitizeHex(darkIn.headerShadow, darkHeaderShadowFallback),
       headerShadowBlur: clampInt(darkIn.headerShadowBlur, 0, 80, d.headerShadowBlur ?? 30),
       headerShadowSpread: clampInt(darkIn.headerShadowSpread, -80, 80, d.headerShadowSpread ?? -22),
+      surfaceRadius: clampInt(darkIn.surfaceRadius, 0, 32, d.surfaceRadius ?? 16),
+      statCardAccentTop: clampInt(darkIn.statCardAccentTop, 0, 8, d.statCardAccentTop ?? 0),
+      panelShadow: sanitizeHex(darkIn.panelShadow, darkPanelShadowFallback),
+      panelShadowBlur: clampInt(darkIn.panelShadowBlur, 0, 80, d.panelShadowBlur ?? d.cardShadowBlur ?? 18),
+      panelShadowSpread: clampInt(darkIn.panelShadowSpread, -80, 80, d.panelShadowSpread ?? d.cardShadowSpread ?? -18),
+      cardShadow: sanitizeHex(darkIn.cardShadow, darkCardShadowFallback),
+      cardShadowBlur: clampInt(darkIn.cardShadowBlur, 0, 80, d.cardShadowBlur ?? 24),
+      cardShadowSpread: clampInt(darkIn.cardShadowSpread, -80, 80, d.cardShadowSpread ?? -18),
+      tabsShadow: sanitizeHex(darkIn.tabsShadow, darkTabsShadowFallback),
+      tabsShadowBlur: clampInt(darkIn.tabsShadowBlur, 0, 80, d.tabsShadowBlur ?? d.cardShadowBlur ?? 24),
+      tabsShadowSpread: clampInt(darkIn.tabsShadowSpread, -80, 80, d.tabsShadowSpread ?? d.cardShadowSpread ?? -18),
+      sidebarShadow: sanitizeHex(darkIn.sidebarShadow, darkSidebarShadowFallback),
+      sidebarShadowBlur: clampInt(
+        darkIn.sidebarShadowBlur,
+        0,
+        80,
+        d.sidebarShadowBlur ?? d.panelShadowBlur ?? d.cardShadowBlur ?? 18,
+      ),
+      sidebarShadowSpread: clampInt(
+        darkIn.sidebarShadowSpread,
+        -80,
+        80,
+        d.sidebarShadowSpread ?? d.panelShadowSpread ?? d.cardShadowSpread ?? -18,
+      ),
       stickyHeaderShadow: sanitizeHex(darkIn.stickyHeaderShadow, darkStickyHeaderShadowFallback),
       stickyHeaderShadowBlur: clampInt(
         darkIn.stickyHeaderShadowBlur,

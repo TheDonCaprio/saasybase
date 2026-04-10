@@ -485,7 +485,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
     <div className="space-y-6">
 
 
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={search}
           onSearchChange={setSearch}
@@ -527,7 +527,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+          'flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -558,14 +558,14 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
 
       <div className={dashboardPanelClass('p-0 overflow-hidden')}>
         {filteredPlans.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500 dark:text-neutral-300">
+          <div className="px-4 py-12 text-center text-sm text-slate-500 dark:text-neutral-300">
             {hasActiveFilters ? 'No plans match your filters.' : 'No plans yet. Create your first plan to get started.'}
           </div>
         ) : (
           <>
             <div className="divide-y divide-slate-100/80 md:hidden dark:divide-neutral-800/80">
               {filteredPlans.map((plan) => (
-                <div key={plan.id} className="space-y-3 p-4">
+                <div key={plan.id} className="space-y-3 p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{plan.name}</div>
@@ -628,13 +628,14 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       ))}
                     </div>
                   ) : null}
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
                     <IconActionButton
                       onClick={() => openEdit(plan.id)}
                       ariaLabel={`Edit plan ${plan.name}`}
                       title="Edit"
                       icon={faPen}
                       color="indigo"
+                      size="compact"
                     />
                     <IconActionButton
                       onClick={() => openDuplicate(plan.id)}
@@ -642,6 +643,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       title="Duplicate"
                       icon={faCopy}
                       color="emerald"
+                      size="compact"
                     />
                     <IconActionButton
                       onClick={() => togglePlanStatus(plan.id, !plan.active)}
@@ -653,6 +655,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       activeColor="amber"
                       inactiveColor="emerald"
                       disabled={loading}
+                      size="compact"
                     />
                     <IconActionButton
                       onClick={() => deletePlan(plan.id)}
@@ -660,6 +663,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       title="Delete"
                       icon={faTrash}
                       color="rose"
+                      size="compact"
                     />
                   </div>
                 </div>
@@ -667,7 +671,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
             </div>
 
             <div className="hidden md:block">
-              <div className="border-b border-slate-200 bg-slate-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+              <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
                 <div className="grid grid-cols-[1.6fr,1fr,1fr,1fr,1fr] gap-4">
                   <div>Plan</div>
                   <div>Pricing</div>
@@ -681,7 +685,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                 {filteredPlans.map((plan) => (
                   <div
                     key={plan.id}
-                    className="grid grid-cols-[1.6fr,1fr,1fr,1fr,1fr] items-center gap-4 px-6 py-4 text-sm text-slate-700 transition-colors hover:bg-slate-50/70 dark:text-neutral-200 dark:hover:bg-neutral-900/60"
+                    className="grid grid-cols-[1.6fr,1fr,1fr,1fr,1fr] items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50/70 dark:text-neutral-200 dark:hover:bg-neutral-900/60"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -753,13 +757,14 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       ) : null}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       <IconActionButton
                         onClick={() => openEdit(plan.id)}
                         ariaLabel={`Edit plan ${plan.name}`}
                         title="Edit"
                         icon={faPen}
                         color="indigo"
+                        size="compact"
                       />
                       <IconActionButton
                         onClick={() => openDuplicate(plan.id)}
@@ -767,6 +772,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                         title="Duplicate"
                         icon={faCopy}
                         color="emerald"
+                        size="compact"
                       />
                       <IconActionButton
                         onClick={() => togglePlanStatus(plan.id, !plan.active)}
@@ -778,6 +784,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                         activeColor="amber"
                         inactiveColor="emerald"
                         disabled={loading}
+                        size="compact"
                       />
                       <IconActionButton
                         onClick={() => deletePlan(plan.id)}
@@ -785,6 +792,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                         title="Delete"
                         icon={faTrash}
                         color="rose"
+                        size="compact"
                       />
                     </div>
                   </div>
@@ -1251,9 +1259,9 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
 
 
 
-                <div className="flex justify-end gap-3 pt-2 pb-2 flex-shrink-0">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 bg-neutral-800 border border-neutral-700 text-neutral-100 rounded hover:bg-neutral-700">Cancel</button>
-                  <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">{editingPlanId ? 'Save' : 'Create'}</button>
+                <div className="flex justify-end gap-2.5 border-t border-neutral-800 pt-3 pb-1 flex-shrink-0">
+                  <button type="button" onClick={() => setShowModal(false)} className="rounded-lg border border-neutral-700 bg-neutral-800 px-3.5 py-2 text-sm text-neutral-100 hover:bg-neutral-700">Cancel</button>
+                  <button type="submit" disabled={loading} className="rounded-lg bg-blue-600 px-3.5 py-2 text-sm text-white hover:bg-blue-700">{editingPlanId ? 'Save' : 'Create'}</button>
                 </div>
               </form>
             </div>

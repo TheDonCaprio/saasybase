@@ -57,14 +57,14 @@ export function OnboardingChecklist({ userId, progress }: OnboardingChecklistPro
         <div
           key={step.id}
           className={clsx(
-            'rounded-2xl border px-6 py-5 shadow-sm transition hover:shadow-md',
+            'rounded-[var(--theme-surface-radius)] border px-5 py-4 shadow-sm transition hover:shadow-md',
             step.completed
               ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10'
               : 'border-slate-200 bg-white hover:border-blue-300 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600'
           )}
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-4">
+          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3.5">
               <div
                 className={clsx(
                   'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold',
@@ -91,7 +91,7 @@ export function OnboardingChecklist({ userId, progress }: OnboardingChecklistPro
             {!step.completed && (
               <Link
                 href={step.action.href}
-                className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-50 dark:border-neutral-700 dark:text-blue-300 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+                className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-50 dark:border-neutral-700 dark:text-blue-300 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
               >
                 {step.action.label}
               </Link>
@@ -99,7 +99,7 @@ export function OnboardingChecklist({ userId, progress }: OnboardingChecklistPro
           </div>
 
           {step.completed && (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-100/80 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <div className="mt-3.5 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-100/80 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
               <span className="text-sm">✓</span>
               Completed
             </div>
@@ -107,7 +107,7 @@ export function OnboardingChecklist({ userId, progress }: OnboardingChecklistPro
         </div>
       ))}
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 shadow-sm backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/40">
+      <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-slate-50/70 p-5 shadow-sm backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/40">
         <h3 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Quick tips</h3>
         <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-neutral-400">
           <li>• Start with the 24-hour plan to test all features.</li>

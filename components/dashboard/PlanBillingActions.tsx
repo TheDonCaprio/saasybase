@@ -67,7 +67,7 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
   // Use .text-actual-white utility to ensure white text even in light theme
 
   return (
-    <div className={dashboardPanelClass('mt-4')}>
+    <div className={dashboardPanelClass('mt-4 space-y-4 p-3 sm:p-4')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-slate-600 dark:text-neutral-300 sm:max-w-[55%]">
           Looking for recent activity? View transactions and invoices for a quick audit of charges.
@@ -76,14 +76,14 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/dashboard/transactions"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
           >
             Recent transactions
           </Link>
 
           <Link
             href="/dashboard/billing"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
           >
             Billing settings
           </Link>
@@ -91,7 +91,7 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
           <button
             type="button"
             onClick={() => setShowRedeem(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white text-actual-white shadow-sm transition hover:bg-blue-700"
           >
             Redeem a coupon
           </button>
@@ -101,8 +101,8 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
       {showRedeem ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowRedeem(false)} />
-          <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
-            <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-neutral-800">
+          <div className="relative z-10 w-full max-w-3xl rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Redeem a coupon</h3>
               <button
                 onClick={() => setShowRedeem(false)}
@@ -116,7 +116,7 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
               </button>
             </div>
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-5 p-5">
               {initialLoading ? (
                 <div className="flex items-center justify-center py-12 text-sm font-medium text-slate-500 dark:text-neutral-300">
                   <div className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-neutral-700 dark:border-t-neutral-200" />
@@ -132,11 +132,11 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
                     initialFilters={modalFilters}
                     displayCurrency={displayCurrency}
                   />
-                  <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-300 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>Need to review redeemed or expired codes? Open the full coupon manager.</span>
                     <Link
                       href="/dashboard/coupons"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-neutral-700 dark:bg-neutral-900/80 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-neutral-700 dark:bg-neutral-900/80 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
                     >
                       Go to coupon dashboard
                     </Link>

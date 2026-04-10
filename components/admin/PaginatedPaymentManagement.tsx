@@ -253,7 +253,7 @@ export function PaginatedPaymentManagement({
     <div className="space-y-6">
       {/* Status summary cards removed */}
 
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={filter}
           onSearchChange={handleFilterChange}
@@ -294,7 +294,7 @@ export function PaginatedPaymentManagement({
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+          'px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -334,11 +334,11 @@ export function PaginatedPaymentManagement({
         ) : (
           <>
             {/* Mobile Card View */}
-            <div className="min-[1025px]:hidden space-y-4 p-4 sm:p-6">
+            <div className="min-[1025px]:hidden space-y-3 p-3 sm:p-4">
               {filteredPayments.map((payment) => {
                 const pricing = getPricingDetails(payment);
                 return (
-                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-4')}>
+                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-3 sm:p-4')}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <PaymentProviderBadge provider={payment.paymentProvider} variant="icon" size="md" />

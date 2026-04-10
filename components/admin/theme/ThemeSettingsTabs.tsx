@@ -115,6 +115,19 @@ export function ThemeSettingsTabs({
 }: ThemeSettingsTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('navigation');
+  const resolveThemeFontStack = useCallback((fontFamily: ColorTokens['fontFamily'] | undefined): string => {
+    switch (fontFamily) {
+      case 'material':
+        return 'Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif';
+      case 'fluent':
+        return '"Segoe UI Variable Text", "Segoe UI", Selawik, Tahoma, Arial, sans-serif';
+      case 'apple':
+        return '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+      case 'system':
+      default:
+        return '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+    }
+  }, []);
 
   const parseHexColor = useCallback((hex: string): { rgb: string; a: number } => {
     const clean = (hex || '').trim().replace(/^#/, '');
@@ -145,6 +158,32 @@ export function ThemeSettingsTabs({
 
       const headerShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(t.headerShadowBlur) ? t.headerShadowBlur : 30)));
       const headerShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(t.headerShadowSpread) ? t.headerShadowSpread : -22)));
+      const cardShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(t.cardShadowBlur) ? t.cardShadowBlur : 24)));
+      const cardShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(t.cardShadowSpread) ? t.cardShadowSpread : -18)));
+      const panelShadowBlurPx = Math.max(
+        0,
+        Math.min(80, Math.round(Number.isFinite(t.panelShadowBlur) ? t.panelShadowBlur : cardShadowBlurPx)),
+      );
+      const panelShadowSpreadPx = Math.max(
+        -80,
+        Math.min(80, Math.round(Number.isFinite(t.panelShadowSpread) ? t.panelShadowSpread : cardShadowSpreadPx)),
+      );
+      const tabsShadowBlurPx = Math.max(
+        0,
+        Math.min(80, Math.round(Number.isFinite(t.tabsShadowBlur) ? t.tabsShadowBlur : cardShadowBlurPx)),
+      );
+      const tabsShadowSpreadPx = Math.max(
+        -80,
+        Math.min(80, Math.round(Number.isFinite(t.tabsShadowSpread) ? t.tabsShadowSpread : cardShadowSpreadPx)),
+      );
+      const sidebarShadowBlurPx = Math.max(
+        0,
+        Math.min(80, Math.round(Number.isFinite(t.sidebarShadowBlur) ? t.sidebarShadowBlur : panelShadowBlurPx)),
+      );
+      const sidebarShadowSpreadPx = Math.max(
+        -80,
+        Math.min(80, Math.round(Number.isFinite(t.sidebarShadowSpread) ? t.sidebarShadowSpread : panelShadowSpreadPx)),
+      );
       const stickyHeaderShadowBlurPx = Math.max(
         0,
         Math.min(80, Math.round(Number.isFinite(t.stickyHeaderShadowBlur) ? t.stickyHeaderShadowBlur : headerShadowBlurPx)),
@@ -153,6 +192,9 @@ export function ThemeSettingsTabs({
         -80,
         Math.min(80, Math.round(Number.isFinite(t.stickyHeaderShadowSpread) ? t.stickyHeaderShadowSpread : headerShadowSpreadPx)),
       );
+      const surfaceRadiusPx = Math.max(0, Math.min(32, Math.round(Number.isFinite(t.surfaceRadius) ? t.surfaceRadius : 16)));
+      const statCardAccentTopPx = Math.max(0, Math.min(8, Math.round(Number.isFinite(t.statCardAccentTop) ? t.statCardAccentTop : 0)));
+      const fontFamily = resolveThemeFontStack(t.fontFamily);
 
       const cssToken = (name: string, hex: string) => {
         const p = parseHexColor(hex);
@@ -170,6 +212,10 @@ export function ThemeSettingsTabs({
       const sidebarBorder = parseHexColor(t.sidebarBorder ?? t.borderPrimary);
       const pageGlow = parseHexColor(t.pageGlow);
       const headerShadow = parseHexColor(t.headerShadow ?? '#00000014');
+      const panelShadow = parseHexColor(t.panelShadow ?? t.cardShadow ?? '#00000012');
+      const cardShadow = parseHexColor(t.cardShadow ?? '#00000014');
+      const tabsShadow = parseHexColor(t.tabsShadow ?? t.cardShadow ?? '#00000010');
+      const sidebarShadow = parseHexColor(t.sidebarShadow ?? t.panelShadow ?? t.headerShadow ?? '#00000010');
       const stickyHeaderShadow = parseHexColor(
         t.stickyHeaderShadow ?? t.headerShadow ?? '#00000014'
       );
@@ -209,6 +255,7 @@ export function ThemeSettingsTabs({
         `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
         `  --theme-header-menu-font-size: ${headerMenuFontSizePx}px;`,
         `  --theme-header-menu-font-weight: ${headerMenuFontWeight};`,
+        `  --theme-font-family: ${fontFamily};`,
         `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a)});`,
         `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
         `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
@@ -217,7 +264,13 @@ export function ThemeSettingsTabs({
         `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a)});`,
         `  --theme-sidebar-border: rgb(${sidebarBorder.rgb} / ${fmtAlpha(sidebarBorder.a)});`,
         `  --theme-header-shadow: 0 12px ${headerShadowBlurPx}px ${headerShadowSpreadPx}px rgb(${headerShadow.rgb} / ${fmtAlpha(headerShadow.a)});`,
+        `  --theme-panel-shadow: 0 12px ${panelShadowBlurPx}px ${panelShadowSpreadPx}px rgb(${panelShadow.rgb} / ${fmtAlpha(panelShadow.a)});`,
+        `  --theme-card-shadow: 0 12px ${cardShadowBlurPx}px ${cardShadowSpreadPx}px rgb(${cardShadow.rgb} / ${fmtAlpha(cardShadow.a)});`,
+        `  --theme-tabs-shadow: 0 12px ${tabsShadowBlurPx}px ${tabsShadowSpreadPx}px rgb(${tabsShadow.rgb} / ${fmtAlpha(tabsShadow.a)});`,
+        `  --theme-sidebar-shadow: 0 12px ${sidebarShadowBlurPx}px ${sidebarShadowSpreadPx}px rgb(${sidebarShadow.rgb} / ${fmtAlpha(sidebarShadow.a)});`,
         `  --theme-sticky-header-shadow: 0 12px ${stickyHeaderShadowBlurPx}px ${stickyHeaderShadowSpreadPx}px rgb(${stickyHeaderShadow.rgb} / ${fmtAlpha(stickyHeaderShadow.a)});`,
+        `  --theme-surface-radius: ${surfaceRadiusPx}px;`,
+        `  --theme-stat-card-accent-top: ${statCardAccentTopPx}px;`,
         `  --theme-page-gradient-from: rgb(${pageFrom.rgb} / ${fmtAlpha(pageFrom.a)});`,
         `  --theme-page-gradient-via: rgb(${pageVia.rgb} / ${fmtAlpha(pageVia.a)});`,
         `  --theme-page-gradient-to: rgb(${pageTo.rgb} / ${fmtAlpha(pageTo.a)});`,
@@ -244,7 +297,7 @@ export function ThemeSettingsTabs({
       document.head.appendChild(tag);
     }
     tag.textContent = css;
-  }, [fmtAlpha, parseHexColor]);
+  }, [fmtAlpha, parseHexColor, resolveThemeFontStack]);
   
   // Navigation state
   const [headerLinks, setHeaderLinks] = useState<ThemeLink[]>(() => 
@@ -1021,11 +1074,11 @@ export function ThemeSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative overflow-x-auto rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
+        className="relative overflow-x-auto rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] transition-shadow"
+        style={{ boxShadow: 'var(--theme-tabs-shadow)' }}
         role="tablist"
         aria-label="Theme settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         <div className="flex min-w-max sm:min-w-0">
           {tabs.map((tab) => (
             <button
@@ -1051,7 +1104,8 @@ export function ThemeSettingsTabs({
       <div
         role="tabpanel"
         aria-labelledby={`${activeContent.id}-tab`}
-        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-950/60"
+        className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-panel-rgb)_/_calc(var(--surface-panel-a)*0.88))] p-6"
+        style={{ boxShadow: 'var(--theme-panel-shadow)' }}
       >
         {activeContent.content}
       </div>

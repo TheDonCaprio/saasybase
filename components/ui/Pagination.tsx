@@ -66,19 +66,19 @@ export function Pagination({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-3 border-t border-neutral-700 pt-4">
+    <div className="flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-800">
       {/* Items info */}
-      <div className="w-full sm:w-auto text-sm text-neutral-400 text-center sm:text-left">
+      <div className="w-full text-center text-xs text-slate-500 sm:w-auto sm:text-left sm:text-sm dark:text-neutral-400">
         Showing {startItem}-{endItem} of {totalItems} items
       </div>
 
       {/* Pagination controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-end">
         {/* Previous button */}
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1 text-sm border border-neutral-700 rounded hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-full border border-slate-200 px-2.5 py-1 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
           Previous
         </button>
@@ -88,14 +88,14 @@ export function Pagination({
           {getVisiblePages().map((page, index) => (
             <span key={index}>
               {page === '...' ? (
-                <span className="px-2 py-1 text-neutral-500">...</span>
+                <span className="px-1.5 py-1 text-[13px] text-slate-400 dark:text-neutral-500">...</span>
               ) : (
                 <button
                   onClick={() => onPageChange(page as number)}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                  className={`rounded-full px-2.5 py-1 text-[13px] font-medium transition-colors ${
                     currentPage === page
                       ? 'bg-blue-600 text-white'
-                      : 'border border-neutral-700 hover:bg-neutral-800'
+                      : 'border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
                   }`}
                 >
                   {page}
@@ -117,7 +117,7 @@ export function Pagination({
           // allow next when either there is a nextCursor (progressive) or currentPage < safeTotalPages
           disabled={!(nextCursor || currentPage < safeTotalPages)}
           title={nextCursor ? 'Uses server cursor for progressive fetch' : undefined}
-          className="px-3 py-1 text-sm border border-neutral-700 rounded hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-full border border-slate-200 px-2.5 py-1 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
           Next
         </button>

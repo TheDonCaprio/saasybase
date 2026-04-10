@@ -242,7 +242,7 @@ export default function SassyAppClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="grid gap-4 lg:grid-cols-3">
         <section className={dashboardMutedPanelClass('space-y-2 lg:col-span-2')}>
           <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Real balances (read-only)</p>
@@ -250,7 +250,7 @@ export default function SassyAppClient() {
             <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
           ) : profile ? (
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className={dashboardPanelClass('p-4')}
+              <div className={dashboardPanelClass('p-3.5')}
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Paid</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
@@ -258,7 +258,7 @@ export default function SassyAppClient() {
                 </p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.paidTokens?.tokenName ?? 'tokens'}</p>
               </div>
-              <div className={dashboardPanelClass('p-4')}
+              <div className={dashboardPanelClass('p-3.5')}
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Free</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
@@ -266,7 +266,7 @@ export default function SassyAppClient() {
                 </p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">{profile.freeTokens?.tokenName ?? 'tokens'}</p>
               </div>
-              <div className={dashboardPanelClass('p-4')}
+              <div className={dashboardPanelClass('p-3.5')}
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Shared</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-neutral-100">
@@ -292,7 +292,7 @@ export default function SassyAppClient() {
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
               Spend from
             </label>
@@ -313,14 +313,14 @@ export default function SassyAppClient() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
-                className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
                 onClick={() => setSimulatedBalance(bucketAvailable)}
               >
                 Load from real
               </button>
               <button
                 type="button"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
                 onClick={() => {
                   setEvents([]);
                   setSimulatedBalance(bucketAvailable);
@@ -332,7 +332,7 @@ export default function SassyAppClient() {
             </div>
           </div>
 
-          <div className={dashboardPanelClass('p-4 space-y-1')}>
+          <div className={dashboardPanelClass('p-3.5 space-y-1')}>
             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">Simulated balance</p>
             <p className="text-2xl font-semibold text-slate-900 dark:text-neutral-100">
               {formatBalance(simulatedBalance, simulatedBalance == null)} <span className="text-sm font-medium text-slate-500 dark:text-neutral-400">{tokenName}</span>
@@ -356,7 +356,7 @@ export default function SassyAppClient() {
               key={op.id}
               type="button"
               className={clsx(
-                'group rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-emerald-500/40',
+                'group rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition hover:border-emerald-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-emerald-500/40',
               )}
               onClick={() => spend(op.cost, op.label, bucket)}
             >
@@ -375,7 +375,7 @@ export default function SassyAppClient() {
 
         <div className={dashboardMutedPanelClass('space-y-3')}>
           <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Custom operation</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-3">
             <input
               value={customLabel}
               onChange={(e) => setCustomLabel(e.target.value)}
@@ -391,7 +391,7 @@ export default function SassyAppClient() {
             />
             <button
               type="button"
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-neutral-100"
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-neutral-100"
               onClick={() => {
                 const cost = safeInt(customCost);
                 spend(cost ?? 0, customLabel || 'Custom operation', bucket);
@@ -423,7 +423,7 @@ export default function SassyAppClient() {
         ) : (
           <ul className="divide-y divide-slate-200 dark:divide-neutral-800">
             {events.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                 <div className="min-w-0">
                   <p className="font-medium text-slate-900 dark:text-neutral-100 truncate">{e.label}</p>
                   <p className="text-xs text-slate-500 dark:text-neutral-400">

@@ -86,9 +86,9 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
   if (!isOpen || !portalEl) return null;
 
   const modal = (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 mt-0">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg w-full max-w-4xl max-h-[80vh] flex flex-col">
-        <div className="flex justify-between items-center p-6 border-b border-neutral-700">
+    <div className="fixed inset-0 z-50 mt-0 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[80vh] w-full max-w-4xl flex-col rounded-lg border border-neutral-700 bg-neutral-900">
+        <div className="flex items-center justify-between border-b border-neutral-700 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold">Payment History</h2>
             <p className="text-sm text-neutral-400">
@@ -103,7 +103,7 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto px-4 py-3 sm:px-5 sm:py-4">
           {loading ? (
             <div className="divide-y divide-slate-200/70 dark:divide-neutral-800/70">
               {[...Array(itemsPerPage)].map((_, i) => (
@@ -111,13 +111,13 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
               ))}
             </div>
           ) : payments.length === 0 ? (
-            <div className="text-center py-8 text-neutral-500">No payments found for this user.</div>
+            <div className="px-4 py-10 text-center text-sm text-neutral-500">No payments found for this user.</div>
           ) : (
             <div className="divide-y divide-slate-200/70 dark:divide-neutral-800/70">
               {payments.map((payment) => (
-                <div key={payment.id} className="flex flex-col sm:flex-row items-start gap-4 py-3 px-4 transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
+                <div key={payment.id} className="flex flex-col items-start gap-3 px-3 py-2.5 transition hover:bg-slate-50/70 sm:flex-row sm:px-4 dark:hover:bg-neutral-900/50">
                   {/* Amount / plan (top on mobile, left on desktop) */}
-                  <div className="w-full sm:w-32 flex-shrink-0 flex flex-col justify-start">
+                  <div className="flex w-full flex-shrink-0 flex-col justify-start sm:w-32">
                     <div className="font-semibold text-sm truncate">{payment.amountFormatted ?? formatAmount(payment.amount, payment.displayCurrency ?? payment.currency)}</div>
                     <div className="text-[11px] text-neutral-400">{payment.planName ?? ''}</div>
                   </div>
@@ -127,11 +127,11 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
                     <div className="flex items-center gap-3">
                       <div className={`text-[11px] px-2 rounded ${getStatusColor(payment.status)} bg-current/8 border border-current py-0.5`}>{payment.status}</div>
                     </div>
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="mt-1 text-xs text-neutral-500">
                       {formatDate(payment.createdAt, { mode: settings.mode, timezone: settings.timezone })}
 
                       {/* IDs shown under the date: payment id and first-available provider id */}
-                      <div className="mt-2 text-[11px] text-neutral-400 font-mono truncate">
+                      <div className="mt-1.5 truncate font-mono text-[11px] text-neutral-400">
                         {payment.id}
                       </div>
                       {(() => {
@@ -140,20 +140,20 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
                           ?? payment.externalRefundId;
                         if (!providerId) return null;
                         return (
-                          <div className="mt-1 text-[11px] text-neutral-400 font-mono truncate">Provider ID: {providerId}</div>
+                          <div className="mt-1 truncate font-mono text-[11px] text-neutral-400">Provider ID: {providerId}</div>
                         );
                       })()}
                     </div>
                   </div>
 
                   {/* Actions: full width on mobile, right aligned on desktop */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-2.5">
                     {(payment.dashboardUrl || payment.externalPaymentId || payment.externalSessionId || payment.externalRefundId) && (
                       <a
                         href={payment.dashboardUrl || '#'}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full sm:w-auto text-center text-xs bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded transition-colors"
+                        className="w-full rounded-md bg-purple-600 px-2.5 py-1 text-center text-xs text-white transition-colors hover:bg-purple-700 sm:w-auto"
                       >
                         View
                       </a>
@@ -166,7 +166,7 @@ export function UserPaymentsModal({ userId, userEmail, isOpen, onClose }: UserPa
 
           {/* Pagination footer inside scroll area so it stays visible with long lists */}
           {totalCount > itemsPerPage && (
-            <div className="mt-4">
+            <div className="mt-3">
               <Pagination currentPage={currentPage} totalPages={Math.max(1, Math.ceil((totalCount || 0) / itemsPerPage))} onPageChange={(p) => fetchPage(p)} totalItems={totalCount} itemsPerPage={itemsPerPage} nextCursor={nextCursor} onNextWithCursor={() => fetchPage(currentPage + 1, false, nextCursor)} />
             </div>
           )}

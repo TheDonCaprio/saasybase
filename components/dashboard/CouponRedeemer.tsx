@@ -156,7 +156,7 @@ export function CouponRedeemer({
 
   return (
     <div className="space-y-6">
-      <section className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">
+      <section className="space-y-4 lg:rounded-[var(--theme-surface-radius)] lg:border lg:border-slate-200 lg:bg-white lg:p-4 xl:p-5 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Redeem a coupon</h2>
           <p className="text-sm text-slate-500 dark:text-neutral-400">
@@ -183,7 +183,7 @@ export function CouponRedeemer({
         </div>
       </section>
 
-  <section className="space-y-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">
+      <section className="space-y-4 lg:rounded-[var(--theme-surface-radius)] lg:border lg:border-slate-200 lg:bg-white lg:p-4 xl:p-5 lg:shadow-sm dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Your coupons</h2>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -215,7 +215,7 @@ export function CouponRedeemer({
         </div>
 
         {redemptions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-neutral-700 dark:text-neutral-400">
+          <div className="rounded-[var(--theme-surface-radius)] border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500 dark:border-neutral-700 dark:text-neutral-400">
             {isLoading
               ? 'Loading coupons…'
               : filter
@@ -225,13 +225,13 @@ export function CouponRedeemer({
         ) : (
           <>
             {/* Mobile stacked cards */}
-            <div className="md:hidden space-y-3 p-4">
+            <div className="space-y-3 p-3 sm:p-4 md:hidden">
               {redemptions.map((row) => {
                 const discount = row.percentOff !== null ? `${row.percentOff}% off` : formatMoney(row.amountOffCents, resolvedCurrency);
                 const status = statusLabel(computeStatus(row));
                 const windowText = `${formatDate(row.startsAt, row.startsAtFormatted)} → ${formatDate(row.endsAt, row.endsAtFormatted)}`;
                 return (
-                  <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+                  <div key={row.id} className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60 sm:p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="font-mono text-sm font-semibold tracking-[0.3em] text-slate-900 dark:text-neutral-100">{row.code}</div>
@@ -254,15 +254,15 @@ export function CouponRedeemer({
             </div>
 
             {/* Desktop table */}
-            <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-neutral-800">
+            <div className="theme-shadow-panel hidden md:block overflow-hidden rounded-[var(--theme-surface-radius)] border border-slate-200 dark:border-neutral-800">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
                   <tr>
-                    <th className="p-4 text-left">Code</th>
-                    <th className="p-4 text-left">Discount</th>
-                    <th className="p-4 text-left">Status</th>
-                    <th className="p-4 text-left">Redeemed</th>
-                    <th className="p-4 text-left">Valid window</th>
+                    <th className="px-3 py-2.5 text-left">Code</th>
+                    <th className="px-3 py-2.5 text-left">Discount</th>
+                    <th className="px-3 py-2.5 text-left">Status</th>
+                    <th className="px-3 py-2.5 text-left">Redeemed</th>
+                    <th className="px-3 py-2.5 text-left">Valid window</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -273,7 +273,7 @@ export function CouponRedeemer({
 
                     return (
                       <tr key={row.id} className="border-t border-slate-200/80 dark:border-neutral-800/80">
-                        <td className="p-4 align-top">
+                        <td className="px-3 py-2.5 align-top">
                           <div className="font-mono text-sm font-semibold tracking-[0.3em] text-slate-900 dark:text-neutral-100">{row.code}</div>
                           {row.description ? (
                             <p className="mt-1 max-w-sm text-xs text-slate-500 dark:text-neutral-400">{row.description}</p>
@@ -285,17 +285,17 @@ export function CouponRedeemer({
                               : 'All plans'}
                           </p>
                         </td>
-                        <td className="p-4 align-top text-slate-700 dark:text-neutral-200">{discount}</td>
-                        <td className="p-4 align-top">
+                        <td className="px-3 py-2.5 align-top text-slate-700 dark:text-neutral-200">{discount}</td>
+                        <td className="px-3 py-2.5 align-top">
                           <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
                         </td>
-                        <td className="p-4 align-top text-slate-600 dark:text-neutral-300">
+                        <td className="px-3 py-2.5 align-top text-slate-600 dark:text-neutral-300">
                           <div>{formatDate(row.redeemedAt, row.redeemedAtFormatted)}</div>
                           {row.consumedAt ? (
                             <div className="text-xs text-slate-500 dark:text-neutral-400">Used {formatDate(row.consumedAt, row.consumedAtFormatted)}</div>
                           ) : null}
                         </td>
-                        <td className="p-4 align-top text-slate-600 dark:text-neutral-300">{windowText}</td>
+                        <td className="px-3 py-2.5 align-top text-slate-600 dark:text-neutral-300">{windowText}</td>
                       </tr>
                     );
                   })}

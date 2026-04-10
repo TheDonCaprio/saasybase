@@ -330,7 +330,7 @@ export default function AnalyticsDashboard({
 
   return (
     <div className="space-y-8">
-      <div className={dashboardPanelClass('space-y-5 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-5 p-3 sm:p-4')}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <span className={dashboardPillClass('text-xs font-semibold text-indigo-600 dark:text-indigo-200')}>
@@ -385,7 +385,7 @@ export default function AnalyticsDashboard({
         ) : null}
       </div>
 
-      <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">This period highlights</h3>
           <span className={smallBadgeClass}>Prev window comparison</span>
@@ -417,7 +417,7 @@ export default function AnalyticsDashboard({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+        <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
           <SimpleLineChart
             data={revenueSeries}
             title="Revenue trend"
@@ -425,7 +425,7 @@ export default function AnalyticsDashboard({
             formatValue={(value) => formatCurrency(value)}
           />
         </div>
-        <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+        <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
           <SimpleLineChart
             data={subscriptionSeries}
             title="Subscriptions trend"
@@ -435,7 +435,7 @@ export default function AnalyticsDashboard({
         </div>
       </div>
 
-      <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
         <div className="grid gap-6 lg:grid-cols-2">
           <SimpleLineChart
             data={recentRegistrationSeries}
@@ -467,16 +467,16 @@ export default function AnalyticsDashboard({
             <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-neutral-800">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-neutral-900/60 dark:text-neutral-400">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left">Plan</th>
-                  <th scope="col" className="px-4 py-3 text-right">Revenue</th>
-                  <th scope="col" className="px-4 py-3 text-right">Users</th>
-                  <th scope="col" className="px-4 py-3 text-right">Share</th>
+                  <th scope="col" className="px-3 py-2.5 text-left">Plan</th>
+                  <th scope="col" className="px-3 py-2.5 text-right">Revenue</th>
+                  <th scope="col" className="px-3 py-2.5 text-right">Users</th>
+                  <th scope="col" className="px-3 py-2.5 text-right">Share</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
                 {topPlans.map((plan) => (
                   <tr key={plan.id} className="bg-white/70 transition hover:bg-slate-50 dark:bg-neutral-900/40 dark:hover:bg-neutral-900/70">
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center justify-between gap-4">
                         <span className="font-medium text-slate-900 dark:text-neutral-50">{plan.name}</span>
                         <div className="hidden w-40 sm:flex sm:flex-col">
@@ -489,13 +489,13 @@ export default function AnalyticsDashboard({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-emerald-600 dark:text-emerald-300">
+                    <td className="px-3 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-300">
                       {formatCurrency(plan.revenue)}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-neutral-200">
+                    <td className="px-3 py-2.5 text-right font-medium text-slate-700 dark:text-neutral-200">
                       {formatNumber(plan.users)}
                     </td>
-                    <td className="px-4 py-3 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
+                    <td className="px-3 py-2.5 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
                       {formatPercentValue(plan.percentage)}
                     </td>
                   </tr>
@@ -506,7 +506,7 @@ export default function AnalyticsDashboard({
         )}
       </div>
 
-      <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">Customer & subscription mix</h3>
           <span className={smallBadgeClass}>Live snapshot</span>
@@ -518,21 +518,21 @@ export default function AnalyticsDashboard({
               <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-neutral-800">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-neutral-900/60 dark:text-neutral-400">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left">Status</th>
-                    <th scope="col" className="px-4 py-3 text-right">Count</th>
-                    <th scope="col" className="px-4 py-3 text-right">Share</th>
+                    <th scope="col" className="px-3 py-2.5 text-left">Status</th>
+                    <th scope="col" className="px-3 py-2.5 text-right">Count</th>
+                    <th scope="col" className="px-3 py-2.5 text-right">Share</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
                   {subscriptionBreakdown.map((item) => (
                     <tr key={item.key} className="bg-white/70 transition hover:bg-slate-50 dark:bg-neutral-900/40 dark:hover:bg-neutral-900/70">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <span className="font-medium text-slate-900 dark:text-neutral-50">{item.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-neutral-200">
+                      <td className="px-3 py-2.5 text-right font-semibold text-slate-700 dark:text-neutral-200">
                         {formatNumber(item.value)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
                         {formatPercentValue(item.percentage)}
                       </td>
                     </tr>
@@ -547,21 +547,21 @@ export default function AnalyticsDashboard({
               <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-neutral-800">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-neutral-900/60 dark:text-neutral-400">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left">Segment</th>
-                    <th scope="col" className="px-4 py-3 text-right">Users</th>
-                    <th scope="col" className="px-4 py-3 text-right">Share</th>
+                    <th scope="col" className="px-3 py-2.5 text-left">Segment</th>
+                    <th scope="col" className="px-3 py-2.5 text-right">Users</th>
+                    <th scope="col" className="px-3 py-2.5 text-right">Share</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
                   {userComposition.map((item) => (
                     <tr key={item.key} className="bg-white/70 transition hover:bg-slate-50 dark:bg-neutral-900/40 dark:hover:bg-neutral-900/70">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <span className="font-medium text-slate-900 dark:text-neutral-50">{item.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-neutral-200">
+                      <td className="px-3 py-2.5 text-right font-semibold text-slate-700 dark:text-neutral-200">
                         {formatNumber(item.value)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-slate-500 dark:text-neutral-300">
                         {formatPercentValue(item.percentage)}
                       </td>
                     </tr>
@@ -583,7 +583,7 @@ export default function AnalyticsDashboard({
         </div>
       </div>
 
-      <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('space-y-6 p-3 sm:p-4')}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">All-time performance</h3>
           <span className={smallBadgeClass}>Lifetime</span>

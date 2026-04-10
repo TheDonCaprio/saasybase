@@ -278,7 +278,7 @@ export function SupportTicketsList({
 
   return (
     <div className="space-y-6">
-      <div className={dashboardMutedPanelClass('p-4 sm:p-5')}>
+      <div className={dashboardMutedPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={search}
           onSearchChange={(v) => setSearch(v)}
@@ -311,7 +311,7 @@ export function SupportTicketsList({
               ))}
             </div>
           ) : (
-            <div className={dashboardMutedPanelClass('py-12 text-center text-sm text-slate-600 dark:text-neutral-300')}>
+            <div className={dashboardMutedPanelClass('px-4 py-10 text-center text-sm text-slate-600 dark:text-neutral-300')}>
               {statusFilter === 'ALL'
                 ? categoryFilter === 'ALL'
                   ? 'No support tickets yet. Submit your first request above.'

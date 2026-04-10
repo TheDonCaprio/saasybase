@@ -256,7 +256,7 @@ export function PaginatedNotificationList({
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 px-6 rounded-xl bg-gray-50 dark:bg-neutral-900/30 border border-gray-200 dark:border-neutral-700">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-12 text-center dark:border-neutral-700 dark:bg-neutral-900/30">
               <div className="text-gray-400 dark:text-neutral-500 text-sm">
                 {filter === 'ALL' 
                   ? 'No notifications yet. You\'ll receive notifications for billing updates, support replies, and account changes.'

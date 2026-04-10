@@ -102,17 +102,17 @@ export function NotificationCard({
 
   return (
     <div className={`
-      relative rounded-xl border p-5 transition-all duration-200
+      relative rounded-xl border p-4 transition-all duration-200
       ${isUnread
         ? `${typeConfig.bgColor} ${typeConfig.borderColor} shadow-sm hover:shadow-md`
         : 'bg-white/50 dark:bg-neutral-900/30 border-gray-200 dark:border-neutral-700/50 hover:bg-white/80 dark:hover:bg-neutral-900/50'
       }
     `}>
 
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         {/* Type icon */}
         <div className={`
-          flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+          flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg
           ${isUnread ? typeConfig.badgeColor : 'bg-gray-100 dark:bg-neutral-800'}
         `}>
           <FontAwesomeIcon
@@ -124,7 +124,7 @@ export function NotificationCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="mb-1.5 flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`
                 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
@@ -156,7 +156,7 @@ export function NotificationCard({
                     {showMarkAsRead && onMarkAsRead && (
                       <button
                         onClick={() => onMarkAsRead(id)}
-                        className="text-xs px-3 py-1.5 rounded-md bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors font-medium"
+                        className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium transition-colors hover:bg-gray-50 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                       >
                         Mark read
                       </button>
@@ -174,7 +174,7 @@ export function NotificationCard({
 
           {/* Title */}
           <h3 className={`
-            text-sm font-semibold mb-1
+            mb-1 text-sm font-semibold
             ${isUnread
               ? 'text-gray-900 dark:text-neutral-50'
               : 'text-gray-700 dark:text-neutral-200'
@@ -192,7 +192,7 @@ export function NotificationCard({
           {/* Message */}
           {message && (
             <p className={`
-              text-sm leading-relaxed
+              text-sm leading-snug
               ${isUnread
                 ? 'text-gray-700 dark:text-neutral-200'
                 : 'text-gray-600 dark:text-neutral-300'

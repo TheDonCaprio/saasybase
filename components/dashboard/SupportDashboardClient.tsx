@@ -105,16 +105,16 @@ export function SupportDashboardClient({
     }
   ];
 
-  return (
-  <div className="grid gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]">
-      <div className="space-y-6 min-w-0">
+    return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-5">
         <SupportRequestLauncher
           userId={userId}
           activeTicketsCount={displayActiveCount}
           onTicketSubmitted={handleTicketSubmitted}
         />
 
-  <section className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
+  <section className={dashboardPanelClass('space-y-5 p-3 sm:p-4')}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">Ticket inbox</h2>
@@ -138,10 +138,10 @@ export function SupportDashboardClient({
         </section>
       </div>
 
-      <aside className="space-y-6 min-w-0">
-        <div className={dashboardPanelClass('space-y-3 p-3')}>
+      <aside className="min-w-0 space-y-5">
+        <div className={dashboardPanelClass('space-y-2.5 p-3')}>
           {statusCards.map((card) => (
-            <div key={card.label} className={dashboardMutedPanelClass('p-2 sm:p-3')}>
+            <div key={card.label} className={dashboardMutedPanelClass('p-2.5')}>
               <div className="flex items-center justify-between gap-2">
                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${card.badge}`}>
                   {card.label}
@@ -153,7 +153,7 @@ export function SupportDashboardClient({
           ))}
         </div>
 
-        <div className={dashboardMutedPanelClass('space-y-4 p-4 sm:p-6 text-sm leading-relaxed text-slate-600 dark:text-neutral-200')}>
+        <div className={dashboardMutedPanelClass('space-y-3 p-3.5 text-sm leading-relaxed text-slate-600 dark:text-neutral-200')}>
           <div>
             <div className="text-sm font-semibold text-slate-800 dark:text-neutral-50">Email support</div>
             <a href={`mailto:${supportEmail}`} className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300">

@@ -53,27 +53,27 @@ export function CompactSupportTicket({ ticket, onOpen }: CompactSupportTicketPro
 
   return (
     <>
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
+      <div className="rounded-2xl border border-neutral-200 transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700">
         {/* Compact Header - Now clickable to open modal */}
         <div 
-          className="p-3 sm:p-4 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors"
+          className="cursor-pointer p-3 hover:bg-neutral-100 transition-colors sm:p-3.5 dark:hover:bg-neutral-800/50"
           onClick={() => onOpen(ticket)}
         >
           <div className="flex items-start sm:items-center justify-between">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 sm:mb-2">
+              <div className="mb-1 flex items-center gap-1.5 sm:mb-1.5">
                 <h4 className="text-sm font-medium text-neutral-900 dark:text-white truncate">{ticket.subject}</h4>
-                <span className="px-2 py-0.5 text-[11px] font-medium bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full" title={ticket.id}>
+                <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300" title={ticket.id}>
                   {ticketIdLabel}
                 </span>
-                <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${getStatusColor(ticket.status)}`}>
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusColor(ticket.status)}`}>
                   {ticket.status.replace('_', ' ')}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-medium border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
+                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
                   {getSupportTicketCategoryLabel(ticket.category)}
                 </span>
                 {showUnreadBadge && (
-                  <span className="bg-blue-600 text-white text-[11px] px-2 py-0.5 rounded-full">
+                  <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[11px] text-white">
                     {unreadReplies} new
                   </span>
                 )}

@@ -23,10 +23,10 @@ const accentMap: Record<AdminStatAccent, {
   overlay: string;
 }> = {
   theme: {
-    border: 'border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))] dark:border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))]',
+    border: 'border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.70))]',
     gradient: 'bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] dark:bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.58)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.58))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))]',
     icon: 'bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.15))] text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]',
-    overlay: 'bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.26)),_transparent_60%)]'
+    overlay: 'bg-[radial-gradient(circle_at_top,_transparent,_transparent)]'
   },
   indigo: {
     border: 'border-indigo-200/70 dark:border-indigo-500/40',
@@ -63,6 +63,14 @@ const accentMap: Record<AdminStatAccent, {
 export function AdminStatCard({ label, value, helper, footer, icon, accent = 'theme', size = 'default', className }: AdminStatCardProps) {
   const palette = accentMap[accent];
   const isCompact = size === 'compact';
+  const themeEdgeStyle = accent === 'theme'
+    ? {
+        borderTopWidth: 'var(--theme-stat-card-accent-top)',
+        borderTopColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
+        borderLeftWidth: 'var(--theme-stat-card-accent-left)',
+        borderLeftColor: 'rgb(var(--accent-primary-rgb) / calc(var(--accent-primary-a) * 0.92))',
+      }
+    : undefined;
   const labelClass = isCompact
     ? 'text-[11px] uppercase tracking-wide text-slate-500 dark:text-neutral-400'
     : 'text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400';
@@ -86,6 +94,7 @@ export function AdminStatCard({ label, value, helper, footer, icon, accent = 'th
           className
         )
       )}
+      style={themeEdgeStyle}
     >
       <div className={clsx('pointer-events-none absolute inset-0 opacity-75', palette.overlay)} />
       <div className="relative flex items-start justify-between gap-2">

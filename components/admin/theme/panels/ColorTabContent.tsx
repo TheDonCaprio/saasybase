@@ -62,6 +62,10 @@ export function ColorTabContent({
       key === 'sidebarBg' ||
       key === 'sidebarBorder' ||
       key === 'headerShadow' ||
+      key === 'panelShadow' ||
+      key === 'cardShadow' ||
+      key === 'tabsShadow' ||
+      key === 'sidebarShadow' ||
       key === 'pageGlow'
     );
   };
@@ -102,6 +106,9 @@ export function ColorTabContent({
     if (!Number.isFinite(num)) return fallback;
     return Math.max(min, Math.min(max, Math.round(num)));
   };
+  const surfaceRadius = clampInt(colors.surfaceRadius, 0, 32, 16);
+  const statCardAccentTop = clampInt(colors.statCardAccentTop, 0, 8, 0);
+  const statCardAccentLeft = clampInt(colors.statCardAccentLeft, 0, 8, 0);
 
   return (
     <div className="space-y-8">
@@ -519,6 +526,302 @@ export function ColorTabContent({
         </p>
       </section>
 
+      <section>
+        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Surface elevation</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Panel shadow blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}
+                onChange={(e) => setColors({ ...colors, panelShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}
+                onChange={(e) => setColors({ ...colors, panelShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Panel shadow blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Panel shadow spread (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}
+                onChange={(e) => setColors({ ...colors, panelShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}
+                onChange={(e) => setColors({ ...colors, panelShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Panel shadow spread pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">-80–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Card shadow blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.cardShadowBlur, 0, 80, 24)}
+                onChange={(e) => setColors({ ...colors, cardShadowBlur: clampInt(e.target.value, 0, 80, 24) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.cardShadowBlur, 0, 80, 24)}
+                onChange={(e) => setColors({ ...colors, cardShadowBlur: clampInt(e.target.value, 0, 80, 24) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Card shadow blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Card shadow spread (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.cardShadowSpread, -80, 80, -18)}
+                onChange={(e) => setColors({ ...colors, cardShadowSpread: clampInt(e.target.value, -80, 80, -18) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.cardShadowSpread, -80, 80, -18)}
+                onChange={(e) => setColors({ ...colors, cardShadowSpread: clampInt(e.target.value, -80, 80, -18) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Card shadow spread pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">-80–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Tab strip shadow blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.tabsShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}
+                onChange={(e) => setColors({ ...colors, tabsShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.tabsShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}
+                onChange={(e) => setColors({ ...colors, tabsShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Tab strip shadow blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Tab strip shadow spread (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.tabsShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}
+                onChange={(e) => setColors({ ...colors, tabsShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.tabsShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}
+                onChange={(e) => setColors({ ...colors, tabsShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Tab strip shadow spread pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">-80–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Sidebar shadow blur (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.sidebarShadowBlur, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)))}
+                onChange={(e) => setColors({ ...colors, sidebarShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={80}
+                step={1}
+                value={clampInt(colors.sidebarShadowBlur, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24)))}
+                onChange={(e) => setColors({ ...colors, sidebarShadowBlur: clampInt(e.target.value, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Sidebar shadow blur pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">0–80px</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Sidebar shadow spread (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.sidebarShadowSpread, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)))}
+                onChange={(e) => setColors({ ...colors, sidebarShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={-80}
+                max={80}
+                step={1}
+                value={clampInt(colors.sidebarShadowSpread, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18)))}
+                onChange={(e) => setColors({ ...colors, sidebarShadowSpread: clampInt(e.target.value, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Sidebar shadow spread pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">-80–80px</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Structure</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Surface radius (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={32}
+                step={1}
+                value={surfaceRadius}
+                onChange={(e) => setColors({ ...colors, surfaceRadius: clampInt(e.target.value, 0, 32, 16) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={32}
+                step={1}
+                value={surfaceRadius}
+                onChange={(e) => setColors({ ...colors, surfaceRadius: clampInt(e.target.value, 0, 32, 16) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Surface radius pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Applies to shared cards, panels, settings shells, and themed pricing cards.</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Stat card accent top (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={8}
+                step={1}
+                value={statCardAccentTop}
+                onChange={(e) => setColors({ ...colors, statCardAccentTop: clampInt(e.target.value, 0, 8, 0) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={8}
+                step={1}
+                value={statCardAccentTop}
+                onChange={(e) => setColors({ ...colors, statCardAccentTop: clampInt(e.target.value, 0, 8, 0) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Stat card accent top pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Adds a theme-accent top edge to theme stat cards. Set to 0 to disable it.</p>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Stat card accent left (px)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={8}
+                step={1}
+                value={statCardAccentLeft}
+                onChange={(e) => setColors({ ...colors, statCardAccentLeft: clampInt(e.target.value, 0, 8, 0) })}
+                className="h-2 w-full flex-1 cursor-pointer"
+              />
+              <input
+                type="number"
+                min={0}
+                max={8}
+                step={1}
+                value={statCardAccentLeft}
+                onChange={(e) => setColors({ ...colors, statCardAccentLeft: clampInt(e.target.value, 0, 8, 0) })}
+                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                aria-label="Stat card accent left pixels"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Adds a theme-accent left edge to theme stat cards. Set to 0 to disable it.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Live preview */}
       <section>
         <div className="mb-3 flex items-center justify-between">
@@ -534,6 +837,7 @@ export function ColorTabContent({
           style={{
             borderColor: colors.borderPrimary,
             backgroundColor: colors.bgPrimary,
+            borderRadius: `${surfaceRadius}px`,
             // Make native inputs inside the preview follow the preview mode, not the page's current mode.
             colorScheme: colorMode,
             // Two-layer background: glow radiates from above the frame (negative Y), then page gradient below
@@ -617,7 +921,11 @@ export function ColorTabContent({
             {/* Sidebar */}
             <div
               className="relative w-32 flex-shrink-0 px-3 py-4 space-y-1"
-              style={{ backgroundColor: colors.sidebarBg, borderRight: `1px solid ${colors.sidebarBorder}` }}
+              style={{
+                backgroundColor: colors.sidebarBg,
+                borderRight: `1px solid ${colors.sidebarBorder}`,
+                boxShadow: `0 12px ${clampInt(colors.sidebarShadowBlur, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, 24))}px ${clampInt(colors.sidebarShadowSpread, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, -18))}px ${colors.sidebarShadow}`,
+              }}
             >
               {[
                 { label: 'Overview', active: true },
@@ -680,11 +988,14 @@ export function ColorTabContent({
                 ].map(({ label, value }) => (
                   <div
                     key={label}
-                    className="rounded-xl px-3 py-2.5"
+                    className="px-3 py-2.5"
                     style={{
                       backgroundColor: colors.bgSecondary,
                       background: `linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
                       border: `1px solid ${colors.borderPrimary}`,
+                      borderRadius: `${surfaceRadius}px`,
+                      borderTop: `${statCardAccentTop}px solid ${colors.accentPrimary}`,
+                      boxShadow: `0 12px ${clampInt(colors.cardShadowBlur, 0, 80, 24)}px ${clampInt(colors.cardShadowSpread, -80, 80, -18)}px ${colors.cardShadow}`,
                     }}
                   >
                     <p className="text-xs" style={{ color: colors.textTertiary }}>
@@ -702,10 +1013,12 @@ export function ColorTabContent({
 
               {/* Tab strip — uses tabsGradient */}
               <div
-                className="flex items-center gap-1 rounded-xl px-2 py-1.5"
+                className="flex items-center gap-1 px-2 py-1.5"
                 style={{
+                  borderRadius: `${surfaceRadius}px`,
                   background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
                   border: `1px solid ${colors.borderPrimary}`,
+                  boxShadow: `0 12px ${clampInt(colors.tabsShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}px ${clampInt(colors.tabsShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}px ${colors.tabsShadow}`,
                 }}
               >
                 {['Activity', 'Invoices', 'Team'].map((label, i) => (
@@ -725,8 +1038,13 @@ export function ColorTabContent({
 
               {/* Panel / table card */}
               <div
-                className="rounded-xl px-3 py-2.5"
-                style={{ backgroundColor: colors.panelBg, border: `1px solid ${colors.borderPrimary}` }}
+                className="px-3 py-2.5"
+                style={{
+                  backgroundColor: colors.panelBg,
+                  border: `1px solid ${colors.borderPrimary}`,
+                  borderRadius: `${surfaceRadius}px`,
+                  boxShadow: `0 12px ${clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}px ${clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}px ${colors.panelShadow}`,
+                }}
               >
                 <p className="text-xs font-semibold mb-2" style={{ color: colors.textPrimary }}>
                   Recent activity
@@ -771,7 +1089,7 @@ export function ColorTabContent({
 
         {/* Token-coverage legend */}
         <p className="mt-2 text-xs text-slate-500 dark:text-neutral-500">
-          All color, gradient, shadow, glow and layout tokens are reflected above.
+          All color, gradient, shadow, glow, layout, and structural tokens are reflected above.
           The thin strip below the header shows sticky-header colors.
           The &quot;Analytics&quot; sidebar item shows the hover fill (<span className="font-semibold">bgQuaternary</span>).
         </p>

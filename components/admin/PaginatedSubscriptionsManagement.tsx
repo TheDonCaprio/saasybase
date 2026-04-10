@@ -672,7 +672,7 @@ export function PaginatedSubscriptionsManagement({
     <div className="space-y-6">
       {/* Status summary cards removed */}
 
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={search}
           onSearchChange={(v) => handleFilterChange(v)}
@@ -717,7 +717,7 @@ export function PaginatedSubscriptionsManagement({
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+          'px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -755,7 +755,7 @@ export function PaginatedSubscriptionsManagement({
           )
         ) : (
           <>
-            <div className="space-y-4 p-4 sm:p-6 md:hidden">
+            <div className="space-y-3 p-3 sm:p-4 md:hidden">
               {subs.map((sub) => {
                 const paymentInfo = getLatestPaymentDetails(sub);
                 const statusLabel = getSubscriptionStatus(sub);
@@ -768,7 +768,7 @@ export function PaginatedSubscriptionsManagement({
                   ]);
 
                 return (
-                  <div key={sub.id} className={dashboardMutedPanelClass('space-y-4 p-4')}>
+                  <div key={sub.id} className={dashboardMutedPanelClass('space-y-3 p-3 sm:p-4')}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{sub.planName}</p>

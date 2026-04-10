@@ -112,7 +112,7 @@ export function UserSettingsTabs({
           <div className="space-y-6">
             <ReactiveProfileHeader fallbackUser={hydratedUser} subscription={hydratedSubscription} preformattedCreatedAt={preformattedCreatedAt} />
             <UserSettingsForm userId={hydratedUser.id} initialSettings={userSettings} />
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+            <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Quick actions</p>
@@ -120,10 +120,10 @@ export function UserSettingsTabs({
                 </div>
                 <span className="text-xs font-medium text-blue-600 dark:text-blue-300">Shortcuts</span>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <Link
                   href="/dashboard/plan"
-                  className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
+                  className="group rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-3.5 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Manage plan</p>
@@ -133,7 +133,7 @@ export function UserSettingsTabs({
                 </Link>
                 <Link
                   href="/dashboard/support"
-                  className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
+                  className="group rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-3.5 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-600"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Support center</p>
@@ -159,7 +159,7 @@ export function UserSettingsTabs({
 
             <PasswordChangeCard />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+            <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Download account data</p>
@@ -170,7 +170,7 @@ export function UserSettingsTabs({
                   onClick={handleDownloadAccountData}
                   disabled={exportingAccountData}
                   aria-busy={exportingAccountData}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-600 dark:hover:bg-neutral-900"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-600 dark:hover:bg-neutral-900"
                 >
                   {exportingAccountData ? (
                     <>
@@ -200,18 +200,18 @@ export function UserSettingsTabs({
   return (
     <div className="space-y-6">
       <div
-        className="relative flex overflow-hidden rounded-2xl border border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] shadow-[0_12px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-shadow dark:border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] dark:shadow-[0_0_40px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18))]"
+        className="relative flex overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] transition-shadow"
+        style={{ boxShadow: 'var(--theme-tabs-shadow)' }}
         role="tablist"
         aria-label="User settings sections"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.18)),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28)),_transparent_60%)]" />
         {tabs.map((tab) => (
           <button
             key={tab.id}
             id={`${tab.id}-tab`}
             onClick={() => setActiveTab(tab.id as 'profile' | 'security')}
             className={cx(
-              'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all',
+              'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all',
               activeTab === tab.id
                 ? 'bg-white text-[rgb(var(--accent-primary))] shadow-md dark:bg-black dark:text-[rgb(var(--accent-primary))]'
                 : 'text-slate-700/85 hover:bg-white/60 hover:text-slate-900 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-neutral-50'
@@ -226,7 +226,8 @@ export function UserSettingsTabs({
       <div
         role="tabpanel"
         aria-labelledby={`${activeContent.id}-tab`}
-  className="lg:rounded-3xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-xl dark:lg:border-neutral-800 dark:lg:bg-neutral-950/60"
+  className="lg:rounded-[var(--theme-surface-radius)] lg:border lg:border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] lg:bg-[color:rgb(var(--surface-panel-rgb)_/_calc(var(--surface-panel-a)*0.88))] lg:p-4 xl:p-5"
+  style={{ boxShadow: 'var(--theme-panel-shadow)' }}
       >
         {activeContent.content}
       </div>
@@ -287,7 +288,7 @@ function AccountDeletionPanel() {
   };
 
   return (
-    <div className="rounded-2xl border border-red-200/80 bg-red-50 p-6 shadow-sm dark:border-red-500/40 dark:bg-red-500/10">
+    <div className="rounded-2xl border border-red-200/80 bg-red-50 p-5 shadow-sm dark:border-red-500/40 dark:bg-red-500/10">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-red-700 dark:text-red-200">Delete account</p>
@@ -310,7 +311,7 @@ function AccountDeletionPanel() {
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-red-400 bg-white px-4 py-2 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-500 hover:bg-red-50 dark:border-red-500/60 dark:bg-transparent dark:text-red-200 dark:hover:border-red-400/80 dark:hover:bg-red-500/10"
+            className="inline-flex items-center gap-2 rounded-full border border-red-400 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-500 hover:bg-red-50 dark:border-red-500/60 dark:bg-transparent dark:text-red-200 dark:hover:border-red-400/80 dark:hover:bg-red-500/10"
           >
             <span className="text-sm">⚠️</span>
             Delete account
@@ -399,7 +400,7 @@ function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Email verification</p>
@@ -489,7 +490,7 @@ function PasswordChangeCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Password</p>
@@ -499,7 +500,7 @@ function PasswordChangeCard() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600"
           >
             Change password
           </button>

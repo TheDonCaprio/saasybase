@@ -320,7 +320,7 @@ export function AdminSupportTicketsList({
     <div className="space-y-6">
       {/* Info cards removed per request: Needs attention / Waiting on agent reply / Open / In progress / Waiting on customer */}
 
-      <div className={dashboardPanelClass('p-4 sm:p-6 space-y-3')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4 space-y-3')}>
         <ListFilters
           search={search}
           onSearchChange={(v) => setSearch(v)}
@@ -381,7 +381,7 @@ export function AdminSupportTicketsList({
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+          'flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -404,7 +404,7 @@ export function AdminSupportTicketsList({
         ) : (
           <div className="divide-y divide-slate-100/80 dark:divide-neutral-800/80">
             {tickets.map((ticket) => (
-              <div key={ticket.id} className="p-4 sm:p-5">
+              <div key={ticket.id} className="p-3 sm:p-4">
                 <AdminCompactSupportTicket
                   ticket={ticket}
                   onUpdate={refreshTickets}

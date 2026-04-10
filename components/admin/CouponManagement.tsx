@@ -739,7 +739,7 @@ export function CouponManagement({
     <div className="space-y-6">
       {/* status cards removed - using a cleaner list view for coupons */}
 
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={searchValue}
           onSearchChange={handleFilterChange}
@@ -785,7 +785,7 @@ export function CouponManagement({
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+          'flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300'
         )}
       >
         <span>
@@ -853,7 +853,7 @@ export function CouponManagement({
                 const remaining = coupon.maxRedemptions !== null ? Math.max((coupon.maxRedemptions ?? 0) - (coupon.redemptionCount ?? 0), 0) : null;
 
                 return (
-                  <div key={coupon.id} className="space-y-3 p-4">
+                  <div key={coupon.id} className="space-y-3 p-3 sm:p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{coupon.code}</div>
@@ -882,14 +882,15 @@ export function CouponManagement({
                         {getPublishStatusLabel(coupon)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <div className="flex flex-wrap gap-1.5">
                         <IconActionButton
                           onClick={() => openEdit(coupon.id)}
                           ariaLabel={`Edit coupon ${coupon.code}`}
                           title="Edit"
                           icon={faPen}
                           color="indigo"
+                          size="compact"
                         />
                         <IconActionButton
                           onClick={() => toggleActive(coupon.id, !coupon.active)}
@@ -901,6 +902,7 @@ export function CouponManagement({
                           activeColor="amber"
                           inactiveColor="emerald"
                           disabled={loading || (status.tone === 'expired' && coupon.active)}
+                          size="compact"
                         />
                         <IconActionButton
                           onClick={() => openDelete(coupon.id)}
@@ -909,6 +911,7 @@ export function CouponManagement({
                           icon={faTrash}
                           color="rose"
                           disabled={loading}
+                          size="compact"
                         />
                       </div>
 
@@ -922,7 +925,7 @@ export function CouponManagement({
             </div>
 
             <div className="hidden md:block">
-              <div className="border-b border-slate-200 bg-slate-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+              <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
                 <div className="grid grid-cols-[1.6fr,1fr,0.8fr,0.8fr,1fr,1fr,1.2fr] gap-4">
                   <div>Code</div>
                   <div>Discount</div>
@@ -957,7 +960,7 @@ export function CouponManagement({
                   return (
                     <div
                       key={coupon.id}
-                      className="grid grid-cols-[1.6fr,1fr,0.8fr,0.8fr,1fr,1fr,1.2fr] items-center gap-4 px-6 py-4 text-sm text-slate-700 transition-colors hover:bg-slate-50/70 dark:text-neutral-200 dark:hover:bg-neutral-900/60"
+                      className="grid grid-cols-[1.6fr,1fr,0.8fr,0.8fr,1fr,1fr,1.2fr] items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50/70 dark:text-neutral-200 dark:hover:bg-neutral-900/60"
                     >
                       <div className="space-y-1">
                         <div className="font-semibold text-slate-900 dark:text-neutral-50">{coupon.code}</div>
@@ -1001,13 +1004,14 @@ export function CouponManagement({
 
                       <div className="text-xs text-slate-500 dark:text-neutral-400">{scheduleLabel || 'N/A'}</div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         <IconActionButton
                           onClick={() => openEdit(coupon.id)}
                           ariaLabel={`Edit coupon ${coupon.code}`}
                           title="Edit"
                           icon={faPen}
                           color="indigo"
+                          size="compact"
                         />
                         <IconActionButton
                           onClick={() => toggleActive(coupon.id, !coupon.active)}
@@ -1019,6 +1023,7 @@ export function CouponManagement({
                           activeColor="amber"
                           inactiveColor="emerald"
                           disabled={loading || (status.tone === 'expired' && coupon.active)}
+                          size="compact"
                         />
                         <IconActionButton
                           onClick={() => openDelete(coupon.id)}
@@ -1027,6 +1032,7 @@ export function CouponManagement({
                           icon={faTrash}
                           color="rose"
                           disabled={loading}
+                          size="compact"
                         />
                       </div>
                     </div>
@@ -1039,7 +1045,7 @@ export function CouponManagement({
       </div>
 
       {(totalPages > 1 || nextCursor) && (
-        <div className={dashboardPanelClass('p-4 sm:p-6')}>
+        <div className={dashboardPanelClass('p-3 sm:p-4')}>
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

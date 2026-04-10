@@ -255,6 +255,7 @@ export type ThemeColorTokens = {
   headerBorderWidth: number;
   headerMenuFontSize: number;
   headerMenuFontWeight: number;
+  fontFamily: 'system' | 'material' | 'fluent' | 'apple';
   stickyHeaderBg: string;
   stickyHeaderOpacity: number;
   stickyHeaderBlur: number;
@@ -268,6 +269,21 @@ export type ThemeColorTokens = {
   headerShadow: string;
   headerShadowBlur: number;
   headerShadowSpread: number;
+  surfaceRadius: number;
+  statCardAccentTop: number;
+  statCardAccentLeft: number;
+  panelShadow: string;
+  panelShadowBlur: number;
+  panelShadowSpread: number;
+  cardShadow: string;
+  cardShadowBlur: number;
+  cardShadowSpread: number;
+  tabsShadow: string;
+  tabsShadowBlur: number;
+  tabsShadowSpread: number;
+  sidebarShadow: string;
+  sidebarShadowBlur: number;
+  sidebarShadowSpread: number;
   stickyHeaderShadow: string;
   stickyHeaderShadowBlur: number;
   stickyHeaderShadowSpread: number;
@@ -319,6 +335,7 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     headerBorderWidth: 1,
     headerMenuFontSize: 14,
     headerMenuFontWeight: 600,
+    fontFamily: 'system',
     stickyHeaderBg: '#ffffff3e',
     stickyHeaderOpacity: 1,
     stickyHeaderBlur: 15,
@@ -332,6 +349,21 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     headerShadow: '#00000062',
     headerShadowBlur: 30,
     headerShadowSpread: -27,
+    surfaceRadius: 16,
+    statCardAccentTop: 0,
+    statCardAccentLeft: 0,
+    panelShadow: '#0f172a10',
+    panelShadowBlur: 18,
+    panelShadowSpread: -18,
+    cardShadow: '#0f172a12',
+    cardShadowBlur: 24,
+    cardShadowSpread: -18,
+    tabsShadow: '#0f172a10',
+    tabsShadowBlur: 20,
+    tabsShadowSpread: -16,
+    sidebarShadow: '#0f172a14',
+    sidebarShadowBlur: 22,
+    sidebarShadowSpread: -20,
     stickyHeaderShadow: '#9e9c9cef',
     stickyHeaderShadowBlur: 30,
     stickyHeaderShadowSpread: -23,
@@ -373,6 +405,7 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     headerBorderWidth: 1,
     headerMenuFontSize: 14,
     headerMenuFontWeight: 600,
+    fontFamily: 'system',
     stickyHeaderBg: '#0a0a0a35',
     stickyHeaderOpacity: 1,
     stickyHeaderBlur: 15,
@@ -386,6 +419,21 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     headerShadow: '#8e8e8e61',
     headerShadowBlur: 30,
     headerShadowSpread: -23,
+    surfaceRadius: 16,
+    statCardAccentTop: 0,
+    statCardAccentLeft: 0,
+    panelShadow: '#00000040',
+    panelShadowBlur: 18,
+    panelShadowSpread: -18,
+    cardShadow: '#00000052',
+    cardShadowBlur: 26,
+    cardShadowSpread: -18,
+    tabsShadow: '#00000042',
+    tabsShadowBlur: 22,
+    tabsShadowSpread: -16,
+    sidebarShadow: '#0000004f',
+    sidebarShadowBlur: 24,
+    sidebarShadowSpread: -22,
     stickyHeaderShadow: '#6f6f6f7d',
     stickyHeaderShadowBlur: 30,
     stickyHeaderShadowSpread: -19,
@@ -491,6 +539,15 @@ const clampInt = (value: unknown, min: number, max: number, fallback: number): n
   return rounded;
 };
 
+const sanitizeThemeFontFamily = (
+  value: unknown,
+  fallback: ThemeColorTokens['fontFamily'],
+): ThemeColorTokens['fontFamily'] => {
+  return value === 'material' || value === 'fluent' || value === 'apple' || value === 'system'
+    ? value
+    : fallback;
+};
+
 const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeColorTokens => {
   const rec = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const legacySurface = rec.bgSecondary;
@@ -504,6 +561,10 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
   const stickyBorderFallback = sanitizeThemeHex(rec.headerBorder ?? rec.borderPrimary, fallback.stickyHeaderBorder ?? fallback.headerBorder ?? fallback.borderPrimary);
   const sidebarBorderFallback = sanitizeThemeHex(rec.borderPrimary, fallback.sidebarBorder ?? fallback.borderPrimary);
   const headerShadowFallback = fallback.headerShadow ?? '#00000014';
+  const panelShadowFallback = fallback.panelShadow ?? fallback.cardShadow ?? '#00000012';
+  const cardShadowFallback = fallback.cardShadow ?? '#00000014';
+  const tabsShadowFallback = fallback.tabsShadow ?? cardShadowFallback;
+  const sidebarShadowFallback = fallback.sidebarShadow ?? panelShadowFallback ?? headerShadowFallback;
   const stickyHeaderShadowFallback = fallback.stickyHeaderShadow ?? headerShadowFallback;
 
   /** Bake a legacy 0-1 opacity into the hex alpha channel and reset opacity to 1. */
@@ -539,6 +600,7 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     headerBorderWidth: clampInt(rec.headerBorderWidth, 0, 4, fallback.headerBorderWidth ?? 1),
     headerMenuFontSize: clampInt(rec.headerMenuFontSize, 10, 20, fallback.headerMenuFontSize ?? 14),
     headerMenuFontWeight: clampInt(rec.headerMenuFontWeight, 300, 800, fallback.headerMenuFontWeight ?? 400),
+    fontFamily: sanitizeThemeFontFamily(rec.fontFamily, fallback.fontFamily ?? 'system'),
     stickyHeaderBg: sanitizeThemeHex(rec.stickyHeaderBg, stickyBgFallback),
     stickyHeaderOpacity: 1,
     stickyHeaderBlur: clampInt(rec.stickyHeaderBlur, 0, 40, fallback.stickyHeaderBlur ?? 14),
@@ -552,6 +614,31 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
     headerShadow: sanitizeThemeHex(rec.headerShadow, headerShadowFallback),
     headerShadowBlur: clampInt(rec.headerShadowBlur, 0, 80, fallback.headerShadowBlur ?? 30),
     headerShadowSpread: clampInt(rec.headerShadowSpread, -80, 80, fallback.headerShadowSpread ?? -22),
+    surfaceRadius: clampInt(rec.surfaceRadius, 0, 32, fallback.surfaceRadius ?? 16),
+    statCardAccentTop: clampInt(rec.statCardAccentTop, 0, 8, fallback.statCardAccentTop ?? 0),
+    statCardAccentLeft: clampInt(rec.statCardAccentLeft, 0, 8, fallback.statCardAccentLeft ?? 0),
+    panelShadow: sanitizeThemeHex(rec.panelShadow, panelShadowFallback),
+    panelShadowBlur: clampInt(rec.panelShadowBlur, 0, 80, fallback.panelShadowBlur ?? fallback.cardShadowBlur ?? 18),
+    panelShadowSpread: clampInt(rec.panelShadowSpread, -80, 80, fallback.panelShadowSpread ?? fallback.cardShadowSpread ?? -18),
+    cardShadow: sanitizeThemeHex(rec.cardShadow, cardShadowFallback),
+    cardShadowBlur: clampInt(rec.cardShadowBlur, 0, 80, fallback.cardShadowBlur ?? 24),
+    cardShadowSpread: clampInt(rec.cardShadowSpread, -80, 80, fallback.cardShadowSpread ?? -18),
+    tabsShadow: sanitizeThemeHex(rec.tabsShadow, tabsShadowFallback),
+    tabsShadowBlur: clampInt(rec.tabsShadowBlur, 0, 80, fallback.tabsShadowBlur ?? fallback.cardShadowBlur ?? 24),
+    tabsShadowSpread: clampInt(rec.tabsShadowSpread, -80, 80, fallback.tabsShadowSpread ?? fallback.cardShadowSpread ?? -18),
+    sidebarShadow: sanitizeThemeHex(rec.sidebarShadow, sidebarShadowFallback),
+    sidebarShadowBlur: clampInt(
+      rec.sidebarShadowBlur,
+      0,
+      80,
+      fallback.sidebarShadowBlur ?? fallback.panelShadowBlur ?? fallback.cardShadowBlur ?? 18,
+    ),
+    sidebarShadowSpread: clampInt(
+      rec.sidebarShadowSpread,
+      -80,
+      80,
+      fallback.sidebarShadowSpread ?? fallback.panelShadowSpread ?? fallback.cardShadowSpread ?? -18,
+    ),
     stickyHeaderShadow: sanitizeThemeHex(rec.stickyHeaderShadow, stickyHeaderShadowFallback),
     stickyHeaderShadowBlur: clampInt(
       rec.stickyHeaderShadowBlur,

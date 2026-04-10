@@ -195,7 +195,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
           </Link>
         </div>
       ) : (
-        <section className="space-y-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
+        <section className="space-y-5 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-4 xl:lg:p-5 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Recent payments</h2>

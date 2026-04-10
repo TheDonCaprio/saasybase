@@ -81,6 +81,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return fixed.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
   };
 
+  const resolveThemeFontStack = (fontFamily: ThemeColorTokens['fontFamily'] | undefined): string => {
+    switch (fontFamily) {
+      case 'material':
+        return 'Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif';
+      case 'fluent':
+        return '"Segoe UI Variable Text", "Segoe UI", Selawik, Tahoma, Arial, sans-serif';
+      case 'apple':
+        return '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+      case 'system':
+      default:
+        return '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+    }
+  };
+
   const buildThemeColorVarsCss = () => {
     const buildBlock = (t: ThemeColorTokens) => {
       const headerBlurNum = typeof t.headerBlur === 'number' ? t.headerBlur : 12;
@@ -118,6 +132,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       const sidebarBorder = parseHexColor(t.sidebarBorder ?? t.borderPrimary);
       const pageGlow = parseHexColor(t.pageGlow);
       const headerShadow = parseHexColor(t.headerShadow ?? '#00000014');
+      const panelShadow = parseHexColor(t.panelShadow ?? t.cardShadow ?? '#00000012');
+      const cardShadow = parseHexColor(t.cardShadow ?? '#00000014');
+      const tabsShadow = parseHexColor(t.tabsShadow ?? t.cardShadow ?? '#00000010');
+      const sidebarShadow = parseHexColor(t.sidebarShadow ?? t.panelShadow ?? t.headerShadow ?? '#00000010');
       const stickyHeaderShadow = parseHexColor(t.stickyHeaderShadow ?? t.headerShadow ?? '#00000014');
 
       const headerShadowBlurNum = typeof t.headerShadowBlur === 'number' ? t.headerShadowBlur : 30;
@@ -127,6 +145,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         -80,
         Math.min(80, Math.round(Number.isFinite(headerShadowSpreadNum) ? headerShadowSpreadNum : -22))
       );
+      const cardShadowBlurNum = typeof t.cardShadowBlur === 'number' ? t.cardShadowBlur : 24;
+      const cardShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(cardShadowBlurNum) ? cardShadowBlurNum : 24)));
+      const cardShadowSpreadNum = typeof t.cardShadowSpread === 'number' ? t.cardShadowSpread : -18;
+      const cardShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(cardShadowSpreadNum) ? cardShadowSpreadNum : -18)));
+      const panelShadowBlurNum = typeof t.panelShadowBlur === 'number' ? t.panelShadowBlur : cardShadowBlurPx;
+      const panelShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(panelShadowBlurNum) ? panelShadowBlurNum : cardShadowBlurPx)));
+      const panelShadowSpreadNum = typeof t.panelShadowSpread === 'number' ? t.panelShadowSpread : cardShadowSpreadPx;
+      const panelShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(panelShadowSpreadNum) ? panelShadowSpreadNum : cardShadowSpreadPx)));
+      const tabsShadowBlurNum = typeof t.tabsShadowBlur === 'number' ? t.tabsShadowBlur : cardShadowBlurPx;
+      const tabsShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(tabsShadowBlurNum) ? tabsShadowBlurNum : cardShadowBlurPx)));
+      const tabsShadowSpreadNum = typeof t.tabsShadowSpread === 'number' ? t.tabsShadowSpread : cardShadowSpreadPx;
+      const tabsShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(tabsShadowSpreadNum) ? tabsShadowSpreadNum : cardShadowSpreadPx)));
+      const sidebarShadowBlurNum = typeof t.sidebarShadowBlur === 'number' ? t.sidebarShadowBlur : panelShadowBlurPx;
+      const sidebarShadowBlurPx = Math.max(0, Math.min(80, Math.round(Number.isFinite(sidebarShadowBlurNum) ? sidebarShadowBlurNum : panelShadowBlurPx)));
+      const sidebarShadowSpreadNum = typeof t.sidebarShadowSpread === 'number' ? t.sidebarShadowSpread : panelShadowSpreadPx;
+      const sidebarShadowSpreadPx = Math.max(-80, Math.min(80, Math.round(Number.isFinite(sidebarShadowSpreadNum) ? sidebarShadowSpreadNum : panelShadowSpreadPx)));
 
       const stickyHeaderShadowBlurNum =
         typeof t.stickyHeaderShadowBlur === 'number' ? t.stickyHeaderShadowBlur : headerShadowBlurPx;
@@ -140,6 +174,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         -80,
         Math.min(80, Math.round(Number.isFinite(stickyHeaderShadowSpreadNum) ? stickyHeaderShadowSpreadNum : headerShadowSpreadPx))
       );
+      const surfaceRadiusNum = typeof t.surfaceRadius === 'number' ? t.surfaceRadius : 16;
+      const surfaceRadiusPx = Math.max(0, Math.min(32, Math.round(Number.isFinite(surfaceRadiusNum) ? surfaceRadiusNum : 16)));
+      const statCardAccentTopNum = typeof t.statCardAccentTop === 'number' ? t.statCardAccentTop : 0;
+      const statCardAccentTopPx = Math.max(0, Math.min(8, Math.round(Number.isFinite(statCardAccentTopNum) ? statCardAccentTopNum : 0)));
+      const statCardAccentLeftNum = typeof t.statCardAccentLeft === 'number' ? t.statCardAccentLeft : 0;
+      const statCardAccentLeftPx = Math.max(0, Math.min(8, Math.round(Number.isFinite(statCardAccentLeftNum) ? statCardAccentLeftNum : 0)));
+      const fontFamily = resolveThemeFontStack(t.fontFamily);
 
       return [
         ...cssToken('bg-primary', t.bgPrimary),
@@ -163,6 +204,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `  --theme-header-border-width: ${headerBorderWidthPx}px;`,
         `  --theme-header-menu-font-size: ${headerMenuFontSizePx}px;`,
         `  --theme-header-menu-font-weight: ${headerMenuFontWeight};`,
+        `  --theme-font-family: ${fontFamily};`,
         `  --theme-sticky-header-bg: rgb(${stickyHeaderBg.rgb} / ${fmtAlpha(stickyHeaderBg.a)});`,
         `  --theme-sticky-header-text: rgb(${stickyHeaderText.rgb} / ${fmtAlpha(stickyHeaderText.a)});`,
         `  --theme-sticky-header-blur: ${stickyHeaderBlurPx}px;`,
@@ -171,7 +213,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `  --theme-sidebar-bg: rgb(${sidebarBg.rgb} / ${fmtAlpha(sidebarBg.a)});`,
         `  --theme-sidebar-border: rgb(${sidebarBorder.rgb} / ${fmtAlpha(sidebarBorder.a)});`,
         `  --theme-header-shadow: 0 12px ${headerShadowBlurPx}px ${headerShadowSpreadPx}px rgb(${headerShadow.rgb} / ${fmtAlpha(headerShadow.a)});`,
+        `  --theme-panel-shadow: 0 12px ${panelShadowBlurPx}px ${panelShadowSpreadPx}px rgb(${panelShadow.rgb} / ${fmtAlpha(panelShadow.a)});`,
+        `  --theme-card-shadow: 0 12px ${cardShadowBlurPx}px ${cardShadowSpreadPx}px rgb(${cardShadow.rgb} / ${fmtAlpha(cardShadow.a)});`,
+        `  --theme-tabs-shadow: 0 12px ${tabsShadowBlurPx}px ${tabsShadowSpreadPx}px rgb(${tabsShadow.rgb} / ${fmtAlpha(tabsShadow.a)});`,
+        `  --theme-sidebar-shadow: 0 12px ${sidebarShadowBlurPx}px ${sidebarShadowSpreadPx}px rgb(${sidebarShadow.rgb} / ${fmtAlpha(sidebarShadow.a)});`,
         `  --theme-sticky-header-shadow: 0 12px ${stickyHeaderShadowBlurPx}px ${stickyHeaderShadowSpreadPx}px rgb(${stickyHeaderShadow.rgb} / ${fmtAlpha(stickyHeaderShadow.a)});`,
+        `  --theme-surface-radius: ${surfaceRadiusPx}px;`,
+        `  --theme-stat-card-accent-top: ${statCardAccentTopPx}px;`,
+        `  --theme-stat-card-accent-left: ${statCardAccentLeftPx}px;`,
         `  --theme-page-gradient-from: rgb(${parseHexColor(t.pageGradientFrom).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientFrom).a)});`,
         `  --theme-page-gradient-via: rgb(${parseHexColor(t.pageGradientVia).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientVia).a)});`,
         `  --theme-page-gradient-to: rgb(${parseHexColor(t.pageGradientTo).rgb} / ${fmtAlpha(parseHexColor(t.pageGradientTo).a)});`,

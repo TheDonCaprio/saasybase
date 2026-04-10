@@ -1,37 +1,46 @@
 import clsx, { type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
 const basePanel =
-	'rounded-2xl border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.70))] bg-[color:rgb(var(--bg-secondary))] p-6 shadow-sm transition-shadow dark:shadow-[0_0_25px_rgba(15,23,42,0.45)]';
+	'theme-shadow-panel rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.70))] bg-[color:rgb(var(--bg-secondary))] transition-shadow';
 
 const baseCard =
-	'rounded-2xl border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.70))] bg-[color:rgb(var(--surface-card))] p-6 shadow-sm transition-shadow dark:shadow-[0_0_25px_rgba(15,23,42,0.45)]';
+	'theme-shadow-card rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.70))] bg-[color:rgb(var(--surface-card))] transition-shadow';
+
+const PADDING_OVERRIDE_RE = /(?:^|\s)(?:[a-z-]+:)*!?p(?:x|y|t|r|b|l)?-(?:\[[^\]]+\]|[^\s]+)/;
+
+function withDefaultPadding(defaultPadding: string, ...extra: ClassValue[]) {
+	const extraClasses = clsx(...extra);
+	if (PADDING_OVERRIDE_RE.test(extraClasses)) {
+		return extraClasses;
+	}
+	return clsx(defaultPadding, extraClasses);
+}
 
 export function dashboardPanelClass(...extra: ClassValue[]) {
-	return twMerge(basePanel, clsx(extra));
+	return clsx(basePanel, withDefaultPadding('p-6', ...extra));
 }
 
 export function dashboardCardClass(...extra: ClassValue[]) {
-	return twMerge(baseCard, clsx(extra));
+	return clsx(baseCard, withDefaultPadding('p-6', ...extra));
 }
 
 export function dashboardMutedPanelClass(...extra: ClassValue[]) {
-	return twMerge(
-		'rounded-2xl border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.70))] p-6 shadow-sm backdrop-blur-sm',
-		clsx(extra)
+	return clsx(
+		'theme-shadow-panel rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.70))] backdrop-blur-sm',
+		withDefaultPadding('p-6', ...extra)
 	);
 }
 
 export function dashboardDangerPanelClass(...extra: ClassValue[]) {
-	return twMerge(
-		'rounded-2xl border border-red-200/80 bg-red-50 p-6 shadow-sm dark:border-red-500/40 dark:bg-red-500/10',
-		clsx(extra)
+	return clsx(
+		'theme-shadow-panel rounded-[var(--theme-surface-radius)] border border-red-200/80 bg-red-50 dark:border-red-500/40 dark:bg-red-500/10',
+		withDefaultPadding('p-6', ...extra)
 	);
 }
 
 export function dashboardPillClass(...extra: ClassValue[]) {
-	return twMerge(
-		'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] px-3 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm dark:text-neutral-200',
-		clsx(extra)
+	return clsx(
+		'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] text-xs font-medium text-slate-600 backdrop-blur-sm dark:text-neutral-200',
+		withDefaultPadding('px-3 py-1', ...extra)
 	);
 }

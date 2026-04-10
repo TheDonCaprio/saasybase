@@ -239,7 +239,7 @@ export function PaginatedTransactionList({
   // inside the transactions list area when there are no payments.
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* keep totals referenced to avoid unused variable lint when server provides them */}
       <span className="sr-only">{totalSpentFormatted ?? formatCurrencyUtil(totalSpent, displayCurrency ?? 'usd')}</span>
       {/* Summary Stats are rendered by the page hero to avoid duplication */}
@@ -258,13 +258,13 @@ export function PaginatedTransactionList({
       <div className={dashboardPanelClass('p-0 overflow-hidden')}>
         {payments.length === 0 ? (
           isLoading ? (
-            <div className="space-y-3 p-8">
+            <div className="space-y-3 p-6">
               <div className="h-16 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-neutral-800/60" />
               <div className="h-16 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-neutral-800/60" />
               <div className="h-16 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-neutral-800/60" />
             </div>
           ) : (
-            <div className="p-10 text-center text-sm text-slate-500 dark:text-neutral-400">
+            <div className="px-5 py-8 text-center text-sm text-slate-500 dark:text-neutral-400 sm:px-6 sm:py-9">
               {statusFilter === 'ALL' 
                 ? 'No transactions yet. Get started with a Pro plan!'
                 : `No ${statusFilter.toLowerCase()} transactions found.`
@@ -273,7 +273,7 @@ export function PaginatedTransactionList({
                 <div className="mt-4">
                   <Link
                     href="/pricing"
-                    className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="inline-block rounded-lg bg-indigo-600 px-3.5 py-1.5 text-sm text-white transition-colors hover:bg-indigo-700"
                   >
                     View Plans
                   </Link>
@@ -284,17 +284,17 @@ export function PaginatedTransactionList({
         ) : (
           <>
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4 p-4 sm:p-6">
+            <div className="space-y-2.5 p-3 md:hidden">
               {payments.map((payment) => {
                 const pricing = getPricingDetails(payment);
                 return (
-                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-4')}>
-                    <div className="flex justify-between items-start">
+                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-3')}>
+                    <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-base font-semibold text-slate-900 dark:text-neutral-100">
                           {payment.subscription?.plan.name || payment.plan?.name || 'Unknown Plan'}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-neutral-400 mt-1" title={payment.id}>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-neutral-400" title={payment.id}>
                           Txn: {payment.id.slice(0, 8)}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-neutral-400">
@@ -306,7 +306,7 @@ export function PaginatedTransactionList({
                           {payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency)}
                         </div>
                         {(pricing.hasDiscount || payment.couponCode) && (
-                          <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-neutral-400 leading-tight">
+                          <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs leading-tight text-slate-500 dark:text-neutral-400">
                             {pricing.hasDiscount && (
                               <>
                                 <span className="line-through text-slate-400 dark:text-neutral-500">
@@ -356,25 +356,33 @@ export function PaginatedTransactionList({
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm text-neutral-400">
-                    <div>
-                      {payment.subscription?.plan.durationHours 
-                        ? formatDuration(payment.subscription.plan.durationHours)
-                        : 'N/A'
-                      }
+                  <div className="flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-sm text-neutral-400 dark:border-neutral-800/80">
+                      <div>
+                        {payment.subscription?.plan.durationHours 
+                          ? formatDuration(payment.subscription.plan.durationHours)
+                          : 'N/A'
+                        }
+                      </div>
+                      {getDisplayStatus(payment.status) === 'COMPLETED' ? (
+                        <button
+                          onClick={() => handleDownloadInvoice(payment.id)}
+                          disabled={downloadingInvoice === payment.id}
+                          className="rounded border border-blue-400 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:border-blue-300 hover:text-blue-300 disabled:opacity-50"
+                        >
+                          {downloadingInvoice === payment.id ? 'Downloading...' : 'Invoice'}
+                        </button>
+                      ) : payment.status === 'REFUNDED' ? (
+                        <button
+                          onClick={() => handleDownloadRefundReceipt(payment.id)}
+                          disabled={downloadingInvoice === payment.id}
+                          className="rounded border border-orange-400 px-2.5 py-1 text-xs text-orange-500 transition-colors hover:border-orange-300 hover:text-orange-400 disabled:opacity-50 dark:border-orange-400/80 dark:text-orange-300 dark:hover:border-orange-300 dark:hover:text-orange-200"
+                        >
+                          {downloadingInvoice === payment.id ? 'Downloading...' : 'Receipt'}
+                        </button>
+                      ) : null}
                     </div>
-                    {getDisplayStatus(payment.status) === 'COMPLETED' && (
-                      <button
-                        onClick={() => handleDownloadInvoice(payment.id)}
-                        disabled={downloadingInvoice === payment.id}
-                        className="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 border border-blue-400 hover:border-blue-300 rounded transition-colors disabled:opacity-50"
-                      >
-                        {downloadingInvoice === payment.id ? 'Downloading...' : 'Invoice'}
-                      </button>
-                    )}
-                  </div>
-                  {payment.subscription && (
-                    <div className="text-xs text-neutral-500">
+                    {payment.subscription && (
+                      <div className="text-xs text-neutral-500">
                       {isPlaceholderStart(payment.subscription.startedAt) && payment.subscription.status === 'PENDING' ? (
                         <div className="flex items-center gap-2">
                           <span>Pending — activate to start now</span>
@@ -385,16 +393,16 @@ export function PaginatedTransactionList({
                           {formatDate(payment.subscription.startedAt, { mode: settings.mode, timezone: settings.timezone })} → {formatDate(payment.subscription.expiresAt, { mode: settings.mode, timezone: settings.timezone })}
                         </>
                       )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
 
             {/* Desktop Table View */}
             <div className="hidden md:block">
-              <div className="border-b border-slate-200 bg-slate-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+              <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
                 <div className="grid grid-cols-7 gap-4">
                   <div>Plan / Date / Txn</div>
                   <div>Amount</div>
@@ -412,12 +420,12 @@ export function PaginatedTransactionList({
                   return (
                     <div
                       key={payment.id}
-                      className="grid grid-cols-7 items-center gap-4 px-6 py-4 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
+                      className="grid grid-cols-7 items-center gap-4 px-4 py-3 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
                     >
                         <div className="truncate">
                           <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{payment.subscription?.plan.name || payment.plan?.name || 'Unknown Plan'}</div>
                           <div className="text-xs text-slate-500 dark:text-neutral-400">{formatDate(payment.createdAt, { mode: settings.mode, timezone: settings.timezone })}</div>
-                          <div className="text-xs font-mono text-slate-500 dark:text-neutral-500 mt-1" title={payment.id}>{payment.id.slice(0, 12)}</div>
+                          <div className="mt-1 text-xs font-mono text-slate-500 dark:text-neutral-500" title={payment.id}>{payment.id.slice(0, 12)}</div>
                         </div>
                       <div className="space-y-1">
                         <div className="font-medium text-slate-800 dark:text-neutral-100">
@@ -502,7 +510,7 @@ export function PaginatedTransactionList({
                           <button
                             onClick={() => handleDownloadInvoice(payment.id)}
                             disabled={downloadingInvoice === payment.id}
-                            className="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 border border-blue-400 hover:border-blue-300 rounded transition-colors disabled:opacity-50"
+                            className="rounded border border-blue-400 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:border-blue-300 hover:text-blue-300 disabled:opacity-50"
                           >
                             {downloadingInvoice === payment.id ? 'Downloading...' : 'Invoice'}
                           </button>
@@ -510,7 +518,7 @@ export function PaginatedTransactionList({
                           <button
                             onClick={() => handleDownloadRefundReceipt(payment.id)}
                             disabled={downloadingInvoice === payment.id}
-                            className="text-orange-500 hover:text-orange-400 text-xs px-2 py-1 border border-orange-400 hover:border-orange-300 rounded transition-colors disabled:opacity-50 dark:text-orange-300 dark:hover:text-orange-200 dark:border-orange-400/80 dark:hover:border-orange-300"
+                            className="rounded border border-orange-400 px-2.5 py-1 text-xs text-orange-500 transition-colors hover:border-orange-300 hover:text-orange-400 disabled:opacity-50 dark:border-orange-400/80 dark:text-orange-300 dark:hover:border-orange-300 dark:hover:text-orange-200"
                           >
                             {downloadingInvoice === payment.id ? 'Downloading...' : 'Receipt'}
                           </button>

@@ -33,7 +33,7 @@ export function ProfileManagement() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   if (!isLoaded) {
-    return <div className="animate-pulse bg-neutral-800 rounded h-32"></div>;
+    return <div className="h-32 animate-pulse rounded bg-neutral-800"></div>;
   }
 
   const handleUpdateProfile = async () => {
@@ -89,12 +89,12 @@ export function ProfileManagement() {
                     formData.lastName !== (user?.lastName || '');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Profile Information */}
-      <div className="border border-neutral-700 rounded p-6 bg-neutral-900">
-        <h3 className="text-lg font-medium mb-4 text-white">Profile Information</h3>
+      <div className="rounded border border-neutral-700 bg-neutral-900 p-5">
+        <h3 className="mb-4 text-lg font-medium text-white">Profile Information</h3>
         
-        <div className="space-y-4 max-w-md">
+        <div className="max-w-md space-y-3.5">
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               First Name
@@ -140,7 +140,7 @@ export function ProfileManagement() {
             <button
               onClick={handleUpdateProfile}
               disabled={isUpdating}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded px-3.5 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {isUpdating ? 'Updating...' : 'Save Changes'}
             </button>
@@ -149,19 +149,19 @@ export function ProfileManagement() {
       </div>
 
       {/* Account Actions */}
-      <div className="border border-neutral-700 rounded p-6 bg-neutral-900">
-        <h3 className="text-lg font-medium mb-4 text-white">Account Actions</h3>
+      <div className="rounded border border-neutral-700 bg-neutral-900 p-5">
+        <h3 className="mb-4 text-lg font-medium text-white">Account Actions</h3>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Password Change */}
-          <div className="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
+          <div className="flex items-center justify-between rounded border border-neutral-700 bg-neutral-800 p-3">
             <div>
               <div className="font-medium text-white">Change Password</div>
               <div className="text-sm text-neutral-400">Update your account password</div>
             </div>
             <ClerkProfileModal
               trigger={
-                <button className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                <button className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-700">
                   Change Password
                 </button>
               }
@@ -169,14 +169,14 @@ export function ProfileManagement() {
           </div>
 
           {/* Email Management */}
-          <div className="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
+          <div className="flex items-center justify-between rounded border border-neutral-700 bg-neutral-800 p-3">
             <div>
               <div className="font-medium text-white">Email Settings</div>
               <div className="text-sm text-neutral-400">Add or change your email addresses</div>
             </div>
             <ClerkProfileModal
               trigger={
-                <button className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                <button className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-700">
                   Manage Email
                 </button>
               }
@@ -184,14 +184,14 @@ export function ProfileManagement() {
           </div>
 
           {/* Two-Factor Authentication */}
-          <div className="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
+          <div className="flex items-center justify-between rounded border border-neutral-700 bg-neutral-800 p-3">
             <div>
               <div className="font-medium text-white">Two-Factor Authentication</div>
               <div className="text-sm text-neutral-400">Enhance your account security with 2FA</div>
             </div>
             <ClerkProfileModal
               trigger={
-                <button className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                <button className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-700">
                   Setup 2FA
                 </button>
               }
@@ -200,16 +200,16 @@ export function ProfileManagement() {
           </div>
 
           {/* Account Deletion */}
-          <div className="border border-red-700/50 rounded p-4 bg-red-900/10">
-            <h4 className="font-medium text-red-400 mb-2">Danger Zone</h4>
-            <div className="text-sm text-neutral-300 mb-3">
+          <div className="rounded border border-red-700/50 bg-red-900/10 p-4">
+            <h4 className="mb-2 font-medium text-red-400">Danger Zone</h4>
+            <div className="mb-3 text-sm text-neutral-300">
               Permanently delete your account and all associated data. This action cannot be undone.
             </div>
             
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                className="rounded bg-red-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-red-700"
               >
                 Delete Account
               </button>
@@ -229,7 +229,7 @@ export function ProfileManagement() {
                   <button
                     onClick={handleDeleteAccount}
                     disabled={deleteConfirmText !== 'DELETE MY ACCOUNT'}
-                    className="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="rounded bg-red-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Delete Account
                   </button>
@@ -238,7 +238,7 @@ export function ProfileManagement() {
                       setShowDeleteConfirm(false);
                       setDeleteConfirmText('');
                     }}
-                    className="px-3 py-2 border border-neutral-700 text-neutral-300 text-sm rounded hover:bg-neutral-800 transition-colors"
+                    className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 transition-colors hover:bg-neutral-800"
                   >
                     Cancel
                   </button>

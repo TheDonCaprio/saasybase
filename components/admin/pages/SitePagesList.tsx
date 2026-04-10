@@ -397,7 +397,7 @@ export default function SitePagesList({
 
   return (
     <div className="space-y-4">
-      <div className={dashboardPanelClass('p-4 sm:p-6')}>
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
         <ListFilters
           search={search}
           onSearchChange={setSearch}
@@ -428,7 +428,7 @@ export default function SitePagesList({
 
       <div
         className={dashboardMutedPanelClass(
-          'flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300'
+          'flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-xs sm:px-4 sm:py-3 sm:text-sm text-neutral-600 dark:text-neutral-300'
         )}
       >
         <span>
@@ -497,7 +497,7 @@ export default function SitePagesList({
         />
 
       {hasSelection ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white/80 px-4 py-3 text-xs font-medium text-neutral-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-200">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white/80 px-3 py-2.5 text-xs font-medium text-neutral-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-200 sm:px-4 sm:py-3">
           <span>{selectedCount} selected</span>
           <div className="flex flex-wrap items-center gap-2">
             {isTrashedView ? (
@@ -543,7 +543,7 @@ export default function SitePagesList({
       {pages.length > 0 ? (
         <>
           {/* Mobile Cards View - Below 1025px */}
-          <div className="block min-[1025px]:hidden overflow-hidden rounded-xl border border-neutral-200 bg-white/80 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/40">
+          <div className="theme-shadow-panel block min-[1025px]:hidden overflow-hidden rounded-xl border border-neutral-200 bg-white/80 dark:border-neutral-800 dark:bg-neutral-900/40">
             <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {pages.map((page) => {
                 const isSelected = selectedIds.includes(page.id);
@@ -553,7 +553,7 @@ export default function SitePagesList({
                 const isPendingDelete = pendingRowAction?.id === page.id && pendingRowAction.action === 'delete';
 
                 return (
-                  <div key={page.id} className="flex flex-col gap-3 px-4 py-3 sm:gap-4">
+                  <div key={page.id} className="flex flex-col gap-3 px-3 py-3 sm:px-4">
                     <div className="flex items-start gap-3 sm:items-center">
                       {!page.system ? (
                         <input
@@ -633,7 +633,7 @@ export default function SitePagesList({
                         <button
                           onClick={() => togglePublished(page.id, !page.published)}
                           disabled={updatingPageId === page.id}
-                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                             page.published
                               ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
                               : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
@@ -696,7 +696,7 @@ export default function SitePagesList({
                               href={getPreviewPath(page.slug)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                              className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
                               title="Preview page"
                             >
                               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -718,7 +718,7 @@ export default function SitePagesList({
                           )}
                           <Link
                             href={`${normalizedEditBasePath}/${page.id}/edit`}
-                            className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-medium text-violet-800 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:hover:bg-violet-900/50"
+                            className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:hover:bg-violet-900/50"
                           >
                             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path
@@ -737,7 +737,7 @@ export default function SitePagesList({
                         <button
                           onClick={() => handleTrash(page.id, page.title)}
                           disabled={isPendingTrash}
-                          className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
                         >
                           {isPendingTrash ? (
                             <>
@@ -779,7 +779,7 @@ export default function SitePagesList({
                           <button
                             onClick={() => handleRestore(page.id, page.title)}
                             disabled={isPendingRestore}
-                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-800 transition-colors hover:bg-emerald-200 disabled:cursor-wait disabled:opacity-70 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 transition-colors hover:bg-emerald-200 disabled:cursor-wait disabled:opacity-70 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
                           >
                             {isPendingRestore ? (
                               <>
@@ -817,7 +817,7 @@ export default function SitePagesList({
                           <button
                             onClick={() => handlePermanentDelete(page.id, page.title)}
                             disabled={isPendingDelete}
-                            className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 disabled:cursor-wait disabled:opacity-70 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                            className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 disabled:cursor-wait disabled:opacity-70 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                           >
                             {isPendingDelete ? (
                               <>
@@ -862,9 +862,9 @@ export default function SitePagesList({
           </div>
 
           {/* Desktop Table View - 1025px and above */}
-          <div className="hidden min-[1025px]:block overflow-hidden rounded-xl border border-neutral-200 bg-white/80 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/40">
+          <div className="theme-shadow-panel hidden min-[1025px]:block overflow-hidden rounded-xl border border-neutral-200 bg-white/80 dark:border-neutral-800 dark:bg-neutral-900/40">
             {/* Table Header */}
-            <div className="border-b border-neutral-200 bg-neutral-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+            <div className="border-b border-neutral-200 bg-neutral-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
               <div className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_14rem_10rem_10rem] gap-4 items-center">
                 <div></div> {/* Checkbox column */}
                 <div>Page</div>
@@ -887,7 +887,7 @@ export default function SitePagesList({
                 return (
                   <div
                     key={page.id}
-                    className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_14rem_10rem_10rem] gap-4 items-center px-6 py-4 text-sm text-neutral-600 transition-colors hover:bg-neutral-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
+                    className="grid grid-cols-[2rem_minmax(0,1fr)_7rem_14rem_10rem_10rem] gap-3 items-center px-4 py-3 text-sm text-neutral-600 transition-colors hover:bg-neutral-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
                   >
                     {/* Checkbox */}
                     <div className="col-span-1 flex items-center">
@@ -978,7 +978,7 @@ export default function SitePagesList({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1.5">
                       {!isTrashed ? (
                         <>
                           {/* Publish/Unpublish */}
@@ -987,7 +987,7 @@ export default function SitePagesList({
                             disabled={updatingPageId === page.id}
                             aria-label={page.published ? 'Unpublish' : 'Publish'}
                             title={page.published ? 'Unpublish' : 'Publish'}
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
                               updatingPageId === page.id
                                 ? 'border border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-100 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
                                 : page.published
@@ -996,11 +996,11 @@ export default function SitePagesList({
                             }`}
                           >
                             {updatingPageId === page.id ? (
-                              <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin" style={{ color: 'white' }} />
+                              <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin" style={{ color: 'white' }} />
                             ) : page.published ? (
-                              <FontAwesomeIcon icon={faLock} className="h-4 w-4" style={{ color: 'white' }} />
+                              <FontAwesomeIcon icon={faLock} className="h-3.5 w-3.5" style={{ color: 'white' }} />
                             ) : (
-                              <FontAwesomeIcon icon={faGlobe} className="h-4 w-4" style={{ color: 'white' }} />
+                              <FontAwesomeIcon icon={faGlobe} className="h-3.5 w-3.5" style={{ color: 'white' }} />
                             )}
                           </button>
 
@@ -1010,13 +1010,13 @@ export default function SitePagesList({
                             disabled={!page.published}
                             aria-label="Preview page"
                             title={page.published ? 'Preview page' : 'Preview unavailable for drafts'}
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${
                               page.published
                                 ? 'border border-blue-500 bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 dark:border-blue-500/70 dark:bg-blue-500/80 dark:hover:bg-blue-500 dark:focus:ring-blue-400'
                                 : 'border border-neutral-300 bg-neutral-100 text-neutral-400 cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-500'
                             }`}
                           >
-                            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                            <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
                           </button>
 
                           {/* Edit */}
@@ -1024,9 +1024,9 @@ export default function SitePagesList({
                             href={`${normalizedEditBasePath}/${page.id}/edit`}
                             aria-label="Edit page"
                             title="Edit page"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-violet-500 bg-violet-500 text-white transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:border-violet-500/70 dark:bg-violet-500/80 dark:hover:bg-violet-500 dark:focus:ring-violet-400 dark:focus:ring-offset-neutral-900"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-500 bg-violet-500 text-white transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:border-violet-500/70 dark:bg-violet-500/80 dark:hover:bg-violet-500 dark:focus:ring-violet-400 dark:focus:ring-offset-neutral-900"
                           >
-                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                            <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
                           </Link>
 
                           {/* Trash (always visible, but grayed out for system pages) */}
@@ -1035,7 +1035,7 @@ export default function SitePagesList({
                             disabled={page.system || isPendingTrash}
                             aria-label={page.system ? 'Cannot delete system page' : 'Move to trash'}
                             title={page.system ? 'Cannot delete system page' : 'Move to trash'}
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 ${
                               page.system
                                 ? 'border border-neutral-300 bg-neutral-100 text-neutral-400 cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-500'
                                 : isPendingTrash
@@ -1044,9 +1044,9 @@ export default function SitePagesList({
                             }`}
                           >
                             {isPendingTrash ? (
-                              <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin" />
+                              <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                             )}
                           </button>
                         </>
@@ -1060,16 +1060,16 @@ export default function SitePagesList({
                               disabled={isPendingRestore}
                               aria-label="Restore"
                               title="Restore"
-                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
                                 isPendingRestore
                                   ? 'border border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-100 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
                                   : 'border border-blue-500 bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 dark:border-blue-500/70 dark:bg-blue-500/80 dark:hover:bg-blue-500 dark:focus:ring-blue-400'
                               }`}
                             >
                               {isPendingRestore ? (
-                                <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin" />
+                                <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <FontAwesomeIcon icon={faUndo} className="h-4 w-4" />
+                                <FontAwesomeIcon icon={faUndo} className="h-3.5 w-3.5" />
                               )}
                             </button>
 
@@ -1079,16 +1079,16 @@ export default function SitePagesList({
                               disabled={isPendingDelete}
                               aria-label="Delete permanently"
                               title="Delete permanently"
-                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-wait disabled:opacity-70 ${
                                 isPendingDelete
                                   ? 'border border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-100 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60'
                                   : 'border border-red-500 bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 dark:border-red-500/70 dark:bg-red-500/80 dark:hover:bg-red-500 dark:focus:ring-red-400'
                               }`}
                             >
                               {isPendingDelete ? (
-                                <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin" />
+                                <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <FontAwesomeIcon icon={faTrashCan} className="h-4 w-4" />
+                                <FontAwesomeIcon icon={faTrashCan} className="h-3.5 w-3.5" />
                               )}
                             </button>
                           </>

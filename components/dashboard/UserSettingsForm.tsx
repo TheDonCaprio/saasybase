@@ -132,14 +132,14 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
       <h3 className="mb-4 text-lg font-medium text-slate-900 dark:text-neutral-100">Preferences</h3>
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {settingDefinitions.map((def) => {
           const currentValue = getSettingValue(def.key);
           
           return (
-            <div key={def.key} className="space-y-2">
+            <div key={def.key} className="space-y-1.5">
               <div>
                 <div className="text-sm font-medium text-slate-800 dark:text-neutral-100">{def.label}</div>
                 <div className="text-xs text-slate-500 dark:text-neutral-400">{def.description}</div>
@@ -162,7 +162,7 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
                     value={currentValue}
                     onChange={(e) => updateSetting(def.key, e.target.value)}
                     disabled={loading}
-                    className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
+                    className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
                   >
                     {def.options?.map(option => (
                       <option key={option} value={option} className="bg-white text-slate-700 dark:bg-neutral-800 dark:text-neutral-100">
@@ -175,7 +175,7 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
                     value={currentValue}
                     onChange={(e) => updateSetting(def.key, e.target.value)}
                     disabled={loading}
-                    className="w-full max-w-md rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
+                    className="w-full max-w-md rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
                   >
                     {TIMEZONE_OPTIONS.map(option => (
                       <option key={option.value} value={option.value} className="bg-white text-slate-700 dark:bg-neutral-800 dark:text-neutral-100">
@@ -190,7 +190,7 @@ export function UserSettingsForm({ userId, initialSettings }: UserSettingsFormPr
                     onChange={(e) => updateSetting(def.key, e.target.value)}
                     onBlur={(e) => updateSetting(def.key, e.target.value)}
                     disabled={loading}
-                    className="flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    className="flex-1 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     placeholder={def.defaultValue}
                   />
                 )}

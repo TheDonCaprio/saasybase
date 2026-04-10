@@ -1096,11 +1096,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || pendingProviderConfirmation || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
-    <div className="group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_28px_70px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-[0_32px_80px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22))]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12)),_transparent_65%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.22)),_transparent_60%)]"
-        aria-hidden="true"
-      />
+            <div className="theme-shadow-card group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-6 transition-transform duration-300 hover:-translate-y-1">
       <div className="relative flex flex-col gap-5">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-6">

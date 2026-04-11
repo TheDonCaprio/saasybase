@@ -42,7 +42,7 @@ function toApiPath(appApiRoot: string, routeFilePath: string): string {
 
 function inferAccess(sourceText: string, apiPath: string): Access {
   // Explicit guard usage wins.
-  if (/(requireAdminOrModerator|requireAdminAuth|requireAdmin)\s*\(/.test(sourceText)) return 'admin';
+  if (/(requireAdminOrModerator|requireAdminPageAccess|requireAdmin)\s*\(/.test(sourceText)) return 'admin';
   if (/(requireUserAuth|requireUser)\s*\(/.test(sourceText)) return 'user';
 
   // Many user-scoped endpoints call `auth()` directly.

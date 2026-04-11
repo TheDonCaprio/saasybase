@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const requireAdminAuthMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'admin_1' })));
+const requireAdminPageAccessMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'admin_1' })));
 const toAuthGuardErrorResponseMock = vi.hoisted(() => vi.fn(() => null));
 const recordAdminActionMock = vi.hoisted(() => vi.fn(async () => undefined));
 const saveAdminFileMock = vi.hoisted(() => vi.fn(async () => '/uploads/test.svg'));
@@ -11,7 +11,7 @@ const fileTypeFromBufferMock = vi.hoisted(() => vi.fn(async () => ({ mime: 'appl
 const sanitizeMock = vi.hoisted(() => vi.fn((input: string) => input));
 
 vi.mock('../lib/route-guards', () => ({
-  requireAdminAuth: requireAdminAuthMock,
+  requireAdminPageAccess: requireAdminPageAccessMock,
 }));
 
 vi.mock('../lib/auth', () => ({
@@ -52,7 +52,7 @@ import { POST } from '../app/api/admin/file/upload/route';
 describe('POST /api/admin/file/upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireAdminAuthMock.mockResolvedValue({ userId: 'admin_1' });
+    requireAdminPageAccessMock.mockResolvedValue({ userId: 'admin_1' });
     toAuthGuardErrorResponseMock.mockReturnValue(null);
     adminRateLimitMock.mockResolvedValue({ success: true, allowed: true, reset: Date.now() + 60_000 });
     fileTypeFromBufferMock.mockResolvedValue({ mime: 'application/xml' });

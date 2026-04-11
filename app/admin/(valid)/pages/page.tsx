@@ -1,4 +1,4 @@
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { listSitePagesPaginated, toSitePageDTO } from '../../../../lib/sitePages';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import SitePagesList from '@/components/admin/pages/SitePagesList';
@@ -17,7 +17,7 @@ export async function generateMetadata() {
 }
 
 export default async function AdminPagesPage() {
-  await requireAdminAuth('/admin/pages');
+  await requireAdminPageAccess('/admin/pages');
   const PAGE_SIZE = 50;
   const result = await listSitePagesPaginated({ page: 1, limit: PAGE_SIZE, includeStatusTotals: true });
 

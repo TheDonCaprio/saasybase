@@ -1,6 +1,6 @@
 import React from 'react';
 export const dynamic = 'force-dynamic';
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { toError } from '../../../../lib/runtime-guards';
 import {
   getThemeHeaderLinks,
@@ -35,10 +35,10 @@ export async function generateMetadata() {
 }
 
 export default async function AdminThemePage() {
-  await requireAdminAuth('/admin/theme');
+  await requireAdminPageAccess('/admin/theme');
 
   try {
-    await requireAdminAuth('/admin/theme');
+    await requireAdminPageAccess('/admin/theme');
   } catch (err: unknown) {
     const e = toError(err);
     console.warn('Admin theme: requireAdmin check failed or redirected', e?.message);

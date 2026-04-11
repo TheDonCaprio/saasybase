@@ -63,53 +63,25 @@ const accentStyles: Record<Accent, { pill: string; dot: string }> = {
 	}
 };
 
+const themedStatTone = {
+	wrapper:
+		'theme-shadow-card rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.24))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] px-3 py-2',
+	label:
+		'text-xs uppercase tracking-wide text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.82))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.9))]',
+	value:
+		'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
+	helper:
+		'text-xs text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.82))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.88))]'
+};
+
 const statToneStyles: Record<Tone, { wrapper: string; label: string; value: string; helper: string }> = {
-	theme: {
-		wrapper:
-			'theme-shadow-card rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.82)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.82))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2',
-		label:
-			'text-xs uppercase tracking-wide text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.85))]',
-		value:
-			'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
-		helper:
-			'text-xs text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.8))]'
-	},
-	indigo: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-indigo-200 bg-indigo-50 px-3 py-2 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10',
-		label: 'text-xs uppercase tracking-wide text-indigo-600/80 dark:text-indigo-100/70',
-		value: 'mt-1 text-base font-semibold text-indigo-700 dark:text-indigo-100',
-		helper: 'text-xs text-indigo-600/70 dark:text-indigo-200/70'
-	},
-	emerald: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10',
-		label: 'text-xs uppercase tracking-wide text-emerald-600/80 dark:text-emerald-100/70',
-		value: 'mt-1 text-base font-semibold text-emerald-700 dark:text-emerald-100',
-		helper: 'text-xs text-emerald-600/70 dark:text-emerald-200/70'
-	},
-	purple: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-purple-200 bg-purple-50 px-3 py-2 shadow-sm dark:border-purple-500/30 dark:bg-purple-500/10',
-		label: 'text-xs uppercase tracking-wide text-purple-600/80 dark:text-purple-100/70',
-		value: 'mt-1 text-base font-semibold text-purple-700 dark:text-purple-100',
-		helper: 'text-xs text-purple-600/70 dark:text-purple-200/70'
-	},
-	blue: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-blue-200 bg-blue-50 px-3 py-2 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10',
-		label: 'text-xs uppercase tracking-wide text-blue-600/80 dark:text-blue-100/70',
-		value: 'mt-1 text-base font-semibold text-blue-700 dark:text-blue-100',
-		helper: 'text-xs text-blue-600/70 dark:text-blue-200/70'
-	},
-	amber: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10',
-		label: 'text-xs uppercase tracking-wide text-amber-600/80 dark:text-amber-100/70',
-		value: 'mt-1 text-base font-semibold text-amber-700 dark:text-amber-100',
-		helper: 'text-xs text-amber-600/70 dark:text-amber-200/70'
-	},
-	rose: {
-		wrapper: 'rounded-[var(--theme-surface-radius)] border border-rose-200 bg-rose-50 px-3 py-2 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10',
-		label: 'text-xs uppercase tracking-wide text-rose-600/80 dark:text-rose-100/70',
-		value: 'mt-1 text-base font-semibold text-rose-700 dark:text-rose-100',
-		helper: 'text-xs text-rose-600/70 dark:text-rose-200/70'
-	},
+	theme: themedStatTone,
+	indigo: themedStatTone,
+	emerald: themedStatTone,
+	purple: themedStatTone,
+	blue: themedStatTone,
+	amber: themedStatTone,
+	rose: themedStatTone,
 	slate: {
 		wrapper:
 			'rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2 shadow-sm backdrop-blur-sm',
@@ -135,12 +107,12 @@ export function DashboardPageHeader({
 }: DashboardPageHeaderProps) {
 	const palette = accentStyles[accent];
 	const toneForAccent: Record<Accent, Tone> = {
-		theme: 'slate',
-		indigo: 'blue',
-		violet: 'purple',
-		emerald: 'emerald',
-		amber: 'amber',
-		rose: 'rose',
+		theme: 'theme',
+		indigo: 'theme',
+		violet: 'theme',
+		emerald: 'theme',
+		amber: 'theme',
+		rose: 'theme',
 	};
 
 	return (

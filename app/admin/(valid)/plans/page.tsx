@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import { PlanManagement } from '../../../../components/admin/PlanManagement';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
@@ -29,7 +29,7 @@ export async function generateMetadata() {
 }
 
 export default async function AdminPlansPage() {
-  await requireAdminAuth('/admin/plans');
+  await requireAdminPageAccess('/admin/plans');
 
   const activeCurrency = await getActiveCurrencyAsync();
   const formatCurrency = (dollars: number) =>

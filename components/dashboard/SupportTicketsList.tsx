@@ -289,6 +289,7 @@ export function SupportTicketsList({
           currentSecondary={categoryFilter}
           onSecondaryChange={handleCategoryFilterChange}
           secondaryLabel="Category"
+          secondaryAllLabel="All"
           onRefresh={() => refreshTickets()}
           placeholder="Search by subject, message, or ticket ID..."
           sortOptions={[

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWrench } from '@fortawesome/free-solid-svg-icons';
-import { requireAdminAuth } from '@/lib/route-guards';
+import { requireAdminPageAccess } from '@/lib/route-guards';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { MaintenanceTools } from '@/components/admin/MaintenanceTools';
 
@@ -16,7 +16,7 @@ export async function generateMetadata() {
 }
 
 export default async function AdminMaintenancePage() {
-  await requireAdminAuth('/admin/maintenance');
+  await requireAdminPageAccess('/admin/maintenance');
 
   return (
     <div className="space-y-8">

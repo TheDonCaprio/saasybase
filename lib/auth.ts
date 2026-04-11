@@ -58,6 +58,7 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
   return resolveUserRole(userId);
 }
 
+// Core API/server admin guard: throws structured auth errors for callers to map into responses.
 export async function requireAdmin() {
   // Only allow the DEV_ADMIN_ID bypass in explicitly localhost-only environments.
   if (isLocalhostDevBypassEnabled()) {
@@ -109,6 +110,7 @@ export interface AdminOrModeratorContext {
   permissions: ModeratorPermissions;
 }
 
+// Core API/server admin-or-moderator guard with optional moderator section enforcement.
 export async function requireAdminOrModerator(section?: ModeratorSection): Promise<AdminOrModeratorContext> {
   if (isLocalhostDevBypassEnabled()) {
     const devId = process.env.DEV_ADMIN_ID;

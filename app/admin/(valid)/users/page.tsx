@@ -148,14 +148,12 @@ export default async function AdminUsersPage() {
           {
             label: 'Active paid accounts',
             value: formatNumber(activePaidUsers),
-            helper: `${formatNumber(expiringSoonCount)} renewals in 14 days`,
-            tone: activePaidUsers > 0 ? 'emerald' : 'slate'
+            helper: `${formatNumber(expiringSoonCount)} renewals in 14 days`
           },
           {
             label: 'Free users',
             value: formatNumber(freeUsers),
-            helper: `${formatNumber(newUsersYesterday)} new yesterday`,
-            tone: freeUsers > 0 ? 'blue' : 'slate'
+            helper: `${formatNumber(newUsersYesterday)} new yesterday`
           }
         ]}
       >

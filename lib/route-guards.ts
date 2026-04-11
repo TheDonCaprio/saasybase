@@ -107,7 +107,8 @@ export async function requireAuth(returnPath?: string): Promise<{ userId: string
   return { userId: auth.userId, orgId: auth.orgId };
 }
 
-export async function requireAdminAuth(returnPath?: string): Promise<{ userId: string }> {
+// Page-only admin guard: redirects instead of returning structured auth errors.
+export async function requireAdminPageAccess(returnPath?: string): Promise<{ userId: string }> {
   try {
     const userId = await requireAdmin();
     return { userId };
@@ -120,6 +121,7 @@ export async function requireAdminAuth(returnPath?: string): Promise<{ userId: s
   }
 }
 
+// Page-only moderator/admin guard for section-gated admin screens.
 export async function requireAdminSectionAccess(section: ModeratorSection): Promise<AdminOrModeratorContext> {
   try {
     return await requireAdminOrModerator(section);
@@ -128,6 +130,7 @@ export async function requireAdminSectionAccess(section: ModeratorSection): Prom
   }
 }
 
+// Page-only moderator/admin guard for shared admin areas without section scoping.
 export async function requireAdminAreaActor(): Promise<AdminOrModeratorContext> {
   try {
     return await requireAdminOrModerator();

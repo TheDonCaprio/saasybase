@@ -324,6 +324,7 @@ export function AdminSupportTicketsList({
         <ListFilters
           search={search}
           onSearchChange={(v) => setSearch(v)}
+          desktopInlineBreakpoint="1280"
           statusOptions={['ALL', 'OPEN', 'IN_PROGRESS', 'CLOSED']}
           currentStatus={status}
           onStatusChange={(s) => handleStatusFilterChange(s)}
@@ -334,6 +335,7 @@ export function AdminSupportTicketsList({
             fetchPage(1);
           }}
           secondaryLabel="Category"
+          secondaryAllLabel="All"
           sortOptions={[
             { value: 'createdAt', label: 'Date Created' },
             { value: 'lastResponse', label: 'Last Response' },
@@ -372,7 +374,7 @@ export function AdminSupportTicketsList({
           onRefresh={() => refreshTickets()}
           placeholder="Search by ticket ID, subject, message, or user email..."
           additionalButton={{
-            label: '+ create',
+            label: '+New',
             onClick: () => setIsCreateModalOpen(true),
             className: 'inline-flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-violet-700'
           }}

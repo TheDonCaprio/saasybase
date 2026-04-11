@@ -1,4 +1,4 @@
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import EmailTemplatesClient from '../../../../components/admin/EmailTemplatesClient';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
@@ -25,7 +25,7 @@ export async function generateMetadata() {
 }
 
 export default async function EmailTemplatesPage() {
-  await requireAdminAuth('/admin/emails');
+  await requireAdminPageAccess('/admin/emails');
   const now = new Date();
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

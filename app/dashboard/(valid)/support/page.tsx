@@ -127,13 +127,11 @@ export default async function SupportPage({ searchParams }: PageProps) {
       label: 'Active tickets',
       value: activeTicketsCount,
       helper: activeTicketsCount > 0 ? 'Open or awaiting our reply' : 'You’re all caught up',
-      tone: activeTicketsCount > 0 ? ('amber' as const) : ('slate' as const),
     },
     {
       label: 'Last update',
       value: latestTicketRelative ?? '—',
       helper: latestTicketFormatted ?? 'No tickets yet',
-      tone: latestTicketFormatted ? ('emerald' as const) : ('slate' as const),
     },
   ];
 

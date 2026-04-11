@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '../../../../../lib/dashboardMetadata';
 import PageEditor from '@/components/admin/pages/PageEditor';
-import { requireAdminAuth } from '@/lib/route-guards';
+import { requireAdminPageAccess } from '@/lib/route-guards';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -12,7 +12,7 @@ export async function generateMetadata() {
 }
 
 export default async function NewPagePage() {
-  await requireAdminAuth('/admin/pages/new');
+  await requireAdminPageAccess('/admin/pages/new');
 
   return (
     <PageEditor

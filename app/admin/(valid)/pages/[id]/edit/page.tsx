@@ -3,7 +3,7 @@ import { buildDashboardMetadata } from '../../../../../../lib/dashboardMetadata'
 import { notFound } from 'next/navigation';
 import PageEditor from '@/components/admin/pages/PageEditor';
 import { getPageById, toSitePageDTO } from '@/lib/sitePages';
-import { requireAdminAuth } from '@/lib/route-guards';
+import { requireAdminPageAccess } from '@/lib/route-guards';
 
 interface EditPageProps {
   params: Promise<{ id: string }>;
@@ -44,7 +44,7 @@ async function loadEditPageData(pageId: string) {
 
 export default async function EditPagePage({ params }: EditPageProps) {
   const resolved = await params;
-  await requireAdminAuth(`/admin/pages/${resolved.id}/edit`);
+  await requireAdminPageAccess(`/admin/pages/${resolved.id}/edit`);
 
   const pageDTO = await loadEditPageData(resolved.id);
   if (!pageDTO) {

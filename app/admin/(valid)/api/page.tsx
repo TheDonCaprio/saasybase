@@ -1,7 +1,7 @@
 import { faCodeBranch, faGaugeHigh, faKey, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlug } from '@fortawesome/free-solid-svg-icons';
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import { AdminStatCard, type AdminStatCardProps } from '../../../../components/admin/AdminStatCard';
 import {
@@ -22,7 +22,7 @@ export async function generateMetadata() {
 }
 
 export default async function AdminApiPage() {
-  await requireAdminAuth('/admin/api');
+  await requireAdminPageAccess('/admin/api');
 
   const catalog = await getAdminApiCatalog();
   const { summary, rateLimiting, changelog } = catalog;

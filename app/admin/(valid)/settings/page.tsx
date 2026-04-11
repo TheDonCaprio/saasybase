@@ -1,7 +1,7 @@
 import React from 'react';
 export const dynamic = 'force-dynamic';
 import os from 'os';
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import { toError } from '../../../../lib/runtime-guards';
 import { AdminSettingsTabs } from '../../../../components/admin/AdminSettingsTabs';
@@ -41,13 +41,13 @@ export async function generateMetadata() {
 
 export default async function AdminSettingsPage() {
   // Redirect non-admins to sign-in (or error page)
-  await requireAdminAuth('/admin/settings');
+  await requireAdminPageAccess('/admin/settings');
 
   // Also ensure admin identity for auditing if needed
   try {
-    await requireAdminAuth('/admin/settings');
+    await requireAdminPageAccess('/admin/settings');
   } catch (err: unknown) {
-    // requireAdminAuth already redirected, so just swallow here
+    // requireAdminPageAccess already redirected, so just swallow here
     // but log unexpected errors for observability
     const e = toError(err);
     console.warn('Admin settings: requireAdmin check failed or redirected', e?.message);

@@ -191,7 +191,7 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
   if (!open) return null;
 
   const modal = (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-6">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-6">
       <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">

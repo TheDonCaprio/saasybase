@@ -2585,7 +2585,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Uploads a single image via raw request body; scope controls whether the asset is treated as a logo or general file. SVG uploads are sanitized server-side.',
         access: 'admin',
         notes: [
-          'Auth: requires authenticated admin via requireAdminAuth() (route guard).',
+          'Auth: API route uses requireAdmin(); auth failures return JSON via toAuthGuardErrorResponse().',
           'Rate limit: admin-upload:<scope> (20 / 120s), where scope is logo|file.',
           'Scope: ?scope=logo|file or header x-upload-scope; defaults to file.',
           'Headers: x-mimetype (hint), x-filename (optional original name).',
@@ -2632,7 +2632,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           file: 'File — required (multipart/form-data)',
         },
         notes: [
-          'Auth: requires authenticated admin via requireAdminAuth() (route guard).',
+          'Auth: API route uses requireAdmin(); auth failures return JSON via toAuthGuardErrorResponse().',
           'Rate limit: admin-upload:legacy-form-data (20 / 120s). Returns 429 with Retry-After on rate limit; returns 503 if rate limiter is unavailable.',
           'Allowed mimes: image/jpeg, image/jpg, image/png, image/gif, image/webp.',
           'Max size: 5MB.',
@@ -3659,7 +3659,7 @@ const CHANGELOG = [
       'Added user token spend endpoint for SaaSyApp (POST /api/user/spend-tokens).',
       'Expanded token-spend coverage in the reference to distinguish browser and server-to-server callers.',
       'Expanded curated docs for token/account endpoints to reduce inventory drift.',
-      'Hardened legacy admin upload endpoint (admin auth + rate limiting).',
+      'Hardened legacy admin upload endpoint (API admin guard + rate limiting).',
       'API docs UI: body schema rows wrap cleanly on narrow screens.'
     ]
   },
@@ -3834,7 +3834,7 @@ export async function getAdminApiCatalog(): Promise<AdminApiCatalog> {
         'Access is determined per endpoint: admin endpoints require an authenticated session whose resolved role is ADMIN, or moderator access where the handler explicitly allows it; user endpoints require an authenticated session from the active auth provider; public endpoints are unauthenticated; internal endpoints require a server-to-server Bearer token.',
       notes: [
         'Dashboard requests automatically forward the active auth-provider session cookies.',
-        'The /admin/api page itself uses requireAdminAuth() and redirects unauthenticated users to sign-in or non-admins to /access-denied; API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
+        'The /admin/api page itself uses requireAdminPageAccess() and redirects unauthenticated users to sign-in or non-admins to /access-denied; API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
         'User-scoped endpoints validate the requester against the resource owner and will return 403 when mismatched.',
         'Internal endpoints (e.g. /api/internal/*) are intended for server-to-server calls: use Authorization: Bearer <INTERNAL_API_TOKEN>. In non-prod environments, some internal endpoints also accept X-Internal-API: true for local tooling.',
         'Some internal endpoints intentionally respond with 404 when unauthorized to reduce endpoint discovery.'

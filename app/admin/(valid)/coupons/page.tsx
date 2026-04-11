@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import type { Prisma } from '@/lib/prisma-client';
-import { requireAdminAuth } from '../../../../lib/route-guards';
+import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import { stripMode, isPrismaModeError } from '@/lib/queryUtils';
 import { CouponManagement } from '@/components/admin/CouponManagement';
@@ -45,7 +45,7 @@ const numberFormatter = new Intl.NumberFormat('en-US');
 const formatNumber = (value: number) => numberFormatter.format(value);
 
 export default async function AdminCouponsPage({ searchParams }: PageProps) {
-  await requireAdminAuth('/admin/coupons');
+  await requireAdminPageAccess('/admin/coupons');
 
   const activeCurrency = await getActiveCurrencyAsync();
 

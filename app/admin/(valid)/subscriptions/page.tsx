@@ -291,7 +291,7 @@ export default async function AdminSubscriptionsPage() {
       accent: 'theme'
     },
     {
-      label: 'Scheduled cancellations',
+      label: 'Scheduled to cancel',
       value: formatNumber(scheduledCancelCount),
       helper: `${formatNumber(expiringSoonCount)} expiring in 30 days`,
       icon: faClockRotateLeft,
@@ -305,7 +305,7 @@ export default async function AdminSubscriptionsPage() {
       accent: 'theme'
     },
     {
-      label: 'New subscriptions (30d)',
+      label: 'New subs (30d)',
       value: formatNumber(newIn30Count),
       helper: `${formatNumber(uniqueCustomers)} unique customers`,
       icon: faUserPlus,
@@ -339,7 +339,7 @@ export default async function AdminSubscriptionsPage() {
       >
       </DashboardPageHeader>
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 min-[834px]:grid-cols-4">
         {metricCards.map((card) => (
           <AdminStatCard key={card.label} {...card} />
         ))}

@@ -368,7 +368,7 @@ export function AdminSettingsTabs({ databaseSettings, environmentSettings, moder
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 min-[834px]:grid-cols-4">
               <SystemBadge label="Stripe mode" value={stripeMode} tone={stripeMode === 'LIVE' ? 'emerald' : 'amber'} />
               <SystemBadge label="Database" value={databaseType} tone="blue" />
               <SystemBadge label="Clerk domain" value={clerkDomain} tone="violet" />

@@ -91,7 +91,7 @@ export default async function AdminApiPage() {
         ) : null}
       </DashboardPageHeader>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 min-[834px]:grid-cols-4">
         {metricCards.map((card) => (
           <AdminStatCard key={card.label} {...card} />
         ))}

@@ -148,7 +148,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
       />
 
       {/* Metric cards (immediately after hero) */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 min-[834px]:grid-cols-4">
         <AdminStatCard
           label="Completed"
           value={completedCount.toLocaleString()}

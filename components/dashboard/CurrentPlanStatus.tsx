@@ -105,7 +105,7 @@ export function CurrentPlanStatus({
 	// only one tile keep it single-column. Larger breakpoints are handled
 	// by `tileCols` (xl/md overrides).
 	const tileBaseCols = tileCount === 1 ? 'grid-cols-1' : 'grid-cols-2';
-	const tileCols = tileCount >= 4 ? 'lg:grid-cols-4' : tileCount === 3 ? 'xl:grid-cols-3' : '';
+	const tileCols = tileCount >= 4 ? 'min-[834px]:grid-cols-4' : tileCount === 3 ? 'xl:grid-cols-3' : '';
 
 	return (
 		<section className={clsx('space-y-6', className)}>

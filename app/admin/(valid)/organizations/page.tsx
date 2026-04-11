@@ -120,14 +120,14 @@ export default async function AdminOrganizationsPage() {
 
   const metricCards: AdminStatCardProps[] = [
     {
-      label: 'Average members per org',
+      label: 'Avg members per org',
       value: formatNumber(avgMembers),
       helper: `${formatNumber(totalCount)} active orgs`,
       icon: faUsersGear,
       accent: 'theme'
     },
     {
-      label: 'Seat-limited workspaces',
+      label: 'Seat-limited teams',
       value: formatNumber(seatLimitedCount),
       helper: `${formatNumber(totalCount)} total`,
       icon: faBuilding,
@@ -159,7 +159,7 @@ export default async function AdminOrganizationsPage() {
         stats={headerStats}
       />
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 min-[834px]:grid-cols-4">
         {metricCards.map((card) => (
           <AdminStatCard key={card.label} {...card} />
         ))}

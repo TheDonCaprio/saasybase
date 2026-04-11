@@ -158,7 +158,7 @@ export default async function TrafficPage() {
       >
       </DashboardPageHeader>
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 min-[834px]:grid-cols-4">
         {metricCards.map((card) => (
           <AdminStatCard key={card.label} {...card} />
         ))}

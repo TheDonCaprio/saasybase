@@ -3,8 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { randomUUID } from 'crypto';
-import { requireAdminAuth } from '../../../../lib/route-guards';
-import { toAuthGuardErrorResponse } from '../../../../lib/auth';
+import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
@@ -20,7 +19,7 @@ export async function POST(request: NextRequest) {
   // Ensure caller is an authenticated admin
   let adminAuth: { userId: string } | undefined;
   try {
-    adminAuth = await requireAdminAuth();
+    adminAuth = { userId: await requireAdmin() };
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
     if (guard) return guard;

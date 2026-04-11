@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
-import { requireAdminAuth } from '../../../../../lib/route-guards';
-import { toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { saveAdminFile, saveLogo } from '../../../../../lib/logoStorage';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
@@ -135,7 +134,7 @@ export async function POST(req: NextRequest) {
   // Ensure caller is an authenticated admin
   let adminAuth;
   try {
-    adminAuth = await requireAdminAuth();
+    adminAuth = { userId: await requireAdmin() };
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
     if (guard) return guard;

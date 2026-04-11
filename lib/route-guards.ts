@@ -1,6 +1,11 @@
 import { redirect } from 'next/navigation';
-import { getAuthSafe, getCurrentUserSafe, requireAdminOrModerator, type AdminOrModeratorContext } from './auth';
-import { prisma } from './prisma';
+import {
+  getAuthSafe,
+  isAuthGuardError,
+  requireAdmin,
+  requireAdminOrModerator,
+  type AdminOrModeratorContext,
+} from './auth';
 import { ModeratorSection } from './moderator';
 
 const DEFAULT_USER_RETURN_PATH = '/dashboard';
@@ -103,36 +108,16 @@ export async function requireAuth(returnPath?: string): Promise<{ userId: string
 }
 
 export async function requireAdminAuth(returnPath?: string): Promise<{ userId: string }> {
-  let userId: string | null = null;
-
-  const currentUser = await getCurrentUserSafe();
-  if (currentUser?.id) {
-    userId = currentUser.id;
-  } else {
-    const auth = await getAuthSafe();
-    if (auth?.userId) {
-      userId = auth.userId;
-    }
-  }
-
-  if (!userId) {
-    redirect(buildSignInRedirect(returnPath ?? DEFAULT_ADMIN_RETURN_PATH));
-  }
-
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-      redirect('/access-denied');
+    const userId = await requireAdmin();
+    return { userId };
+  } catch (error) {
+    if (isAuthGuardError(error) && error.code === 'UNAUTHENTICATED') {
+      redirect(buildSignInRedirect(returnPath ?? DEFAULT_ADMIN_RETURN_PATH));
     }
-  } catch {
+
     redirect('/access-denied');
   }
-
-  return { userId };
 }
 
 export async function requireAdminSectionAccess(section: ModeratorSection): Promise<AdminOrModeratorContext> {

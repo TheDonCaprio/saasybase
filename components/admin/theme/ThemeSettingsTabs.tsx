@@ -117,6 +117,16 @@ export function ThemeSettingsTabs({
   const [activeTab, setActiveTab] = useState<string>('navigation');
   const resolveThemeFontStack = useCallback((fontFamily: ColorTokens['fontFamily'] | undefined): string => {
     switch (fontFamily) {
+      case 'carbon':
+        return 'Arial, "Helvetica Neue", Helvetica, sans-serif';
+      case 'polaris':
+        return 'Verdana, "Segoe UI", Arial, sans-serif';
+      case 'ant':
+        return '"Trebuchet MS", "Segoe UI", Arial, sans-serif';
+      case 'spectrum':
+        return '"Segoe UI", Tahoma, Arial, sans-serif';
+      case 'geist':
+        return '"Helvetica Neue", Helvetica, Arial, sans-serif';
       case 'material':
         return 'Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif';
       case 'fluent':

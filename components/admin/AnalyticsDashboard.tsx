@@ -390,7 +390,7 @@ export default function AnalyticsDashboard({
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">This period highlights</h3>
           <span className={smallBadgeClass}>Prev window comparison</span>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {momentumStats.map((stat) => (
             <div key={stat.label} className={statTileClass}>
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">{stat.label}</p>
@@ -401,7 +401,7 @@ export default function AnalyticsDashboard({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {healthStats.map((stat) => (
             <div
               key={stat.label}
@@ -588,7 +588,7 @@ export default function AnalyticsDashboard({
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">All-time performance</h3>
           <span className={smallBadgeClass}>Lifetime</span>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {allTimeStats.map((stat) => (
             <div key={stat.label} className={statTileClass}>
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">{stat.label}</p>

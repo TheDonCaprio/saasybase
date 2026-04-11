@@ -393,7 +393,7 @@ export default async function AdminHome() {
       >
       </DashboardPageHeader>
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {metrics.length > 0
           ? metrics.map((metric) => <AdminStatCard key={metric.label} {...metric} />)
           : (

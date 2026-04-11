@@ -161,7 +161,7 @@ export default async function AdminUsersPage() {
       >
       </DashboardPageHeader>
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {metricCards.map((metric) => (
           <AdminStatCard key={metric.label} {...metric} />
         ))}

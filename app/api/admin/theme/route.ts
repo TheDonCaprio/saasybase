@@ -117,7 +117,17 @@ const sanitizeThemeFontFamily = (
   value: unknown,
   fallback: ThemeColorTokens['fontFamily'],
 ): ThemeColorTokens['fontFamily'] => {
-  return value === 'material' || value === 'fluent' || value === 'apple' || value === 'system'
+  return (
+    value === 'material' ||
+    value === 'fluent' ||
+    value === 'apple' ||
+    value === 'system' ||
+    value === 'carbon' ||
+    value === 'polaris' ||
+    value === 'ant' ||
+    value === 'spectrum' ||
+    value === 'geist'
+  )
     ? value
     : fallback;
 };

@@ -255,7 +255,7 @@ export type ThemeColorTokens = {
   headerBorderWidth: number;
   headerMenuFontSize: number;
   headerMenuFontWeight: number;
-  fontFamily: 'system' | 'material' | 'fluent' | 'apple';
+  fontFamily: 'system' | 'material' | 'fluent' | 'apple' | 'carbon' | 'polaris' | 'ant' | 'spectrum' | 'geist';
   stickyHeaderBg: string;
   stickyHeaderOpacity: number;
   stickyHeaderBlur: number;
@@ -543,7 +543,17 @@ const sanitizeThemeFontFamily = (
   value: unknown,
   fallback: ThemeColorTokens['fontFamily'],
 ): ThemeColorTokens['fontFamily'] => {
-  return value === 'material' || value === 'fluent' || value === 'apple' || value === 'system'
+  return (
+    value === 'material' ||
+    value === 'fluent' ||
+    value === 'apple' ||
+    value === 'system' ||
+    value === 'carbon' ||
+    value === 'polaris' ||
+    value === 'ant' ||
+    value === 'spectrum' ||
+    value === 'geist'
+  )
     ? value
     : fallback;
 };

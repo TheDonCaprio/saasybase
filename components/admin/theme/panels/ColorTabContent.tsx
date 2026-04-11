@@ -988,21 +988,29 @@ export function ColorTabContent({
                 ].map(({ label, value }) => (
                   <div
                     key={label}
-                    className="px-3 py-2.5"
+                    className="relative overflow-hidden px-3 py-2.5"
                     style={{
-                      backgroundColor: colors.bgSecondary,
                       background: `linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
                       borderStyle: 'solid',
                       borderColor: colors.borderPrimary,
                       borderWidth: '1px',
-                      borderLeftWidth: `${statCardAccentLeft}px`,
-                      borderLeftColor: colors.accentPrimary,
                       borderRadius: `${surfaceRadius}px`,
-                      borderTopWidth: `${statCardAccentTop}px`,
-                      borderTopColor: colors.accentPrimary,
                       boxShadow: `0 12px ${clampInt(colors.cardShadowBlur, 0, 80, 24)}px ${clampInt(colors.cardShadowSpread, -80, 80, -18)}px ${colors.cardShadow}`,
                     }}
                   >
+                    {/* Accent overlays matching AdminStatCard */}
+                    {statCardAccentLeft > 0 && (
+                      <div
+                        className="pointer-events-none absolute inset-y-0 left-0 z-[1]"
+                        style={{ width: `${statCardAccentLeft}px`, backgroundColor: `${colors.accentPrimary}eb` }}
+                      />
+                    )}
+                    {statCardAccentTop > 0 && (
+                      <div
+                        className="pointer-events-none absolute inset-x-0 top-0 z-[1]"
+                        style={{ height: `${statCardAccentTop}px`, backgroundColor: `${colors.accentPrimary}eb` }}
+                      />
+                    )}
                     <p className="text-xs" style={{ color: colors.textTertiary }}>
                       {label}
                     </p>
@@ -1018,7 +1026,7 @@ export function ColorTabContent({
 
               {/* Tab strip — uses tabsGradient */}
               <div
-                className="flex items-center gap-1 px-2 py-1.5"
+                className="flex items-center gap-1 px-1.5 py-1"
                 style={{
                   borderRadius: `${surfaceRadius}px`,
                   background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
@@ -1029,11 +1037,12 @@ export function ColorTabContent({
                 {['Activity', 'Invoices', 'Team'].map((label, i) => (
                   <div
                     key={label}
-                    className="rounded-lg px-3 py-1 text-xs font-medium"
+                    className="px-3 py-1 text-xs font-medium"
                     style={{
-                      backgroundColor: i === 0 ? colors.bgPrimary : 'transparent',
+                      backgroundColor: i === 0 ? (colorMode === 'dark' ? '#000000' : '#ffffff') : 'transparent',
                       color: i === 0 ? colors.accentPrimary : colors.textSecondary,
-                      boxShadow: i === 0 ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                      borderRadius: `${Math.max(surfaceRadius - 2, 2)}px`,
+                      boxShadow: i === 0 ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
                     }}
                   >
                     {label}
@@ -1046,7 +1055,7 @@ export function ColorTabContent({
                 className="px-3 py-2.5"
                 style={{
                   backgroundColor: colors.panelBg,
-                  border: `1px solid ${colors.borderPrimary}`,
+                  border: `1px solid ${colors.borderPrimary}b3`,
                   borderRadius: `${surfaceRadius}px`,
                   boxShadow: `0 12px ${clampInt(colors.panelShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}px ${clampInt(colors.panelShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}px ${colors.panelShadow}`,
                 }}
@@ -1057,8 +1066,11 @@ export function ColorTabContent({
                 {['Invoice #1042 paid', 'New signup: maria@co.io', 'Plan upgraded to Pro'].map((row, i) => (
                   <div
                     key={row}
-                    className="flex items-center justify-between py-1 text-xs"
-                    style={{ borderTop: `1px solid ${colors.borderPrimary}`, color: colors.textSecondary }}
+                    className="flex items-center justify-between py-1.5 text-xs"
+                    style={{
+                      borderTop: i > 0 ? `1px solid ${colors.borderPrimary}80` : 'none',
+                      color: colors.textSecondary,
+                    }}
                   >
                     <span>{row}</span>
                     <span style={{ color: colors.textTertiary }}>{i === 0 ? '2 min' : i === 1 ? '5 min' : 'just now'}</span>

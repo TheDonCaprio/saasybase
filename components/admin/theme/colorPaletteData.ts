@@ -45,7 +45,16 @@ export type OpacityKey =
   | 'headerBorderOpacity'
   | 'stickyHeaderBorderOpacity';
 
-export type ThemeFontFamily = 'system' | 'material' | 'fluent' | 'apple';
+export type ThemeFontFamily =
+  | 'system'
+  | 'material'
+  | 'fluent'
+  | 'apple'
+  | 'carbon'
+  | 'polaris'
+  | 'ant'
+  | 'spectrum'
+  | 'geist';
 
 export type ColorTokens = {
   bgPrimary: string;
@@ -173,7 +182,17 @@ type OptionalEffectKeys =
   | 'fontFamily';
 
 const sanitizeThemeFontFamily = (value: unknown, fallback: ThemeFontFamily): ThemeFontFamily => {
-  return value === 'material' || value === 'fluent' || value === 'apple' || value === 'system'
+  return (
+    value === 'material' ||
+    value === 'fluent' ||
+    value === 'apple' ||
+    value === 'system' ||
+    value === 'carbon' ||
+    value === 'polaris' ||
+    value === 'ant' ||
+    value === 'spectrum' ||
+    value === 'geist'
+  )
     ? value
     : fallback;
 };
@@ -502,6 +521,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
+      fontFamily: 'carbon',
       stickyHeaderBg: '#fffffffa',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -577,6 +597,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'polaris',
       stickyHeaderBg: '#fffffff2',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -653,6 +674,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'ant',
       stickyHeaderBg: '#fffffffc',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -729,6 +751,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'spectrum',
       stickyHeaderBg: '#ffffffd8',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 16,
@@ -805,6 +828,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'system',
       stickyHeaderBg: '#f6f8faf5',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -881,6 +905,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
+      fontFamily: 'geist',
       stickyHeaderBg: '#ffffffb0',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 20,
@@ -1180,6 +1205,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
+      fontFamily: 'carbon',
       stickyHeaderBg: '#161616f8',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -1255,6 +1281,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'polaris',
       stickyHeaderBg: '#1a1a1af5',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -1331,6 +1358,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'ant',
       stickyHeaderBg: '#141414f8',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -1406,6 +1434,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'spectrum',
       stickyHeaderBg: '#1e1e1ed8',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 16,
@@ -1481,6 +1510,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 500,
+      fontFamily: 'system',
       stickyHeaderBg: '#0d1117f5',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 0,
@@ -1557,6 +1587,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
+      fontFamily: 'geist',
       stickyHeaderBg: '#000000b0',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 20,

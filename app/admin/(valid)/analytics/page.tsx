@@ -100,9 +100,9 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
     <div className="space-y-10">
       <DashboardPageHeader
         accent="indigo"
-        eyebrow="Growth intelligence"
+        eyebrow="Growth analytics"
         eyebrowIcon={<FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />}
-        title="Analytics command center"
+        title="Sales & growth"
         stats={heroStats}
       >
       </DashboardPageHeader>

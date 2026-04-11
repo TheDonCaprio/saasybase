@@ -388,7 +388,7 @@ export default async function AdminHome() {
         accent="indigo"
         eyebrow="Operations center"
         eyebrowIcon={<FontAwesomeIcon icon={faGear} />}
-        title="Control room overview"
+        title="Quick overview"
         stats={headerStats.length > 0 ? headerStats : undefined}
       >
       </DashboardPageHeader>

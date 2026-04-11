@@ -131,7 +131,7 @@ export default async function AdminSupportPage({ searchParams }: { searchParams?
         accent="indigo"
         eyebrow="Customer care"
         eyebrowIcon={<FontAwesomeIcon icon={faHeadset} />}
-        title="Support desk overview"
+        title="Support desk"
         stats={heroStats}
       >
       </DashboardPageHeader>

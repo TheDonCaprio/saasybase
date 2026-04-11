@@ -283,9 +283,9 @@ export default async function AdminPurchasesPage() {
     <div className="space-y-10">
       <DashboardPageHeader
         accent="violet"
-        eyebrow="Purchase ledger"
+        eyebrow="One-time sales"
         eyebrowIcon={<FontAwesomeIcon icon={faReceipt} />}
-        title="One-time purchase management"
+        title="Non-recurring purchases"
         stats={headerStats}
       >
       </DashboardPageHeader>

@@ -151,9 +151,9 @@ export default async function TrafficPage() {
     <div className="space-y-10">
       <DashboardPageHeader
         accent="indigo"
-        eyebrow="Traffic intelligence"
+        eyebrow="Visits & views"
         eyebrowIcon={<FontAwesomeIcon icon={faRoad} className="w-5 h-5" />}
-        title="Traffic analytics hub"
+        title="Traffic details"
         stats={heroStats}
       >
       </DashboardPageHeader>

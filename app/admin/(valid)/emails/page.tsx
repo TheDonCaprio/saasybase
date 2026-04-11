@@ -121,7 +121,7 @@ export default async function EmailTemplatesPage() {
         accent="violet"
         eyebrow="Messaging"
         eyebrowIcon={<FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />}
-        title="Email delivery center"
+        title="Email templates"
         stats={heroStats}
       >
       </DashboardPageHeader>

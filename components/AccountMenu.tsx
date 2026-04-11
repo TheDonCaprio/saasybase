@@ -8,69 +8,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays, faBars, faFileInvoiceDollar, faSackDollar, faHouse } from '@fortawesome/free-solid-svg-icons';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
-
-interface UserProfile {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-  };
-  paidTokens?: {
-    tokenName: string;
-    remaining: number;
-    isUnlimited?: boolean;
-    displayRemaining?: string;
-  };
-  subscription: {
-    planName: string;
-    expiresAt: string;
-    tokenName: string;
-    tokens: {
-      total: number | null;
-      used: number | null;
-      remaining: number;
-      isUnlimited?: boolean;
-      displayRemaining?: string;
-    };
-  } | null;
-  organization?: {
-    id: string;
-    name: string;
-    role: string;
-    planName: string;
-    tokenName: string;
-    expiresAt?: string | null;
-    tokenPoolStrategy?: string | null;
-    memberTokenCap?: number | null;
-    memberCapStrategy?: string | null;
-    memberCapResetIntervalHours?: number | null;
-  } | null;
-  sharedTokens?: {
-    tokenName: string;
-    remaining: number;
-    cap?: number | null;
-    strategy?: string | null;
-  } | null;
-  freeTokens?: {
-    tokenName?: string;
-    total?: number | null;
-    remaining: number;
-  } | null;
-  planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
-  planActionLabel?: 'Upgrade' | 'Change Plan';
-  canCreateOrganization?: boolean;
-}
+import { useUserProfile } from '@/components/UserProfileProvider';
 
 interface SiteInfo {
   siteName: string;
   tokenLabel: string;
-}
-
-const PROFILE_FETCH_RETRY_DELAY_MS = 450;
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function isWithinAuthOverlay(target: Element | null): boolean {
@@ -92,122 +34,38 @@ export default function AccountMenu() {
   const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
   const router = useRouter();
+  const { ensureProfile, loaded: profileLoadedForOrg, loading: profileLoading, profile, resetProfile } = useUserProfile();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const prevOrgIdRef = useRef(currentOrgId);
-  const profileRequestInFlightRef = useRef(false);
-  const hasAttemptedProfileFetchRef = useRef(false);
   const dropdownTop = '4.45rem';
-  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
-  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
-  const loading = isSignedIn && isOpen && !profileLoadedForOrg;
-
-  const fetchProfile = async (retryOnUnauthorized = false) => {
-    const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
-
-    if (response.ok) {
-      const data = (await response.json()) as Partial<UserProfile> | null;
-      const hasUser =
-        Boolean(data?.user)
-        && typeof data?.user?.id === 'string'
-        && typeof data?.user?.name === 'string'
-        && typeof data?.user?.email === 'string'
-        && typeof data?.user?.role === 'string';
-
-      return hasUser ? (data as UserProfile) : null;
-    }
-
-    if (retryOnUnauthorized && response.status === 401) {
-      await delay(PROFILE_FETCH_RETRY_DELAY_MS);
-      const retriedResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
-
-      if (retriedResponse.ok) {
-        const data = (await retriedResponse.json()) as Partial<UserProfile> | null;
-        const hasUser =
-          Boolean(data?.user)
-          && typeof data?.user?.id === 'string'
-          && typeof data?.user?.name === 'string'
-          && typeof data?.user?.email === 'string'
-          && typeof data?.user?.role === 'string';
-
-        return hasUser ? (data as UserProfile) : null;
-      }
-
-      if (retriedResponse.status === 401) {
-        return null;
-      }
-
-      throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
-    }
-
-    if (response.status === 401) {
-      return null;
-    }
-
-    throw new Error(`Profile fetch failed: ${response.status}`);
-  };
+  const loading = isSignedIn && isOpen && (!profileLoadedForOrg || profileLoading);
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
-    hasAttemptedProfileFetchRef.current = false;
-    setProfileState((prev) => {
-      if (prev?.orgId === currentOrgId && prev.profile == null) {
-        return null;
-      }
-      return prev;
-    });
-  }, [currentOrgId]);
+    if (!profile) {
+      resetProfile();
+    }
+  }, [profile, resetProfile]);
 
   useEffect(() => {
-    // Skip the initial mount — only react to actual org switches
     if (prevOrgIdRef.current === currentOrgId) return;
     prevOrgIdRef.current = currentOrgId;
-    hasAttemptedProfileFetchRef.current = false;
 
-    // Clerk needs a moment to propagate the new session cookie after an org
-    // switch.  Give it 600ms then re-fetch profile and refresh RSC data.
     const timer = setTimeout(() => {
       refreshVisibleRoute(router, 'org-validity');
-      profileRequestInFlightRef.current = true;
-      hasAttemptedProfileFetchRef.current = true;
-
-      fetchProfile(true)
-        .then((nextProfile) => {
-          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
-        })
-        .catch((err) => {
-          console.error('Failed to fetch profile after org switch:', err);
-          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-        })
-        .finally(() => {
-          profileRequestInFlightRef.current = false;
-        });
     }, 600);
 
     return () => clearTimeout(timer);
   }, [currentOrgId, router]);
 
   useEffect(() => {
-    if (isSignedIn && isOpen && !profile && !hasAttemptedProfileFetchRef.current && !profileRequestInFlightRef.current) {
-      hasAttemptedProfileFetchRef.current = true;
-      profileRequestInFlightRef.current = true;
-      fetchProfile(false)
-        .then((nextProfile) => {
-          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
-        })
-        .catch((err) => {
-          console.error('Failed to fetch profile:', err);
-          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-        })
-        .finally(() => {
-          profileRequestInFlightRef.current = false;
-        });
+    if (isSignedIn && isOpen && !profile && !profileLoading) {
+      void ensureProfile();
     }
 
-    // Fetch site info when dropdown opens (for logged-out users)
     if (!isSignedIn && isOpen && !siteInfo) {
       fetch('/api/site-info')
         .then((res) => res.json())
@@ -218,13 +76,7 @@ export default function AccountMenu() {
           console.error('Failed to fetch site info:', err);
         });
     }
-  }, [currentOrgId, isSignedIn, isOpen, profile, siteInfo]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      hasAttemptedProfileFetchRef.current = false;
-    }
-  }, [closeMenu, isOpen]);
+  }, [ensureProfile, isSignedIn, isOpen, profile, profileLoading, siteInfo]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -250,9 +102,8 @@ export default function AccountMenu() {
   const handleSignOut = async () => {
     await signOut();
     setIsOpen(false);
-    setProfileState(null);
     setSiteInfo(null);
-    hasAttemptedProfileFetchRef.current = false;
+    resetProfile();
   };
 
   if (!isLoaded) {
@@ -279,9 +130,19 @@ export default function AccountMenu() {
   const planActionLabel = profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan');
   const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
   const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
-  const expiresAt = isOrganizationContext
+  const billingDateValue = isOrganizationContext
     ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
     : profile?.subscription?.expiresAt ?? null;
+  const billingDateLabel = isOrganizationContext
+    ? profile?.organization?.billingDateLabel ?? profile?.subscription?.billingDateLabel ?? 'Expires'
+    : profile?.subscription?.billingDateLabel ?? 'Expires';
+  const billingDateDisplayLabel = isOrganizationContext && profile?.organization?.role === 'MEMBER'
+    ? billingDateLabel === 'Renews'
+      ? 'Managed renewal'
+      : billingDateLabel === 'Cancels'
+        ? 'Managed cancellation'
+        : 'Managed expiry'
+    : billingDateLabel;
 
   const isActiveRoute = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -407,10 +268,10 @@ export default function AccountMenu() {
                 )}
 
                 {/* Plan Expiry */}
-                {expiresAt && (
+                {billingDateValue && (
                   <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                     <FontAwesomeIcon icon={faCalendarDays} className="w-4 h-4" />
-                    <span>Expires: {expiresAt}</span>
+                    <span>{billingDateDisplayLabel}: {billingDateValue}</span>
                   </div>
                 )}
 

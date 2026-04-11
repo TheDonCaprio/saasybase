@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useAuthUser } from '@/lib/auth-provider/client';
+import { useAuthSession, useAuthUser } from '@/lib/auth-provider/client';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 
@@ -9,19 +9,23 @@ type GraceStatus =
   | { inGrace: false }
   | {
       inGrace: true;
+      scope: 'PERSONAL' | 'WORKSPACE';
       graceHours: number;
       expiresAt: string;
       graceEndsAt: string;
+      workspace?: { id: string; name: string | null; role: 'OWNER' | 'MEMBER' | null } | null;
       plan?: { name: string | null; supportsOrganizations: boolean; autoRenew: boolean };
     };
 
-const DISMISS_UNTIL_KEY = 'dashboard:grace-notice:dismiss-until';
+const DISMISS_UNTIL_KEY_PREFIX = 'dashboard:grace-notice:dismiss-until';
 
 export function GracePeriodNotice() {
   const { isLoaded, isSignedIn } = useAuthUser();
+  const { orgId } = useAuthSession();
   const [status, setStatus] = useState<GraceStatus | null>(null);
-  const [hidden, setHidden] = useState(false);
+  const [hiddenScopeKey, setHiddenScopeKey] = useState<string | null>(null);
   const formatSettings = useFormatSettings();
+  const scopeStorageKey = `${DISMISS_UNTIL_KEY_PREFIX}:${orgId ?? 'personal'}`;
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -44,7 +48,7 @@ export function GracePeriodNotice() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, orgId]);
 
   const graceEndsAt = useMemo(() => {
     if (!status || !status.inGrace) return null;
@@ -61,11 +65,11 @@ export function GracePeriodNotice() {
   const dismissedUntilIso = useMemo(() => {
     if (typeof window === 'undefined') return null;
     try {
-      return localStorage.getItem(DISMISS_UNTIL_KEY);
+      return localStorage.getItem(scopeStorageKey);
     } catch {
       return null;
     }
-  }, []);
+  }, [scopeStorageKey]);
 
   const isDismissedForThisGrace = useMemo(() => {
     if (!status || !status.inGrace || !graceEndsAt) return false;
@@ -76,28 +80,31 @@ export function GracePeriodNotice() {
     // The API-backed `status.inGrace` check already ensures the grace window is active.
     return stored.getTime() >= graceEndsAt.getTime();
   }, [status, graceEndsAt, dismissedUntilIso]);
+  const isHiddenForScope = hiddenScopeKey === scopeStorageKey;
 
   if (!isLoaded || !isSignedIn) return null;
 
   if (!status || !status.inGrace) return null;
-  if (hidden || isDismissedForThisGrace) return null;
+  if (isHiddenForScope || isDismissedForThisGrace) return null;
 
-  const handleClose = () => setHidden(true);
+  const handleClose = () => setHiddenScopeKey(scopeStorageKey);
 
   const handleDontShowAgain = () => {
     if (!graceEndsAt) {
-      setHidden(true);
+      setHiddenScopeKey(scopeStorageKey);
       return;
     }
     try {
-      localStorage.setItem(DISMISS_UNTIL_KEY, graceEndsAt.toISOString());
+      localStorage.setItem(scopeStorageKey, graceEndsAt.toISOString());
     } catch {
       // ignore storage failures
     }
-    setHidden(true);
+    setHiddenScopeKey(scopeStorageKey);
   };
 
-  const planLabel = status.plan?.name ? ` (${status.plan.name})` : '';
+  const contextLabel = status.scope === 'WORKSPACE'
+    ? status.workspace?.name ?? 'this workspace'
+    : status.plan?.name ?? null;
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-6 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
@@ -107,15 +114,28 @@ export function GracePeriodNotice() {
             <div className="w-2 h-2 bg-amber-500 rounded-full" />
           </div>
           <div className="text-sm">
-            <div className="font-semibold">Grace period active{planLabel}</div>
+            <div className="font-semibold">
+              {status.scope === 'WORKSPACE'
+                ? `Workspace grace period active${contextLabel ? ` (${contextLabel})` : ''}`
+                : `Grace period active${contextLabel ? ` (${contextLabel})` : ''}`}
+            </div>
             <div className="mt-1 text-amber-800/90 dark:text-amber-100/90">
               {expiresAt ? (
                 <>
-                  Your plan expired on {formatDate(expiresAt, { mode: formatSettings.mode, timezone: formatSettings.timezone })}. You’re in a grace period until{' '}
-                  {graceEndsAt ? formatDate(graceEndsAt, { mode: formatSettings.mode, timezone: formatSettings.timezone }) : 'soon'}. Subscribe to a Pro plan to retain your remaining allocation and retain organisation settings.
+                  {status.scope === 'WORKSPACE'
+                    ? `The active workspace plan expired on ${formatDate(expiresAt, { mode: formatSettings.mode, timezone: formatSettings.timezone })}.`
+                    : `Your plan expired on ${formatDate(expiresAt, { mode: formatSettings.mode, timezone: formatSettings.timezone })}.`}{' '}
+                  You’re in a grace period until {graceEndsAt ? formatDate(graceEndsAt, { mode: formatSettings.mode, timezone: formatSettings.timezone }) : 'soon'}.{' '}
+                  {status.scope === 'WORKSPACE'
+                    ? 'Renew the active workspace plan to retain its remaining allocation and workspace settings.'
+                    : 'Subscribe to a Pro plan to retain your remaining allocation and organisation settings.'}
                 </>
               ) : (
-                <>Your plan recently expired. You’re currently in a grace period. Subscribe to a Pro plan to retain your remaining allocation and retain organisation settings.</>
+                <>
+                  {status.scope === 'WORKSPACE'
+                    ? 'The active workspace plan recently expired. You’re currently in a grace period. Renew that workspace plan to retain its remaining allocation and workspace settings.'
+                    : 'Your plan recently expired. You’re currently in a grace period. Subscribe to a Pro plan to retain your remaining allocation and organisation settings.'}
+                </>
               )}
             </div>
           </div>

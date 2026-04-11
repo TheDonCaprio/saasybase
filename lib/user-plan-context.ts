@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { getActiveTeamSubscription, getOrganizationAccessSummary } from './organization-access';
+import { getActiveTeamSubscriptionForOrganization, getOrganizationAccessSummary } from './organization-access';
 import type { Prisma } from '@/lib/prisma-client';
 
 export const PLAN_WITH_BILLING_FIELDS = {
@@ -118,7 +118,7 @@ export async function getOrganizationPlanContext(userId: string, activeOrganizat
 
   const effectiveTeamSubscription = access.kind === 'OWNER'
     ? access.subscription
-    : await getActiveTeamSubscription(organization.ownerUserId, { includeGrace: true });
+    : await getActiveTeamSubscriptionForOrganization(organization.ownerUserId, organization.id, { includeGrace: true });
   const effectivePlan = effectiveTeamSubscription?.plan ?? organization.plan;
 
   if (!effectivePlan) {

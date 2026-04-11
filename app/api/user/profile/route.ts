@@ -3,9 +3,10 @@ import { getAuthSafe } from '../../../../lib/auth';
 import { fetchModeratorPermissions, buildAdminLikePermissions } from '../../../../lib/moderator';
 import { prisma } from '../../../../lib/prisma';
 import { authService } from '../../../../lib/auth-provider';
+import { getActiveTeamSubscriptionForOrganization } from '../../../../lib/organization-access';
 import { validateAndFormatPersonName } from '../../../../lib/name-validation';
 import { sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
-import { getDefaultTokenLabel, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
+import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { formatDateServer } from '../../../../lib/formatDate.server';
 import {
   getEffectiveMemberTokenCap,
@@ -15,6 +16,14 @@ import {
   getOrganizationPlanContext,
   getSubscriptionScopeFilter,
 } from '../../../../lib/user-plan-context';
+
+type BillingDateLabel = 'Expires' | 'Cancels' | 'Renews';
+
+function getBillingDateLabel(params: { autoRenew?: boolean | null; canceledAt?: Date | null }): BillingDateLabel {
+  if (params.canceledAt) return 'Cancels';
+  if (params.autoRenew) return 'Renews';
+  return 'Expires';
+}
 
 export async function GET() {
   try {
@@ -51,7 +60,9 @@ export async function GET() {
         gt: new Date()
       }
     },
-    include: {
+    select: {
+      expiresAt: true,
+      canceledAt: true,
       plan: {
         select: {
           name: true,
@@ -59,6 +70,7 @@ export async function GET() {
           tokenLimit: true,
           tokenName: true,
           durationHours: true,
+          autoRenew: true,
           supportsOrganizations: true,
         }
       }
@@ -108,24 +120,18 @@ export async function GET() {
     // For provisioned workspace members, surface the workspace plan expiry.
     // The workspace plan is billed on the owner's subscription, not the member.
     let organizationExpiresAt: string | null = null;
+    let organizationBillingDateLabel: BillingDateLabel | null = null;
     if (organizationContext?.organization?.ownerUserId) {
-      const now = new Date();
-      const graceHours = await getPaidTokensNaturalExpiryGraceHours();
-      const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
-      const ownerSub = await prisma.subscription.findFirst({
-        where: {
-          userId: organizationContext.organization.ownerUserId,
-          plan: { supportsOrganizations: true },
-          OR: [
-            { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
-            { status: 'EXPIRED', expiresAt: { gt: graceCutoff, lte: now } },
-          ],
-        },
-        orderBy: { expiresAt: 'desc' },
-        select: { expiresAt: true },
-      });
+      const ownerSub = await getActiveTeamSubscriptionForOrganization(
+        organizationContext.organization.ownerUserId,
+        organizationContext.organization.id,
+        { includeGrace: true },
+      );
 
       organizationExpiresAt = ownerSub?.expiresAt ? await formatDateServer(ownerSub.expiresAt) : null;
+      organizationBillingDateLabel = ownerSub
+        ? getBillingDateLabel({ autoRenew: ownerSub.plan?.autoRenew, canceledAt: ownerSub.canceledAt })
+        : null;
     }
 
     const paidTokenName = subscription?.plan?.tokenName?.trim() || defaultTokenLabel;
@@ -156,6 +162,7 @@ export async function GET() {
       ? {
           planName: subscription.plan?.name || 'Pro',
           expiresAt: await formatDateServer(subscription.expiresAt),
+          billingDateLabel: getBillingDateLabel({ autoRenew: subscription.plan?.autoRenew, canceledAt: subscription.canceledAt }),
           tokenName: paidTokenName,
           tokens: {
             total: subscription.plan?.tokenLimit ?? null,
@@ -174,6 +181,7 @@ export async function GET() {
           planName: organizationPlan?.name || 'Workspace Plan',
           tokenName: organizationTokenName,
           expiresAt: organizationExpiresAt,
+          billingDateLabel: organizationBillingDateLabel ?? undefined,
           tokenPoolStrategy: workspaceTokenPoolStrategy,
           memberTokenCap: organizationContext.organization.memberTokenCap,
           memberCapStrategy: organizationContext.organization.memberCapStrategy,

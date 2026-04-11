@@ -1,8 +1,9 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuthUser } from '@/lib/auth-provider/client';
+import { useUserProfile } from '@/components/UserProfileProvider';
 import { isCurrentPageNotFound } from '@/lib/client-not-found';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -15,28 +16,10 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-type SidebarProfile = {
-  user: {
-    id: string;
-    role: string;
-  };
-  permissions?: Record<string, boolean>;
-};
-
-const PROFILE_FETCH_RETRY_DELAY_MS = 300;
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], items?: NavItem[] }) {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useAuthUser();
-  const { orgId } = useAuthSession();
-  const currentOrgId = orgId ?? null;
-
-  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
-  const profileRequestInFlightRef = useRef(false);
+  const { ensureProfile, profile, loaded, loading } = useUserProfile();
 
   const CLIENT_MODERATOR_SECTIONS = [
     'users',
@@ -68,57 +51,18 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
     [pathname]
   );
 
-  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
-  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
+  const profileLoadedForOrg = loaded;
 
   useEffect(() => {
     const isAdminArea = pathname.startsWith('/admin');
     const isNotFoundPage = isCurrentPageNotFound();
 
-    if (!isLoaded || !isSignedIn || !isAdminArea || isNotFoundPage || profileLoadedForOrg || profileRequestInFlightRef.current) {
+    if (!isLoaded || !isSignedIn || !isAdminArea || isNotFoundPage || profileLoadedForOrg || loading) {
       return;
     }
 
-    profileRequestInFlightRef.current = true;
-    let cancelled = false;
-
-    const fetchProfile = async () => {
-      const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
-      if (response.ok) {
-        return response.json() as Promise<SidebarProfile>;
-      }
-      if (response.status === 401) {
-        await delay(PROFILE_FETCH_RETRY_DELAY_MS);
-        const retryResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
-        if (retryResponse.ok) {
-          return retryResponse.json() as Promise<SidebarProfile>;
-        }
-        if (retryResponse.status === 401) {
-          return null;
-        }
-        throw new Error(`profile-fetch-${retryResponse.status}`);
-      }
-      throw new Error(`profile-fetch-${response.status}`);
-    };
-
-    fetchProfile()
-      .then((data) => {
-        if (cancelled) return;
-        setProfileState({ orgId: currentOrgId, profile: data, loaded: true });
-      })
-      .catch((err) => {
-        console.error('Failed to fetch profile:', err);
-        if (cancelled) return;
-        setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-      })
-      .finally(() => {
-        profileRequestInFlightRef.current = false;
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoaded, isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
+    void ensureProfile();
+  }, [ensureProfile, isLoaded, isSignedIn, loading, pathname, profileLoadedForOrg]);
 
   const defaultExpandedGroups = useMemo(() => {
     const s = new Set<string>();

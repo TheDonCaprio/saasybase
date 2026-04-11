@@ -5,6 +5,7 @@ import React from 'react';
 import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';
 import AppAuthProvider from '../components/AppAuthProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';
+import { UserProfileProvider } from '../components/UserProfileProvider';
 import { ToastContainer } from '../components/ui/Toast';
 import PaymentProviderScripts from '../components/PaymentProviderScripts';
 import { SiteHeader } from '../components/SiteHeader';
@@ -306,6 +307,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <meta name="x-clerk-enabled" content={String(clerkEnabled)} />
             <script async src="/scripts/clerk-flag-init.js" />
             <FormatSettingsProvider initialMode={formatSettings.mode} initialTimezone={formatSettings.timezone}>
+          <UserProfileProvider>
           {shouldInjectGa ? (
             <>
               <Script
@@ -384,6 +386,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
               dangerouslySetInnerHTML={{ __html: customBodySnippet }}
             />
           ) : null}
+          </UserProfileProvider>
             </FormatSettingsProvider>
           </AppAuthProvider>
         </body>

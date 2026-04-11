@@ -1,35 +1,37 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '../../../../lib/auth';
+import { authService } from '@/lib/auth-provider/service';
 import { prisma } from '../../../../lib/prisma';
 import { getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
+import { getOrganizationPlanContext, getSubscriptionScopeFilter } from '../../../../lib/user-plan-context';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  let userId: string;
-  try {
-    userId = await requireUser();
-  } catch (error: unknown) {
-    try {
-      const err = error as { code?: string; status?: number };
-      if (err && (err.code === 'UNAUTHENTICATED' || err.status === 401)) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    } catch {
-      // fall through to generic unauthorized handling
-    }
-
+  const session = await authService.getSession();
+  const userId = session.userId;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const activeOrgId = typeof session.orgId === 'string' && session.orgId.trim().length > 0 ? session.orgId : null;
+  const organizationContext = activeOrgId ? await getOrganizationPlanContext(userId, activeOrgId) : null;
+  const workspaceOrganizationId = organizationContext?.organization.id ?? null;
+  const workspaceOwnerUserId = organizationContext?.organization.ownerUserId ?? null;
+  const workspaceScope = !!workspaceOrganizationId;
+  const scopedUserId = workspaceScope ? (workspaceOwnerUserId ?? userId) : userId;
+  const scopeFilter = getSubscriptionScopeFilter(workspaceScope ? 'WORKSPACE' : 'PERSONAL');
+  const organizationFilter = workspaceOrganizationId ? { organizationId: workspaceOrganizationId } : {};
 
   const graceHours = await getPaidTokensNaturalExpiryGraceHours();
   const now = new Date();
   const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
 
-  // If the user has any currently-valid subscription, they are not in grace.
+  // Grace is scoped to the active workspace context.
   const hasValid = await prisma.subscription.findFirst({
     where: {
-      userId,
+      userId: scopedUserId,
+      ...organizationFilter,
+      ...scopeFilter,
       status: { not: 'EXPIRED' },
       expiresAt: { gt: now },
     },
@@ -44,7 +46,9 @@ export async function GET() {
   // (EXPIRED or CANCELLED) within the configured window.
   const latestEndedWithinGrace = await prisma.subscription.findFirst({
     where: {
-      userId,
+      userId: scopedUserId,
+      ...organizationFilter,
+      ...scopeFilter,
       status: { in: ['EXPIRED', 'CANCELLED'] },
       expiresAt: { gt: graceCutoff, lte: now },
     },
@@ -69,7 +73,7 @@ export async function GET() {
   if (adminActionLog) {
     const immediateAdminTermination = await adminActionLog.findFirst({
       where: {
-        targetUserId: userId,
+        targetUserId: scopedUserId,
         createdAt: { gte: graceCutoff },
         OR: [
           {
@@ -106,9 +110,17 @@ export async function GET() {
 
   return NextResponse.json({
     inGrace: true,
+    scope: workspaceScope ? 'WORKSPACE' : 'PERSONAL',
     graceHours,
     expiresAt: expiresAt.toISOString(),
     graceEndsAt: graceEndsAt.toISOString(),
+    workspace: workspaceOrganizationId
+      ? {
+          id: workspaceOrganizationId,
+          name: organizationContext?.organization.name ?? null,
+          role: organizationContext?.role ?? null,
+        }
+      : null,
     plan: {
       name: latestEndedWithinGrace.plan?.name ?? null,
       supportsOrganizations: Boolean(latestEndedWithinGrace.plan?.supportsOrganizations),

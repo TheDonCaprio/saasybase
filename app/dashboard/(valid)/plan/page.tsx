@@ -18,6 +18,7 @@ import { buildReturnPath, requireAuth } from '../../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay, getPlanScope, getSubscriptionScopeFilter } from '../../../../lib/user-plan-context';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../../lib/dashboard-workspace-guard';
 import { buildPricingCardRecurringState } from '../../../../lib/pricing-card-status';
+import { getActiveTeamSubscriptionForOrganization } from '../../../../lib/organization-access';
 
 interface PageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -39,45 +40,64 @@ export default async function PlanPage({ searchParams }: PageProps) {
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
+  const organizationPlan = await getOrganizationPlanContext(userId, orgId);
   const planScope = getPlanScope(orgId);
+  const workspaceOrganizationId = planScope === 'WORKSPACE' ? organizationPlan?.organization.id : null;
+  const workspaceOwnerUserId = planScope === 'WORKSPACE' ? organizationPlan?.organization.ownerUserId : null;
+  const workspaceOwnerView = planScope === 'WORKSPACE' && organizationPlan?.role === 'OWNER' && !!workspaceOrganizationId;
+  const workspaceMemberView = planScope === 'WORKSPACE' && organizationPlan?.role === 'MEMBER' && !!workspaceOrganizationId;
+  const canManageWorkspaceBilling = !workspaceMemberView;
 
   // Get all subscriptions (active and pending) to show complete picture
-  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, organizationPlan, ownedRecurringSubscriptionsForCards] = await Promise.all([
-    prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
-      include: {
-        plan: {
-          select: {
-            id: true,
-            name: true,
-            shortDescription: true,
-            description: true,
-            priceCents: true,
-            durationHours: true,
-            autoRenew: true,
-            recurringInterval: true,
-            tokenLimit: true,
-            tokenName: true,
-            supportsOrganizations: true,
-            organizationTokenPoolStrategy: true,
+  const [activeSub, allSubscriptions, userRecord, defaultTokenLabel, allPlansRaw, ownedRecurringSubscriptionsForCards] = await Promise.all([
+    workspaceOwnerView
+      ? getActiveTeamSubscriptionForOrganization(userId, workspaceOrganizationId, { includeGrace: true })
+      : workspaceMemberView
+      ? Promise.resolve(null)
+      : prisma.subscription.findFirst({
+          where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
+          include: {
+            plan: {
+              select: {
+                id: true,
+                name: true,
+                shortDescription: true,
+                description: true,
+                priceCents: true,
+                durationHours: true,
+                autoRenew: true,
+                recurringInterval: true,
+                tokenLimit: true,
+                tokenName: true,
+                supportsOrganizations: true,
+                organizationTokenPoolStrategy: true,
+              }
+            },
+            scheduledPlan: { select: { id: true, name: true, priceCents: true } }
           }
-        },
-        scheduledPlan: { select: { id: true, name: true, priceCents: true } }
-      }
-    }),
-    prisma.subscription.findMany({
-      where: { userId, status: { in: ['ACTIVE', 'PENDING'] }, ...getSubscriptionScopeFilter(planScope) },
+        }),
+    workspaceMemberView
+      ? Promise.resolve([])
+      : prisma.subscription.findMany({
+      where: {
+        userId: workspaceOwnerView && workspaceOwnerUserId ? workspaceOwnerUserId : userId,
+        status: { in: ['ACTIVE', 'PENDING'] },
+        ...getSubscriptionScopeFilter(planScope),
+        ...(workspaceOrganizationId ? { organizationId: workspaceOrganizationId } : {}),
+      },
       include: { plan: true },
       orderBy: [{ status: 'asc' }, { startedAt: 'asc' }]
     }),
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
-    getOrganizationPlanContext(userId, orgId),
-    prisma.subscription.findMany({
+    workspaceMemberView
+      ? Promise.resolve([])
+      : prisma.subscription.findMany({
       where: {
-        userId,
+        userId: workspaceOwnerView && workspaceOwnerUserId ? workspaceOwnerUserId : userId,
         plan: { autoRenew: true },
+        ...(workspaceOrganizationId ? { organizationId: workspaceOrganizationId } : {}),
         OR: [
           { status: 'ACTIVE', expiresAt: { gt: now } },
           {
@@ -393,7 +413,12 @@ export default async function PlanPage({ searchParams }: PageProps) {
                   </Link>
                 ),
               }}
-            extra={<PlanBillingActions />}
+            extra={
+              <PlanBillingActions
+                canManageBilling={canManageWorkspaceBilling}
+                workspaceName={organizationPlan?.organization.name ?? null}
+              />
+            }
           />
 
           {pendingCount > 0 ? (

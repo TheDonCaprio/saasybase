@@ -1,38 +1,16 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useEffect, useRef, useState } from 'react';
-import { useAuthUser, useAuthSession } from '@/lib/auth-provider/client';
-import { isCurrentPageNotFound } from '@/lib/client-not-found';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { useUserProfile } from '@/components/UserProfileProvider';
 
 export interface NavItem { href: string; label: string; badge?: string; adminOnly?: boolean; icon?: IconProp }
 
-type SidebarProfile = {
-  user: {
-    id: string;
-    role: string;
-  };
-  permissions?: Record<string, boolean>;
-  planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
-  planActionLabel?: 'Upgrade' | 'Change Plan';
-  hasPendingTeamInvites?: boolean;
-};
-
-const PROFILE_FETCH_RETRY_DELAY_MS = 300;
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const { isSignedIn, isLoaded } = useAuthUser();
-  const { orgId } = useAuthSession();
-  const currentOrgId = orgId ?? null;
-  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: SidebarProfile | null; loaded: boolean } | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const { profile } = useUserProfile();
 
   const CLIENT_MODERATOR_SECTIONS = [
     'users',
@@ -54,64 +32,6 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     if (!m || !m.groups) return null;
     return m.groups.seg || null;
   }
-
-  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
-  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
-
-  useEffect(() => {
-    const isDashboardArea = pathname.startsWith('/dashboard');
-    const isNotFoundPage = isCurrentPageNotFound();
-
-    if (!isLoaded || !isSignedIn || !isDashboardArea || isNotFoundPage || profileLoadedForOrg) {
-      return;
-    }
-
-    // Cancel any in-flight request from a previous org context.
-    // Using AbortController ensures the effect always fires a fresh fetch when
-    // the org changes, even if the previous fetch hadn't completed yet
-    // (avoids the profileRequestInFlightRef race-condition that blocked the
-    // org-workspace fetch when switching orgs mid-flight).
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    const capturedOrgId = currentOrgId;
-
-    const fetchProfile = async () => {
-      const response = await fetch('/api/user/profile', { credentials: 'same-origin', signal: controller.signal });
-
-      if (response.ok) {
-        return response.json() as Promise<SidebarProfile>;
-      }
-
-      if (response.status === 401) {
-        await delay(PROFILE_FETCH_RETRY_DELAY_MS);
-        const retryResponse = await fetch('/api/user/profile', { credentials: 'same-origin', signal: controller.signal });
-        if (retryResponse.ok) {
-          return retryResponse.json() as Promise<SidebarProfile>;
-        }
-        if (retryResponse.status === 401) {
-          return null;
-        }
-        throw new Error(`profile-fetch-${retryResponse.status}`);
-      }
-
-      throw new Error(`profile-fetch-${response.status}`);
-    };
-
-    fetchProfile()
-      .then((data) => {
-        setProfileState({ orgId: capturedOrgId, profile: data, loaded: true });
-      })
-      .catch((err: Error) => {
-        if (err.name === 'AbortError') return;
-        console.error('Failed to fetch profile:', err);
-        setProfileState({ orgId: capturedOrgId, profile: null, loaded: true });
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [isLoaded, isSignedIn, currentOrgId, profileLoadedForOrg, pathname]);
 
   const visibleItems = (() => {
     if (!items) return [] as NavItem[];

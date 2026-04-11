@@ -10,6 +10,8 @@ import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 
 interface PaymentManagementProps {
   isActive: boolean;
+  canManageBilling?: boolean;
+  ownerManagedMessage?: string;
   /** Currency code to use for display/formatting (central currency setting). */
   displayCurrency?: string;
   recentPayments: Array<{
@@ -35,6 +37,8 @@ interface PaymentManagementProps {
 
 export default function PaymentManagement({
   isActive,
+  canManageBilling = true,
+  ownerManagedMessage,
   displayCurrency,
   recentPayments,
   isCancellationScheduled,
@@ -151,14 +155,18 @@ export default function PaymentManagement({
               <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Update payment method</p>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400">Manage your cards and billing profile inside the billing portal.</p>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">
+                    {canManageBilling
+                      ? 'Manage your cards and billing profile inside the billing portal.'
+                      : ownerManagedMessage ?? 'Only the workspace owner can manage payment methods for this workspace.'}
+                  </p>
                 </div>
                 <button
-                  onClick={handleUpdatePaymentMethod}
-                  disabled={isUpdatingPayment}
+                  onClick={canManageBilling ? handleUpdatePaymentMethod : undefined}
+                  disabled={isUpdatingPayment || !canManageBilling}
                   className="inline-flex items-center gap-2 self-start rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
-                  {isUpdatingPayment ? 'Opening…' : 'Manage payment'}
+                  {canManageBilling ? (isUpdatingPayment ? 'Opening…' : 'Manage payment') : 'Workspace owner only'}
                 </button>
               </div>
             </div>
@@ -173,14 +181,22 @@ export default function PaymentManagement({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-red-700 dark:text-red-200">Cancel subscription</p>
-                    <p className="text-xs text-red-600/80 dark:text-red-200/70">Canceling stops future renewals. You&apos;ll retain access until the end of the current cycle.</p>
+                    <p className="text-xs text-red-600/80 dark:text-red-200/70">
+                      {canManageBilling
+                        ? 'Canceling stops future renewals. You’ll retain access until the end of the current cycle.'
+                        : ownerManagedMessage ?? 'You do not have access to cancel this workspace subscription because you are not the workspace owner.'}
+                    </p>
                     {isCancellationScheduled && (preformattedCanceledAt ?? canceledAt) ? (
                       <p className="text-[11px] text-amber-600/80 dark:text-amber-200/80">
                         Cancellation scheduled on {preformattedCanceledAt ?? formatDate(canceledAt, { mode: settings.mode, timezone: settings.timezone })}
                       </p>
                     ) : null}
                   </div>
-                  {!planAutoRenew ? (
+                  {!canManageBilling ? (
+                    <div className="rounded-xl border border-red-200/70 bg-white/80 px-4 py-3 text-xs text-red-700 shadow-sm dark:border-red-500/40 dark:bg-transparent dark:text-red-200/80">
+                      Only the workspace owner can manage renewals, cancellations, or payment details for this plan.
+                    </div>
+                  ) : !planAutoRenew ? (
                     <div className="rounded-xl border border-red-200/70 bg-white/80 px-4 py-3 text-xs text-red-700 shadow-sm dark:border-red-500/40 dark:bg-transparent dark:text-red-200/80">
                       This plan is non-recurring. Your workspace stays active until {preformattedNextBillingDate ?? (nextBillingDate ? formatDate(nextBillingDate, { mode: settings.mode, timezone: settings.timezone }) : 'the period end')}.
                     </div>
@@ -190,7 +206,7 @@ export default function PaymentManagement({
                       disabled={isCancelling}
                       className="inline-flex items-center gap-2 self-start rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
                     >
-                      {isCancelling ? 'Cancelling…' : 'Cancel subscription'}
+                      {isCancelling ? 'Cancelling…' : 'Cancel subscription as workspace owner'}
                     </button>
                   ) : (
                     <button

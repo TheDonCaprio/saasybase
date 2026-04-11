@@ -14,6 +14,7 @@ import PlanBillingActions from '../../../../components/dashboard/PlanBillingActi
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '../../../../lib/route-guards';
 import { getOrganizationPlanContext, buildPlanDisplay, getPaymentScopeFilter, getPlanScope, getSubscriptionScopeFilter } from '../../../../lib/user-plan-context';
+import { getActiveTeamSubscriptionForOrganization } from '../../../../lib/organization-access';
 import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { enforceTeamWorkspaceProvisioningGuard } from '../../../../lib/dashboard-workspace-guard';
 import { buildPendingSubscriptionSectionCopy } from '../../../../lib/pending-subscription-display';
@@ -38,21 +39,34 @@ export default async function BillingPage({ searchParams }: PageProps) {
   const { userId, orgId } = await requireAuth(returnPath);
   await enforceTeamWorkspaceProvisioningGuard(userId);
   const now = new Date();
+  const organizationPlan = await getOrganizationPlanContext(userId, orgId);
   const planScope = getPlanScope(orgId);
+  const workspaceOrganizationId = planScope === 'WORKSPACE' ? organizationPlan?.organization.id : null;
+  const workspaceOwnerUserId = planScope === 'WORKSPACE' ? organizationPlan?.organization.ownerUserId : null;
+  const workspaceOwnerView = planScope === 'WORKSPACE' && organizationPlan?.role === 'OWNER' && !!workspaceOrganizationId;
+  const workspaceMemberView = planScope === 'WORKSPACE' && organizationPlan?.role === 'MEMBER' && !!workspaceOrganizationId;
+  const canManageWorkspaceBilling = !workspaceMemberView;
 
-  const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, organizationPlan, activeCurrency] = await Promise.all([
-    prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
-      include: {
-        plan: true,
-        scheduledPlan: { select: { id: true, name: true, priceCents: true } }
-      }
-    }),
-    prisma.subscription.findMany({
+  const [subscription, upcomingSubscriptions, recentPayments, supportEmail, userRecord, defaultTokenLabel, activeCurrency] = await Promise.all([
+    workspaceOwnerView
+      ? getActiveTeamSubscriptionForOrganization(userId, workspaceOrganizationId, { includeGrace: true })
+      : workspaceMemberView
+      ? Promise.resolve(null)
+      : prisma.subscription.findFirst({
+          where: { userId, status: 'ACTIVE', expiresAt: { gt: now }, ...getSubscriptionScopeFilter(planScope) },
+          include: {
+            plan: true,
+            scheduledPlan: { select: { id: true, name: true, priceCents: true } }
+          }
+        }),
+    workspaceMemberView
+      ? Promise.resolve([])
+      : prisma.subscription.findMany({
       where: {
-        userId,
+        userId: workspaceOwnerView && workspaceOwnerUserId ? workspaceOwnerUserId : userId,
         status: { in: ['PENDING'] },
         ...getSubscriptionScopeFilter(planScope),
+        ...(workspaceOrganizationId ? { organizationId: workspaceOrganizationId } : {}),
         // Only show upcoming items that are either scheduled for the future
         // or have payment evidence. This prevents abandoned checkout placeholders
         // from appearing as activatable subscriptions.
@@ -65,8 +79,14 @@ export default async function BillingPage({ searchParams }: PageProps) {
       include: { plan: true },
       orderBy: { startedAt: 'asc' }
     }),
-    prisma.payment.findMany({
-      where: { userId, ...getPaymentScopeFilter(planScope) },
+    workspaceMemberView
+      ? Promise.resolve([])
+      : prisma.payment.findMany({
+      where: {
+        userId: workspaceOwnerView && workspaceOwnerUserId ? workspaceOwnerUserId : userId,
+        ...getPaymentScopeFilter(planScope),
+        ...(workspaceOrganizationId ? { organizationId: workspaceOrganizationId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: { subscription: { include: { plan: true } } },
       take: 3
@@ -74,7 +94,6 @@ export default async function BillingPage({ searchParams }: PageProps) {
     getSupportEmail(),
     prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
     getDefaultTokenLabel(),
-    getOrganizationPlanContext(userId, orgId),
     getActiveCurrencyAsync(),
   ]);
 
@@ -356,7 +375,11 @@ export default async function BillingPage({ searchParams }: PageProps) {
                       View all invoices
                     </Link>
                   </div>
-                  <PlanBillingActions displayCurrency={activeCurrency} />
+                  <PlanBillingActions
+                    displayCurrency={activeCurrency}
+                    canManageBilling={canManageWorkspaceBilling}
+                    workspaceName={organizationPlan?.organization.name ?? null}
+                  />
                 </>
               ) : null
             }
@@ -459,6 +482,8 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <section className="lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
             <PaymentManagement
               isActive={planActive}
+              canManageBilling={canManageWorkspaceBilling}
+              ownerManagedMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner.` : undefined}
               displayCurrency={activeCurrency}
               recentPayments={recentPayments}
               isCancellationScheduled={isCancellationScheduled}

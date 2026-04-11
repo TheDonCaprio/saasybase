@@ -41,13 +41,14 @@ type NoTeamAccess = { allowed: false; reason?: 'NO_PLAN' | 'NO_MEMBERSHIP' };
 
 export type TeamSubscriptionStatus = OwnerTeamAccess | MemberTeamAccess | NoTeamAccess;
 
-export async function getActiveTeamSubscription(
+async function findActiveTeamSubscription(
   userId: string,
-  opts?: { includeGrace?: boolean; includeCancelled?: boolean }
+  opts?: { includeGrace?: boolean; includeCancelled?: boolean; organizationId?: string }
 ) {
   const now = new Date();
   const includeCancelled = opts?.includeCancelled !== false;
   const eligibleStatuses = includeCancelled ? TEAM_SUB_STATUSES : TEAM_SUB_STATUSES_STRICT;
+  const organizationFilter = opts?.organizationId ? { organizationId: opts.organizationId } : {};
 
   const baseInclude = {
     plan: {
@@ -67,12 +68,20 @@ export async function getActiveTeamSubscription(
         supportsOrganizations: true,
       },
     },
+    scheduledPlan: {
+      select: {
+        id: true,
+        name: true,
+        priceCents: true,
+      },
+    },
   } as const;
 
   if (!opts?.includeGrace) {
     return prisma.subscription.findFirst({
       where: {
         userId,
+        ...organizationFilter,
         status: { in: eligibleStatuses as unknown as string[] },
         expiresAt: { gt: now },
         plan: { supportsOrganizations: true },
@@ -91,21 +100,20 @@ export async function getActiveTeamSubscription(
 
   const unexpiredAccessClause = includeCancelled
     ? {
-      // Preserve historical behavior: any non-EXPIRED status with time remaining
-      // still confers org access.
-      status: { not: 'EXPIRED' },
-      expiresAt: { gt: now },
-    }
+        status: { not: 'EXPIRED' },
+        expiresAt: { gt: now },
+      }
     : {
-      status: { in: eligibleStatuses as unknown as string[] },
-      expiresAt: { gt: now },
-    };
+        status: { in: eligibleStatuses as unknown as string[] },
+        expiresAt: { gt: now },
+      };
 
   const graceWindowStatuses = includeCancelled ? ['EXPIRED', 'CANCELLED', 'PAST_DUE'] : ['EXPIRED', 'PAST_DUE'];
 
   return prisma.subscription.findFirst({
     where: {
       userId,
+      ...organizationFilter,
       plan: { supportsOrganizations: true },
       NOT: {
         status: 'PENDING',
@@ -113,9 +121,6 @@ export async function getActiveTeamSubscription(
       },
       OR: [
         unexpiredAccessClause,
-        // After wall-clock expiry, keep org access during the grace window.
-        // Include CANCELLED (cancel-at-period-end that has reached its end) and
-        // PAST_DUE (payment issues unresolved by period end) — not just EXPIRED.
         {
           status: { in: graceWindowStatuses },
           expiresAt: { gt: graceCutoff, lte: now },
@@ -125,6 +130,21 @@ export async function getActiveTeamSubscription(
     orderBy: { expiresAt: 'desc' },
     include: baseInclude,
   });
+}
+
+export async function getActiveTeamSubscription(
+  userId: string,
+  opts?: { includeGrace?: boolean; includeCancelled?: boolean }
+) {
+  return findActiveTeamSubscription(userId, opts);
+}
+
+export async function getActiveTeamSubscriptionForOrganization(
+  userId: string,
+  organizationId: string,
+  opts?: { includeGrace?: boolean; includeCancelled?: boolean }
+) {
+  return findActiveTeamSubscription(userId, { ...opts, organizationId });
 }
 
 export async function getOrganizationAccessSummary(userId: string, activeOrganizationId?: string | null): Promise<TeamSubscriptionStatus> {
@@ -138,24 +158,27 @@ export async function getOrganizationAccessSummary(userId: string, activeOrganiz
     : {};
 
   // First, check if they are an OWNER directly, factoring in the targeted org context if requested.
-  const subscription = await getActiveTeamSubscription(userId, { includeGrace: true });
-  if (subscription && subscription.plan) {
-    if (activeOrganizationId) {
-      // Confirm the requested active organization is actually the one they own
-      const ownedOrg = await prisma.organization.findFirst({
-        where: {
-          ownerUserId: userId,
-          OR: [
-            { id: activeOrganizationId },
-            { clerkOrganizationId: activeOrganizationId },
-          ],
-        }
-      });
-      if (ownedOrg) {
+  if (activeOrganizationId) {
+    const ownedOrg = await prisma.organization.findFirst({
+      where: {
+        ownerUserId: userId,
+        OR: [
+          { id: activeOrganizationId },
+          { clerkOrganizationId: activeOrganizationId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (ownedOrg) {
+      const subscription = await getActiveTeamSubscriptionForOrganization(userId, ownedOrg.id, { includeGrace: true });
+      if (subscription && subscription.plan) {
         return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
       }
-      // If they own a DIFFERENT org than the one selected, proceed to check if they are a member of the requested one.
-    } else {
+    }
+  } else {
+    const subscription = await getActiveTeamSubscription(userId, { includeGrace: true });
+    if (subscription && subscription.plan) {
       return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan };
     }
   }
@@ -188,7 +211,11 @@ export async function getOrganizationAccessSummary(userId: string, activeOrganiz
     // Verify the organization owner still has an active (or in-grace) team subscription.
     // Without this check, members retain access after the owner's plan fully expires
     // until the cron job or lazy dashboard check runs cleanup.
-    const ownerSub = await getActiveTeamSubscription(membership.organization.ownerUserId, { includeGrace: true });
+    const ownerSub = await getActiveTeamSubscriptionForOrganization(
+      membership.organization.ownerUserId,
+      membership.organization.id,
+      { includeGrace: true },
+    );
     if (!ownerSub) {
       return { allowed: false, reason: 'NO_PLAN' };
     }

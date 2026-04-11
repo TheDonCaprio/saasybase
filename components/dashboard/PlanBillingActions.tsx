@@ -6,7 +6,15 @@ import { CouponRedeemer, type CouponRedemptionRow } from './CouponRedeemer';
 import { dashboardPanelClass } from './dashboardSurfaces';
 import { showToast } from '../ui/Toast';
 
-export default function PlanBillingActions({ displayCurrency }: { displayCurrency?: string }) {
+export default function PlanBillingActions({
+  displayCurrency,
+  canManageBilling = true,
+  workspaceName,
+}: {
+  displayCurrency?: string;
+  canManageBilling?: boolean;
+  workspaceName?: string | null;
+}) {
   const [showRedeem, setShowRedeem] = useState(false);
   const [redeemLoading] = useState(false);
   const [initialCoupons, setInitialCoupons] = useState<CouponRedemptionRow[]>([]);
@@ -70,7 +78,9 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
     <div className={dashboardPanelClass('mt-4 space-y-4 p-3 sm:p-4')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-slate-600 dark:text-neutral-300 sm:max-w-[55%]">
-          Looking for recent activity? View transactions and invoices for a quick audit of charges.
+          {canManageBilling
+            ? 'Looking for recent activity? View transactions and invoices for a quick audit of charges.'
+            : `${workspaceName ?? 'This workspace'} billing is managed by the workspace owner. You can still review activity, but only the owner can change billing settings.`}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -81,12 +91,18 @@ export default function PlanBillingActions({ displayCurrency }: { displayCurrenc
             Recent transactions
           </Link>
 
-          <Link
-            href="/dashboard/billing"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
-          >
-            Billing settings
-          </Link>
+          {canManageBilling ? (
+            <Link
+              href="/dashboard/billing"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+            >
+              Billing settings
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-300">
+              Owner-managed billing
+            </span>
+          )}
 
           <button
             type="button"

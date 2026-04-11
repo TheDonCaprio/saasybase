@@ -1,20 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faUserShield, faChevronDown, faCrown, faCoins, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faXmark, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from '../dashboard/SidebarNav';
-import { AuthSignOutButton, useAuthUser, useAuthInstance, useAuthSession, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
-import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
+import { AuthSignOutButton, useAuthUser, useAuthInstance } from '@/lib/auth-provider/client';
 import { createPortal } from 'react-dom';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
-
-const PROFILE_FETCH_RETRY_DELAY_MS = 450;
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { useUserProfile } from '@/components/UserProfileProvider';
+import { SharedDrawerAccountSection } from '@/components/drawer/SharedDrawerAccountSection';
 
 interface MenuGroup {
   title: string;
@@ -29,59 +24,6 @@ interface AdminHeaderDrawerProps {
   signOutLabel?: string;
 }
 
-interface UserProfile {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-  };
-  paidTokens?: {
-    tokenName: string;
-    remaining: number;
-    isUnlimited?: boolean;
-    displayRemaining?: string;
-  };
-  subscription: {
-    planName: string;
-    expiresAt: string;
-    tokenName: string;
-    tokens: {
-      total: number | null;
-      used: number | null;
-      remaining: number;
-      isUnlimited?: boolean;
-      displayRemaining?: string;
-    };
-  } | null;
-  organization?: {
-    id: string;
-    name: string;
-    role: string;
-    planName: string;
-    tokenName: string;
-    expiresAt?: string | null;
-    tokenPoolStrategy?: string | null;
-    memberTokenCap?: number | null;
-    memberCapStrategy?: string | null;
-    memberCapResetIntervalHours?: number | null;
-  } | null;
-  sharedTokens?: {
-    tokenName: string;
-    remaining: number;
-    cap?: number | null;
-    strategy?: string | null;
-  } | null;
-  freeTokens?: {
-    tokenName?: string;
-    total?: number | null;
-    remaining: number;
-  } | null;
-  planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
-  canCreateOrganization?: boolean;
-  permissions?: Record<string, boolean> | undefined;
-}
-
 export function AdminHeaderDrawer({
   items,
   groups,
@@ -91,64 +33,12 @@ export function AdminHeaderDrawer({
 }: AdminHeaderDrawerProps) {
   const pathname = usePathname();
   const { isSignedIn } = useAuthUser();
-  const { orgId } = useAuthSession();
-  const currentOrgId = orgId ?? null;
   const { signOut } = useAuthInstance();
+  const { ensureProfile, loaded: profileLoadedForOrg, loading: profileLoading, profile, resetProfile } = useUserProfile();
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [profileState, setProfileState] = useState<{ orgId: string | null; profile: UserProfile | null; loaded: boolean } | null>(null);
-  const prevOrgIdRef = useRef(currentOrgId);
-  const profileRequestInFlightRef = useRef(false);
-  const hasAttemptedProfileFetchRef = useRef(false);
   const open = openPathname === pathname;
-  const profileLoadedForOrg = profileState?.orgId === currentOrgId && profileState?.loaded === true;
-  const profile = profileState?.orgId === currentOrgId ? (profileState?.profile ?? null) : null;
-  const loading = isSignedIn && open && !profileLoadedForOrg;
-
-  const fetchProfile = useCallback(async (retryOnUnauthorized = false) => {
-    const response = await fetch('/api/user/profile', { credentials: 'same-origin' });
-
-    if (response.ok) {
-      const data = (await response.json()) as Partial<UserProfile> | null;
-      const hasUser =
-        Boolean(data?.user)
-        && typeof data?.user?.id === 'string'
-        && typeof data?.user?.name === 'string'
-        && typeof data?.user?.email === 'string'
-        && typeof data?.user?.role === 'string';
-
-      return hasUser ? (data as UserProfile) : null;
-    }
-
-    if (retryOnUnauthorized && response.status === 401) {
-      await delay(PROFILE_FETCH_RETRY_DELAY_MS);
-      const retriedResponse = await fetch('/api/user/profile', { credentials: 'same-origin' });
-
-      if (retriedResponse.ok) {
-        const data = (await retriedResponse.json()) as Partial<UserProfile> | null;
-        const hasUser =
-          Boolean(data?.user)
-          && typeof data?.user?.id === 'string'
-          && typeof data?.user?.name === 'string'
-          && typeof data?.user?.email === 'string'
-          && typeof data?.user?.role === 'string';
-
-        return hasUser ? (data as UserProfile) : null;
-      }
-
-      if (retriedResponse.status === 401) {
-        return null;
-      }
-
-      throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
-    }
-
-    if (response.status === 401) {
-      return null;
-    }
-
-    throw new Error(`Profile fetch failed: ${response.status}`);
-  }, []);
+  const loading = isSignedIn && open && (!profileLoadedForOrg || profileLoading);
 
   const isActiveHref = useCallback(
     (href?: string) => {
@@ -202,14 +92,10 @@ export function AdminHeaderDrawer({
   const close = useCallback(() => {
     setOpenPathname(null);
     setDetailsExpanded(false);
-    hasAttemptedProfileFetchRef.current = false;
-    setProfileState((prev) => {
-      if (prev?.orgId === currentOrgId && prev.profile == null) {
-        return null;
-      }
-      return prev;
-    });
-  }, [currentOrgId]);
+    if (!profile) {
+      resetProfile();
+    }
+  }, [profile, resetProfile]);
 
   const toggleGroup = useCallback((groupTitle: string) => {
     setExpandedGroups(prev => {
@@ -241,83 +127,19 @@ export function AdminHeaderDrawer({
   }, [open]);
 
   useEffect(() => {
-    if (prevOrgIdRef.current === currentOrgId) return;
-    prevOrgIdRef.current = currentOrgId;
-    hasAttemptedProfileFetchRef.current = false;
-
-    const timer = setTimeout(() => {
-      profileRequestInFlightRef.current = true;
-      hasAttemptedProfileFetchRef.current = true;
-
-      fetchProfile(true)
-        .then((nextProfile) => {
-          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
-        })
-        .catch((err) => {
-          console.error('Failed to fetch profile after org switch:', err);
-          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-        })
-        .finally(() => {
-          profileRequestInFlightRef.current = false;
-        });
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [currentOrgId, fetchProfile]);
-
-  useEffect(() => {
-    if (isSignedIn && open && !profile && !hasAttemptedProfileFetchRef.current && !profileRequestInFlightRef.current) {
-      hasAttemptedProfileFetchRef.current = true;
-      profileRequestInFlightRef.current = true;
-      fetchProfile(false)
-        .then((nextProfile) => {
-          setProfileState({ orgId: currentOrgId, profile: nextProfile, loaded: true });
-        })
-        .catch((err) => {
-          console.error('Failed to fetch profile:', err);
-          setProfileState({ orgId: currentOrgId, profile: null, loaded: true });
-        })
-        .finally(() => {
-          profileRequestInFlightRef.current = false;
-        });
+    if (isSignedIn && open && !profile && !profileLoading) {
+      void ensureProfile();
     }
-  }, [currentOrgId, fetchProfile, isSignedIn, open, profile]);
-
-  useEffect(() => {
-    if (!open) {
-      hasAttemptedProfileFetchRef.current = false;
-    }
-  }, [open]);
+  }, [ensureProfile, isSignedIn, open, profile, profileLoading]);
 
   const handleSignOut = async () => {
     await signOut();
     setOpenPathname(null);
-    setProfileState(null);
-    hasAttemptedProfileFetchRef.current = false;
+    resetProfile();
   };
 
   const wrapperClass = className ? `${className}` : '';
   const displayGroups = groups || [];
-  const personalTokenCount = profile?.subscription?.tokens.remaining ?? profile?.paidTokens?.remaining ?? null;
-  const personalTokenName = profile?.subscription?.tokenName ?? profile?.paidTokens?.tokenName ?? null;
-  const hasUnlimitedPersonalTokens = Boolean(profile?.subscription?.tokens.isUnlimited || profile?.paidTokens?.isUnlimited);
-  const personalTokenDisplay = hasUnlimitedPersonalTokens
-    ? 'Unlimited'
-    : personalTokenCount != null
-      ? personalTokenCount.toLocaleString()
-      : null;
-  const isOrganizationContext = profile?.planSource === 'ORGANIZATION';
-  const isPersonalContext = profile?.planSource === 'PERSONAL';
-  const activePlanName = isOrganizationContext
-    ? profile?.organization?.planName || 'Workspace Plan'
-    : isPersonalContext
-      ? profile?.subscription?.planName || 'Free Plan'
-      : 'Free Plan';
-  const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
-  const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
-  const expiresAt = isOrganizationContext
-    ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
-    : profile?.subscription?.expiresAt ?? null;
 
   // Client-side list of moderator sections. Keep in sync with server
   // `MODERATOR_SECTIONS` in `lib/moderator.ts`.
@@ -419,111 +241,21 @@ export function AdminHeaderDrawer({
               {/* Account Info Section */}
               {isSignedIn && (
                 <div className="border-b border-[color:rgb(var(--border-primary))] bg-neutral-900/50">
-                  {loading ? (
-                    <div className="space-y-2.5 p-3.5">
-                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse w-3/4" />
-                    </div>
-                  ) : profile ? (
-                    <div className="space-y-2.5 p-3.5">
-                      <button
-                        type="button"
-                        onClick={() => setDetailsExpanded((prev) => !prev)}
-                        className="flex w-full items-start justify-between gap-3 rounded-xl px-0 py-0 text-left transition"
-                        aria-expanded={detailsExpanded}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate font-semibold text-neutral-100">
-                              {profile.user.name}
-                            </p>
-                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                              {profile.user.role}
-                            </span>
-                          </div>
-                          <p className="truncate text-xs text-neutral-400">
-                            {profile.user.email}
-                          </p>
-                          {profile.organization && (
-                            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                              {profile.organization.name} · {profile.organization.role === 'OWNER' ? 'Owner' : 'Member'}
-                            </p>
-                          )}
-                        </div>
-                        <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800/70 text-neutral-400">
-                          <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transition-transform ${detailsExpanded ? 'rotate-180' : ''}`} />
+                  <SharedDrawerAccountSection
+                    profile={profile}
+                    loading={loading}
+                    detailsExpanded={detailsExpanded}
+                    currentPath={pathname}
+                    onToggleDetails={() => setDetailsExpanded((prev) => !prev)}
+                    onClose={close}
+                    roleBadge={
+                      profile ? (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                          {profile.user.role}
                         </span>
-                      </button>
-
-                      {detailsExpanded ? (
-                        <div className="space-y-2 rounded-xl bg-neutral-900/35 px-3 py-2.5">
-                          <div className="flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCrown} className="h-4 w-4 text-amber-500" />
-                            <span className="text-neutral-300">
-                              {activePlanName}
-                            </span>
-                          </div>
-
-                          {shouldShowPersonalTokens && personalTokenDisplay && personalTokenName && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-emerald-500" />
-                              <span className="text-neutral-300">
-                                {personalTokenDisplay} {personalTokenName} (Personal)
-                              </span>
-                            </div>
-                          )}
-
-                          {shouldShowSharedTokens && profile.sharedTokens && (
-                            <div className="flex items-start gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-[rgb(var(--accent-primary-rgb))]" />
-                              <div>
-                                <span className="text-neutral-300">
-                                  {profile.sharedTokens.remaining.toLocaleString()} {profile.sharedTokens.tokenName}
-                                  {profile.organization ? ` (${profile.organization.name})` : ''}
-                                </span>
-                                <p className="text-[11px] text-neutral-400">
-                                    {profile.organization?.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
-                                      ? 'Allocated to you in this workspace'
-                                      : profile.sharedTokens.cap != null
-                                    ? `Cap: ${profile.sharedTokens.cap.toLocaleString()} ${profile.sharedTokens.tokenName} (${(profile.sharedTokens.strategy || 'SOFT').toLowerCase()} mode)`
-                                    : profile.sharedTokens.strategy === 'DISABLED'
-                                    ? 'Member caps disabled'
-                                    : ''}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {profile.freeTokens && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-sky-500" />
-                              <span className="text-neutral-300">
-                                {profile.freeTokens.remaining.toLocaleString()} {profile.freeTokens.tokenName || 'tokens'} (Free)
-                              </span>
-                            </div>
-                          )}
-
-                          {expiresAt && (
-                            <div className="flex items-center gap-2 text-xs text-neutral-400">
-                              <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
-                              <span>Expires: {expiresAt}</span>
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
-                        <AuthOrganizationSwitcher
-                          hidePersonal={false}
-                          appearance={getOrganizationSwitcherAppearance({
-                            variant: 'drawer',
-                            canCreateOrganization: profile?.canCreateOrganization,
-                          })}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
+                      ) : undefined
+                    }
+                  />
                 </div>
               )}
 

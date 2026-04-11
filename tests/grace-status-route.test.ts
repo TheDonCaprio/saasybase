@@ -9,8 +9,12 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
+const authServiceMock = vi.hoisted(() => ({
+  getSession: vi.fn(),
+}));
+
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('../lib/auth', () => ({ requireUser: vi.fn(async () => 'user_1') }));
+vi.mock('../lib/auth-provider/service', () => ({ authService: authServiceMock }));
 vi.mock('../lib/settings', () => ({ getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24) }));
 
 import { GET } from '../app/api/user/grace-status/route';
@@ -18,6 +22,7 @@ import { GET } from '../app/api/user/grace-status/route';
 describe('GET /api/user/grace-status', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authServiceMock.getSession.mockResolvedValue({ userId: 'user_1', orgId: null, sessionId: 'session_1' });
   });
 
   it('returns inGrace=false when user has a valid subscription', async () => {

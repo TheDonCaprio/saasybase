@@ -7,11 +7,13 @@ const prismaMock = vi.hoisted(() => ({
 
 const accessSummaryMock = vi.hoisted(() => vi.fn());
 const getActiveTeamSubscriptionMock = vi.hoisted(() => vi.fn());
+const getActiveTeamSubscriptionForOrganizationMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/organization-access', () => ({
   getOrganizationAccessSummary: accessSummaryMock,
   getActiveTeamSubscription: getActiveTeamSubscriptionMock,
+  getActiveTeamSubscriptionForOrganization: getActiveTeamSubscriptionForOrganizationMock,
 }));
 
 import { getOrganizationPlanContext } from '../lib/user-plan-context';
@@ -198,7 +200,7 @@ describe('getOrganizationPlanContext personal switching', () => {
       },
     });
     prismaMock.organizationMembership.findFirst.mockResolvedValue(null);
-    getActiveTeamSubscriptionMock.mockResolvedValue({
+    getActiveTeamSubscriptionForOrganizationMock.mockResolvedValue({
       id: 'sub_owner_1',
       plan: {
         id: 'plan_team_new',
@@ -219,7 +221,7 @@ describe('getOrganizationPlanContext personal switching', () => {
 
     const context = await getOrganizationPlanContext('user_2', 'org_1');
 
-    expect(getActiveTeamSubscriptionMock).toHaveBeenCalledWith('owner_1', { includeGrace: true });
+    expect(getActiveTeamSubscriptionForOrganizationMock).toHaveBeenCalledWith('owner_1', 'org_1', { includeGrace: true });
     expect(context?.role).toBe('MEMBER');
     expect(context?.effectivePlan.name).toBe('Team Plus');
   });

@@ -99,8 +99,20 @@ export function ColorTabContent({
   };
 
   const isPresetActive = (preset: ColorTokens) => {
-    const keys = Object.keys(DEFAULT_LIGHT_COLORS) as (keyof ColorTokens)[];
-    return keys.every((k) => colors[k] === preset[k]);
+    const ignoredKeys: Array<keyof ColorTokens> = [
+      'headerOpacity',
+      'sidebarOpacity',
+      'glowOpacity',
+      'headerBorderOpacity',
+      'stickyHeaderOpacity',
+      'stickyHeaderBorderOpacity',
+    ];
+    const keys = (Object.keys(DEFAULT_LIGHT_COLORS) as (keyof ColorTokens)[]).filter((key) => !ignoredKeys.includes(key));
+    const normalizeComparableValue = (value: ColorTokens[keyof ColorTokens]) => {
+      return typeof value === 'string' ? value.trim().toLowerCase() : value;
+    };
+
+    return keys.every((key) => normalizeComparableValue(colors[key]) === normalizeComparableValue(preset[key]));
   };
 
   const clampInt = (n: unknown, min: number, max: number, fallback: number) => {
@@ -271,9 +283,7 @@ export function ColorTabContent({
 
       {/* Presets */}
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
-        </div>
+
         <div className="flex flex-wrap gap-3">
           {presets.map((preset) => {
             const active = isPresetActive(preset.colors);
@@ -1002,19 +1012,37 @@ export function ColorTabContent({
                     Billing, activity, and team health at a glance.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="rounded-lg border px-2.5 py-1 text-[10px] font-medium"
-                    style={{ borderColor: colors.borderPrimary, color: colors.textSecondary }}
-                  >
-                    12 updates
-                  </div>
-                  <div
-                    className="rounded-lg px-2.5 py-1 text-[10px] font-semibold"
-                    style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
-                  >
-                    New report
-                  </div>
+                <div className="grid min-w-[180px] grid-cols-2 gap-2 text-sm">
+                  {[
+                    { label: 'Personal', value: '18,420', detail: 'tokens available' },
+                    { label: 'Workspace', value: '7,250', detail: 'shared this month' },
+                  ].map(({ label, value, detail }) => (
+                    <div
+                      key={label}
+                      className="relative px-3 py-2"
+                      style={{
+                        backgroundColor: `${colors.accentPrimary}14`,
+                        borderStyle: 'solid',
+                        borderColor: `${colors.accentPrimary}3d`,
+                        borderWidth: '1px',
+                        borderRadius: `${surfaceRadius}px`,
+                        boxShadow: `0 12px ${clampInt(colors.cardShadowBlur, 0, 80, 24)}px ${clampInt(colors.cardShadowSpread, -80, 80, -18)}px ${colors.cardShadow}`,
+                      }}
+                    >
+                      <p
+                        className="text-xs uppercase tracking-wide"
+                        style={{ color: `${colors.accentPrimary}${getHexAlpha01(colors.accentPrimary) < 1 ? '' : 'd1'}` }}
+                      >
+                        {label}
+                      </p>
+                      <p className="mt-1 text-base font-semibold" style={{ color: colors.textPrimary }}>
+                        {value}
+                      </p>
+                      <p className="text-xs" style={{ color: `${colors.accentPrimary}${getHexAlpha01(colors.accentPrimary) < 1 ? '' : 'cc'}` }}>
+                        {detail}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -1065,7 +1093,7 @@ export function ColorTabContent({
 
               {/* Tab strip — uses tabsGradient */}
               <div
-                className="flex items-center gap-1 px-1.5 py-1"
+                className="relative flex items-center gap-1 px-1.5 py-1"
                 style={{
                   borderRadius: `${surfaceRadius}px`,
                   background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
@@ -1073,15 +1101,24 @@ export function ColorTabContent({
                   boxShadow: `0 12px ${clampInt(colors.tabsShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}px ${clampInt(colors.tabsShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}px ${colors.tabsShadow}`,
                 }}
               >
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-1 left-1.5 top-1 z-0 transition-transform duration-200 ease-out"
+                  style={{
+                    width: 'calc((100% - 12px) / 3)',
+                    transform: 'translateX(0%)',
+                    borderRadius: `${Math.max(surfaceRadius - 2, 4)}px`,
+                    backgroundColor: colorMode === 'dark' ? '#000000' : '#ffffff',
+                    boxShadow: `0 8px ${clampInt(colors.tabsShadowBlur, 0, 80, clampInt(colors.cardShadowBlur, 0, 80, 24))}px ${clampInt(colors.tabsShadowSpread, -80, 80, clampInt(colors.cardShadowSpread, -80, 80, -18))}px ${colors.tabsShadow}`,
+                  }}
+                />
                 {['Activity', 'Invoices', 'Team'].map((label, i) => (
                   <div
                     key={label}
-                    className="px-3 py-1 text-xs font-medium"
+                    className="relative z-10 px-3 py-1 text-xs font-medium"
                     style={{
-                      backgroundColor: i === 0 ? (colorMode === 'dark' ? '#000000' : '#ffffff') : 'transparent',
                       color: i === 0 ? colors.accentPrimary : colors.textSecondary,
-                      borderRadius: `${Math.max(surfaceRadius - 2, 2)}px`,
-                      boxShadow: i === 0 ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      borderRadius: `${Math.max(surfaceRadius - 2, 4)}px`,
                     }}
                   >
                     {label}

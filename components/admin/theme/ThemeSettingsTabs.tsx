@@ -1101,15 +1101,29 @@ export function ThemeSettingsTabs({
   ]);
 
   const activeContent = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const activeTabIndex = Math.max(0, tabs.findIndex((tab) => tab.id === activeContent.id));
+  const tabSelectorRadius = 'max(calc(var(--theme-surface-radius) - 4px), 4px)';
 
   return (
     <div className="space-y-6">
       <div
-        className="relative overflow-x-auto rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] transition-shadow"
+        className="relative overflow-x-auto rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,var(--theme-tabs-gradient-from),var(--theme-tabs-gradient-via),var(--theme-tabs-gradient-to))] p-1 transition-shadow"
         style={{ boxShadow: 'var(--theme-tabs-shadow)' }}
         role="tablist"
         aria-label="Theme settings sections"
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-1 left-1 top-1 z-0 hidden transition-transform duration-200 ease-out sm:block"
+          style={{
+            width: `calc((100% - 8px) / ${tabs.length})`,
+            transform: `translateX(${activeTabIndex * 100}%)`,
+            borderRadius: tabSelectorRadius,
+            backgroundColor: 'rgb(var(--surface-panel-rgb) / calc(var(--surface-panel-a) * 0.96))',
+            border: '1px solid rgb(var(--border-primary-rgb) / calc(var(--border-primary-a) * 0.55))',
+            boxShadow: 'var(--theme-panel-shadow)',
+          }}
+        />
         <div className="flex min-w-max sm:min-w-0">
           {tabs.map((tab) => (
             <button
@@ -1119,11 +1133,12 @@ export function ThemeSettingsTabs({
               aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cx(
-                'relative z-10 flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all sm:px-6 whitespace-nowrap',
+                'relative z-10 inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors sm:px-6',
                 activeTab === tab.id
-                  ? 'bg-white text-[rgb(var(--accent-primary))] shadow-md dark:bg-black dark:text-[rgb(var(--accent-primary))]'
+                  ? 'bg-transparent text-[rgb(var(--accent-primary))] dark:text-[rgb(var(--accent-primary))]'
                   : 'text-slate-700/85 hover:bg-white/60 hover:text-slate-900 dark:text-neutral-200 dark:hover:bg-white/10 dark:hover:text-neutral-50'
               )}
+              style={{ borderRadius: tabSelectorRadius }}
             >
               <FontAwesomeIcon icon={tab.icon} className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">{tab.label}</span>

@@ -66,7 +66,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           {
             label: 'Personal',
             value: isTeamWorkspace
-              ? 'UNAVAILABLE'
+              ? 'Unavailable'
               : `${paidBalance.toLocaleString()} paid · ${freeBalance.toLocaleString()} free`,
             helper: isTeamWorkspace
               ? 'Switch to personal workspace'
@@ -76,7 +76,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             label: orgName,
             value: isTeamWorkspace
               ? `${(sharedBalance ?? 0).toLocaleString()} ${orgTokenName}`
-              : 'UNAVAILABLE',
+              : 'Unavailable',
             helper: isTeamWorkspace
               ? `Available in ${orgName} workspace`
               : 'Switch to a team workspace',

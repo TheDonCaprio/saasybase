@@ -1505,14 +1505,14 @@ export default function PageEditor({
         ) : null}
       </DashboardPageHeader>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2.35fr)_minmax(320px,0.8fr)]">
         <div className="space-y-6">
           <div className={dashboardPanelClass('space-y-5')}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
                   {entityNames.singular} title
-                </label>
+                </label> <span className="text-xs text-neutral-500 dark:text-neutral-400">{formData.title.length}/80 characters</span>
                 <input
                   type="text"
                   value={formData.title}
@@ -1521,7 +1521,6 @@ export default function PageEditor({
                   maxLength={80}
                   className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-lg font-medium text-neutral-900 placeholder-neutral-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
                 />
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">{formData.title.length}/80 characters</p>
               </div>
 
               <div className="space-y-2">
@@ -1555,8 +1554,8 @@ export default function PageEditor({
                       <span className="sr-only">Edit URL slug</span>
                     </button>
                   )}
+                  <span className="text-xs text-neutral-400 dark:text-neutral-500">Max 30 characters. Use letters, numbers, hyphen, or underscore.</span>
                 </div>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500">Max 30 characters. Use letters, numbers, hyphen, or underscore.</p>
               </div>
 
               {/* Description moved to right panel */}
@@ -2285,15 +2284,15 @@ export default function PageEditor({
         </div>
 
         <div className="space-y-6">
-          <div className={dashboardPanelClass('flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-evenly')}>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-center sm:gap-3">
+          <div className={dashboardPanelClass('p-4')}>
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setFormData((prev) => ({ ...prev, published: !prev.published }));
                   triggerAutoSave();
                 }}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition sm:text-sm ${
                   formData.published
                     ? 'bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500/90 [&]:!text-white [&_*]:!text-white'
                     : 'bg-neutral-200 text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
@@ -2321,7 +2320,7 @@ export default function PageEditor({
                 type="button"
                 onClick={() => handleSave('draft')}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600 dark:focus:ring-neutral-500 dark:focus:ring-offset-neutral-900"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-neutral-200 px-3 py-2 text-xs font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600 dark:focus:ring-neutral-500 dark:focus:ring-offset-neutral-900 sm:text-sm"
               >
                 {isSaving ? (
                   <>
@@ -2346,7 +2345,7 @@ export default function PageEditor({
                 type="button"
                 onClick={() => handleSave('publish')}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-6 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-offset-neutral-900"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-violet-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-offset-neutral-900 sm:text-sm"
               >
                 {isSaving ? (
                   <>
@@ -2361,7 +2360,7 @@ export default function PageEditor({
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    {formData.published ? 'Update Published' : 'Publish'}
+                    {formData.published ? 'Update' : 'Publish'}
                   </>
                 )}
               </button>

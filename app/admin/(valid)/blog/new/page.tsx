@@ -29,7 +29,7 @@ export default async function NewBlogPostPage() {
       previewPathPrefix="/blog"
       backHref="/admin/blog"
       categoriesHref="/admin/blog/categories"
-      uploadScope="blog"
+      uploadScope="file"
     />
   );
 }

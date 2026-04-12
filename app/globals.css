@@ -767,15 +767,6 @@ select {
   stroke: #ffffff !important;
   fill: #ffffff !important;
 }
-/* Sidebar NEW badge overrides */
-.sidebar-new-badge {
-  color: #ffffff !important;
-  font-weight: 600 !important;
-}
-.dark .sidebar-new-badge {
-  color: #ffffff !important;
-}
-
 /* Input and form elements */
 input, textarea, select {
   background-color: rgb(var(--bg-tertiary)) !important;

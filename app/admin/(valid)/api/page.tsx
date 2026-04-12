@@ -81,7 +81,7 @@ export default async function AdminApiPage() {
         eyebrow="Platform API"
         eyebrowIcon={<FontAwesomeIcon icon={faPlug} />}
         title="API reference"
-        description="Browse, search, and explore every endpoint available in your platform."
+        description=""
         stats={heroStats}
       >
         {latestChangelogEntry ? (

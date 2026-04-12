@@ -182,11 +182,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                           <span className="font-medium tracking-tight text-current">{item.label}</span>
                         </span>
                         {item.badge && (
-                          <span className={`text-[9px] font-semibold uppercase tracking-wide rounded-full ${
-                            item.badge === 'NEW'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                              : 'bg-slate-200 text-slate-700 dark:bg-neutral-700 dark:text-neutral-300'
-                          }`}>
+                          <span className="text-[9px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.13))] text-[color:rgb(var(--accent-primary))] dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.20))] dark:text-[color:rgb(var(--accent-primary))]">
                             {item.badge}
                           </span>
                         )}
@@ -240,13 +236,7 @@ export function GroupedSidebarNav({ groups, items }: { groups?: NavGroup[], item
                 <span>{it.label}</span>
               </span>
               {it.badge && (
-                <span
-                  className={`text-[10px] rounded px-1.5 py-0.5 ${
-                    it.badge === 'NEW'
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-neutral-700 text-neutral-300'
-                  }`}
-                >
+                <span className="text-[9px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.20))] text-[color:rgb(var(--accent-primary))]">
                   {it.badge}
                 </span>
               )}

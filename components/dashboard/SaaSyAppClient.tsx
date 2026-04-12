@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import clsx from 'clsx';
 import { useAuthSession } from '@/lib/auth-provider/client';
 import {
@@ -126,6 +128,7 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
   const [bucket, setBucket] = useState<Bucket>('auto');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<SpendEvent[]>([]);
 
   const [warningOpen, setWarningOpen] = useState(false);
@@ -314,7 +317,7 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
       <WarningsModal
         isOpen={Boolean(message)}
         title="Action failed"
-        description="{message ?? undefined}"
+        description={message ?? undefined}
         warnings={message ? [{ code: 'error', message }] : []}
         acknowledgeLabel="Close"
         onClose={() => setMessage(null)}
@@ -340,36 +343,49 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
                 <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
               ) : null}
 
-              <div className="flex gap-2">
-                {availableBuckets.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setBucket(option)}
-                    className={clsx(
-                      'rounded-[var(--theme-surface-radius)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50',
-                      (bucket === option || (bucket === 'auto' && resolvedBucket === option))
-                        ? 'bg-[color:rgb(var(--accent-rgb))] text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-neutral-300 dark:hover:bg-white/10'
-                    )}
-                  >
-                    {option}
-                  </button>
-                ))}
+              <div className="flex gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 p-1 shadow-sm backdrop-blur-sm dark:bg-white/5">
+                {availableBuckets.map((option) => {
+                  const isActive = bucket === option || (bucket === 'auto' && resolvedBucket === option);
+
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={isActive}
+                      disabled={busy}
+                      onClick={() => setBucket(option)}
+                      className={clsx(
+                        'rounded-full border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+                        isActive
+                          ? 'border-[color:rgb(var(--accent-rgb))] bg-[color:rgb(var(--accent-rgb))] text-white shadow-[0_0_0_1px_rgb(var(--accent-rgb)_/_0.18),0_10px_24px_rgb(var(--accent-rgb)_/_0.24)]'
+                          : 'border-transparent bg-transparent text-slate-500 hover:border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.85))] hover:bg-slate-100 hover:text-slate-800 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
+                      )}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
               </div>
 
               <button
                 type="button"
-                className="h-8 whitespace-nowrap rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--accent-rgb))] bg-[color:rgb(var(--accent-rgb))] px-4 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70"
-                disabled={busy}
-                onClick={() =>
-                  refreshProfile().catch((err: unknown) =>
-                    setMessage(err instanceof Error ? err.message : 'Refresh failed')
-                  )
-                }
+                aria-label="Refresh balances"
+                title="Refresh balances"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.8))] bg-[color:rgb(var(--surface-card))] text-slate-600 shadow-sm transition duration-200 hover:border-[color:rgb(var(--accent-rgb)_/_0.55)] hover:text-[color:rgb(var(--accent-rgb))] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:text-neutral-200"
+                disabled={busy || refreshing}
+                onClick={() => {
+                  setRefreshing(true);
+                  refreshProfile()
+                    .catch((err: unknown) =>
+                      setMessage(err instanceof Error ? err.message : 'Refresh failed')
+                    )
+                    .finally(() => setRefreshing(false));
+                }}
               >
-                Refresh
+                <FontAwesomeIcon
+                  icon={faArrowsRotate}
+                  className={clsx('h-3.5 w-3.5 transition-transform duration-200', refreshing && 'animate-spin')}
+                />
               </button>
             </div>
           </div>
@@ -421,7 +437,7 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
                   onChange={(e) => setCustomLabel(e.target.value)}
                   placeholder="Operation label"
                   disabled={busy}
-                  className="h-10 min-w-[10rem] flex-[1.6] rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
+                  className="h-10 min-w-[8rem] flex-[1.6] rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
                 />
                 <input
                   suppressHydrationWarning
@@ -430,12 +446,12 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
                   inputMode="numeric"
                   placeholder="Cost"
                   disabled={busy}
-                  className="h-10 w-24 shrink-0 rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
+                  className="h-10 w-16 shrink-0 rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
                 />
                 <button
                   type="button"
                   disabled={busy}
-                  className="h-10 shrink-0 rounded-[var(--theme-surface-radius)] bg-[color:rgb(var(--accent-rgb))] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-70"
+                  className="h-10 shrink-0 rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--accent-rgb))] bg-[color:rgb(var(--accent-rgb))] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgb(var(--accent-rgb)_/_0.24)] transition duration-200 hover:brightness-[1.03] hover:shadow-[0_16px_34px_rgb(var(--accent-rgb)_/_0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgb(var(--accent-rgb)_/_0.22)] disabled:brightness-100 disabled:shadow-none disabled:opacity-70"
                   onClick={() => {
                     const cost = safeInt(customCost);
                     spend(cost ?? 0, customLabel || 'Custom operation', bucket, 'custom');

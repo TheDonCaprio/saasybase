@@ -31,6 +31,7 @@ import { ContentTabContent } from './panels/ContentTabContent';
 import { ColorTabContent } from './panels/ColorTabContent';
 import { LayoutTabContent } from './panels/LayoutTabContent';
 import { CodeTabContent } from './panels/CodeTabContent';
+import { validateThemeCustomCss, validateThemeCustomMarkup } from '../../../lib/theme-custom-code';
 
 interface PricingSettings {
   maxColumns: number;
@@ -566,6 +567,24 @@ export function ThemeSettingsTabs({
     if (!normalizedHeader) return;
     const normalizedFooter = normalizeLinks(footerLinks, 'Footer');
     if (!normalizedFooter) return;
+
+    const cssValidationError = validateThemeCustomCss(customCss);
+    if (cssValidationError) {
+      showToast(cssValidationError, 'error');
+      return;
+    }
+
+    const headValidationError = validateThemeCustomMarkup('head', customHead);
+    if (headValidationError) {
+      showToast(headValidationError, 'error');
+      return;
+    }
+
+    const bodyValidationError = validateThemeCustomMarkup('body', customBody);
+    if (bodyValidationError) {
+      showToast(bodyValidationError, 'error');
+      return;
+    }
 
     setSaving(true);
     try {

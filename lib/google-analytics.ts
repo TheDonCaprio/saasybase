@@ -120,6 +120,18 @@ const PERIOD_TO_DAYS: Record<Exclude<PeriodKey, 'custom'>, number> = {
 
 const DEFAULT_CACHE_SECONDS = Number(process.env.GA_DATA_API_CACHE_SECONDS ?? '30');
 const cacheSecondsFallback = Number.isFinite(DEFAULT_CACHE_SECONDS) ? Math.max(0, DEFAULT_CACHE_SECONDS) : 30;
+const DEFAULT_GA_MAX_CONCURRENT_REPORTS = Number(process.env.GA_DATA_API_MAX_CONCURRENT_REPORTS ?? '2');
+const gaMaxConcurrentReports = Number.isFinite(DEFAULT_GA_MAX_CONCURRENT_REPORTS)
+  ? Math.max(1, Math.floor(DEFAULT_GA_MAX_CONCURRENT_REPORTS))
+  : 2;
+const DEFAULT_GA_CONCURRENT_QUOTA_RETRIES = Number(process.env.GA_DATA_API_CONCURRENT_QUOTA_RETRIES ?? '2');
+const gaConcurrentQuotaRetries = Number.isFinite(DEFAULT_GA_CONCURRENT_QUOTA_RETRIES)
+  ? Math.max(0, Math.floor(DEFAULT_GA_CONCURRENT_QUOTA_RETRIES))
+  : 2;
+const DEFAULT_GA_RETRY_BASE_DELAY_MS = Number(process.env.GA_DATA_API_RETRY_BASE_DELAY_MS ?? '250');
+const gaRetryBaseDelayMs = Number.isFinite(DEFAULT_GA_RETRY_BASE_DELAY_MS)
+  ? Math.max(50, Math.floor(DEFAULT_GA_RETRY_BASE_DELAY_MS))
+  : 250;
 const ANALYTICS_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 const GA_MIN_LIFETIME_START_DATE = '2015-08-14';
 const GA_MAX_LIFETIME_START_DATE = '2999-12-31';
@@ -147,6 +159,8 @@ const breakdownCache = new Map<
 let cachedCredentialsHash: string | null = null;
 let cachedClient: BetaAnalyticsDataClient | null = null;
 let cachedAuth: GoogleAuth | null = null;
+let activeGaReportRequests = 0;
+const pendingGaReportResolvers: Array<() => void> = [];
 
 type FilterExpressionType = protos.google.analytics.data.v1beta.IFilterExpression;
 type RunReportRequest = protos.google.analytics.data.v1beta.IRunReportRequest;
@@ -365,10 +379,20 @@ function cacheGet(key: string): NormalizedTrafficSnapshot | undefined {
     return undefined;
   }
   if (Date.now() >= entry.expiresAt) {
-    snapshotCache.delete(key);
     return undefined;
   }
   return entry.payload;
+}
+
+function cacheGetStale(key: string): { payload: NormalizedTrafficSnapshot; staleSeconds: number } | undefined {
+  const entry = snapshotCache.get(key);
+  if (!entry) {
+    return undefined;
+  }
+  return {
+    payload: entry.payload,
+    staleSeconds: Math.max(0, Math.floor((Date.now() - entry.expiresAt) / 1000))
+  };
 }
 
 function cacheSet(key: string, value: NormalizedTrafficSnapshot, ttlSeconds: number) {
@@ -420,10 +444,20 @@ function breakdownCacheGet(key: string): TrafficBreakdownResult | undefined {
     return undefined;
   }
   if (Date.now() >= entry.expiresAt) {
-    breakdownCache.delete(key);
     return undefined;
   }
   return entry.payload;
+}
+
+function breakdownCacheGetStale(key: string): { payload: TrafficBreakdownResult; staleSeconds: number } | undefined {
+  const entry = breakdownCache.get(key);
+  if (!entry) {
+    return undefined;
+  }
+  return {
+    payload: entry.payload,
+    staleSeconds: Math.max(0, Math.floor((Date.now() - entry.expiresAt) / 1000))
+  };
 }
 
 function breakdownCacheSet(key: string, value: TrafficBreakdownResult, ttlSeconds: number) {
@@ -647,8 +681,75 @@ function aggregateTimeseries(
 }
 
 async function runReport(client: BetaAnalyticsDataClient, request: RunReportRequest) {
-  const [response] = await client.runReport(request);
-  return response;
+  return withGaReportSlot(async () => {
+    let attempt = 0;
+
+    while (true) {
+      try {
+        const [response] = await client.runReport(request);
+        return response;
+      } catch (error: unknown) {
+        if (!isConcurrentQuotaExceeded(error) || attempt >= gaConcurrentQuotaRetries) {
+          throw error;
+        }
+
+        const retryDelayMs = computeQuotaRetryDelayMs(attempt);
+        Logger.warn('Google Analytics concurrent quota exhausted; retrying report', {
+          attempt: attempt + 1,
+          retryDelayMs
+        });
+        attempt += 1;
+        await wait(retryDelayMs);
+      }
+    }
+  });
+}
+
+async function withGaReportSlot<T>(operation: () => Promise<T>): Promise<T> {
+  await acquireGaReportSlot();
+  try {
+    return await operation();
+  } finally {
+    releaseGaReportSlot();
+  }
+}
+
+async function acquireGaReportSlot(): Promise<void> {
+  if (activeGaReportRequests < gaMaxConcurrentReports) {
+    activeGaReportRequests += 1;
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    pendingGaReportResolvers.push(resolve);
+  });
+}
+
+function releaseGaReportSlot() {
+  activeGaReportRequests = Math.max(0, activeGaReportRequests - 1);
+  if (activeGaReportRequests >= gaMaxConcurrentReports) {
+    return;
+  }
+
+  const next = pendingGaReportResolvers.shift();
+  if (!next) {
+    return;
+  }
+
+  activeGaReportRequests += 1;
+  next();
+}
+
+function computeQuotaRetryDelayMs(attempt: number): number {
+  const baseDelayMs = gaRetryBaseDelayMs * 2 ** attempt;
+  const jitterMs = Math.floor(Math.random() * gaRetryBaseDelayMs);
+  return baseDelayMs + jitterMs;
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 }
 
 function isPermissionDenied(error: unknown): boolean {
@@ -673,6 +774,25 @@ function isPermissionDenied(error: unknown): boolean {
     lower.includes('"code":7') ||
     lower.includes('user does not have sufficient permissions')
   );
+}
+
+function isConcurrentQuotaExceeded(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+  const candidate = error as { code?: number; status?: number; message?: string; details?: string };
+  if (typeof candidate.code === 'number' && candidate.code === 8) {
+    return true;
+  }
+  if (typeof candidate.status === 'number' && candidate.status === 8) {
+    return true;
+  }
+  const message = candidate.details || candidate.message || (error instanceof Error ? error.message : '');
+  if (!message) {
+    return false;
+  }
+  const lower = message.toLowerCase();
+  return lower.includes('exhausted concurrent requests quota') || lower.includes('send fewer requests concurrently');
 }
 
 function createPermissionDeniedError(): Error {
@@ -901,6 +1021,21 @@ export async function fetchTrafficSnapshot(filters: TrafficFilters): Promise<Nor
     if (isPermissionDenied(error)) {
       throw createPermissionDeniedError();
     }
+    if (isConcurrentQuotaExceeded(error)) {
+      const stale = cacheGetStale(cacheKey);
+      if (stale) {
+        Logger.warn('Google Analytics concurrent quota exhausted; serving stale traffic snapshot', {
+          period: filters.period,
+          staleSeconds: stale.staleSeconds,
+          filters: {
+            country: filters.country,
+            page: filters.page,
+            deviceType: filters.deviceType
+          }
+        });
+        return stale.payload;
+      }
+    }
     throw error;
   }
 }
@@ -1005,6 +1140,19 @@ export async function fetchTrafficBreakdown(
     });
     if (isPermissionDenied(error)) {
       throw createPermissionDeniedError();
+    }
+    if (isConcurrentQuotaExceeded(error)) {
+      const stale = breakdownCacheGetStale(cacheKey);
+      if (stale) {
+        Logger.warn('Google Analytics concurrent quota exhausted; serving stale traffic breakdown', {
+          group,
+          staleSeconds: stale.staleSeconds,
+          page,
+          pageSize,
+          filters
+        });
+        return stale.payload;
+      }
     }
     throw error;
   }

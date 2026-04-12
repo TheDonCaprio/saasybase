@@ -83,7 +83,7 @@ export function PaginatedTransactionList({
     }
   });
 
-  const totalPages = Math.ceil((totalCount || 0) / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil((totalCount || 0) / itemsPerPage));
   // reference fetchNext to avoid assigned-but-unused lint in some render paths
   void fetchNext;
 
@@ -239,20 +239,42 @@ export function PaginatedTransactionList({
   // inside the transactions list area when there are no payments.
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* keep totals referenced to avoid unused variable lint when server provides them */}
       <span className="sr-only">{totalSpentFormatted ?? formatCurrencyUtil(totalSpent, displayCurrency ?? 'usd')}</span>
       {/* Summary Stats are rendered by the page hero to avoid duplication */}
 
-      <ListFilters
-        search={search}
-        onSearchChange={(v) => setSearch(v)}
-        statusOptions={['ALL', 'SUCCEEDED', 'PENDING', 'FAILED', 'REFUNDED']}
-        currentStatus={statusFilter}
-        onStatusChange={(s) => handleStatusFilterChange(s)}
-        onRefresh={() => refreshPayments()}
-        placeholder="Search by plan, id, or email..."
-      />
+      <div className={dashboardPanelClass('p-3 sm:p-4')}>
+        <ListFilters
+          search={search}
+          onSearchChange={(v) => setSearch(v)}
+          statusOptions={['ALL', 'SUCCEEDED', 'PENDING', 'FAILED', 'REFUNDED']}
+          currentStatus={statusFilter}
+          onStatusChange={(s) => handleStatusFilterChange(s)}
+          onRefresh={() => refreshPayments()}
+          placeholder="Search by plan, id, or email..."
+        />
+      </div>
+
+      <div
+        className={dashboardMutedPanelClass(
+          'px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:text-sm dark:text-neutral-300'
+        )}
+      >
+        <span>
+          Showing {payments.length.toLocaleString()} of {totalCount.toLocaleString()} transactions
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            Status: {statusFilter === 'ALL' ? 'All statuses' : getDisplayStatus(statusFilter)}
+          </span>
+          {search ? (
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+              Search: “{search}”
+            </span>
+          ) : null}
+        </div>
+      </div>
 
       {/* Transactions Table */}
       <div className={dashboardPanelClass('p-0 overflow-hidden')}>
@@ -284,11 +306,11 @@ export function PaginatedTransactionList({
         ) : (
           <>
             {/* Mobile Card View */}
-            <div className="space-y-2.5 p-3 md:hidden">
+            <div className="space-y-3 p-3 sm:p-4 min-[1025px]:hidden">
               {payments.map((payment) => {
                 const pricing = getPricingDetails(payment);
                 return (
-                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-3')}>
+                  <div key={payment.id} className={dashboardMutedPanelClass('space-y-3 p-3 sm:p-4')}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-base font-semibold text-slate-900 dark:text-neutral-100">
@@ -305,9 +327,9 @@ export function PaginatedTransactionList({
                         <div className="text-base font-bold text-slate-900 dark:text-neutral-100">
                           {payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency)}
                         </div>
-                        {(pricing.hasDiscount || payment.couponCode) && (
+                        {(pricing.hasDiscount || payment.couponCode) ? (
                           <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs leading-tight text-slate-500 dark:text-neutral-400">
-                            {pricing.hasDiscount && (
+                            {pricing.hasDiscount ? (
                               <>
                                 <span className="line-through text-slate-400 dark:text-neutral-500">
                                   {payment.subtotalFormatted ?? formatCurrency(pricing.subtotal, payment.currency)}
@@ -316,52 +338,53 @@ export function PaginatedTransactionList({
                                   −{payment.discountFormatted ?? formatCurrency(pricing.discount, payment.currency)}
                                 </span>
                               </>
-                            )}
-                          {payment.couponCode ? (
-                            <CouponBadge code={payment.couponCode} />
-                          ) : pricing.hasDiscount ? (
-                            <CouponBadge>
-                              <span>Discount applied</span>
-                            </CouponBadge>
-                          ) : null}
-                        </div>
-                      )}
-                      <div className="flex flex-col items-end space-y-1">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-                            getDisplayStatus(payment.status) === 'COMPLETED'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100'
-                              : payment.status === 'PENDING'
-                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-100'
-                              : payment.status === 'FAILED'
-                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100'
-                              : payment.status === 'REFUNDED'
-                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-100'
-                              : 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300'
-                          }`}
-                        >
-                          {getDisplayStatus(payment.status)}
-                        </span>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-                            getAccessStatus(payment) === 'Active'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100'
-                              : getAccessStatus(payment) === 'Pending'
-                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-100'
-                              : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100'
-                          }`}
-                        >
-                          {getAccessStatus(payment)}
-                        </span>
+                            ) : null}
+                            {payment.couponCode ? (
+                              <CouponBadge code={payment.couponCode} />
+                            ) : pricing.hasDiscount ? (
+                              <CouponBadge>
+                                <span>Discount applied</span>
+                              </CouponBadge>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-sm text-neutral-400 dark:border-neutral-800/80">
+
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                          getDisplayStatus(payment.status) === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100'
+                            : payment.status === 'PENDING'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-100'
+                            : payment.status === 'FAILED'
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100'
+                            : payment.status === 'REFUNDED'
+                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-100'
+                            : 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300'
+                        }`}
+                      >
+                        {getDisplayStatus(payment.status)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                          getAccessStatus(payment) === 'Active'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100'
+                            : getAccessStatus(payment) === 'Pending'
+                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-100'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100'
+                        }`}
+                      >
+                        {getAccessStatus(payment)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-sm text-neutral-400 dark:border-neutral-800/80">
                       <div>
-                        {payment.subscription?.plan.durationHours 
+                        {payment.subscription?.plan.durationHours
                           ? formatDuration(payment.subscription.plan.durationHours)
-                          : 'N/A'
-                        }
+                          : 'N/A'}
                       </div>
                       {getDisplayStatus(payment.status) === 'COMPLETED' ? (
                         <button
@@ -381,28 +404,29 @@ export function PaginatedTransactionList({
                         </button>
                       ) : null}
                     </div>
-                    {payment.subscription && (
+
+                    {payment.subscription ? (
                       <div className="text-xs text-neutral-500">
-                      {isPlaceholderStart(payment.subscription.startedAt) && payment.subscription.status === 'PENDING' ? (
-                        <div className="flex items-center gap-2">
-                          <span>Pending — activate to start now</span>
-                          <ActivatePendingButton subscriptionId={payment.subscription.id} />
-                        </div>
-                      ) : (
-                        <>
-                          {formatDate(payment.subscription.startedAt, { mode: settings.mode, timezone: settings.timezone })} → {formatDate(payment.subscription.expiresAt, { mode: settings.mode, timezone: settings.timezone })}
-                        </>
-                      )}
+                        {isPlaceholderStart(payment.subscription.startedAt) && payment.subscription.status === 'PENDING' ? (
+                          <div className="flex items-center gap-2">
+                            <span>Pending — activate to start now</span>
+                            <ActivatePendingButton subscriptionId={payment.subscription.id} />
+                          </div>
+                        ) : (
+                          <>
+                            {formatDate(payment.subscription.startedAt, { mode: settings.mode, timezone: settings.timezone })} → {formatDate(payment.subscription.expiresAt, { mode: settings.mode, timezone: settings.timezone })}
+                          </>
+                        )}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block">
-              <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+            <div className="hidden min-[1025px]:block">
+              <div className="border-b border-slate-200 bg-slate-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
                 <div className="grid grid-cols-7 gap-4">
                   <div>Plan / Date / Txn</div>
                   <div>Amount</div>
@@ -420,7 +444,7 @@ export function PaginatedTransactionList({
                   return (
                     <div
                       key={payment.id}
-                      className="grid grid-cols-7 items-center gap-4 px-4 py-3 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
+                      className="grid grid-cols-7 items-center gap-4 px-6 py-4 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60"
                     >
                         <div className="truncate">
                           <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{payment.subscription?.plan.name || payment.plan?.name || 'Unknown Plan'}</div>
@@ -537,15 +561,17 @@ export function PaginatedTransactionList({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-          totalItems={totalCount}
-          itemsPerPage={itemsPerPage}
-          nextCursor={nextCursor}
-          onNextWithCursor={() => fetchPage(currentPage + 1, false, nextCursor)}
-        />
+        <div className={dashboardPanelClass('p-4 sm:p-6')}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={itemsPerPage}
+            nextCursor={nextCursor}
+            onNextWithCursor={() => fetchPage(currentPage + 1, false, nextCursor)}
+          />
+        </div>
       )}
     </div>
   );

@@ -25,9 +25,13 @@ import {
   clearSettingsCache
 } from '../../../../lib/settings';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
+import {
+  sanitizeCustomCode,
+  validateThemeCustomCss,
+  validateThemeCustomMarkup,
+} from '../../../../lib/theme-custom-code';
 
 const MAX_LINKS = 10;
-const MAX_CUSTOM_CODE_CHARS = 10_000;
 
 const isSafeHref = (href: string) => /^(https?:\/\/|\/)/i.test(href.trim());
 
@@ -58,11 +62,6 @@ const sanitizeLinks = (input: unknown, fallback: ThemeLink[]): ThemeLink[] => {
   }
 
   return result;
-};
-
-const sanitizeCustomCode = (value: unknown): string => {
-  if (typeof value !== 'string') return '';
-  return value.slice(0, MAX_CUSTOM_CODE_CHARS);
 };
 
 async function getThemePayload() {
@@ -492,6 +491,21 @@ export async function PUT(req: NextRequest) {
     const rawBodySnippet = body?.customBody ?? body?.customCode ?? body?.customJs ?? '';
     const customHead = sanitizeCustomCode(rawHeadSnippet);
     const customBody = sanitizeCustomCode(rawBodySnippet);
+
+    const cssValidationError = validateThemeCustomCss(customCss);
+    if (cssValidationError) {
+      return NextResponse.json({ error: cssValidationError }, { status: 400 });
+    }
+
+    const headValidationError = validateThemeCustomMarkup('head', customHead);
+    if (headValidationError) {
+      return NextResponse.json({ error: headValidationError }, { status: 400 });
+    }
+
+    const bodyValidationError = validateThemeCustomMarkup('body', customBody);
+    if (bodyValidationError) {
+      return NextResponse.json({ error: bodyValidationError }, { status: 400 });
+    }
 
     const colorPalette = sanitizePalette(body?.colorPalette);
 

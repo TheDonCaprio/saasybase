@@ -85,12 +85,12 @@ export interface AdminAnalyticsResponse {
 export const ADMIN_ANALYTICS_PERIODS: AdminAnalyticsPeriodOption[] = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last 24 hours', value: '1d' },
-  { label: 'Last 7 days', value: '7d' },
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
-  { label: 'Last 3 months', value: '3m' },
-  { label: 'Last 6 months', value: '6m' },
-  { label: 'Last 12 months', value: '1y' },
+  { label: '24h', value: '1d' },
+  { label: '7d', value: '7d' },
+  { label: '30d', value: '30d' },
+  { label: '90d', value: '90d' },
+  { label: '3m', value: '3m' },
+  { label: '6m', value: '6m' },
+  { label: '1y', value: '1y' },
   { label: 'All time', value: 'all' }
 ];

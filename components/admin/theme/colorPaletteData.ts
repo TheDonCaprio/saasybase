@@ -464,6 +464,10 @@ export const COLOR_LABELS: Record<ColorHexKey, string> = {
 
 export const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
   {
+    title: 'General',
+    keys: ['borderPrimary', 'borderSecondary', 'accentPrimary', 'accentHover'],
+  },
+  {
     title: 'Backgrounds',
     keys: ['bgPrimary', 'bgTertiary', 'bgQuaternary', 'pageGradientFrom', 'pageGradientVia', 'pageGradientTo', 'pageGlow'],
   },
@@ -478,8 +482,6 @@ export const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
     ],
   },
   { title: 'Text', keys: ['textPrimary', 'textSecondary', 'textTertiary'] },
-  { title: 'Borders', keys: ['borderPrimary', 'borderSecondary'] },
-  { title: 'Accents', keys: ['accentPrimary', 'accentHover'] },
   { title: 'Header', keys: ['headerBg', 'headerText', 'headerBorder', 'headerShadow'] },
   { title: 'Elevation', keys: ['panelShadow', 'cardShadow', 'tabsShadow', 'sidebarShadow'] },
   { title: 'Layout', keys: ['sidebarBg', 'sidebarBorder'] },
@@ -492,12 +494,12 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
     accent: DEFAULT_LIGHT_COLORS.accentPrimary,
     colors: DEFAULT_LIGHT_COLORS,
   },
-  // ── Carbon: IBM Carbon Design ─────────────────────────────────────────
+  // ── Gridline ──────────────────────────────────────────────────────────
   // Flat, no glow, no gradients · 0 radius · strong visible borders ·
   // solid opaque white header · left accent 4 px · neutral gray palette
-  // with blue-60 accent · IBM Productive style
+  // with a bright blue accent · structured utility style
   {
-    name: 'Carbon',
+    name: 'Gridline',
     accent: '#0f62fe',
     colors: {
       bgPrimary: '#ffffff',
@@ -569,11 +571,11 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       glowOpacity: 0,
     },
   },
-  // ── Polaris: Shopify Polaris ───────────────────────────────────────────
+  // ── Evergreen ─────────────────────────────────────────────────────────
   // Warm off-white tones · soft card shadows · rounded (8 px) ·
   // solid header · green accent · no glow · top accent 3 px
   {
-    name: 'Polaris',
+    name: 'Evergreen',
     accent: '#008060',
     colors: {
       bgPrimary: '#f6f6f7',
@@ -645,12 +647,12 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       glowOpacity: 0,
     },
   },
-  // ── Ant: Ant Design ───────────────────────────────────────────────────
+  // ── Keystone ──────────────────────────────────────────────────────────
   // Clean professional · 6 px radius · medium card shadows · blue
   // accent (#1677ff) · solid header with subtle shadow · no glow ·
   // subtle card gradients · top accent 2 px
   {
-    name: 'Ant',
+    name: 'Keystone',
     accent: '#1677ff',
     colors: {
       bgPrimary: '#ffffff',
@@ -722,12 +724,12 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       glowOpacity: 0,
     },
   },
-  // ── Spectrum: Adobe Spectrum ───────────────────────────────────────────
+  // ── Prism ─────────────────────────────────────────────────────────────
   // Refined, accessibility-first · 4 px radius · moderate shadows ·
   // header blur (16 px) · blue accent · left accent 3 px · calm
   // professional gradients · no glow
   {
-    name: 'Spectrum',
+    name: 'Prism',
     accent: '#0d66d0',
     colors: {
       bgPrimary: '#ffffff',
@@ -799,12 +801,12 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       glowOpacity: 0,
     },
   },
-  // ── Primer: GitHub Primer ─────────────────────────────────────────────
+  // ── Baseline ──────────────────────────────────────────────────────────
   // Clean dev-tool aesthetic · 6 px radius · subtle shadows · blue
   // accent · solid header with visible bottom border · no glow · no
   // accents · neutral cool-gray scale
   {
-    name: 'Primer',
+    name: 'Baseline',
     accent: '#0969da',
     colors: {
       bgPrimary: '#ffffff',
@@ -876,32 +878,32 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       glowOpacity: 0,
     },
   },
-  // ── Geist: Vercel Geist ───────────────────────────────────────────────
-  // Ultra-clean · 12 px radius · minimal shadows with tight spread ·
-  // glass header (blur 20) · monochrome palette with no accent color
-  // pop · no glow · no stat-card accents · swiss minimalism
+  // ── Monochrome ────────────────────────────────────────────────────────
+  // Apple HIG-inspired · 12 px radius · minimal shadows ·
+  // glass header (blur 20) · blue-gray tinted neutrals · no glow ·
+  // no stat-card accents · swiss minimalism
   {
-    name: 'Geist',
-    accent: '#171717',
+    name: 'Monochrome',
+    accent: '#1d1d1f',
     colors: {
       bgPrimary: '#ffffff',
-      bgSecondary: '#fafafa',
+      bgSecondary: '#f5f5f7',
       panelBg: '#ffffff',
-      heroBg: '#fafafa',
-      bgTertiary: '#f5f5f5',
-      bgQuaternary: '#e5e5e5',
-      textPrimary: '#171717',
-      textSecondary: '#666666',
-      textTertiary: '#999999',
-      borderPrimary: '#eaeaea',
-      borderSecondary: '#d4d4d4',
-      accentPrimary: '#171717',
+      heroBg: '#f5f5f7',
+      bgTertiary: '#f2f2f7',
+      bgQuaternary: '#e5e5ea',
+      textPrimary: '#1d1d1f',
+      textSecondary: '#6e6e73',
+      textTertiary: '#86868b',
+      borderPrimary: '#d2d2d7',
+      borderSecondary: '#c7c7cc',
+      accentPrimary: '#1d1d1f',
       accentHover: '#000000',
       headerBg: '#ffffffa0',
       headerOpacity: 1,
-      headerText: '#171717',
+      headerText: '#1d1d1f',
       headerBlur: 20,
-      headerBorder: '#eaeaea90',
+      headerBorder: '#d2d2d790',
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
@@ -909,12 +911,12 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       stickyHeaderBg: '#ffffffb0',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 20,
-      stickyHeaderText: '#171717',
-      stickyHeaderBorder: '#eaeaea80',
+      stickyHeaderText: '#1d1d1f',
+      stickyHeaderBorder: '#d2d2d780',
       stickyHeaderBorderOpacity: 1,
       stickyHeaderBorderWidth: 1,
-      sidebarBg: '#fafafa90',
-      sidebarBorder: '#eaeaea80',
+      sidebarBg: '#f5f5f790',
+      sidebarBorder: '#d2d2d780',
       sidebarOpacity: 1,
       headerShadow: '#0000000a',
       headerShadowBlur: 10,
@@ -940,14 +942,14 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
       pageGradientFrom: '#ffffff',
       pageGradientVia: '#ffffff',
       pageGradientTo: '#ffffff',
-      heroGradientFrom: '#fafafa',
-      heroGradientVia: '#fafafa',
-      heroGradientTo: '#fafafa',
+      heroGradientFrom: '#f5f5f7',
+      heroGradientVia: '#f5f5f7',
+      heroGradientTo: '#f5f5f7',
       cardGradientFrom: '#ffffff',
       cardGradientVia: '#ffffff',
       cardGradientTo: '#ffffff',
       tabsGradientFrom: '#ffffff',
-      tabsGradientVia: '#fafafa',
+      tabsGradientVia: '#f5f5f7',
       tabsGradientTo: '#ffffff',
       pageGlow: '#00000000',
       glowOpacity: 0,
@@ -1098,7 +1100,7 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
     },
   },
   {
-    name: 'Cupertino',
+    name: 'Glassline',
     accent: '#0071e3',
     colors: {
       bgPrimary: '#f5f5f7',
@@ -1177,11 +1179,11 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
     accent: DEFAULT_DARK_COLORS.accentPrimary,
     colors: DEFAULT_DARK_COLORS,
   },
-  // ── Carbon: IBM Carbon Dark ───────────────────────────────────────────
+  // ── Gridline Dark ─────────────────────────────────────────────────────
   // Flat, no glow, no gradients · 0 radius · visible white-10 borders ·
   // solid opaque header · left accent 4 px · cool gray 100/90/80 scale
   {
-    name: 'Carbon',
+    name: 'Gridline',
     accent: '#78a9ff',
     colors: {
       bgPrimary: '#161616',
@@ -1253,11 +1255,11 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       glowOpacity: 0,
     },
   },
-  // ── Polaris: Shopify Polaris Dark ─────────────────────────────────────
+  // ── Evergreen Dark ────────────────────────────────────────────────────
   // Warm charcoal base · soft card shadows · 8 px radius · solid
   // header · green accent · no glow · top accent 3 px
   {
-    name: 'Polaris',
+    name: 'Evergreen',
     accent: '#36a977',
     colors: {
       bgPrimary: '#1a1a1a',
@@ -1329,12 +1331,12 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       glowOpacity: 0,
     },
   },
-  // ── Ant: Ant Design Dark ──────────────────────────────────────────────
+  // ── Keystone Dark ─────────────────────────────────────────────────────
   // Cool neutral dark · 6 px radius · medium shadows · blue accent
   // (#1668dc) · solid header with subtle border · no glow · top
   // accent 2 px
   {
-    name: 'Ant',
+    name: 'Keystone',
     accent: '#1668dc',
     colors: {
       bgPrimary: '#141414',
@@ -1406,11 +1408,11 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       glowOpacity: 0,
     },
   },
-  // ── Spectrum: Adobe Spectrum Dark ─────────────────────────────────────
+  // ── Prism Dark ────────────────────────────────────────────────────────
   // Deep gray base · 4 px radius · moderate shadows · blue accent ·
   // header blur 16 · left accent 3 px · no glow
   {
-    name: 'Spectrum',
+    name: 'Prism',
     accent: '#2680eb',
     colors: {
       bgPrimary: '#1e1e1e',
@@ -1482,11 +1484,11 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       glowOpacity: 0,
     },
   },
-  // ── Primer: GitHub Primer Dark ────────────────────────────────────────
+  // ── Baseline Dark ─────────────────────────────────────────────────────
   // Signature GitHub dark · 6 px radius · subtle shadows · blue
   // accent · solid header with bottom border · no glow · no accents
   {
-    name: 'Primer',
+    name: 'Baseline',
     accent: '#58a6ff',
     colors: {
       bgPrimary: '#0d1117',
@@ -1558,65 +1560,65 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       glowOpacity: 0,
     },
   },
-  // ── Geist: Vercel Geist Dark ──────────────────────────────────────────
-  // True black base · 12 px radius · subtle tight shadows · glass
-  // header (blur 20) · monochrome palette · no glow · no accents ·
-  // swiss minimalism
+  // ── Monochrome Dark ───────────────────────────────────────────────────
+  // Apple HIG dark · 12 px radius · elevated surfaces · glass
+  // header (blur 20) · blue-gray tinted grays · no glow ·
+  // system-gray accent for button contrast
   {
-    name: 'Geist',
-    accent: '#ededed',
+    name: 'Monochrome',
+    accent: '#8e8e93',
     colors: {
       bgPrimary: '#000000',
-      bgSecondary: '#111111',
-      panelBg: '#111111',
+      bgSecondary: '#1c1c1e',
+      panelBg: '#1c1c1e',
       heroBg: '#0a0a0a',
-      bgTertiary: '#1a1a1a',
-      bgQuaternary: '#2e2e2e',
-      textPrimary: '#ededed',
-      textSecondary: '#888888',
-      textTertiary: '#666666',
-      borderPrimary: '#222222',
-      borderSecondary: '#333333',
-      accentPrimary: '#ededed',
-      accentHover: '#ffffff',
-      headerBg: '#000000a0',
+      bgTertiary: '#2c2c2e',
+      bgQuaternary: '#3a3a3c',
+      textPrimary: '#f5f5f7',
+      textSecondary: '#98989d',
+      textTertiary: '#636366',
+      borderPrimary: '#38383a',
+      borderSecondary: '#48484a',
+      accentPrimary: '#8e8e93',
+      accentHover: '#787880',
+      headerBg: '#1c1c1ea0',
       headerOpacity: 1,
-      headerText: '#ededed',
+      headerText: '#f5f5f7',
       headerBlur: 20,
-      headerBorder: '#22222290',
+      headerBorder: '#38383a90',
       headerBorderOpacity: 1,
       headerBorderWidth: 1,
       headerMenuFontWeight: 400,
       fontFamily: 'geist',
-      stickyHeaderBg: '#000000b0',
+      stickyHeaderBg: '#000000c0',
       stickyHeaderOpacity: 1,
       stickyHeaderBlur: 20,
-      stickyHeaderText: '#ededed',
-      stickyHeaderBorder: '#22222280',
+      stickyHeaderText: '#f5f5f7',
+      stickyHeaderBorder: '#38383a80',
       stickyHeaderBorderOpacity: 1,
       stickyHeaderBorderWidth: 1,
-      sidebarBg: '#0a0a0a90',
-      sidebarBorder: '#22222280',
+      sidebarBg: '#1c1c1e90',
+      sidebarBorder: '#38383a80',
       sidebarOpacity: 1,
-      headerShadow: '#00000018',
+      headerShadow: '#00000020',
       headerShadowBlur: 10,
       headerShadowSpread: -10,
       surfaceRadius: 12,
       statCardAccentTop: 0,
       statCardAccentLeft: 0,
-      panelShadow: '#00000016',
+      panelShadow: '#00000020',
       panelShadowBlur: 8,
       panelShadowSpread: -8,
-      cardShadow: '#0000001e',
+      cardShadow: '#00000028',
       cardShadowBlur: 12,
       cardShadowSpread: -8,
-      tabsShadow: '#00000012',
+      tabsShadow: '#00000018',
       tabsShadowBlur: 8,
       tabsShadowSpread: -8,
-      sidebarShadow: '#00000010',
+      sidebarShadow: '#00000015',
       sidebarShadowBlur: 8,
       sidebarShadowSpread: -10,
-      stickyHeaderShadow: '#00000018',
+      stickyHeaderShadow: '#00000020',
       stickyHeaderShadowBlur: 10,
       stickyHeaderShadowSpread: -10,
       pageGradientFrom: '#000000',
@@ -1625,12 +1627,12 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
       heroGradientFrom: '#0a0a0a',
       heroGradientVia: '#0a0a0a',
       heroGradientTo: '#0a0a0a',
-      cardGradientFrom: '#111111',
-      cardGradientVia: '#111111',
-      cardGradientTo: '#111111',
-      tabsGradientFrom: '#000000',
-      tabsGradientVia: '#050505',
-      tabsGradientTo: '#000000',
+      cardGradientFrom: '#1c1c1e',
+      cardGradientVia: '#1c1c1e',
+      cardGradientTo: '#1c1c1e',
+      tabsGradientFrom: '#1c1c1e',
+      tabsGradientVia: '#1c1c1e',
+      tabsGradientTo: '#1c1c1e',
       pageGlow: '#00000000',
       glowOpacity: 0,
     },
@@ -1780,7 +1782,7 @@ export const DARK_PRESETS: Array<{ name: string; accent: string; colors: Partial
     },
   },
   {
-    name: 'Cupertino',
+    name: 'Glassline',
     accent: '#0a84ff',
     colors: {
       bgPrimary: '#0b0b0f',

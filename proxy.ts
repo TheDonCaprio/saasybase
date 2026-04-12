@@ -4,6 +4,7 @@ import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
 import { prisma } from '@/lib/prisma';
 import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
 import { canUseLocalhostDevBypass } from '@/lib/dev-admin-bypass';
+import { addVisitTrackingHeaders, getOrCreateVisitSessionId, shouldTrackVisit, trackVisit } from '@/lib/visit-tracking';
 
 type ProxyAuthResult = {
   userId?: unknown;
@@ -93,6 +94,19 @@ const isProtectedRoute = createAuthRouteMatcher([
 
 const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
+async function continueWithVisitTracking(req: NextRequest) {
+  const response = NextResponse.next();
+
+  if (!shouldTrackVisit(req)) {
+    return response;
+  }
+
+  const existingSessionId = req.cookies.get('session-id')?.value;
+  const sessionId = existingSessionId ?? getOrCreateVisitSessionId(req);
+  await trackVisit(req, sessionId);
+  return addVisitTrackingHeaders(response, existingSessionId ? undefined : sessionId);
+}
+
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   const pathname = req.nextUrl.pathname;
 
@@ -148,7 +162,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   }
 
   if (!isProtectedRoute(req)) {
-    return;
+    return continueWithVisitTracking(req);
   }
 
   if (canUseLocalhostDevBypass(req.nextUrl.hostname)) {
@@ -165,7 +179,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   if (isAuthenticated(authResult)) {
     // User is authenticated; let them through to the page/API handler.
     // The handler will decide if they have sufficient permissions (admin vs moderator).
-    return;
+    return continueWithVisitTracking(req);
   }
 
   // User is NOT authenticated. For API routes, return JSON 401.

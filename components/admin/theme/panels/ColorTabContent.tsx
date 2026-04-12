@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx, { type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faFloppyDisk, faPaintBrush, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 import { ConfirmModal } from '../../../ui/ConfirmModal';
 import { ColorPickerWithAlpha } from '../ColorPickerWithAlpha';
@@ -76,6 +76,8 @@ export function ColorTabContent({
 
   const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
   const [deletePresetLoading, setDeletePresetLoading] = useState(false);
+  const [themeEditorOpen, setThemeEditorOpen] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const custom = customPresets.map((preset) => {
     const modeColors = colorMode === 'light' ? preset.light : preset.dark;
@@ -271,19 +273,6 @@ export function ColorTabContent({
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Presets</div>
-          {onSavePreset ? (
-            <button
-              type="button"
-              onClick={() => {
-                setSavePresetName('');
-                setSaveModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
-            >
-              <FontAwesomeIcon icon={faFloppyDisk} className="h-3.5 w-3.5" />
-              Save current as preset
-            </button>
-          ) : null}
         </div>
         <div className="flex flex-wrap gap-3">
           {presets.map((preset) => {
@@ -334,12 +323,43 @@ export function ColorTabContent({
         </div>
       </section>
 
+      {/* Theme Editor toggle */}
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            setThemeEditorOpen((prev) => {
+              if (!prev) {
+                requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+              }
+              return !prev;
+            });
+          }}
+          className={cx(
+            'inline-flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all',
+            themeEditorOpen
+              ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-inner dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
+          )}
+        >
+          <FontAwesomeIcon icon={faPaintBrush} className="h-3.5 w-3.5" />
+          Theme Editor
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            className={cx('h-3 w-3 transition-transform', themeEditorOpen && 'rotate-180')}
+          />
+        </button>
+      </div>
+
+      {themeEditorOpen && (
+      <div ref={editorRef} className="space-y-8">
+
       {/* Per-token pickers */}
       <section className="space-y-6">
         {COLOR_GROUPS.map((group) => (
           <div key={group.title}>
             <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">{group.title}</div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {group.keys.map((key) => (
                 <div
                   key={key}
@@ -362,7 +382,7 @@ export function ColorTabContent({
       {/* Header effects */}
       <section>
         <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Header</div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
             <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Header blur (px)</label>
             <div className="flex items-center gap-3">
@@ -528,7 +548,7 @@ export function ColorTabContent({
 
       <section>
         <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Surface elevation</div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
             <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Panel shadow blur (px)</label>
             <div className="flex items-center gap-3">
@@ -741,7 +761,7 @@ export function ColorTabContent({
 
       <section>
         <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-neutral-100">Structure</div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
             <label className="block text-sm font-medium text-slate-900 dark:text-neutral-100">Surface radius (px)</label>
             <div className="flex items-center gap-3">
@@ -821,6 +841,25 @@ export function ColorTabContent({
           </div>
         </div>
       </section>
+
+      {onSavePreset ? (
+        <div className="flex justify-end pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setSavePresetName('');
+              setSaveModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+          >
+            <FontAwesomeIcon icon={faFloppyDisk} className="h-3.5 w-3.5" />
+            Save current as preset
+          </button>
+        </div>
+      ) : null}
+
+      </div>
+      )}
 
       {/* Live preview */}
       <section>

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useAuthSession } from '@/lib/auth-provider/client';
 import {
+  dashboardPanelClass,
+  dashboardMutedPanelClass,
   dashboardPillClass,
 } from '@/components/dashboard/dashboardSurfaces';
 import { WarningsModal, type AppWarning, type SharedCapContext } from '@/components/ui/WarningsModal';
@@ -16,11 +18,6 @@ type ProfilePayload = {
   sharedTokens?: { tokenName?: string; remaining?: number } | null;
   planSource?: 'PERSONAL' | 'ORGANIZATION' | 'FREE';
 };
-
-function formatBucketDisplay(value: number | undefined, isUnlimited?: boolean) {
-  if (isUnlimited) return 'Unlimited';
-  return Math.max(0, Number(value ?? 0)).toLocaleString();
-}
 
 type Operation = {
   id: string;
@@ -77,27 +74,28 @@ function safeInt(value: unknown) {
   return null;
 }
 
-function defaultBucketForProfile(profile: ProfilePayload | null): Bucket {
+function defaultBucketForProfile(profile: ProfilePayload | null, isTeamWorkspace: boolean): Bucket {
   if (!profile) return 'auto';
-  const sharedRemaining = Math.max(0, Number(profile.sharedTokens?.remaining ?? 0));
+
+  if (isTeamWorkspace) {
+    // In team workspace, only the shared bucket is usable
+    return 'shared';
+  }
+
+  // In personal workspace, only paid and free are usable
   const paidRemaining = Math.max(0, Number(profile.paidTokens?.remaining ?? 0));
   const paidUnlimited = profile.paidTokens?.isUnlimited === true;
   const freeRemaining = Math.max(0, Number(profile.freeTokens?.remaining ?? 0));
 
-  // Prefer buckets with available balance.
-  if (sharedRemaining > 0) return 'shared';
   if (paidUnlimited || paidRemaining > 0) return 'paid';
   if (freeRemaining > 0) return 'free';
-
-  // No remaining balance in any bucket: preserve legacy PERSONAL fallback.
-  if (profile.planSource === 'PERSONAL') return 'paid';
-  return 'free';
+  return 'paid';
 }
 
-function resolveBucket(bucket: Bucket, profile: ProfilePayload | null): Exclude<Bucket, 'auto'> {
+function resolveBucket(bucket: Bucket, profile: ProfilePayload | null, isTeamWorkspace = false): Exclude<Bucket, 'auto'> {
   if (bucket !== 'auto') return bucket;
-  const fallback = defaultBucketForProfile(profile);
-  return fallback === 'auto' ? 'free' : fallback;
+  const fallback = defaultBucketForProfile(profile, isTeamWorkspace);
+  return fallback === 'auto' ? (isTeamWorkspace ? 'shared' : 'free') : fallback;
 }
 
 function getBucketTokenName(resolved: Exclude<Bucket, 'auto'>, profile: ProfilePayload | null) {
@@ -120,7 +118,7 @@ function formatEventTime(at: number) {
   }).format(new Date(at));
 }
 
-export default function SaaSyAppClient() {
+export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: boolean }) {
   const { orgId, isLoaded, isSignedIn } = useAuthSession();
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -140,8 +138,13 @@ export default function SaaSyAppClient() {
   const [customLabel, setCustomLabel] = useState('Custom operation');
   const [customCost, setCustomCost] = useState('10');
 
-  const resolvedBucket = useMemo(() => resolveBucket(bucket, profile), [bucket, profile]);
+  const resolvedBucket = useMemo(() => resolveBucket(bucket, profile, isTeamWorkspace), [bucket, profile, isTeamWorkspace]);
   const tokenName = useMemo(() => getBucketTokenName(resolvedBucket, profile), [resolvedBucket, profile]);
+
+  // Bucket options available in the current workspace
+  const availableBuckets: Bucket[] = isTeamWorkspace
+    ? ['shared']
+    : ['paid', 'free'];
 
   async function refreshProfile() {
     setProfileError(null);
@@ -171,16 +174,26 @@ export default function SaaSyAppClient() {
     if (!profile) return;
     setBucket((prev) => {
       if (prev === 'auto') return 'auto';
-      if (prev === 'shared' && !profile.sharedTokens) return defaultBucketForProfile(profile);
+      // If the selected bucket is no longer valid for this workspace, reset
+      if (isTeamWorkspace && prev !== 'shared') return 'shared';
+      if (!isTeamWorkspace && prev === 'shared') return defaultBucketForProfile(profile, isTeamWorkspace);
       return prev;
     });
-  }, [profile]);
+  }, [profile, isTeamWorkspace]);
 
   async function spend(cost: number, label: string, spendBucket: Bucket, feature?: string) {
     setMessage(null);
 
-    if (spendBucket === 'shared' && !profile?.sharedTokens) {
-      setMessage('Shared workspace tokens are not available in your current account context.');
+    // Resolve auto to a concrete bucket before validation
+    const resolved = resolveBucket(spendBucket, profile, isTeamWorkspace);
+
+    // Enforce workspace bucket restrictions
+    if (isTeamWorkspace && resolved !== 'shared') {
+      setMessage('Only the shared (organization) bucket is available in a team workspace.');
+      return;
+    }
+    if (!isTeamWorkspace && resolved === 'shared') {
+      setMessage('The shared bucket is only available in a team workspace.');
       return;
     }
 
@@ -282,35 +295,13 @@ export default function SaaSyAppClient() {
   const freeRemaining = profile?.freeTokens?.remaining ?? 0;
   const sharedRemaining = profile?.sharedTokens?.remaining ?? 0;
   const paidRemaining = profile?.paidTokens?.remaining ?? 0;
-  const balanceItems = [
-    {
-      key: 'paid',
-      label: 'Paid',
-      value: formatBucketDisplay(paidRemaining, profile?.paidTokens?.isUnlimited),
-      tokenLabel: profile?.paidTokens?.tokenName ?? 'tokens',
-      accent: 'bg-emerald-500',
-      mutedAccent: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-200',
-    },
-    {
-      key: 'free',
-      label: 'Free',
-      value: formatBucketDisplay(freeRemaining),
-      tokenLabel: profile?.freeTokens?.tokenName ?? 'tokens',
-      accent: 'bg-sky-500',
-      mutedAccent: 'bg-sky-500/12 text-sky-700 dark:text-sky-200',
-    },
-    {
-      key: 'shared',
-      label: 'Shared',
-      value: formatBucketDisplay(sharedRemaining),
-      tokenLabel: profile?.sharedTokens?.tokenName ?? 'tokens',
-      accent: 'bg-violet-500',
-      mutedAccent: 'bg-violet-500/12 text-violet-700 dark:text-violet-200',
-    },
-  ] as const;
+  // keep these referenced so lint doesn't flag them as unused (used by event log display)
+  void freeRemaining;
+  void sharedRemaining;
+  void paidRemaining;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.75))] bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(248,250,252,0.96))] shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:bg-[linear-gradient(180deg,rgba(10,14,24,0.96),rgba(14,18,28,0.98))] dark:shadow-[0_30px_90px_rgba(2,6,23,0.48)]">
+    <div className="space-y-6">
       <WarningsModal
         isOpen={warningOpen}
         warnings={warningPayload?.warnings ?? []}
@@ -328,77 +319,38 @@ export default function SaaSyAppClient() {
         acknowledgeLabel="Close"
         onClose={() => setMessage(null)}
       />
-        <section className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.75))] bg-[linear-gradient(135deg,rgba(250,250,255,0.92),rgba(239,246,255,0.72))] px-4 py-4 dark:bg-[linear-gradient(135deg,rgba(32,23,60,0.5),rgba(8,15,28,0.3))] sm:px-5">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,28rem)] xl:items-end">
-            <div className="min-w-0 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-violet-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white shadow-sm">
-                  Demo Token Operations
-                </span>
-                <span className={dashboardPillClass('bg-white/70 dark:bg-white/5')}>
-                  Bucket <span className="font-semibold uppercase text-slate-900 dark:text-neutral-100">{resolvedBucket}</span>
-                </span>
-                <span className={dashboardPillClass('bg-white/70 dark:bg-white/5')}>
-                  Unit <span className="font-semibold text-slate-900 dark:text-neutral-100">{tokenName}</span>
-                </span>
-              </div>
 
-              {profileError ? (
-                <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
-              ) : profile ? (
-                <div className="grid grid-cols-3 gap-2 xl:max-w-3xl">
-                  {balanceItems.map((item) => (
-                    <div
-                      key={item.key}
-                      className="min-w-0 rounded-2xl border border-white/60 bg-white/80 px-2.5 py-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.04] sm:flex sm:items-center sm:gap-3 sm:px-3 sm:py-3"
-                    >
-                      <span className={clsx('mb-2 block h-1.5 w-8 rounded-full sm:mb-0 sm:h-10 sm:w-1.5', item.accent)} />
-                      <div className="min-w-0">
-                        <p className="truncate text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-400 sm:text-[11px] sm:tracking-[0.22em]">{item.label}</p>
-                        <div className="mt-1 flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:gap-2">
-                          <span className="text-sm font-semibold tracking-[-0.03em] text-slate-950 dark:text-white sm:text-lg">{item.value}</span>
-                          <span className={clsx('max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2', item.mutedAccent)}>{item.tokenLabel}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-600 dark:text-neutral-300">Loading balances…</p>
-              )}
+        {/* Controls bar */}
+        <section className={dashboardPanelClass('p-4 sm:p-5')}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-[color:rgb(var(--accent-rgb))] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white shadow-sm">
+                {isTeamWorkspace ? 'Team workspace' : 'Personal workspace'}
+              </span>
+              <span className={dashboardPillClass()}>
+                Bucket <span className="font-semibold uppercase text-slate-900 dark:text-neutral-100">{resolvedBucket}</span>
+              </span>
+              <span className={dashboardPillClass()}>
+                Unit <span className="font-semibold text-slate-900 dark:text-neutral-100">{tokenName}</span>
+              </span>
             </div>
 
-            <div className="w-full rounded-[24px] border border-white/70 bg-white/85 p-3 shadow-[0_16px_32px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-black/20 lg:p-4 xl:max-w-xl xl:justify-self-end">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-neutral-400">Preferred bucket</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Pick a source bucket, run a real spend action, and experiment with token operations.</p>
-                </div>
-                <button
-                  type="button"
-                  className="h-8 whitespace-nowrap rounded-2xl border border-violet-700 bg-violet-600 px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(124,58,237,0.22)] transition hover:bg-violet-500 disabled:opacity-70 dark:border-violet-400 dark:bg-violet-500 dark:text-white dark:hover:bg-violet-400"
-                  disabled={busy}
-                  onClick={() =>
-                    refreshProfile().catch((err: unknown) =>
-                      setMessage(err instanceof Error ? err.message : 'Refresh failed')
-                    )
-                  }
-                >
-                  Refresh
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              {profileError ? (
+                <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
+              ) : null}
 
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {['auto', 'paid', 'free', 'shared'].map((option) => (
+              <div className="flex gap-2">
+                {availableBuckets.map((option) => (
                   <button
                     key={option}
                     type="button"
-                    disabled={busy || (option === 'shared' && !profile?.sharedTokens)}
-                    onClick={() => setBucket(option as Bucket)}
+                    disabled={busy}
+                    onClick={() => setBucket(option)}
                     className={clsx(
-                      'rounded-2xl px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50',
-                      bucket === option
-                        ? 'bg-violet-600 text-white shadow-[0_10px_24px_rgba(124,58,237,0.28)] dark:bg-violet-500 dark:text-white'
+                      'rounded-[var(--theme-surface-radius)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50',
+                      (bucket === option || (bucket === 'auto' && resolvedBucket === option))
+                        ? 'bg-[color:rgb(var(--accent-rgb))] text-white shadow-sm'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-neutral-300 dark:hover:bg-white/10'
                     )}
                   >
@@ -407,15 +359,29 @@ export default function SaaSyAppClient() {
                 ))}
               </div>
 
+              <button
+                type="button"
+                className="h-8 whitespace-nowrap rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--accent-rgb))] bg-[color:rgb(var(--accent-rgb))] px-4 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70"
+                disabled={busy}
+                onClick={() =>
+                  refreshProfile().catch((err: unknown) =>
+                    setMessage(err instanceof Error ? err.message : 'Refresh failed')
+                  )
+                }
+              >
+                Refresh
+              </button>
             </div>
           </div>
         </section>
 
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-          <section className="min-w-0 border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.75))] px-4 py-4 dark:border-b-white/10 xl:border-b-0 xl:border-r xl:px-5">
+        {/* Main area: operations + event log */}
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
+          <section className="min-w-0 space-y-4">
 
-            <div className="overflow-hidden rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 dark:bg-white/[0.03]">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-neutral-400">
+            {/* Operations table */}
+            <div className={dashboardPanelClass('p-0 overflow-hidden')}>
+              <div className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-neutral-400">
                 <span>Action</span>
               </div>
               <div className="divide-y divide-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))]">
@@ -431,7 +397,7 @@ export default function SaaSyAppClient() {
                     <button
                       type="button"
                       disabled={busy}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-violet-300 hover:text-violet-700 disabled:opacity-70 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:hover:border-violet-500/50 dark:hover:text-violet-200"
+                      className="rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[color:rgb(var(--accent-rgb)_/_0.5)] hover:text-[color:rgb(var(--accent-rgb))] disabled:opacity-70 dark:text-neutral-100"
                       onClick={() => spend(op.cost, op.label, bucket, op.feature)}
                     >
                       Run
@@ -441,7 +407,8 @@ export default function SaaSyAppClient() {
               </div>
             </div>
 
-            <section className="mt-4 overflow-hidden rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,250,252,0.7))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
+            {/* Quick composer */}
+            <div className={dashboardMutedPanelClass('p-0 overflow-hidden')}>
               <div className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-neutral-400">Quick composer</p>
                 <h3 className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">Custom operation</h3>
@@ -454,7 +421,7 @@ export default function SaaSyAppClient() {
                   onChange={(e) => setCustomLabel(e.target.value)}
                   placeholder="Operation label"
                   disabled={busy}
-                  className="h-10 min-w-[10rem] flex-[1.6] rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/15 disabled:opacity-70 dark:border-neutral-700 dark:bg-neutral-950/80 dark:text-neutral-100"
+                  className="h-10 min-w-[10rem] flex-[1.6] rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
                 />
                 <input
                   suppressHydrationWarning
@@ -463,12 +430,12 @@ export default function SaaSyAppClient() {
                   inputMode="numeric"
                   placeholder="Cost"
                   disabled={busy}
-                  className="h-10 w-24 shrink-0 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/15 disabled:opacity-70 dark:border-neutral-700 dark:bg-neutral-950/80 dark:text-neutral-100"
+                  className="h-10 w-24 shrink-0 rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--surface-card))] px-3 text-sm text-slate-900 shadow-sm focus:border-[color:rgb(var(--accent-rgb))] focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--accent-rgb)_/_0.15)] disabled:opacity-70 dark:text-neutral-100"
                 />
                 <button
                   type="button"
                   disabled={busy}
-                  className="h-10 shrink-0 rounded-2xl bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-70"
+                  className="h-10 shrink-0 rounded-[var(--theme-surface-radius)] bg-[color:rgb(var(--accent-rgb))] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-70"
                   onClick={() => {
                     const cost = safeInt(customCost);
                     spend(cost ?? 0, customLabel || 'Custom operation', bucket, 'custom');
@@ -478,12 +445,12 @@ export default function SaaSyAppClient() {
                 </button>
                 </div>
               </div>
-            </section>
+            </div>
           </section>
 
-          <aside className="min-w-0 px-4 py-4 sm:px-5">
-            <div className="space-y-4">
-              <section className="overflow-hidden rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 dark:bg-white/[0.03]">
+          {/* Event log sidebar */}
+          <aside className="min-w-0">
+              <div className={dashboardPanelClass('p-0 overflow-hidden')}>
                 <div className="flex items-center justify-between gap-3 border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-neutral-400">Recent operations</p>
@@ -527,8 +494,7 @@ export default function SaaSyAppClient() {
                     ))}
                   </ul>
                 )}
-              </section>
-            </div>
+              </div>
           </aside>
         </div>
     </div>

@@ -333,13 +333,9 @@ export default function AnalyticsDashboard({
       <div className={dashboardPanelClass('space-y-5 p-3 sm:p-4')}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <span className={dashboardPillClass('text-xs font-semibold text-indigo-600 dark:text-indigo-200')}>
-              {periodMeta.label}
-            </span>
+
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-neutral-50">
-                Analytics for {periodMeta.label.toLowerCase()}
-              </h2>
+
               <p className="text-sm text-slate-600 dark:text-neutral-300">{rangeLabel}</p>
             </div>
           </div>

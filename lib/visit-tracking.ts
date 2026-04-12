@@ -1,52 +1,57 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getEnv } from './env';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { getRequestIp } from './request-ip';
 
-export async function trackVisit(request: NextRequest) {
+export function shouldTrackVisit(request: NextRequest): boolean {
+  if (!['GET', 'HEAD'].includes(request.method.toUpperCase())) {
+    return false;
+  }
+
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/admin/') ||
+    pathname.includes('.')
+  ) {
+    return false;
+  }
+
+  const userAgent = request.headers.get('user-agent') || '';
+  const botPatterns = [
+    'bot', 'crawler', 'spider', 'scraper', 'facebook', 'twitter',
+    'linkedin', 'google', 'bing', 'yahoo', 'duckduck', 'baidu',
+    'yandex', 'pinterest', 'whatsapp', 'telegram', 'discord',
+    'lighthouse', 'pagespeed', 'gtmetrix', 'pingdom', 'uptimerobot'
+  ];
+
+  return !botPatterns.some((pattern) => userAgent.toLowerCase().includes(pattern));
+}
+
+export function getOrCreateVisitSessionId(request: NextRequest): string {
+  return request.cookies.get('session-id')?.value || generateSessionId();
+}
+
+export async function trackVisit(request: NextRequest, sessionId = getOrCreateVisitSessionId(request)) {
   try {
-    // Skip tracking for certain paths and bots
+    if (!shouldTrackVisit(request)) {
+      return;
+    }
+
     const { pathname } = request.nextUrl;
-    
-    // Skip API routes, static files, and admin routes
-    if (
-      pathname.startsWith('/api/') ||
-      pathname.startsWith('/_next/') ||
-      pathname.startsWith('/admin/') ||
-      pathname.includes('.') ||
-      pathname.startsWith('/sign-in') ||
-      pathname.startsWith('/sign-up')
-    ) {
-      return;
-    }
 
-    // Skip known bots and crawlers
     const userAgent = request.headers.get('user-agent') || '';
-    const botPatterns = [
-      'bot', 'crawler', 'spider', 'scraper', 'facebook', 'twitter',
-      'linkedin', 'google', 'bing', 'yahoo', 'duckduck', 'baidu',
-      'yandex', 'pinterest', 'whatsapp', 'telegram', 'discord',
-      'lighthouse', 'pagespeed', 'gtmetrix', 'pingdom', 'uptimerobot'
-    ];
-    
-    if (botPatterns.some(pattern => userAgent.toLowerCase().includes(pattern))) {
-      return;
-    }
 
-    // Extract visit information
     const ip = getRequestIp(request) ?? 'unknown';
-    
     const referrer = request.headers.get('referer') || 'direct';
-    const sessionId = request.cookies.get('session-id')?.value || generateSessionId();
-    
-    // Get geographic data (simplified - in production you'd use a service like MaxMind)
+
     const country = request.headers.get('cf-ipcountry') || 
                    getCountryFromIP(ip) || 
                    'Unknown';
 
-    // Create visit record asynchronously to not block the request
     createVisitRecord({
       sessionId,
       ip,
@@ -74,14 +79,30 @@ async function createVisitRecord(data: {
   path: string;
 }) {
   try {
-    // Use fetch to call an internal API endpoint; require validated NEXT_PUBLIC_APP_URL
-    const base = getEnv().NEXT_PUBLIC_APP_URL;
+    const base = process.env.NEXT_PUBLIC_APP_URL;
+    if (!base) {
+      Logger.warn('Visit tracking skipped because NEXT_PUBLIC_APP_URL is not configured');
+      return;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    if (process.env.NODE_ENV === 'production') {
+      const internalApiToken = process.env.INTERNAL_API_TOKEN;
+      if (!internalApiToken) {
+        Logger.warn('Visit tracking skipped because INTERNAL_API_TOKEN is not configured in production');
+        return;
+      }
+      headers.Authorization = `Bearer ${internalApiToken}`;
+    } else {
+      headers['X-Internal-API'] = 'true';
+    }
+
     await fetch(`${base}/api/internal/track-visit`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-API': 'true'
-      },
+      headers,
       body: JSON.stringify(data)
     });
   } catch (error: unknown) {
@@ -104,7 +125,7 @@ function getCountryFromIP(ip: string): string | null {
 }
 
 export function addVisitTrackingHeaders(response: NextResponse, sessionId?: string) {
-  if (sessionId && !response.cookies.get('session-id')) {
+  if (sessionId) {
     response.cookies.set('session-id', sessionId, {
       maxAge: 30 * 24 * 60 * 60, // 30 days
       httpOnly: true,

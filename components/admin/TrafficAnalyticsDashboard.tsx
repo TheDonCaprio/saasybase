@@ -492,16 +492,10 @@ export default function TrafficAnalyticsDashboard({
       <div className={dashboardPanelClass('space-y-6 p-4 sm:p-6')}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <span className={dashboardPillClass('text-xs font-semibold text-indigo-600 dark:text-indigo-200')}>
-              {periodMeta.label}
-            </span>
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-neutral-50">Filtered traffic activity</h2>
+
               <p className="text-sm text-slate-600 dark:text-neutral-300">{rangeLabel}</p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-neutral-400">
-              Benchmarks update in real time from Google Analytics. Toggle periods or apply filters to focus on the segments you care about most.
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {quickPeriodOptions.map((option) => (

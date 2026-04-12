@@ -59,20 +59,18 @@ export default async function TrafficPage() {
   let pageViewsYesterday = 0;
 
   try {
-    const todaySnapshot = await getAdminTrafficSnapshot({ period: '1d' });
-    visitsToday = Number(todaySnapshot.totals?.visits ?? 0);
-    pageViewsToday = Number(todaySnapshot.totals?.pageViews ?? 0);
+    const twoDayTraffic = await getAdminTrafficSnapshot({ period: '2d' });
+    const visitSeries = twoDayTraffic.charts?.visits ?? [];
+    const pageViewSeries = twoDayTraffic.charts?.pageViews ?? [];
+    const todayVisitPoint = visitSeries[visitSeries.length - 1];
+    const yesterdayVisitPoint = visitSeries.length > 1 ? visitSeries[visitSeries.length - 2] : null;
+    const todayPageViewPoint = pageViewSeries[pageViewSeries.length - 1];
+    const yesterdayPageViewPoint = pageViewSeries.length > 1 ? pageViewSeries[pageViewSeries.length - 2] : null;
 
-    try {
-      const now = new Date();
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const yStr = yesterday.toISOString().slice(0, 10);
-      const yesterdaySnapshot = await getAdminTrafficSnapshot({ period: 'custom', startDate: yStr, endDate: yStr });
-      visitsYesterday = Number(yesterdaySnapshot.totals?.visits ?? 0);
-      pageViewsYesterday = Number(yesterdaySnapshot.totals?.pageViews ?? 0);
-    } catch {
-      // ignore secondary GA failure
-    }
+    visitsToday = Number(todayVisitPoint?.value ?? 0);
+    visitsYesterday = Number(yesterdayVisitPoint?.value ?? 0);
+    pageViewsToday = Number(todayPageViewPoint?.value ?? 0);
+    pageViewsYesterday = Number(yesterdayPageViewPoint?.value ?? 0);
   } catch {
     // GA unavailable — keep zeros
   }

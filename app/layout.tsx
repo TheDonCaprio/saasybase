@@ -33,6 +33,7 @@ import { cookies } from 'next/headers';
 import Script from 'next/script';
 import Link from 'next/link';
 import TwitterLoader from '../components/twitter/TwitterLoader';
+import VisitTracker from '../components/VisitTracker';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
@@ -322,11 +323,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '${gaMeasurementId}', { anonymize_ip: true${gaConfigExtras} });`
+gtag('config', '${gaMeasurementId}', { anonymize_ip: true, send_page_view: false${gaConfigExtras} });`
                 }}
               />
             </>
           ) : null}
+          <VisitTracker measurementId={gaMeasurementId} />
           {/* Payment provider scripts (loaded dynamically based on active provider) */}
           <PaymentProviderScripts provider={process.env.PAYMENT_PROVIDER} />
           <SiteHeader

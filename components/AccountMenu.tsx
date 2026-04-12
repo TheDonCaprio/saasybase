@@ -45,10 +45,7 @@ export default function AccountMenu() {
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
-    if (!profile) {
-      resetProfile();
-    }
-  }, [profile, resetProfile]);
+  }, []);
 
   useEffect(() => {
     if (prevOrgIdRef.current === currentOrgId) return;
@@ -108,7 +105,14 @@ export default function AccountMenu() {
 
   if (!isLoaded) {
     return (
-      <div className="w-9 h-9 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+      <button
+        type="button"
+        disabled
+        aria-label="Account menu loading"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 transition-colors dark:bg-neutral-800 dark:text-neutral-500"
+      >
+        <FontAwesomeIcon icon={faUser} className="h-5 w-5" />
+      </button>
     );
   }
 
@@ -130,6 +134,7 @@ export default function AccountMenu() {
   const planActionLabel = profile?.planActionLabel ?? (profile?.planSource === 'FREE' ? 'Upgrade' : 'Change Plan');
   const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
   const shouldShowSharedTokens = Boolean(isOrganizationContext && profile?.sharedTokens);
+  const shouldShowFreeTokens = Boolean(!isOrganizationContext && profile?.freeTokens);
   const billingDateValue = isOrganizationContext
     ? profile?.organization?.expiresAt ?? profile?.subscription?.expiresAt ?? null
     : profile?.subscription?.expiresAt ?? null;
@@ -257,8 +262,7 @@ export default function AccountMenu() {
                   </div>
                 )}
 
-                {/* Free tokens (always visible) */}
-                {profile.freeTokens && (
+                {shouldShowFreeTokens && profile.freeTokens && (
                   <div className="flex items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faCoins} className="w-4 h-4 text-sky-500" />
                     <span className="text-neutral-700 dark:text-neutral-300">

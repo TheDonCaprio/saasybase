@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   };
 
   const navCandidates: NavCandidate[] = [
-    { href: '/admin', label: 'Overview', icon: faTachometerAlt },
+    { href: '/admin', label: 'Dashboard', icon: faTachometerAlt },
     { href: '/admin/users', label: 'Users', badge: String(userCount), icon: faUsers, section: 'users' },
     { href: '/admin/organizations', label: 'Organizations', icon: faSitemap, section: 'organizations' },
     { href: '/admin/transactions', label: 'Transactions', badge: String(payCount), icon: faFileInvoiceDollar, section: 'transactions' },

@@ -104,6 +104,13 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isAbortError(error: unknown): boolean {
+  return Boolean(
+    (error instanceof DOMException && error.name === 'AbortError')
+    || (error instanceof Error && error.name === 'AbortError')
+  );
+}
+
 function createInitialState(orgId: string | null): ProfileState {
   return {
     orgId,
@@ -125,7 +132,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const prevOrgIdRef = useRef(currentOrgId);
 
   const resetProfile = useCallback(() => {
-    abortControllerRef.current?.abort();
+    abortControllerRef.current?.abort('profile-reset');
     abortControllerRef.current = null;
     inFlightPromiseRef.current = null;
     setProfileState(createInitialState(currentOrgId));
@@ -155,7 +162,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    abortControllerRef.current?.abort();
+    abortControllerRef.current?.abort('profile-refresh');
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -168,36 +175,22 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     }));
 
     const requestPromise = (async () => {
-      if (delayMs > 0) {
-        await delay(delayMs);
-      }
+      try {
+        if (delayMs > 0) {
+          await delay(delayMs);
+        }
 
-      const response = await fetch('/api/user/profile', {
-        credentials: 'same-origin',
-        signal: controller.signal,
-      });
+        if (controller.signal.aborted) {
+          return null;
+        }
 
-      if (response.ok) {
-        const data = (await response.json()) as Partial<SharedUserProfile> | null;
-        const hasUser =
-          Boolean(data?.user)
-          && typeof data?.user?.id === 'string'
-          && typeof data?.user?.name === 'string'
-          && typeof data?.user?.email === 'string'
-          && typeof data?.user?.role === 'string';
-
-        return hasUser ? (data as SharedUserProfile) : null;
-      }
-
-      if (retryOnUnauthorized && response.status === 401) {
-        await delay(PROFILE_FETCH_RETRY_DELAY_MS);
-        const retriedResponse = await fetch('/api/user/profile', {
+        const response = await fetch('/api/user/profile', {
           credentials: 'same-origin',
           signal: controller.signal,
         });
 
-        if (retriedResponse.ok) {
-          const data = (await retriedResponse.json()) as Partial<SharedUserProfile> | null;
+        if (response.ok) {
+          const data = (await response.json()) as Partial<SharedUserProfile> | null;
           const hasUser =
             Boolean(data?.user)
             && typeof data?.user?.id === 'string'
@@ -208,18 +201,49 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           return hasUser ? (data as SharedUserProfile) : null;
         }
 
-        if (retriedResponse.status === 401) {
+        if (retryOnUnauthorized && response.status === 401) {
+          await delay(PROFILE_FETCH_RETRY_DELAY_MS);
+
+          if (controller.signal.aborted) {
+            return null;
+          }
+
+          const retriedResponse = await fetch('/api/user/profile', {
+            credentials: 'same-origin',
+            signal: controller.signal,
+          });
+
+          if (retriedResponse.ok) {
+            const data = (await retriedResponse.json()) as Partial<SharedUserProfile> | null;
+            const hasUser =
+              Boolean(data?.user)
+              && typeof data?.user?.id === 'string'
+              && typeof data?.user?.name === 'string'
+              && typeof data?.user?.email === 'string'
+              && typeof data?.user?.role === 'string';
+
+            return hasUser ? (data as SharedUserProfile) : null;
+          }
+
+          if (retriedResponse.status === 401) {
+            return null;
+          }
+
+          throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
+        }
+
+        if (response.status === 401) {
           return null;
         }
 
-        throw new Error(`Profile fetch failed: ${retriedResponse.status}`);
-      }
+        throw new Error(`Profile fetch failed: ${response.status}`);
+      } catch (error) {
+        if (isAbortError(error)) {
+          return null;
+        }
 
-      if (response.status === 401) {
-        return null;
+        throw error;
       }
-
-      throw new Error(`Profile fetch failed: ${response.status}`);
     })();
 
     inFlightPromiseRef.current = requestPromise;
@@ -235,7 +259,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       });
       return profile;
     } catch (error) {
-      if ((error as Error).name === 'AbortError') {
+      if (isAbortError(error)) {
         return currentStateMatchesOrg ? profileState.profile : null;
       }
 
@@ -308,7 +332,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      abortControllerRef.current?.abort('profile-provider-unmount');
       abortControllerRef.current = null;
       inFlightPromiseRef.current = null;
     };

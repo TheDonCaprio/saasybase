@@ -66,6 +66,7 @@ export function SharedDrawerAccountSection({
       : 'Free Plan';
   const shouldShowPersonalTokens = Boolean(isPersonalContext && personalTokenName && (hasUnlimitedPersonalTokens || personalTokenCount != null));
   const shouldShowSharedTokens = Boolean(isOrganizationContext && profile.sharedTokens);
+  const shouldShowFreeTokens = Boolean(!isOrganizationContext && profile.freeTokens);
   const billingDateValue = isOrganizationContext
     ? profile.organization?.expiresAt ?? profile.subscription?.expiresAt ?? null
     : profile.subscription?.expiresAt ?? null;
@@ -146,7 +147,7 @@ export function SharedDrawerAccountSection({
             </div>
           )}
 
-          {profile.freeTokens && (
+          {shouldShowFreeTokens && profile.freeTokens && (
             <div className="flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-sky-500" />
               <span className="text-neutral-300">

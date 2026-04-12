@@ -278,12 +278,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <head>
           <link rel="icon" href={faviconHref} />
+          <Script
+            id="form-attr-sanitizer"
+            src="/scripts/form-attr-sanitizer.js"
+            strategy="beforeInteractive"
+          />
           {/* External scripts loaded as async <script src> — React 19 treats
               these as hoisted resources so they never trigger the
               "Encountered a script tag" console warning. */}
           <script async src="/scripts/theme-init.js" />
-          <style id="theme-color-vars" dangerouslySetInnerHTML={{ __html: themeColorVarsCss }} />
-          {customCss ? <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
+          <style id="theme-color-vars" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeColorVarsCss }} />
+          {customCss ? <style id="custom-theme-css" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
           {customHeadSnippet ? (
             <>
               <template id="custom-head-snippet-data" dangerouslySetInnerHTML={{ __html: customHeadSnippet }} />

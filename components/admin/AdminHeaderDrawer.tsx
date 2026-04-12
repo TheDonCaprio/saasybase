@@ -92,10 +92,7 @@ export function AdminHeaderDrawer({
   const close = useCallback(() => {
     setOpenPathname(null);
     setDetailsExpanded(false);
-    if (!profile) {
-      resetProfile();
-    }
-  }, [profile, resetProfile]);
+  }, []);
 
   const toggleGroup = useCallback((groupTitle: string) => {
     setExpandedGroups(prev => {

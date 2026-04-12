@@ -90,10 +90,7 @@ export function DashboardHeaderDrawer({
   const close = useCallback(() => {
     setOpenPathname(null);
     setManualDetailsExpanded(false);
-    if (!profile) {
-      resetProfile();
-    }
-  }, [profile, resetProfile]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

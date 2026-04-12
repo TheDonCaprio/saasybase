@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { Logger } from '@/lib/logger';
-import { listAdminFiles } from '@/lib/logoStorage';
+import { listAdminFiles } from '@/lib/fileStorage';
 
 export async function GET(request: NextRequest) {
   try {

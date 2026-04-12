@@ -989,7 +989,7 @@ LOGO_S3_ENDPOINT=""       # Optional: Custom S3-compatible endpoint (Cloudflare 
 
 When `LOGO_CDN_DOMAIN` is set, the upload handler returns CDN URLs (`https://<LOGO_CDN_DOMAIN>/logos/<file>`) instead of raw S3 links.
 
-**File upload scoping:** The `saveAdminFile` helper in `lib/logoStorage.js` scopes uploads to sub-directories based on context (e.g. `/blog/`, `/logos/`, `/files/`) to keep the bucket organized.
+**File upload scoping:** The `saveAdminFile` helper in `lib/fileStorage.js` scopes uploads to sub-directories based on context (e.g. `/logos/`, `/files/`) to keep the bucket organized.
 
 ### S3 CORS (required for browser uploads)
 

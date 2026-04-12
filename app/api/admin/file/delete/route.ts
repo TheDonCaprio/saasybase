@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { recordAdminAction } from '@/lib/admin-actions';
-import { deleteAdminFile } from '@/lib/logoStorage';
+import { deleteAdminFile } from '@/lib/fileStorage';
 import { Logger } from '@/lib/logger';
 
 export async function DELETE(request: NextRequest) {

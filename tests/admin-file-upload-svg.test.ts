@@ -19,7 +19,7 @@ vi.mock('../lib/admin-actions', () => ({
   recordAdminAction: recordAdminActionMock,
 }));
 
-vi.mock('../lib/logoStorage', () => ({
+vi.mock('../lib/fileStorage', () => ({
   saveAdminFile: saveAdminFileMock,
   saveLogo: saveLogoMock,
 }));

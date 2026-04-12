@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
-import { saveAdminFile, saveLogo } from '../../../../../lib/logoStorage';
+import { saveAdminFile, saveLogo } from '../../../../../lib/fileStorage';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
 
 const ALLOWED_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']);

@@ -64,7 +64,7 @@ export function SimpleTiptapEditor({ content, onChange, placeholder = "Start wri
   }
 
   return (
-    <div className={`border border-slate-300 dark:border-neutral-700 rounded-lg overflow-hidden ${className}`}>
+    <div className={`border border-slate-300 dark:border-neutral-700 rounded-[var(--theme-surface-radius)] overflow-hidden ${className}`}>
       {/* Toolbar */}
       <div className="border-b border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-800 p-2 flex flex-wrap gap-1">
         <button

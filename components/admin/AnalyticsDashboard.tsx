@@ -16,8 +16,7 @@ import {
 import {
   dashboardDangerPanelClass,
   dashboardMutedPanelClass,
-  dashboardPanelClass,
-  dashboardPillClass
+  dashboardPanelClass
 } from '../dashboard/dashboardSurfaces';
 
 interface AnalyticsDashboardProps {
@@ -73,11 +72,6 @@ export default function AnalyticsDashboard({
     const end = formatDate(data.endDate, { mode: settings.mode, timezone: settings.timezone });
     return start === end ? start : `${start} → ${end}`;
   }, [data.startDate, data.endDate, settings]);
-
-  const periodMeta = useMemo(
-    () => periodOptions.find((option) => option.value === data.period) ?? { label: data.period.toUpperCase(), value: data.period },
-    [data.period, periodOptions]
-  );
 
   const revenueSeries = useMemo(
     () =>

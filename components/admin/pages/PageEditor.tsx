@@ -1580,7 +1580,7 @@ export default function PageEditor({
                 'relative flex flex-col bg-white shadow-sm dark:bg-neutral-900',
                 isEditorFullscreen
                   ? 'flex-col h-full w-full'
-                  : 'rounded-xl border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
+                  : 'rounded-[var(--theme-surface-radius)] border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
               )}
             >
               {editor ? (
@@ -1590,7 +1590,7 @@ export default function PageEditor({
                     ref={toolbarRef}
                     className={clsx(
                       'sticky z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
-                      isEditorFullscreen ? 'top-0 shadow-sm' : ''
+                      isEditorFullscreen ? 'top-0 shadow-sm' : 'rounded-t-[calc(var(--theme-surface-radius)-1px)]'
                     )}
                     style={!isEditorFullscreen ? { top: 'var(--sticky-header-height, 0px)' } : undefined}
                   >
@@ -2761,8 +2761,8 @@ export default function PageEditor({
 
       {isMounted && showCategoriesModal && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="flex h-[min(90vh,900px)] w-[min(1100px,96vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-700">
+          <div className="flex h-[min(86vh,820px)] w-[min(960px,94vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700 sm:px-5">
               <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Manage blog categories</h3>
               <button
                 type="button"
@@ -2772,10 +2772,11 @@ export default function PageEditor({
                 Close
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
               <BlogCategoriesPanel
                 initialCategories={availableCategories}
                 onCategoriesChange={handleCategoriesPanelChange}
+                variant="modal"
               />
             </div>
           </div>

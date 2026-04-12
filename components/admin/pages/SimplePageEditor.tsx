@@ -525,7 +525,7 @@ export function SimplePageEditor({ value, onChange, placeholder = 'Start writing
 	);
 
 	return (
-		<div className="rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/50">
+		<div className="rounded-[var(--theme-surface-radius)] overflow-hidden border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/50">
 			{renderToolbar()}
 			<div className="max-h-[700px] overflow-y-auto p-4">
 				<EditorContent

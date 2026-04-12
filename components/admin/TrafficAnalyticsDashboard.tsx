@@ -17,8 +17,7 @@ import {
 import {
   dashboardDangerPanelClass,
   dashboardMutedPanelClass,
-  dashboardPanelClass,
-  dashboardPillClass
+  dashboardPanelClass
 } from '../dashboard/dashboardSurfaces';
 
 const BREAKDOWN_PAGE_SIZE = 25;

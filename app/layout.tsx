@@ -273,8 +273,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           backgroundColor: 'rgb(var(--bg-primary))',
           backgroundImage: 'linear-gradient(to bottom, var(--theme-page-gradient-from), var(--theme-page-gradient-via), var(--theme-page-gradient-to))',
           backgroundRepeat: 'no-repeat',
-          backgroundSize: '100% 100%',
-          colorScheme: initialThemeClass === 'dark' ? 'dark' : 'light'
+          backgroundSize: '100% 100%'
         }}
       >
         <head>

@@ -23,6 +23,7 @@
 }
 
 .light {
+  color-scheme: light;
   --bg-primary: 255 255 255; /* white */
   --bg-secondary: 249 250 251; /* gray-50 */
   --bg-tertiary: 243 244 246; /* gray-100 */
@@ -38,6 +39,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --bg-primary: 10 10 10; /* neutral-950 */
   --bg-secondary: 23 23 23; /* neutral-900 */
   --bg-tertiary: 38 38 38; /* neutral-800 */

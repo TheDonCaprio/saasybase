@@ -118,7 +118,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ].filter(group => group.items.length > 0);
 
   return (
-    <div className="min-h-screen w-full overflow-x-clip lg:flex lg:gap-3">
+    <div className="min-h-screen w-full lg:flex lg:gap-3">
       {/* Desktop Sidebar */}
       {/* Desktop Sidebar Placeholder (to keep layout in place) */}
       <div className="hidden lg:block w-64 flex-shrink-0" />

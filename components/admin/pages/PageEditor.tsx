@@ -17,7 +17,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import type { Editor as TiptapEditor, JSONContent } from '@tiptap/core';
 import { useRouter } from 'next/navigation';
 import NextLink from 'next/link';
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { showToast } from '../../ui/Toast';
@@ -196,6 +196,8 @@ export default function PageEditor({
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [toolbarHeight, setToolbarHeight] = useState(0);
+  const [isToolbarPinned, setIsToolbarPinned] = useState(false);
+  const [toolbarPinnedStyle, setToolbarPinnedStyle] = useState<CSSProperties | undefined>(undefined);
   // Refs used for DOM-teleport fullscreen approach
   const editorWrapperRef = useRef<HTMLDivElement | null>(null);
   const editorPlaceholderRef = useRef<HTMLDivElement | null>(null);
@@ -378,6 +380,12 @@ export default function PageEditor({
 
   const headingLevels = [1, 2, 3] as const;
   const textAlignments = ['left', 'center', 'right'] as const;
+  const toolbarButtonClass =
+    'inline-flex h-8 min-w-8 items-center justify-center rounded-md px-1.5 text-[13px] transition hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-violet-500 dark:hover:bg-neutral-800';
+  const toolbarIconClass = 'h-[15px] w-[15px]';
+  const toolbarGroupClass =
+    'flex flex-shrink-0 items-center gap-0.5 border-r border-neutral-200 pr-1.5 dark:border-neutral-700';
+  const toolbarActiveClass = 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400';
 
   const openImageEditor = useCallback((state: ImageEditorState) => {
     setImageEditorState((previous) => {
@@ -952,6 +960,72 @@ export default function PageEditor({
     return () => window.removeEventListener('resize', measure);
   }, [isEditorFullscreen]);
 
+  useEffect(() => {
+    if (isEditorFullscreen) {
+      setIsToolbarPinned(false);
+      setToolbarPinnedStyle(undefined);
+      return;
+    }
+
+    let frameId = 0;
+
+    const syncPinnedToolbar = () => {
+      frameId = 0;
+
+      const wrapper = editorWrapperRef.current;
+      const toolbar = toolbarRef.current;
+      if (!wrapper || !toolbar) return;
+
+      const rootStyles = window.getComputedStyle(document.documentElement);
+      const stickyHeaderHeight = Number.parseFloat(rootStyles.getPropertyValue('--sticky-header-height').trim()) || 0;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const measuredToolbarHeight = toolbar.getBoundingClientRect().height || toolbarHeight;
+      const shouldPin =
+        wrapperRect.top <= stickyHeaderHeight &&
+        wrapperRect.bottom > stickyHeaderHeight + measuredToolbarHeight;
+
+      setIsToolbarPinned((previous) => (previous === shouldPin ? previous : shouldPin));
+      setToolbarPinnedStyle((previous) => {
+        if (!shouldPin) {
+          return previous ? undefined : previous;
+        }
+
+        const nextStyle: CSSProperties = {
+          top: stickyHeaderHeight,
+          left: wrapperRect.left,
+          width: wrapperRect.width,
+        };
+
+        if (
+          previous?.top === nextStyle.top &&
+          previous?.left === nextStyle.left &&
+          previous?.width === nextStyle.width
+        ) {
+          return previous;
+        }
+
+        return nextStyle;
+      });
+    };
+
+    const requestSync = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(syncPinnedToolbar);
+    };
+
+    requestSync();
+    window.addEventListener('scroll', requestSync, { passive: true });
+    window.addEventListener('resize', requestSync);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener('scroll', requestSync);
+      window.removeEventListener('resize', requestSync);
+    };
+  }, [isEditorFullscreen, toolbarHeight]);
+
   const handleCategoryToggle = (categoryId: string) => {
     let limited = false;
     setFormData((prev) => {
@@ -1458,9 +1532,46 @@ export default function PageEditor({
         eyebrow={mode === 'create' ? `Create ${entityNames.singularLower}` : `Edit ${entityNames.singularLower}`}
         eyebrowIcon={<FontAwesomeIcon icon={mode === 'create' ? faPlus : faPenToSquare} />}
         title={
-          mode === 'create'
-            ? `Create a new ${entityNames.singularLower}`
-            : `Edit ${initialPage?.title ?? entityNames.singularLower}`
+          <span className="flex w-full items-start justify-between gap-3">
+            <span className="min-w-0 flex-1">
+              {mode === 'create'
+                ? `New ${entityNames.singularLower}`
+                : `Edit ${entityNames.singularLower}`}
+            </span>
+            <span className="flex shrink-0 items-center gap-2 sm:hidden">
+              <button
+                type="button"
+                onClick={handleBackNavigation}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.55))] text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] hover:text-[color:rgb(var(--text-primary))]"
+                aria-label={`Back to ${entityNames.pluralLower}`}
+                title={`Back to ${entityNames.pluralLower}`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {mode === 'edit' && formData.published && previewHref ? (
+                <NextLink
+                  href={previewHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))]"
+                  aria-label={`Preview ${entityNames.singular}`}
+                  title={`Preview ${entityNames.singular}`}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                </NextLink>
+              ) : null}
+            </span>
+          </span>
         }
         description=""
         actionsAlign="right"
@@ -1469,7 +1580,7 @@ export default function PageEditor({
             <button
               type="button"
               onClick={handleBackNavigation}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.55))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] hover:text-[color:rgb(var(--text-primary))]"
+              className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.55))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] hover:text-[color:rgb(var(--text-primary))]"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1482,7 +1593,7 @@ export default function PageEditor({
                 href={previewHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))]"
+                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))]"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -1505,8 +1616,8 @@ export default function PageEditor({
         ) : null}
       </DashboardPageHeader>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2.35fr)_minmax(320px,0.8fr)]">
-        <div className="space-y-6">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,2.35fr)_minmax(320px,0.8fr)]">
+        <div className="min-w-0 space-y-6">
           <div className={dashboardPanelClass('space-y-5')}>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1577,7 +1688,7 @@ export default function PageEditor({
             <div
               ref={editorWrapperRef}
               className={clsx(
-                'relative flex flex-col bg-white shadow-sm dark:bg-neutral-900',
+                'relative flex min-w-0 w-full max-w-full flex-col bg-white shadow-sm dark:bg-neutral-900',
                 isEditorFullscreen
                   ? 'flex-col h-full w-full'
                   : 'rounded-[var(--theme-surface-radius)] border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
@@ -1585,32 +1696,38 @@ export default function PageEditor({
             >
               {editor ? (
                 <>
+                  {!isEditorFullscreen && isToolbarPinned ? <div aria-hidden="true" style={{ height: toolbarHeight }} /> : null}
+
                   {/* Sticky toolbar inside editor */}
                   <div
                     ref={toolbarRef}
                     className={clsx(
-                      'sticky z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
-                      isEditorFullscreen ? 'top-0 shadow-sm' : 'rounded-t-[calc(var(--theme-surface-radius)-1px)]'
+                      'max-w-full overflow-hidden border-b border-neutral-200 bg-white/95 px-2 py-2 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
+                      isEditorFullscreen
+                        ? 'sticky top-0 z-10 shadow-sm'
+                        : isToolbarPinned
+                          ? 'fixed z-40 shadow-sm'
+                          : 'relative rounded-t-[calc(var(--theme-surface-radius)-1px)]'
                     )}
-                    style={!isEditorFullscreen ? { top: 'var(--sticky-header-height, 0px)' } : undefined}
+                    style={!isEditorFullscreen && isToolbarPinned ? toolbarPinnedStyle : undefined}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                    <div className="max-w-full overflow-x-auto overflow-y-hidden pr-1 [-webkit-overflow-scrolling:touch] [overscroll-behavior-x:contain] [touch-action:pan-x]">
+                      <div className="inline-flex min-w-max items-center gap-1.5 pr-2">
+                        <div className={toolbarGroupClass}>
                           <button
                             type="button"
                             onClick={() => {
                               if (!editor) return;
                               editor.chain().focus().toggleBold().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('bold')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Bold"
                           >
-                            <span className="text-sm font-bold">B</span>
+                            <span className="text-[13px] font-bold">B</span>
                           </button>
                           <button
                             type="button"
@@ -1618,14 +1735,14 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleItalic().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('italic')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Italic"
                           >
-                            <span className="text-sm font-medium italic">I</span>
+                            <span className="text-[13px] font-medium italic">I</span>
                           </button>
                           <button
                             type="button"
@@ -1633,14 +1750,14 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleUnderline().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('underline')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Underline"
                           >
-                            <span className="text-sm font-medium underline">U</span>
+                            <span className="text-[13px] font-medium underline">U</span>
                           </button>
                           <button
                             type="button"
@@ -1648,18 +1765,18 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleStrike().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('strike')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Strikethrough"
                           >
-                            <span className="text-sm font-medium line-through">S</span>
+                            <span className="text-[13px] font-medium line-through">S</span>
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                        <div className={toolbarGroupClass}>
                           <button
                             type="button"
                             onClick={() => {
@@ -1667,10 +1784,10 @@ export default function PageEditor({
                               editor.chain().focus().undo().run();
                             }}
                             disabled={!editor?.can().undo()}
-                            className={`rounded p-2 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-neutral-800`}
+                            className={`${toolbarButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
                             title="Undo (Ctrl+Z)"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                             </svg>
                           </button>
@@ -1681,16 +1798,16 @@ export default function PageEditor({
                               editor.chain().focus().redo().run();
                             }}
                             disabled={!editor?.can().redo()}
-                            className={`rounded p-2 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-neutral-800`}
+                            className={`${toolbarButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
                             title="Redo (Ctrl+Y)"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
                             </svg>
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                        <div className={toolbarGroupClass}>
                           {headingLevels.map((level) => (
                             <button
                               key={level}
@@ -1699,9 +1816,9 @@ export default function PageEditor({
                                 if (!editor) return;
                                 editor.chain().focus().toggleHeading({ level }).run();
                               }}
-                              className={`rounded px-3 py-2 text-sm font-medium transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                              className={`${toolbarButtonClass} px-2 text-xs font-medium ${
                                 editor?.isActive('heading', { level })
-                                  ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                  ? toolbarActiveClass
                                   : ''
                               }`}
                               title={`Heading ${level}`}
@@ -1711,21 +1828,21 @@ export default function PageEditor({
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                        <div className={toolbarGroupClass}>
                           <button
                             type="button"
                             onClick={() => {
                               if (!editor) return;
                               editor.chain().focus().toggleBulletList().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('bulletList')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Bullet list"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
                             </svg>
                           </button>
@@ -1735,14 +1852,14 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleOrderedList().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('orderedList')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Numbered list"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14l3.5-2 3.5 2z" />
                             </svg>
                           </button>
@@ -1752,14 +1869,14 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleBlockquote().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('blockquote')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Quote"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                             </svg>
                           </button>
@@ -1769,14 +1886,14 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().toggleCodeBlock().run();
                             }}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                            className={`${toolbarButtonClass} ${
                               editor?.isActive('codeBlock')
-                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                ? toolbarActiveClass
                                 : ''
                             }`}
                             title="Code block"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                             </svg>
                           </button>
@@ -1786,25 +1903,25 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().setHorizontalRule().run();
                             }}
-                            className="rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            className={toolbarButtonClass}
                             title="Horizontal line"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                             </svg>
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                        <div className={toolbarGroupClass}>
                           <button
                             type="button"
                             onClick={setLink}
-                            className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                              editor?.isActive('link') ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' : ''
+                            className={`${toolbarButtonClass} ${
+                              editor?.isActive('link') ? toolbarActiveClass : ''
                             }`}
                             title="Add link"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
                           </button>
@@ -1812,16 +1929,16 @@ export default function PageEditor({
                             type="button"
                             onClick={addImage}
                             disabled={isUploading || isPreparingImage}
-                            className="rounded p-2 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-neutral-800"
+                            className={`${toolbarButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
                             title="Add image"
                           >
                             {isUploading || isPreparingImage ? (
-                              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <svg className={`${toolbarIconClass} animate-spin`} fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                               </svg>
                             ) : (
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             )}
@@ -1829,27 +1946,27 @@ export default function PageEditor({
                           <button
                             type="button"
                             onClick={() => setShowEmbedModal(true)}
-                            className="ml-1 rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            className={`${toolbarButtonClass} ml-0.5`}
                             title="Insert embed"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 11l3 2 5-4" />
                             </svg>
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1 border-r border-neutral-200 pr-2 dark:border-neutral-700">
+                        <div className={toolbarGroupClass}>
                           <button
                             type="button"
                             onClick={() => {
                               if (!editor) return;
                               editor.chain().focus().unsetAllMarks().run();
                             }}
-                            className="rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            className={toolbarButtonClass}
                             title="Clear formatting"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -1859,29 +1976,29 @@ export default function PageEditor({
                               if (!editor) return;
                               editor.chain().focus().clearNodes().run();
                             }}
-                            className="rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            className={toolbarButtonClass}
                             title="Clear block formatting"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z" />
                             </svg>
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-shrink-0 items-center gap-0.5">
                           {textAlignments.map((position) => (
                             <button
                               key={position}
                               type="button"
                               onClick={() => editor.chain().focus().setTextAlign(position).run()}
-                              className={`rounded p-2 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                              className={`${toolbarButtonClass} ${
                                 editor.isActive({ textAlign: position })
-                                  ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                  ? toolbarActiveClass
                                   : ''
                               }`}
                               title={`Align ${position}`}
                             >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 {position === 'left' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />}
                                 {position === 'center' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M8 12h8m-8 6h8" />}
                                 {position === 'right' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M12 12h8M4 18h16" />}
@@ -1890,15 +2007,15 @@ export default function PageEditor({
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-1 border-l border-neutral-200 pl-2 dark:border-neutral-700">
+                        <div className="flex flex-shrink-0 items-center gap-0.5 border-l border-neutral-200 pl-1.5 dark:border-neutral-700">
                           <button
                             type="button"
                             onClick={() => toggleEditorFullscreen()}
                             aria-pressed={isEditorFullscreen}
-                            className="inline-flex items-center gap-2 rounded p-2 transition hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:hover:bg-neutral-800 dark:focus:ring-offset-neutral-900"
+                            className="inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-1.5 transition hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-violet-500 dark:hover:bg-neutral-800"
                             title={isEditorFullscreen ? 'Exit full screen' : 'Enter full screen'}
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               {isEditorFullscreen ? (
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H5v4M19 9V5h-4M9 19H5v-4M19 15v4h-4" />
                               ) : (
@@ -1909,16 +2026,16 @@ export default function PageEditor({
                         </div>
 
                         {isEditorFullscreen && (
-                          <div className="flex items-center gap-1 border-l border-neutral-200 pl-2 dark:border-neutral-700">
+                          <div className="flex flex-shrink-0 items-center gap-0.5 border-l border-neutral-200 pl-1.5 dark:border-neutral-700">
                             <button
                               type="button"
                               onClick={() => toggleEditorFullscreen(false)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-white dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:focus:ring-offset-neutral-900"
+                              className="inline-flex h-8 items-center gap-1 rounded-md border border-neutral-200 px-2 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-violet-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
                             >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className={toolbarIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H5v4M19 9V5h-4M9 19H5v-4M19 15v4h-4" />
                               </svg>
-                              <span className="text-xs font-medium">Exit full screen</span>
+                              <span className="font-medium whitespace-nowrap">Exit full screen</span>
                             </button>
                           </div>
                         )}
@@ -2449,24 +2566,19 @@ export default function PageEditor({
 
           {/* Categories (moved from left) */}
           {enableCategories && (
-            <div className={dashboardPanelClass('space-y-4')}>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Categories</h2>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    Select up to {CATEGORY_SELECTION_LIMIT} categories for this {entityNames.singularLower}.
-                  </p>
-                </div>
-                <div className="flex flex-col items-start gap-2 text-sm text-neutral-500 sm:items-end dark:text-neutral-400">
-                  <span>
+            <div className={dashboardPanelClass('space-y-2.5')}>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Categories</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
                     {formData.categoryIds.length}/{CATEGORY_SELECTION_LIMIT} selected
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowCategoriesModal(true)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-2 py-1 font-medium text-neutral-700 transition hover:border-violet-400 hover:text-violet-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-400"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700 transition hover:border-violet-400 hover:text-violet-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-400"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                     </svg>
                     Manage
@@ -2475,11 +2587,11 @@ export default function PageEditor({
               </div>
 
               {availableCategories.length ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {availableCategories.map((category) => {
                     const isSelected = formData.categoryIds.includes(category.id);
                     const disableSelection = !isSelected && formData.categoryIds.length >= CATEGORY_SELECTION_LIMIT;
-                    const postCountLabel = category.postCount === 1 ? '1 post' : `${category.postCount} posts`;
+                    const postCountLabel = category.postCount === 1 ? '1' : `${category.postCount}`;
                     return (
                       <button
                         type="button"
@@ -2487,7 +2599,7 @@ export default function PageEditor({
                         onClick={() => handleCategoryToggle(category.id)}
                         disabled={disableSelection}
                         className={clsx(
-                          'inline-flex items-center gap-3 rounded-md border px-3 py-1.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:cursor-not-allowed disabled:opacity-60',
+                          'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] transition focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:cursor-not-allowed disabled:opacity-60',
                           isSelected
                             ? 'border-violet-500 bg-violet-50/80 text-violet-700 dark:border-violet-500/60 dark:bg-violet-900/20 dark:text-violet-100'
                             : 'border-neutral-200 bg-white hover:border-violet-200 hover:bg-violet-50/40 dark:bg-neutral-900'
@@ -2497,13 +2609,13 @@ export default function PageEditor({
                         <span className="font-medium text-neutral-900 dark:text-neutral-100">{category.title}</span>
                         <span
                           className={clsx(
-                            'rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                            'rounded-full border px-1 py-px text-[9px] font-medium',
                             isSelected
                               ? 'border-violet-300 bg-violet-100 text-violet-700 dark:border-violet-500/60 dark:bg-violet-900/40 dark:text-violet-100'
                               : 'border-neutral-200 text-neutral-500 dark:border-neutral-600 dark:text-neutral-400'
                           )}
                         >
-                          {isSelected ? 'Selected' : postCountLabel}
+                          {isSelected ? '+' : postCountLabel}
                         </span>
                       </button>
                     );

@@ -502,7 +502,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.HEADER_STYLE]: 'center-nav',
   [SETTING_KEYS.HEADER_HEIGHT]: '60',
   [SETTING_KEYS.HEADER_STICKY_ENABLED]: 'true',
-  [SETTING_KEYS.HEADER_STICKY_SCROLL_Y]: '100',
+  [SETTING_KEYS.HEADER_STICKY_SCROLL_Y]: '60',
   [SETTING_KEYS.HEADER_STICKY_HEIGHT]: '50'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_ONE_TIME]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_RECURRING]: 'true'
@@ -952,10 +952,10 @@ export async function getHeaderLayoutSettings(): Promise<{
 
   return {
     style,
-    height: clampInt(Number.isFinite(height) ? height : 80, 48, 160),
+    height: clampInt(Number.isFinite(height) ? height : 60, 48, 160),
     stickyEnabled,
-    stickyScrollY: clampInt(Number.isFinite(stickyScrollY) ? stickyScrollY : 120, 0, 2000),
-    stickyHeight: clampInt(Number.isFinite(stickyHeight) ? stickyHeight : 64, 40, 160),
+    stickyScrollY: clampInt(Number.isFinite(stickyScrollY) ? stickyScrollY : 60, 0, 2000),
+    stickyHeight: clampInt(Number.isFinite(stickyHeight) ? stickyHeight : 50, 40, 160),
   };
 }
 

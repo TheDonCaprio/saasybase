@@ -42,6 +42,11 @@ export function SiteHeader({
   const [headerBlurPx, setHeaderBlurPx] = useState<number | null>(null);
   const [stickyHeaderBlurPx, setStickyHeaderBlurPx] = useState<number | null>(null);
   const stickyActive = layout.stickyEnabled && isSticky;
+  const stickyOverlayClassName = !layout.stickyEnabled
+    ? '-translate-y-full opacity-0 pointer-events-none'
+    : stickyActive
+      ? 'translate-y-0 opacity-100'
+      : '-translate-y-full opacity-0 pointer-events-none';
 
   useEffect(() => {
     const root = document.documentElement;
@@ -69,23 +74,22 @@ export function SiteHeader({
     return () => observer.disconnect();
   }, []);
 
-  const stickyStyles = stickyActive
-    ? {
-        backgroundColor: 'var(--theme-sticky-header-bg)',
-        color: 'var(--theme-sticky-header-text)',
-        backdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
-        WebkitBackdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
-        borderBottom: 'var(--theme-sticky-header-border-width) solid var(--theme-sticky-header-border)',
-        boxShadow: 'var(--theme-sticky-header-shadow)',
-      }
-    : {
-        backgroundColor: 'var(--theme-header-bg)',
-        color: 'var(--theme-header-text)',
-        backdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
-        WebkitBackdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
-        borderBottom: 'var(--theme-header-border-width) solid var(--theme-header-border)',
-        boxShadow: 'var(--theme-header-shadow)',
-      };
+  const normalStyles = {
+    backgroundColor: 'var(--theme-header-bg)',
+    color: 'var(--theme-header-text)',
+    backdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
+    WebkitBackdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
+    borderBottom: 'var(--theme-header-border-width) solid var(--theme-header-border)',
+    boxShadow: 'var(--theme-header-shadow)',
+  };
+  const stickyStyles = {
+    backgroundColor: 'var(--theme-sticky-header-bg)',
+    color: 'var(--theme-sticky-header-text)',
+    backdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
+    WebkitBackdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
+    borderBottom: 'var(--theme-sticky-header-border-width) solid var(--theme-sticky-header-border)',
+    boxShadow: 'var(--theme-sticky-header-shadow)',
+  };
   useEffect(() => {
     if (!layout.stickyEnabled) {
       return;
@@ -110,26 +114,23 @@ export function SiteHeader({
     return Math.max(min, Math.min(max, Math.round(num)));
   };
 
-  const normalHeight = clampInt(layout.height, 48, 160, 80);
-  const stickyHeight = clampInt(layout.stickyHeight, 40, 160, 64);
-  const currentHeight = stickyActive ? stickyHeight : normalHeight;
+  const normalHeight = clampInt(layout.height, 48, 160, 60);
+  const stickyHeight = clampInt(layout.stickyHeight, 40, 160, 50);
 
   useEffect(() => {
     const root = document.documentElement;
     if (stickyActive) {
-      root.style.setProperty('--sticky-header-height', `${currentHeight}px`);
+      root.style.setProperty('--sticky-header-height', `${stickyHeight}px`);
     } else {
       root.style.setProperty('--sticky-header-height', '0px');
     }
-  }, [stickyActive, currentHeight]);
+  }, [stickyActive, stickyHeight]);
 
-  const headerPositionClass = stickyActive ? 'fixed top-0 left-0 right-0' : 'relative';
+  const renderNavLink = (link: ThemeLink, sticky: boolean) => {
+    const navLinkClassName = sticky
+      ? 'text-[color:var(--theme-sticky-header-text)] transition-opacity hover:opacity-90'
+      : 'text-[color:var(--theme-header-text)] transition-opacity hover:opacity-90';
 
-  const navLinkClassName = stickyActive
-    ? 'text-[color:var(--theme-sticky-header-text)] transition-opacity hover:opacity-90'
-    : 'text-[color:var(--theme-header-text)] transition-opacity hover:opacity-90';
-
-  const renderNavLink = (link: ThemeLink) => {
     const isExternal = /^https?:\/\//i.test(link.href);
     if (isExternal) {
       return (
@@ -145,22 +146,6 @@ export function SiteHeader({
     );
   };
 
-  const nav = headerLinks.length ? (
-    <nav
-      className={
-        stickyActive
-          ? 'hidden lg:flex gap-4 text-[color:var(--theme-sticky-header-text)]'
-          : 'hidden lg:flex gap-4 text-[color:var(--theme-header-text)]'
-      }
-      style={{
-        fontSize: 'var(--theme-header-menu-font-size)',
-        fontWeight: 'var(--theme-header-menu-font-weight)',
-      }}
-    >
-      {headerLinks.map(renderNavLink)}
-    </nav>
-  ) : null;
-
   const actions = (
     <div className="flex items-center gap-4">
       <ThemeToggle />
@@ -171,63 +156,97 @@ export function SiteHeader({
     </div>
   );
 
+  const renderHeaderInner = (sticky: boolean) => {
+    const nav = headerLinks.length ? (
+      <nav
+        className={
+          sticky
+            ? 'hidden lg:flex gap-4 text-[color:var(--theme-sticky-header-text)]'
+            : 'hidden lg:flex gap-4 text-[color:var(--theme-header-text)]'
+        }
+        style={{
+          fontSize: 'var(--theme-header-menu-font-size)',
+          fontWeight: 'var(--theme-header-menu-font-weight)',
+        }}
+      >
+        {headerLinks.map((link) => renderNavLink(link, sticky))}
+      </nav>
+    ) : null;
+
+    if (layout.style === 'center-nav') {
+      return (
+        <div className="flex w-full items-center">
+          <Link href="/" className="font-semibold text-lg flex items-center gap-3">
+            <LogoBlock
+              siteName={siteName}
+              siteLogo={siteLogo}
+              siteLogoLight={siteLogoLight}
+              siteLogoDark={siteLogoDark}
+              logoHeight={logoHeight}
+              aspectRatioCss={aspectRatioCss}
+            />
+          </Link>
+          <div className="flex-1 flex items-center justify-center">{nav}</div>
+          {actions}
+        </div>
+      );
+    }
+
+    if (layout.style === 'left-nav') {
+      return (
+        <div className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="font-semibold text-lg flex items-center gap-3">
+              <LogoBlock
+                siteName={siteName}
+                siteLogo={siteLogo}
+                siteLogoLight={siteLogoLight}
+                siteLogoDark={siteLogoDark}
+                logoHeight={logoHeight}
+                aspectRatioCss={aspectRatioCss}
+              />
+            </Link>
+            {nav}
+          </div>
+          {actions}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex w-full items-center justify-between">
+        <Link href="/" className="font-semibold text-lg flex items-center gap-3">
+          <LogoBlock
+            siteName={siteName}
+            siteLogo={siteLogo}
+            siteLogoLight={siteLogoLight}
+            siteLogoDark={siteLogoDark}
+            logoHeight={logoHeight}
+            aspectRatioCss={aspectRatioCss}
+          />
+        </Link>
+        <div className="flex items-center gap-4">
+          {nav}
+          {actions}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
-      {stickyActive ? <div aria-hidden style={{ height: currentHeight }} /> : null}
       <header
-        className={`px-6 flex items-center bg-[color:var(--theme-header-bg)] backdrop-blur z-40 ${headerPositionClass}`}
-        style={{ minHeight: currentHeight, height: currentHeight, ...stickyStyles }}
+        className="relative z-40 flex items-center px-6 bg-[color:var(--theme-header-bg)] backdrop-blur transition-[background-color,border-color,box-shadow] duration-300"
+        style={{ minHeight: normalHeight, height: normalHeight, ...normalStyles }}
       >
-        {layout.style === 'center-nav' ? (
-          <div className="flex w-full items-center">
-            <Link href="/" className="font-semibold text-lg flex items-center gap-3">
-              <LogoBlock
-                siteName={siteName}
-                siteLogo={siteLogo}
-                siteLogoLight={siteLogoLight}
-                siteLogoDark={siteLogoDark}
-                logoHeight={logoHeight}
-                aspectRatioCss={aspectRatioCss}
-              />
-            </Link>
-            <div className="flex-1 flex items-center justify-center">{nav}</div>
-            {actions}
-          </div>
-        ) : layout.style === 'left-nav' ? (
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Link href="/" className="font-semibold text-lg flex items-center gap-3">
-                <LogoBlock
-                  siteName={siteName}
-                  siteLogo={siteLogo}
-                  siteLogoLight={siteLogoLight}
-                  siteLogoDark={siteLogoDark}
-                  logoHeight={logoHeight}
-                  aspectRatioCss={aspectRatioCss}
-                />
-              </Link>
-              {nav}
-            </div>
-            {actions}
-          </div>
-        ) : (
-          <div className="flex w-full items-center justify-between">
-            <Link href="/" className="font-semibold text-lg flex items-center gap-3">
-              <LogoBlock
-                siteName={siteName}
-                siteLogo={siteLogo}
-                siteLogoLight={siteLogoLight}
-                siteLogoDark={siteLogoDark}
-                logoHeight={logoHeight}
-                aspectRatioCss={aspectRatioCss}
-              />
-            </Link>
-            <div className="flex items-center gap-4">
-              {nav}
-              {actions}
-            </div>
-          </div>
-        )}
+        {renderHeaderInner(false)}
+      </header>
+      <header
+        className={`fixed left-0 right-0 top-0 z-50 flex items-center px-6 backdrop-blur transition-[transform,opacity,background-color,border-color,box-shadow] duration-300 ease-out ${stickyOverlayClassName}`}
+        style={{ minHeight: stickyHeight, height: stickyHeight, ...stickyStyles }}
+        aria-hidden={!layout.stickyEnabled}
+      >
+        {renderHeaderInner(true)}
       </header>
     </>
   );

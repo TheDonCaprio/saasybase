@@ -278,11 +278,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <head>
           <link rel="icon" href={faviconHref} />
-          <Script
-            id="form-attr-sanitizer"
-            src="/scripts/form-attr-sanitizer.js"
-            strategy="beforeInteractive"
-          />
+          <script async src="/scripts/form-attr-sanitizer.js" />
           {/* External scripts loaded as async <script src> — React 19 treats
               these as hoisted resources so they never trigger the
               "Encountered a script tag" console warning. */}

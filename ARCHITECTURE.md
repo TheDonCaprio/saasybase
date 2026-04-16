@@ -488,7 +488,7 @@ Subscription Lifecycle Events
 | `prisma/` | Data layer — schema, migrations, seeds | `prisma/schema.prisma` |
 | `tests/` | Quality assurance — unit and E2E tests | `tests/stripe-webhook.test.ts` |
 | `scripts/` | Operations — backfill, admin, maintenance | `scripts/validate-env.js` |
-| `docs/` | Internal documentation | `docs/token-usage-and-deduction.md` |
+| `docs/` | Focused extension guides | `docs/adding-payment-providers.md` |
 | `ops/` | Production ops — indexes, runbooks | `ops/PROD_INDEXES.sql` |
 
 **Key principle:** Business logic lives in `lib/`, never in `app/` route handlers. Route handlers are thin — they do auth, validation, call into `lib/`, and return responses.

@@ -81,6 +81,10 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
   });
 
   it('spends from shared pool when active orgId is a Clerk org id and owner has no membership row', async () => {
+    txMock.subscription.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'sub_owner_active_1' });
+
     const req = new NextRequest('http://localhost/api/user/spend-tokens', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -163,6 +167,56 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
 
     expect(txMock.organization.updateMany).not.toHaveBeenCalled();
     expect(txMock.organizationMembership.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('blocks paid bucket spending after personal plan expiry even when paid tokens remain', async () => {
+    getAuthSafeMock.mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
+    txMock.user.findUnique.mockReset();
+    txMock.user.findUnique.mockResolvedValueOnce({ id: 'user_1', tokenBalance: 15, freeTokenBalance: 0 });
+
+    txMock.subscription.findFirst.mockResolvedValueOnce(null);
+    txMock.organizationMembership.findFirst.mockResolvedValueOnce(null);
+    txMock.organization.findFirst.mockResolvedValueOnce(null);
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 3, bucket: 'paid', feature: 'expired-paid-bucket' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body).toMatchObject({
+      ok: false,
+      error: 'paid_subscription_expired',
+      bucket: 'paid',
+    });
+    expect(txMock.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('blocks owner shared spending when the workspace subscription is expired even if org tokens remain', async () => {
+    txMock.subscription.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 10, bucket: 'shared', feature: 'expired-shared-bucket' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body).toMatchObject({
+      ok: false,
+      error: 'owner_subscription_expired',
+    });
+    expect(txMock.organization.updateMany).not.toHaveBeenCalled();
   });
 
   it('uses free bucket for auto when paid has no spendable balance', async () => {

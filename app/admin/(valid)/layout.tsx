@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic';
 import React from 'react';
 import { GroupedSidebarNav } from '../../../components/dashboard/GroupedSidebarNav';
-import { faTachometerAlt, faUsers, faFileInvoiceDollar, faListAlt, faLifeRing, faBell, faChartLine, faTrafficLight, faClipboardList, faCogs, faShoppingCart, faTicketAlt, faTriangleExclamation, faEnvelope, faUserShield, faPalette, faFileLines, faNewspaper, faSitemap, faWrench } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
 import { requireAdminAreaActor } from '../../../lib/route-guards';
 import { prisma } from '../../../lib/prisma';
-import type { ModeratorSection } from '../../../lib/moderator';
 import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
+import { buildAdminSidebarGroups } from '../../../lib/admin-nav/groups';
+import type { AdminNavCounts } from '../../../lib/admin-nav/types';
+import { Logger } from '../../../lib/logger';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
@@ -39,83 +39,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     }
   } catch (e) {
     // Swallow errors to avoid breaking admin layout if counts fail
-    console.warn('Failed to load admin counts for sidebar:', e);
+    Logger.warn('Failed to load admin counts for sidebar', e);
   }
-  type NavCandidate = {
-    href: string;
-    label: string;
-    icon: IconDefinition;
-    badge?: string;
-    section?: ModeratorSection;
-    adminOnly?: boolean;
+  const counts: AdminNavCounts = {
+    userCount,
+    paymentCount: payCount,
+    ticketCount,
+    unreadNotifications,
+    purchasesCount,
+    subscriptionsCount,
+    couponCount,
+    logCount,
+    moderatorLogCount,
   };
 
-  const navCandidates: NavCandidate[] = [
-    { href: '/admin', label: 'Dashboard', icon: faTachometerAlt },
-    { href: '/admin/users', label: 'Users', badge: String(userCount), icon: faUsers, section: 'users' },
-    { href: '/admin/organizations', label: 'Organizations', icon: faSitemap, section: 'organizations' },
-    { href: '/admin/transactions', label: 'Transactions', badge: String(payCount), icon: faFileInvoiceDollar, section: 'transactions' },
-    { href: '/admin/purchases', label: 'One-Time Sales', badge: purchasesCount > 0 ? String(purchasesCount) : undefined, icon: faShoppingCart, section: 'purchases' },
-    { href: '/admin/subscriptions', label: 'Subscriptions', badge: subscriptionsCount > 0 ? String(subscriptionsCount) : undefined, icon: faClipboardList, section: 'subscriptions' },
-    { href: '/admin/coupons', label: 'Coupons', badge: couponCount > 0 ? String(couponCount) : undefined, icon: faTicketAlt, adminOnly: true },
-    { href: '/admin/theme', label: 'Theme', icon: faPalette, adminOnly: true },
-    { href: '/admin/pages', label: 'Pages', icon: faFileLines, adminOnly: true },
-    { href: '/admin/blog', label: 'Blog', icon: faNewspaper, adminOnly: true },
-    { href: '/admin/plans', label: 'Plans', icon: faListAlt, adminOnly: true },
-    { href: '/admin/logs', label: 'Logs', badge: logCount > 0 ? String(logCount) : undefined, icon: faTriangleExclamation, adminOnly: true },
-    { href: '/admin/moderation', label: 'Moderation', badge: moderatorLogCount > 0 ? String(Math.min(moderatorLogCount, 99)) : undefined, icon: faUserShield, adminOnly: true },
-    { href: '/admin/support', label: 'Support', badge: ticketCount > 0 ? String(ticketCount) : undefined, icon: faLifeRing, section: 'support' },
-    { href: '/admin/notifications', label: 'Notifications', badge: unreadNotifications > 0 ? String(unreadNotifications) : undefined, icon: faBell, section: 'notifications' },
-  { href: '/admin/emails', label: 'Email Templates', icon: faEnvelope, adminOnly: true },
-    { href: '/admin/analytics', label: 'Analytics', icon: faChartLine, section: 'analytics' },
-    { href: '/admin/traffic', label: 'Traffic', icon: faTrafficLight, section: 'traffic' },
-    { href: '/admin/api', label: 'API Docs', icon: faListAlt, adminOnly: true },
-    { href: '/admin/maintenance', label: 'Maintenance', icon: faWrench, adminOnly: true },
-    { href: '/admin/settings', label: 'Settings', icon: faCogs, adminOnly: true }
-  ];
-
-  const nav = navCandidates.filter((item) => {
-    if (item.adminOnly && actor.role !== 'ADMIN') {
-      return false;
-    }
-    if (item.section && actor.role !== 'ADMIN' && !actor.permissions[item.section]) {
-      return false;
-    }
-    return true;
+  const navGroups = buildAdminSidebarGroups({
+    actor,
+    counts,
   });
-
-  // Organize nav items into groups
-  type NavGroup = {
-    title: string;
-    items: typeof nav;
-  };
-
-  const navGroups: NavGroup[] = [
-    {
-      title: 'Overview',
-      items: nav.filter(item => item.href === '/admin'),
-    },
-    {
-      title: 'Users & Access',
-      items: nav.filter(item => ['/admin/users', '/admin/organizations', '/admin/moderation'].includes(item.href)),
-    },
-    {
-      title: 'Finances',
-      items: nav.filter(item => ['/admin/transactions', '/admin/purchases', '/admin/subscriptions', '/admin/coupons'].includes(item.href)),
-    },
-    {
-      title: 'Platform',
-      items: nav.filter(item => ['/admin/theme', '/admin/pages', '/admin/blog', '/admin/plans', '/admin/emails', '/admin/settings'].includes(item.href)),
-    },
-    {
-      title: 'Support & Analytics',
-      items: nav.filter(item => ['/admin/support', '/admin/notifications', '/admin/analytics', '/admin/traffic'].includes(item.href)),
-    },
-    {
-      title: 'Developer',
-      items: nav.filter(item => ['/admin/api', '/admin/logs', '/admin/maintenance'].includes(item.href)),
-    },
-  ].filter(group => group.items.length > 0);
 
   return (
     <div className="min-h-screen w-full lg:flex lg:gap-3">

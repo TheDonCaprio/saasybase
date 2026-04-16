@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '../../../../../../lib/dashboardMetadata';
 import { notFound } from 'next/navigation';
-import PageEditor from '@/components/admin/pages/PageEditor';
+import PageEditorEntry from '@/components/admin/pages/PageEditorEntry';
 import { getPageById, toSitePageDTO } from '@/lib/sitePages';
 import { requireAdminPageAccess } from '@/lib/route-guards';
+import { Logger } from '@/lib/logger';
 
 interface EditPageProps {
   params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ async function loadEditPageData(pageId: string) {
 
     return toSitePageDTO(page);
   } catch (error) {
-    console.error('Error loading page:', error);
+    Logger.error('Error loading page', error);
     return null;
   }
 }
@@ -52,7 +53,8 @@ export default async function EditPagePage({ params }: EditPageProps) {
   }
 
   return (
-    <PageEditor
+    <PageEditorEntry
+      contentType="page"
       mode="edit"
       initialPage={pageDTO}
       enableCategories={false}

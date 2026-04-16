@@ -25,6 +25,7 @@ import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPalette } from '@fortawesome/free-solid-svg-icons';
+import { Logger } from '../../../../lib/logger';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -41,7 +42,7 @@ export default async function AdminThemePage() {
     await requireAdminPageAccess('/admin/theme');
   } catch (err: unknown) {
     const e = toError(err);
-    console.warn('Admin theme: requireAdmin check failed or redirected', e?.message);
+    Logger.warn('Admin theme: requireAdmin check failed or redirected', { error: e?.message });
   }
 
   const [headerLinks, footerLinks, footerText, customCss, customHead, customBody, legacyBody, pricingSettings, headerLayoutSettings, blogListingStyle, blogListingPageSize, blogSidebarSettings, relatedPostsEnabled, blogHtmlSnippets, colorPalette] = await Promise.all([

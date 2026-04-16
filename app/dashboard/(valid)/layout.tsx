@@ -1,6 +1,5 @@
 import React from 'react';
 import { SidebarNav } from '../../../components/dashboard/SidebarNav';
-import { faPlay, faUserShield, faBell, faLifeRing, faFlask } from '@fortawesome/free-solid-svg-icons';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';
@@ -11,8 +10,11 @@ import { getPendingEmailChangeForUser } from '../../../lib/nextauth-email-verifi
 import { PendingEmailChangeNotice } from '../../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../../lib/user-helpers';
 import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
+import { Logger } from '../../../lib/logger';
 
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
+import { buildDashboardSidebarItems } from '../../../lib/dashboard-nav/groups';
+import type { DashboardNavCounts } from '../../../lib/dashboard-nav/types';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
@@ -78,16 +80,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }
     }
   } catch (err) {
-    console.warn('Failed to compute support badge:', err);
+    Logger.warn('Failed to compute support badge', err);
   }
 
-  const nav = [
-    { href: '/dashboard', label: 'SaaSyApp', icon: faFlask },
-    { href: '/dashboard/onboarding', label: 'Get Started', icon: faPlay },
-    { href: '/dashboard/team', label: 'Team', icon: faUserShield, badge: teamBadge },
-    { href: '/dashboard/support', label: 'Support', icon: faLifeRing, badge: supportBadge },
-    { href: '/dashboard/notifications', label: 'Notifications', icon: faBell },
-  ];
+  const counts: DashboardNavCounts = {
+    teamBadge,
+    supportBadge,
+  };
+
+  const nav = buildDashboardSidebarItems({
+    counts,
+  });
+
   return (
     <div className="min-h-screen w-full overflow-x-clip lg:flex lg:gap-3">
       {/* Desktop Sidebar */}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authService } from '@/lib/auth-provider';
+import { Logger } from '@/lib/logger';
 
 export async function POST() {
   const { userId } = await authService.getSession();
@@ -19,7 +20,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    Logger.error('Error marking all notifications as read', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

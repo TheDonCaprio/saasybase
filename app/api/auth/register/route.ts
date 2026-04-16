@@ -12,6 +12,7 @@ import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
 import { sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
+import { Logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ id: user.id, email: user.email, requiresVerification: true }, { status: 201 });
   } catch (err) {
-    console.error('Registration failed:', err);
+    Logger.error('Registration failed', err);
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }

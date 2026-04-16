@@ -26,7 +26,7 @@ import { DashboardPageHeader } from '../../dashboard/DashboardPageHeader';
 import { SitePageDTO } from './SitePagesList';
 import ImageEditorModal from './ImageEditorModal';
 import { ImagePickerModal } from '../../ui/ImagePickerModal';
-import BlogCategoriesPanel from '../blog/BlogCategoriesPanel';
+import { SimplePageEditor } from './SimplePageEditor';
 import { CustomImage } from './CustomImage';
 import CustomIframe, { IframeAttrs } from './CustomIframe';
 import Youtube from '@tiptap/extension-youtube';
@@ -34,6 +34,7 @@ import { useFormatSettings } from '../../FormatSettingsProvider';
 import { formatDate } from '../../../lib/formatDate';
 import './editor.css';
 import type { BlogCategoryDTO } from '@/lib/blog';
+import type { PageEditorVariant } from './PageEditorMode';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -50,7 +51,13 @@ import {
   runYoutubeEmbed,
 } from './richTextHelpers';
 
-interface PageEditorProps {
+export interface PageEditorCategoryManagerProps {
+  initialCategories: BlogCategoryDTO[];
+  onCategoriesChange?: (categories: BlogCategoryDTO[]) => void;
+  variant?: 'page' | 'modal';
+}
+
+export interface PageEditorProps {
   mode: 'create' | 'edit';
   initialPage?: SitePageDTO;
   apiBasePath?: string;
@@ -64,6 +71,8 @@ interface PageEditorProps {
   backHref?: string;
   categoriesHref?: string;
   uploadScope?: 'file' | 'blog' | 'logo';
+  editorVariant?: PageEditorVariant;
+  categoriesManagerComponent?: React.ComponentType<PageEditorCategoryManagerProps>;
 }
 
 interface FormData {
@@ -151,12 +160,15 @@ export default function PageEditor({
   entityLabelPlural,
   previewPathPrefix = '',
   backHref,
-  uploadScope = 'file'
+  uploadScope = 'file',
+  editorVariant = 'rich',
+  categoriesManagerComponent: CategoriesManagerComponent,
 }: PageEditorProps) {
   const router = useRouter();
   const { mode: formatMode, timezone: formatTimezone } = useFormatSettings();
   const normalizedApiBasePath = apiBasePath.replace(/\/$/, '');
   const normalizedEditBasePath = editBasePath.replace(/\/$/, '');
+  const isSimpleEditor = editorVariant === 'simple';
   const [formData, setFormData] = useState<FormData>(() => mergeFormData());
   const [isSaving, setIsSaving] = useState(false);
   const [hideBubbleMenus, setHideBubbleMenus] = useState(false);
@@ -777,7 +789,10 @@ export default function PageEditor({
   }, [editor]);
 
   useEffect(() => {
-    if (initialPage && editor) {
+    if (!initialPage) {
+      return;
+    }
+
       const pageCategories = (initialPage as SitePageDTO & { categories?: { id: string }[] }).categories;
       const categoryIds = (pageCategories ?? []).map((category) => category.id);
 
@@ -806,35 +821,36 @@ export default function PageEditor({
         ogTitle: !!(initialPage.ogTitle && initialPage.ogTitle !== initialPage.title),
         ogDescription: !!(initialPage.ogDescription && initialPage.ogDescription !== (initialPage.description || '')),
       });
-      
-      // Use a slight delay to ensure editor is fully initialized
-      setTimeout(() => {
-        if (!editor || editor.isDestroyed) return;
-        
-        try {
-          const content = initialPage.content || '';
-          if (content) {
-            editor.commands.setContent(content);
-          } else {
-            // Set placeholder for empty editor
-            editor.commands.setContent('<p></p>');
-            editor.commands.focus();
+
+      if (editor && !isSimpleEditor) {
+        // Use a slight delay to ensure editor is fully initialized
+        setTimeout(() => {
+          if (!editor || editor.isDestroyed) return;
+
+          try {
+            const content = initialPage.content || '';
+            if (content) {
+              editor.commands.setContent(content);
+            } else {
+              // Set placeholder for empty editor
+              editor.commands.setContent('<p></p>');
+              editor.commands.focus();
+            }
+          } catch (error) {
+            console.warn('Error setting initial content:', error);
           }
-        } catch (error) {
-          console.warn('Error setting initial content:', error);
-        }
-      }, 100);
-      
+        }, 100);
+      }
+
       // Set last saved time for existing pages
       if (mode === 'edit' && initialPage.updatedAt) {
         setLastSaved(new Date(initialPage.updatedAt));
       }
-    }
-  }, [initialPage, editor, mode]);
+  }, [initialPage, editor, isSimpleEditor, mode]);
 
   // Sync editor content changes back to form state
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || isSimpleEditor) return;
 
     const handleUpdate = () => {
       try {
@@ -850,7 +866,7 @@ export default function PageEditor({
     return () => {
       editor.off('update', handleUpdate);
     };
-  }, [editor]);
+  }, [editor, isSimpleEditor]);
 
   const generateSlug = useCallback((title: string) => {
     return normalizeSlug(title);
@@ -913,6 +929,22 @@ export default function PageEditor({
       handleAutoSave();
     }, 5000);
   }, [handleAutoSave]);
+
+  const handleContentChange = useCallback((content: string) => {
+    let changed = false;
+    setFormData((prev) => {
+      if (prev.content === content) {
+        return prev;
+      }
+
+      changed = true;
+      return { ...prev, content };
+    });
+
+    if (changed) {
+      triggerAutoSave();
+    }
+  }, [triggerAutoSave]);
 
   const handleTitleChange = (title: string) => {
     // Limit title to 80 characters
@@ -1679,23 +1711,36 @@ export default function PageEditor({
             {!isEditorFullscreen && (
               <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-0">
                 <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Content</label>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">Rich text with semantic HTML</span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {isSimpleEditor ? 'Simple content editor for site pages' : 'Rich text with semantic HTML'}
+                </span>
               </div>
             )}
 
-            {/* Placeholder keeps layout space while editor is teleported */}
-            <div ref={editorPlaceholderRef} className={isEditorFullscreen ? 'min-h-[520px]' : ''} />
-            <div
-              ref={editorWrapperRef}
-              className={clsx(
-                'relative flex min-w-0 w-full max-w-full flex-col bg-white shadow-sm dark:bg-neutral-900',
-                isEditorFullscreen
-                  ? 'flex-col h-full w-full'
-                  : 'rounded-[var(--theme-surface-radius)] border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
-              )}
-            >
-              {editor ? (
-                <>
+            {isSimpleEditor ? (
+              <div className="rounded-[var(--theme-surface-radius)] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+                <SimplePageEditor
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  placeholder="Start writing your page content..."
+                  uploadScope={uploadScope}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Placeholder keeps layout space while editor is teleported */}
+                <div ref={editorPlaceholderRef} className={isEditorFullscreen ? 'min-h-[520px]' : ''} />
+                <div
+                  ref={editorWrapperRef}
+                  className={clsx(
+                    'relative flex min-w-0 w-full max-w-full flex-col bg-white shadow-sm dark:bg-neutral-900',
+                    isEditorFullscreen
+                      ? 'flex-col h-full w-full'
+                      : 'rounded-[var(--theme-surface-radius)] border border-neutral-200 dark:border-neutral-700 min-h-[520px]'
+                  )}
+                >
+                  {editor ? (
+                    <>
                   {!isEditorFullscreen && isToolbarPinned ? <div aria-hidden="true" style={{ height: toolbarHeight }} /> : null}
 
                   {/* Sticky toolbar inside editor */}
@@ -2300,9 +2345,11 @@ export default function PageEditor({
                     </div>
                   </BubbleMenu>
                   )}
-                </>
-              ) : null}
-            </div>
+                    </>
+                  ) : null}
+                </div>
+              </>
+            )}
           </div>
 
           {/* SEO settings */}
@@ -2871,7 +2918,7 @@ export default function PageEditor({
         document.body
       )}
 
-      {isMounted && showCategoriesModal && createPortal(
+      {isMounted && showCategoriesModal && CategoriesManagerComponent && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="flex h-[min(86vh,820px)] w-[min(960px,94vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700 sm:px-5">
@@ -2885,7 +2932,7 @@ export default function PageEditor({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-5">
-              <BlogCategoriesPanel
+              <CategoriesManagerComponent
                 initialCategories={availableCategories}
                 onCategoriesChange={handleCategoriesPanelChange}
                 variant="modal"

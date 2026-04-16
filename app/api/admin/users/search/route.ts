@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
+import { Logger } from '../../../../../lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const guard = toAuthGuardErrorResponse(error);
     if (guard) return guard;
-    console.error('Error searching users:', error);
+    Logger.error('Error searching users', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

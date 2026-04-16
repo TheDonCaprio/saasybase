@@ -3,6 +3,7 @@ import { requireAdmin, toAuthGuardErrorResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { adminRateLimit } from '@/lib/rateLimit';
 import { recordAdminAction } from '@/lib/admin-actions';
+import { Logger } from '@/lib/logger';
 
 export async function PATCH(
   request: NextRequest,
@@ -16,12 +17,12 @@ export async function PATCH(
     } catch (err: unknown) {
       const guard = toAuthGuardErrorResponse(err);
       if (guard) return guard;
-      console.error('Admin role update auth error', err);
+      Logger.error('Admin role update auth error', err);
       return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 500 });
     }
     const rl = await adminRateLimit(actorId, request, 'admin-users:role', { limit: 60, windowMs: 120_000 });
     if (!rl.success && !rl.allowed) {
-      console.error('Rate limiter unavailable for admin user role update', { actorId, error: rl.error });
+      Logger.error('Rate limiter unavailable for admin user role update', { actorId, error: rl.error });
       return NextResponse.json({ error: 'Service temporarily unavailable. Please retry shortly.' }, { status: 503 });
     }
     if (!rl.allowed) {
@@ -54,7 +55,7 @@ export async function PATCH(
     if (rl.reset) res.headers.set('X-RateLimit-Reset', String(rl.reset));
     return res;
   } catch (error) {
-    console.error('Admin role update error:', error);
+    Logger.error('Admin role update error', error);
     return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 });
   }
 }

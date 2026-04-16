@@ -45,6 +45,7 @@ type Plan = {
   description: string | null;
   priceCents: number;
   durationHours: number;
+  isLifetime?: boolean | null;
   active: boolean;
   sortOrder: number;
   externalPriceId?: string | null;
@@ -72,13 +73,14 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'createdAt' | 'priceCents' | 'tokenLimit'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; active: boolean; sortOrder: number; externalPriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' };
+  type Form = { name: string; shortDescription: string; description: string; priceCents: number; durationHours: number; isLifetime: boolean; active: boolean; sortOrder: number; externalPriceId?: string; autoRenew: boolean; recurringInterval: 'day' | 'week' | 'month' | 'year'; recurringIntervalCount: number; tokenLimit: string; tokenName: string; supportsOrganizations: boolean; organizationSeatLimit: string; organizationTokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' };
   const [form, setForm] = useState<Form>({
     name: '',
     shortDescription: '',
     description: '',
     priceCents: 0,
     durationHours: 24,
+    isLifetime: false,
     active: true,
     sortOrder: 0,
     externalPriceId: '',
@@ -335,6 +337,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       description: plan.description || '',
       priceCents: plan.priceCents,
       durationHours: plan.durationHours,
+      isLifetime: plan.isLifetime === true,
       active: plan.active,
       sortOrder: (plan.sortOrder ?? plans.length) + 1,
       externalPriceId: '',
@@ -361,6 +364,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       description: '',
       priceCents: 0,
       durationHours: 24,
+      isLifetime: false,
       active: true,
       sortOrder: plans.length,
       externalPriceId: '',
@@ -389,6 +393,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       description: plan.description || '',
       priceCents: plan.priceCents,
       durationHours: plan.durationHours,
+      isLifetime: plan.isLifetime === true,
       active: plan.active,
       sortOrder: plan.sortOrder,
       externalPriceId: plan.externalPriceId || '',
@@ -591,7 +596,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                     <span className={`rounded-full px-2 py-1 ${getPlanTypeBadgeClass(plan.autoRenew)}`}>
                       {plan.autoRenew
                         ? `Subscription · every ${formatNumber(Math.max(1, plan.recurringIntervalCount ?? 1))} ${plan.recurringInterval ?? 'interval'}${Math.max(1, plan.recurringIntervalCount ?? 1) === 1 ? '' : 's'}`
-                        : `One-time · ${formatDuration(plan.durationHours)}`}
+                        : plan.isLifetime ? 'Lifetime · one-time' : `One-time · ${formatDuration(plan.durationHours)}`}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-neutral-800 dark:text-neutral-100">
                       Subscribers: {formatNumber(plan.activeSubscriberCount)}
@@ -742,7 +747,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                           : 'One-time'}
                       </span>
                       <div className="text-xs text-slate-500 dark:text-neutral-400">
-                        {plan.autoRenew ? 'Renews automatically' : `Access: ${formatDuration(plan.durationHours)}`}
+                        {plan.autoRenew ? 'Renews automatically' : plan.isLifetime ? 'Access: Lifetime' : `Access: ${formatDuration(plan.durationHours)}`}
                       </div>
                     </div>
 
@@ -900,7 +905,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                           name="billing-type"
                           checked={form.autoRenew}
                           disabled={isEditingExistingPlan}
-                          onChange={() => setForm((prev) => ({ ...prev, autoRenew: true }))}
+                          onChange={() => setForm((prev) => ({ ...prev, autoRenew: true, isLifetime: false }))}
                           className="mt-1 h-4 w-4 border-slate-400 bg-white text-blue-600 focus:ring-blue-500 disabled:opacity-40 dark:border-neutral-600 dark:bg-neutral-800 dark:text-blue-500"
                         />
                         <div>
@@ -949,14 +954,27 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                       </div>
                     </div>
                   ) : (
-                    <div>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/60">
+                        <input
+                          type="checkbox"
+                          checked={form.isLifetime}
+                          disabled={isEditingExistingPlan}
+                          onChange={(e) => setForm((prev) => ({ ...prev, isLifetime: e.target.checked, autoRenew: e.target.checked ? false : prev.autoRenew }))}
+                          className="mt-1 h-4 w-4 border-slate-400 bg-white text-blue-600 focus:ring-blue-500 disabled:opacity-40 dark:border-neutral-600 dark:bg-neutral-800 dark:text-blue-500"
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-slate-900 dark:text-neutral-100">Lifetime access</div>
+                          <p className="text-xs text-slate-600 mt-1 dark:text-neutral-400">Creates a one-time plan that never naturally expires. Duration hours stay stored for compatibility but are ignored for access expiry.</p>
+                        </div>
+                      </label>
                       <label className="block text-sm text-slate-700 mb-1 dark:text-neutral-300">Duration (hours)</label>
                       <input
                         className="w-full p-2.5 bg-white border border-slate-300 rounded text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 disabled:opacity-40 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-100 dark:placeholder-neutral-500"
                         placeholder="Duration hours"
                         type="number"
                         value={form.durationHours}
-                        disabled={isEditingExistingPlan}
+                        disabled={isEditingExistingPlan || form.isLifetime}
                         onChange={e => setForm({ ...form, durationHours: Number(e.target.value) })}
                       />
                     </div>
@@ -969,7 +987,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
                   ) : form.autoRenew ? (
                     <div className="rounded p-2 text-xs text-slate-600 bg-white/80 dark:bg-neutral-800/50 dark:text-neutral-400">Subscription plans ignore duration hours. The provider will expect a recurring price.</div>
                   ) : (
-                    <div className="rounded p-2 text-xs text-slate-600 bg-white/80 dark:bg-neutral-800/50 dark:text-neutral-400">One-time plans use duration hours and a one-time external price.</div>
+                    <div className="rounded p-2 text-xs text-slate-600 bg-white/80 dark:bg-neutral-800/50 dark:text-neutral-400">{form.isLifetime ? 'Lifetime plans keep permanent access and use a one-time external price.' : 'One-time plans use duration hours and a one-time external price.'}</div>
                   )}
                 </div>
 

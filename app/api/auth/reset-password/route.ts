@@ -11,6 +11,7 @@ import { hashPassword } from '@/lib/nextauth.config';
 import { createHash } from 'crypto';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
+import { Logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Password has been reset successfully' });
   } catch (err) {
-    console.error('Reset password error:', err);
+    Logger.error('Reset password error', err);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

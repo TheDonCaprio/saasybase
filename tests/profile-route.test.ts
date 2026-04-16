@@ -62,7 +62,7 @@ describe('GET /api/user/profile', () => {
   it('includes paidTokens even when subscription is null', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'caprio@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Caprio',
       role: 'USER',
       tokenBalance: 123,
@@ -85,7 +85,7 @@ describe('GET /api/user/profile', () => {
 
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'owner@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Owner',
       role: 'USER',
       tokenBalance: 0,
@@ -107,7 +107,7 @@ describe('GET /api/user/profile', () => {
   it('uses subscription tokenName for paidTokens when active subscription exists', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'caprio@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Caprio',
       role: 'USER',
       tokenBalance: 250,
@@ -130,7 +130,7 @@ describe('GET /api/user/profile', () => {
   it('marks paid tokens as unlimited when the active plan has no token limit', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'caprio@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Caprio',
       role: 'USER',
       tokenBalance: 0,
@@ -159,7 +159,7 @@ describe('GET /api/user/profile', () => {
   it('includes organization.expiresAt for workspace members', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'member@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Member',
       role: 'USER',
       tokenBalance: 0,
@@ -219,7 +219,7 @@ describe('GET /api/user/profile', () => {
   it('prefers the effective workspace plan over stale organization metadata', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'member@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Member',
       role: 'USER',
       tokenBalance: 0,
@@ -288,7 +288,7 @@ describe('GET /api/user/profile', () => {
   it('reports the effective workspace token strategy in the profile payload', async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
-      email: 'member@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Member',
       role: 'USER',
       tokenBalance: 0,

@@ -12,9 +12,11 @@
  *   3. Set `AUTH_PROVIDER=<name>` in your `.env`
  */
 
-import type { AuthProvider, AuthProviderFeature } from './types';
 import { ClerkAuthProvider } from './providers/clerk';
 import { NextAuthProvider } from './providers/nextauth';
+import type { AuthProvider, AuthProviderFeature } from './types';
+
+type AuthProviderClass = new (...args: never[]) => AuthProvider;
 
 // ---------------------------------------------------------------------------
 // Registry Types (mirrors PaymentProvider's ProviderConfig)
@@ -22,7 +24,7 @@ import { NextAuthProvider } from './providers/nextauth';
 
 export interface AuthProviderConfig {
   /** Constructor / class reference for documentation & testing. */
-  Class: new (...args: unknown[]) => AuthProvider;
+  getClass: () => AuthProviderClass;
   /**
    * Throws if required env vars are missing.
    * Called before instantiation, identical to the payment pattern.
@@ -40,7 +42,7 @@ export interface AuthProviderConfig {
 
 export const AUTH_PROVIDER_REGISTRY: Record<string, AuthProviderConfig> = {
   clerk: {
-    Class: ClerkAuthProvider,
+    getClass: () => ClerkAuthProvider,
     envVarCheck: () => {
       // The publishable key is needed for the client-side provider wrapper.
       // The secret key is needed for server-side SDK calls.
@@ -74,7 +76,7 @@ export const AUTH_PROVIDER_REGISTRY: Record<string, AuthProviderConfig> = {
   // e.g. supabase, firebase, etc.
 
   nextauth: {
-    Class: NextAuthProvider,
+    getClass: () => NextAuthProvider,
     envVarCheck: () => {
       // NextAuth requires AUTH_SECRET for signing tokens.
       if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {

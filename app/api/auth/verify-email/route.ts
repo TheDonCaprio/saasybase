@@ -10,17 +10,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { createHash } from 'crypto';
+import { RATE_LIMITS, getClientIP, rateLimit } from '@/lib/rateLimit';
 import {
   parseVerificationIdentifier,
   sendNextAuthVerificationEmail,
 } from '@/lib/nextauth-email-verification';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';
+import { Logger } from '@/lib/logger';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const session = await authService.getSession();
     if (!session.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const ip = getClientIP(request);
+    const rl = await rateLimit(`auth:verify-email:${ip}:${session.userId}`, RATE_LIMITS.AUTH, {
+      ip,
+      actorId: session.userId,
+      route: '/api/auth/verify-email',
+      method: 'POST',
+    });
+
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many verification email requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -44,7 +61,7 @@ export async function POST() {
 
     return NextResponse.json({ message: 'Verification email sent' });
   } catch (err) {
-    console.error('Send verification email error:', err);
+    Logger.error('Send verification email error', err);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
@@ -139,7 +156,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL('/dashboard/profile?emailChange=success', request.url));
   } catch (err) {
-    console.error('Verify email error:', err);
+    Logger.error('Verify email error', err);
     return NextResponse.redirect(new URL('/sign-in?error=verification-failed', request.url));
   }
 }

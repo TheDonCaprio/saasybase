@@ -42,7 +42,7 @@ describe('GET /api/user/export-account-data', () => {
     rateLimitMock.mockResolvedValue({ success: true, allowed: true, reset: Date.now() + 60_000, remaining: 19 });
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user_1',
-      email: 'caprio@capriofiles.com',
+      email: 'admin@saasybase.com',
       name: 'Caprio',
       imageUrl: null,
       role: 'USER',
@@ -71,7 +71,7 @@ describe('GET /api/user/export-account-data', () => {
     expect(res.headers.get('content-disposition')).toContain('saasybase-account-data-');
 
     const body = await res.json();
-    expect(body.profile.email).toBe('caprio@capriofiles.com');
+    expect(body.profile.email).toBe('admin@saasybase.com');
     expect(body.profile.externalCustomerIds).toEqual({ stripe: 'cus_123' });
     expect(body.security.sessions).toHaveLength(1);
     expect(body.settings).toHaveLength(1);

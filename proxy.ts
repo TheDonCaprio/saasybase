@@ -5,6 +5,12 @@ import { prisma } from '@/lib/prisma';
 import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
 import { canUseLocalhostDevBypass } from '@/lib/dev-admin-bypass';
 import { addVisitTrackingHeaders, getOrCreateVisitSessionId, shouldTrackVisit, trackVisit } from '@/lib/visit-tracking';
+import { Logger } from '@/lib/logger';
+
+function proxyWarn(message: string, error?: unknown) {
+  if (process.env.NODE_ENV !== 'development') return;
+  Logger.warn(message, error);
+}
 
 type ProxyAuthResult = {
   userId?: unknown;
@@ -27,7 +33,7 @@ async function resolveAuthResult(auth: unknown): Promise<ProxyAuthResult | null>
     const resolved = isPromiseLike(maybeResult) ? await maybeResult : maybeResult;
     return resolved && typeof resolved === 'object' ? (resolved as ProxyAuthResult) : null;
   } catch (error) {
-    console.warn('proxy: auth resolution failed', error);
+    proxyWarn('proxy: auth resolution failed', error);
     return null;
   }
 }
@@ -78,7 +84,7 @@ async function isAdminUser(userId: string | null): Promise<boolean> {
     });
     return user?.role === 'ADMIN';
   } catch (error) {
-    console.warn('proxy: admin role lookup failed', error);
+    proxyWarn('proxy: admin role lookup failed', error);
     return false;
   }
 }

@@ -48,6 +48,10 @@ function jsonError(message: string, status: number, code: string, extra?: Record
     return NextResponse.json({ error: message, code, ...(extra || {}) }, { status });
 }
 
+function isTeamWorkspace(orgId: string | null | undefined): boolean {
+    return typeof orgId === 'string' && orgId.length > 0;
+}
+
 function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown } {
     const messages: string[] = [];
     let cur: unknown = err;
@@ -235,7 +239,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
             const selectedPlanIsOneTime = dbPlanRecord?.['autoRenew'] !== true;
             const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
-            if (selectedPlanIsOneTime && !selectedPlanIsTeam) {
+            if (selectedPlanIsOneTime && !selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
                 const activeTeamSubscription = await prisma.subscription.findFirst({
                     where: {
                         userId,

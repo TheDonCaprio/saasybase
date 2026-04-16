@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { getClientIP, rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { resolveSessionActivityFromHeaders } from '@/lib/session-activity';
+import { Logger } from '@/lib/logger';
 
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err) {
-    console.error('Credentials login failed:', err);
+    Logger.error('Credentials login failed', err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

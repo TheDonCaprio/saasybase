@@ -137,6 +137,7 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
     const shortDescriptionProvided = Object.prototype.hasOwnProperty.call(payload, 'shortDescription');
     const descriptionProvided = Object.prototype.hasOwnProperty.call(payload, 'description');
     const durationProvided = Object.prototype.hasOwnProperty.call(payload, 'durationHours');
+    const isLifetimeProvided = Object.prototype.hasOwnProperty.call(payload, 'isLifetime');
     const priceProvided = Object.prototype.hasOwnProperty.call(payload, 'priceCents');
     const activeProvided = Object.prototype.hasOwnProperty.call(payload, 'active');
     const sortOrderProvided = Object.prototype.hasOwnProperty.call(payload, 'sortOrder');
@@ -177,6 +178,16 @@ export const PUT = withValidation(apiSchemas.adminPlanUpdate, async (request: Ne
         {
           error:
             'Plan duration cannot be changed after creation. Duplicate or recreate the plan instead.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (isLifetimeProvided && Boolean(payload.isLifetime) !== Boolean(existingPlan.isLifetime)) {
+      return NextResponse.json(
+        {
+          error:
+            'Lifetime access cannot be changed after creation. Duplicate or recreate the plan instead.',
         },
         { status: 400 }
       );

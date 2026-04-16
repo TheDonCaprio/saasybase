@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     return successResponse;
   } catch (err) {
-    console.error('Forgot password error:', err);
+    Logger.error('Forgot password error', err);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

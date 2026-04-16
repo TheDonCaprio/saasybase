@@ -72,7 +72,14 @@ export async function resolveOneTimeCheckoutDisposition(params: {
         return { latestActive, mode: 'extend_non_recurring' };
     }
     if (latestActive && latestActive.plan && latestActive.plan.autoRenew === true) {
-        return { latestActive, mode: 'topup_recurring' };
+        const latestSupportsOrganizations = latestActive.plan.supportsOrganizations === true;
+        const purchasedSupportsOrganizations = params.planSupportsOrganizations === true;
+
+        if (latestSupportsOrganizations === purchasedSupportsOrganizations) {
+            return { latestActive, mode: 'topup_recurring' };
+        }
+
+        return { latestActive, mode: 'create_new' };
     }
 
     return { latestActive, mode: 'create_new' };

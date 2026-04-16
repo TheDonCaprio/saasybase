@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { requireAdmin, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { adminRateLimit } from '../../../../lib/rateLimit';
+import { Logger } from '../../../../lib/logger';
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
 const EXTENSIONS: Record<string, string> = {
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    Logger.error('Upload error', error);
     return NextResponse.json(
       { error: 'Failed to upload file' },
       { status: 500 }

@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '../../../../../lib/dashboardMetadata';
-import PageEditor from '@/components/admin/pages/PageEditor';
+import PageEditorEntry from '@/components/admin/pages/PageEditorEntry';
 import { requireAdminPageAccess } from '@/lib/route-guards';
 
 export async function generateMetadata() {
@@ -15,7 +15,8 @@ export default async function NewPagePage() {
   await requireAdminPageAccess('/admin/pages/new');
 
   return (
-    <PageEditor
+    <PageEditorEntry
+      contentType="page"
       mode="create"
       enableCategories={false}
       categories={[]}

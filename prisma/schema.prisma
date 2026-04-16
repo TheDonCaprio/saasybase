@@ -91,6 +91,7 @@ model Plan {
   recurringIntervalCount Int @default(1)
   active            Boolean  @default(true)
   durationHours     Int
+  isLifetime        Boolean  @default(false)
   priceCents        Int
   sortOrder         Int      @default(0)
   // Token system: nullable Int means unlimited if null, custom name overrides global setting
@@ -211,6 +212,7 @@ model Subscription {
   status               String    @default("ACTIVE")
   startedAt            DateTime  @default(now())
   expiresAt            DateTime
+  isLifetime           Boolean   @default(false)
   // Denormalized latest payment amount (in cents) to support server-side sorting
   // and efficient keyset pagination by amount without expensive joins.
   lastPaymentAmountCents Int?

@@ -9,6 +9,7 @@ import { formatCurrency } from '../utils/currency';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import type { StandardizedCheckoutSession } from './types';
 import { getDefaultTokenLabel } from '../settings';
+import { getLifetimeAccessExpiresAt, isLifetimePlan } from '../subscription-lifetime';
 
 type SubscriptionForRazorpayFallbackPayment = {
     id: string;
@@ -449,18 +450,25 @@ export async function tryRecordPaystackRenewalStyleCharge(params: {
         }
 
         if (candidateSub.status === 'EXPIRED' && !refreshedPeriodEnd) {
-            const durationHours = typeof plan.durationHours === 'number' ? plan.durationHours : 0;
-            if (durationHours > 0) {
-                const base = Math.max(candidateSub.expiresAt.getTime(), Date.now());
-                const nextExpiresAt = new Date(base + durationHours * 60 * 60 * 1000);
-                await params.markSubscriptionActive(candidateSub.id, nextExpiresAt);
+            if (isLifetimePlan(plan)) {
+                await params.markSubscriptionActive(candidateSub.id, getLifetimeAccessExpiresAt());
             } else {
-                await params.markSubscriptionActive(candidateSub.id);
+                const durationHours = typeof plan.durationHours === 'number' ? plan.durationHours : 0;
+                if (durationHours > 0) {
+                    const base = Math.max(candidateSub.expiresAt.getTime(), Date.now());
+                    const nextExpiresAt = new Date(base + durationHours * 60 * 60 * 1000);
+                    await params.markSubscriptionActive(candidateSub.id, nextExpiresAt);
+                } else {
+                    await params.markSubscriptionActive(candidateSub.id);
+                }
             }
         } else if (candidateSub.status === 'PENDING') {
             // If this was a pre-created Paystack subscription that only charges at cycle end,
             // the first charge is the proof of activation.
-            await params.markSubscriptionActive(candidateSub.id, refreshedPeriodEnd ?? undefined);
+            await params.markSubscriptionActive(
+                candidateSub.id,
+                isLifetimePlan(plan) ? getLifetimeAccessExpiresAt() : (refreshedPeriodEnd ?? undefined)
+            );
         }
 
         Logger.info('Recorded Paystack renewal/activation-style charge as SUCCEEDED', {

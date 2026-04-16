@@ -1,8 +1,8 @@
-import { PaymentProvider } from './types';
-import { StripePaymentProvider } from './providers/stripe';
-import { PaystackPaymentProvider } from './providers/paystack';
 import { PaddlePaymentProvider } from './providers/paddle';
+import { PaystackPaymentProvider } from './providers/paystack';
 import { RazorpayPaymentProvider } from './providers/razorpay';
+import { StripePaymentProvider } from './providers/stripe';
+import { PaymentProvider } from './types';
 import { getSetting, getSettingCached } from '../settings';
 
 type ProviderConstructor = new (secretKey: string) => PaymentProvider;
@@ -19,7 +19,9 @@ interface ProviderConfig {
 
 export const PAYMENT_PROVIDER_REGISTRY: Record<string, ProviderConfig> = {
     stripe: {
-        Class: StripePaymentProvider,
+        get Class() {
+            return StripePaymentProvider;
+        },
         envVarCheck: () => {
             if (!process.env.STRIPE_SECRET_KEY) {
                 throw new Error('STRIPE_SECRET_KEY is not defined');
@@ -33,7 +35,9 @@ export const PAYMENT_PROVIDER_REGISTRY: Record<string, ProviderConfig> = {
         // Stripe supports 135+ currencies, no need to list them all
     },
     paystack: {
-        Class: PaystackPaymentProvider,
+        get Class() {
+            return PaystackPaymentProvider;
+        },
         envVarCheck: () => {
             if (!process.env.PAYSTACK_SECRET_KEY) {
                 throw new Error('PAYSTACK_SECRET_KEY is not defined');
@@ -46,7 +50,9 @@ export const PAYMENT_PROVIDER_REGISTRY: Record<string, ProviderConfig> = {
         supportedCurrencies: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'], // USD requires merchant approval; set PAYSTACK_CURRENCY=USD to use it as default
     },
     paddle: {
-        Class: PaddlePaymentProvider,
+        get Class() {
+            return PaddlePaymentProvider;
+        },
         envVarCheck: () => {
             if (!process.env.PADDLE_API_KEY) {
                 throw new Error('PADDLE_API_KEY is not defined');
@@ -60,7 +66,9 @@ export const PAYMENT_PROVIDER_REGISTRY: Record<string, ProviderConfig> = {
         // We do not restrict supportedCurrencies here.
     },
     razorpay: {
-        Class: RazorpayPaymentProvider,
+        get Class() {
+            return RazorpayPaymentProvider;
+        },
         envVarCheck: () => {
             if (!process.env.RAZORPAY_KEY_ID) {
                 throw new Error('RAZORPAY_KEY_ID is not defined');

@@ -3,7 +3,12 @@ import { prisma } from './prisma';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { upsertOrganization, syncOrganizationMembership } from './teams';
-import { getPaidTokensNaturalExpiryGraceHours } from './settings';
+import {
+  getOrganizationExpiryMode,
+  getPaidTokensNaturalExpiryGraceHours,
+  shouldResetPaidTokensOnExpiryForPlanAutoRenew,
+  type OrganizationExpiryMode,
+} from './settings';
 import { workspaceService } from './workspace-service';
 
 const TEAM_SUB_STATUSES = ['ACTIVE', 'PENDING', 'CANCELLED', 'PAST_DUE'] as const;
@@ -59,6 +64,7 @@ async function findActiveTeamSubscription(
         description: true,
         priceCents: true,
         durationHours: true,
+        isLifetime: true,
         autoRenew: true,
         recurringInterval: true,
         tokenLimit: true,
@@ -247,11 +253,148 @@ export async function syncOrganizationEligibilityForUser(userId: string, opts?: 
   if (subscription && subscription.plan) {
     return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan } satisfies TeamSubscriptionStatus;
   }
-  await deactivateUserOrganizations(userId);
+  const mode: OrganizationExpiryMode = opts?.ignoreGrace ? 'DISMANTLE' : await getOrganizationExpiryMode();
+  await deactivateUserOrganizations(userId, {
+    mode,
+    reason: 'syncOrganizationEligibilityForUser',
+    useExpiryTokenResetPolicy: mode === 'SUSPEND',
+  });
   return { allowed: false, reason: 'NO_PLAN' } satisfies TeamSubscriptionStatus;
 }
 
-export async function deactivateOrganizationsByIds(orgIds: string[], context?: { userId?: string; reason?: string }) {
+async function resolveSuspendedOrganizationTokenResetMap(orgs: Array<{ id: string; ownerUserId: string }>) {
+  const entries = await Promise.all(
+    orgs.map(async (org) => {
+      const exactSubscription = await prisma.subscription.findFirst({
+        where: {
+          userId: org.ownerUserId,
+          organizationId: org.id,
+          plan: { supportsOrganizations: true },
+        },
+        orderBy: { expiresAt: 'desc' },
+        select: {
+          plan: {
+            select: {
+              autoRenew: true,
+            },
+          },
+        },
+      });
+
+      const fallbackSubscription = exactSubscription
+        ? null
+        : await prisma.subscription.findFirst({
+            where: {
+              userId: org.ownerUserId,
+              plan: { supportsOrganizations: true },
+            },
+            orderBy: { expiresAt: 'desc' },
+            select: {
+              plan: {
+                select: {
+                  autoRenew: true,
+                },
+              },
+            },
+          });
+
+      const latestSubscription = exactSubscription ?? fallbackSubscription;
+      const shouldReset = latestSubscription?.plan
+        ? await shouldResetPaidTokensOnExpiryForPlanAutoRenew(latestSubscription.plan.autoRenew)
+        : true;
+
+      return [org.id, shouldReset] as const;
+    })
+  );
+
+  return Object.fromEntries(entries);
+}
+
+async function suspendOrganizationsByIds(
+  orgIds: string[],
+  context?: { userId?: string; reason?: string; useExpiryTokenResetPolicy?: boolean }
+) {
+  const uniqueOrgIds = Array.from(new Set(orgIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (uniqueOrgIds.length === 0) return;
+
+  const providerName = workspaceService.providerName;
+  const shouldDeleteProviderOrganizations = workspaceService.usesExternalProviderOrganizations;
+
+  const orgs = await prisma.organization.findMany({
+    where: { id: { in: uniqueOrgIds } },
+    select: { id: true, clerkOrganizationId: true, ownerUserId: true },
+  });
+  if (orgs.length === 0) return;
+
+  const tokenResetByOrgId = context?.useExpiryTokenResetPolicy
+    ? await resolveSuspendedOrganizationTokenResetMap(
+        orgs
+          .filter((org): org is { id: string; clerkOrganizationId: string | null; ownerUserId: string } => typeof org.ownerUserId === 'string' && org.ownerUserId.length > 0)
+          .map((org) => ({ id: org.id, ownerUserId: org.ownerUserId }))
+      )
+    : null;
+
+  await Promise.all(
+    orgs.map(async (org) => {
+      if (!shouldDeleteProviderOrganizations || !org.clerkOrganizationId) return;
+      try {
+        await workspaceService.deleteProviderOrganization(org.clerkOrganizationId);
+      } catch (err: unknown) {
+        const error = toError(err);
+        const message = error.message.toLowerCase();
+        if (!message.includes('not found') && !message.includes('does not exist')) {
+          Logger.warn('Failed to remove provider organization while suspending workspace access', {
+            clerkOrganizationId: org.clerkOrganizationId,
+            userId: context?.userId ?? org.ownerUserId,
+            reason: context?.reason,
+            error: error.message,
+          });
+        }
+      }
+    })
+  );
+
+  await prisma.organizationInvite.updateMany({
+    where: { organizationId: { in: orgs.map((org) => org.id) }, status: 'PENDING' },
+    data: { status: 'EXPIRED', expiresAt: new Date() },
+  });
+
+  await prisma.organization.updateMany({
+    where: { id: { in: orgs.map((org) => org.id) } },
+    data: {
+      clerkOrganizationId: null,
+    },
+  });
+
+  const orgIdsToZero = orgs
+    .filter((org) => (tokenResetByOrgId ? tokenResetByOrgId[org.id] !== false : true))
+    .map((org) => org.id);
+
+  if (orgIdsToZero.length > 0) {
+    await prisma.organization.updateMany({
+      where: { id: { in: orgIdsToZero } },
+      data: { tokenBalance: 0 },
+    });
+  }
+
+  Logger.info('Suspended local organizations after losing team access', {
+    userId: context?.userId,
+    organizationIds: orgs.map((org) => org.id),
+    tokenResetOrganizationIds: orgIdsToZero,
+    reason: context?.reason,
+    providerName,
+  });
+}
+
+export async function deactivateOrganizationsByIds(
+  orgIds: string[],
+  context?: { userId?: string; reason?: string; mode?: OrganizationExpiryMode; useExpiryTokenResetPolicy?: boolean }
+) {
+  if (context?.mode === 'SUSPEND') {
+    await suspendOrganizationsByIds(orgIds, context);
+    return;
+  }
+
   const uniqueOrgIds = Array.from(new Set(orgIds.filter((id) => typeof id === 'string' && id.length > 0)));
   if (uniqueOrgIds.length === 0) return;
 
@@ -374,7 +517,10 @@ export async function deactivateOrganizationsByIds(orgIds: string[], context?: {
   }
 }
 
-export async function deactivateUserOrganizations(userId: string) {
+export async function deactivateUserOrganizations(
+  userId: string,
+  opts?: { mode?: OrganizationExpiryMode; reason?: string; useExpiryTokenResetPolicy?: boolean }
+) {
   const orgs = await prisma.organization.findMany({
     where: { ownerUserId: userId },
     select: { id: true, clerkOrganizationId: true },
@@ -383,7 +529,12 @@ export async function deactivateUserOrganizations(userId: string) {
 
   await deactivateOrganizationsByIds(
     orgs.map((o) => o.id),
-    { userId, reason: 'deactivateUserOrganizations' }
+    {
+      userId,
+      reason: opts?.reason ?? 'deactivateUserOrganizations',
+      mode: opts?.mode,
+      useExpiryTokenResetPolicy: opts?.useExpiryTokenResetPolicy,
+    }
   );
 }
 

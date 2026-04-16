@@ -140,9 +140,20 @@ Examples:
 
 - `app/admin/(valid)/theme/page.tsx` renders `/admin/theme`
 - `app/dashboard/(valid)/team/page.tsx` renders `/dashboard/team`
-- `app/admin/(valid)/api/page.tsx` renders `/admin/api`
+- `app/admin/(valid)/logs/page.tsx` renders `/admin/logs`
+- `app/docs/api/page.tsx` renders `/docs/api`
 
 > **Tip for vibecoders:** Most of your custom app code will go in `app/dashboard/` (user-facing pages), `components/` (UI), and `lib/` (business logic). The payment, auth, and admin infrastructure is already built — you're extending it, not rebuilding it.
+
+### AI context files
+
+If you work with GitHub Copilot, Cursor, Claude Code, Windsurf, or another coding agent, read these repo-root files early:
+
+- **`AGENTS.md`** — specialized AI agent personas and their codebase focus areas
+- **`CLAUDE.md`** — project rules, architecture notes, quick reference, and common pitfalls
+- **`INSTRUCTIONS.md`** — additional implementation guidance and conventions
+
+These files explain project-specific requirements like using the auth/payment abstractions, checking both generic and legacy provider ID fields, and running the right regression tests for core infrastructure changes.
 
 ## Quick Start
 
@@ -198,9 +209,7 @@ These are the commands most people actually need when working on or operating th
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
 | `npm run prisma:migrate` | Create and apply a local Prisma migration |
 | `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
-| `npm run check:admin-api-parity` | Verify curated admin API docs stay in sync with discovered routes |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
-| `npm run ops:reencrypt-payment-authorizations` | Re-encrypt stored payment authorizations after key rotation or crypto changes |
 
 If you are new to the repo, the normal local loop is: `npm install` → `npx prisma db seed` → `npm run dev`.
 
@@ -354,6 +363,8 @@ PlanPrice {
 
 For example, a plan can have a $10 USD price on Stripe and a ₦15,000 NGN price on Paystack simultaneously.
 
+**Current UI reality:** the shipped admin plan modal does **not** yet expose full `PlanPrice` CRUD management. It supports the base plan fields, recurring cadence, token/team metadata, and advanced external provider price ID overrides. If you need full localized price-row management today, use seed/sync flows, Prisma Studio, direct data tooling, or build additional admin UI.
+
 ### Auto-creating Provider Price IDs
 
 ```bash
@@ -380,7 +391,7 @@ STRIPE_WEBHOOK_SECRET="whsec_..."       # Supports comma-separated for rotation
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."
 ```
 
-**Webhook endpoint:** `/api/webhooks/payments` (centralized, preferred) or `/api/stripe/webhook`
+**Webhook endpoint:** `/api/webhooks/payments` (centralized, preferred), `/api/webhooks/stripe`, or `/api/stripe/webhook`
 
 **Local testing:**
 ```bash
@@ -486,7 +497,7 @@ RAZORPAY_CURRENCY="USD"                 # Optional; affects catalog sync and red
 RAZORPAY_ENABLE_OFFERS="true"           # Optional; attach offer_id to one-time Payment Links
 ```
 
-**Webhook endpoint:** `/api/webhooks/payments` (centralized ingress)
+**Webhook endpoint:** `/api/webhooks/payments` (centralized ingress only; no dedicated Razorpay alias route is currently shipped)
 
 Checkouts are **redirect-based**:
 - One-time: Payment Links (`/v1/payment_links`) → `short_url`
@@ -523,7 +534,7 @@ If Razorpay rejects the `offer_id`, the server retries without it.
 | Proration | ✅ | ❌ | ✅ | ✅ |
 | Subscription updates | ✅ | ❌ (cancel + recreate) | ✅ | ✅ |
 | Cancel at period end | ✅ | ✅ (workaround) | ✅ | ✅ |
-| Customer portal | ✅ | Subscriptions only | ✅ | Subscriptions only |
+| Manage payment experience | ✅ Hosted portal | Subscription short_url best effort | ✅ Hosted portal | Subscription short_url best effort |
 | Invoices / Receipts | ✅ | ❌ | ❌ | ❌ |
 | PDF Invoices (in-app) | ✅ | ✅ | ✅ | ✅ |
 | Refunds | ✅ | ✅ | ✅ | ✅ |
@@ -558,18 +569,20 @@ When querying, always resolve subscriptions and plans the same way the service l
 
 ### Adding New Providers
 
-See [`docs/adding-payment-providers.md`](docs/adding-payment-providers.md) for the full step-by-step guide.
+See the public docs page at `/docs/adding-payment-provider` for the overview, and [`docs/adding-payment-providers.md`](docs/adding-payment-providers.md) for the deeper implementation guide.
 
 ---
 
 ## Token System
 
-The app ships with a dual token balance system for metering usage:
+The app ships with a multi-bucket token system for metering usage:
 
 | Bucket | Field | Purpose |
 |---|---|---|
-| **Paid tokens** | `tokenBalance` | Granted by plan purchases/top-ups. Configurable expiry behavior. |
-| **Free tokens** | `freeTokenBalance` | Granted by the free plan; reset monthly based on settings. |
+| **Paid personal tokens** | `User.tokenBalance` | Granted by plan purchases and top-ups. Configurable expiry and renewal behavior. |
+| **Free-plan tokens** | `User.freeTokenBalance` | Granted by the free plan using configurable renewal rules. |
+| **Organization shared balance** | `Organization.tokenBalance` | Shared workspace pool used by `SHARED_FOR_ORG` organizations. |
+| **Organization member allocation** | `OrganizationMembership.sharedTokenBalance` | Per-member workspace balance used by `ALLOCATED_PER_MEMBER` organizations. |
 
 ### Token Spending
 
@@ -579,10 +592,12 @@ The app ships with a dual token balance system for metering usage:
 
 | Bucket | Behavior |
 |---|---|
-| `auto` | Deducts from paid first, then free (default) |
+| `auto` | Multi-pass selection across paid, shared, and free balances |
 | `paid` | Only deducts from paid tokens |
 | `free` | Only deducts from free tokens |
-| `shared` | Deducts from the user's organization shared token pool |
+| `shared` | Deducts from the active organization context |
+
+In other words, `auto` is not just “paid then free.” The real selection logic also considers workspace shared balance when the user is operating inside an organization.
 
 ### Organization Token Pools
 
@@ -617,6 +632,20 @@ Token grants, renewals, one-time top-ups, and pending-activation flows all branc
 - `resetUserTokensIfNeeded` — resets free tokens monthly (checked on every dashboard visit).
 - `shouldResetPaidTokensOnExpiry` / `shouldResetPaidTokensOnRenewal` — configurable in admin settings.
 
+The admin settings surface also exposes the paid-token operations controls under `/admin/settings`:
+
+| Setting | Purpose |
+|---|---|
+| `FREE_PLAN_TOKEN_LIMIT` | Amount granted to free-plan users |
+| `FREE_PLAN_RENEWAL_TYPE` | Renewal cadence for free-plan balance (`daily`, `monthly`, `one-time`, `unlimited`) |
+| `FREE_PLAN_TOKEN_NAME` | Optional free-plan-specific token label |
+| `TOKENS_RESET_ON_EXPIRY_ONE_TIME` | Reset paid tokens when a one-time plan expires |
+| `TOKENS_RESET_ON_EXPIRY_RECURRING` | Reset paid tokens when a recurring plan naturally expires |
+| `TOKENS_RESET_ON_RENEWAL_ONE_TIME` | Reset paid tokens on one-time renewal-style flows |
+| `TOKENS_RESET_ON_RENEWAL_RECURRING` | Reset paid tokens on recurring renewals |
+| `TOKENS_NATURAL_EXPIRY_GRACE_HOURS` | Grace window before natural-expiry cleanup clears paid tokens and applies the organization access cleanup policy |
+| `ORGANIZATION_EXPIRY_MODE` | Expiry policy for organization access: suspend workspaces by default or dismantle them explicitly |
+
 ---
 
 ## Team Plans & Organizations
@@ -626,11 +655,21 @@ Team subscriptions provision managed organizations and keep them in sync with bi
 - **Provisioning:** When a qualifying subscription activates, `ensureTeamOrganization` creates or updates an organization, assigns a deterministic slug, and mirrors metadata to the active auth provider when that provider supports organization primitives. In practice, that means an active team plan whose plan has `supportsOrganizations: true` and is not in a proration-pending state.
 - **Token strategies:** Team plans can use either a shared workspace pool or allocated-per-member balances. The effective dashboard strategy follows the attached team plan so older organizations with legacy defaults still render correctly.
 - **Member entitlements:** When a workspace uses `ALLOCATED_PER_MEMBER`, joining members receive the plan token allowance in their membership balance, renewals reset those balances, and top-ups/extensions credit each active member instead of the org pool.
-- **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses, the helper dismantles the organization and clears member access.
+- **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses beyond the grace window, the helper suspends workspace access by default, clears member access, and can be switched to full dismantling through `ORGANIZATION_EXPIRY_MODE`.
 - **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, provisioning refresh, strategy-aware balance labels, and shared-pool cap controls that only appear when the workspace actually uses `SHARED_FOR_ORG`.
 - **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
 - **API routes:** `/api/team/invite`, `/api/team/invite/revoke`, `/api/team/members/remove`, `/api/team/summary`, `/api/team/provision`, `/api/team/settings`.
 - **Clerk webhook sync:** `organization.*`, `organizationMembership.*`, and `organizationInvitation.*` events are handled in `/api/webhooks/clerk` to keep Prisma and Clerk in sync.
+
+### Workspace switching
+
+Users can move between their personal workspace and team workspaces.
+
+- **UI switcher:** the dashboard sidebar footer renders the auth-provider organization switcher
+- **App-managed switching:** `POST /api/user/active-org` stores or clears the active organization in an httpOnly cookie
+- **Why it matters:** billing, plan scope, token spending, checkout metadata, and team pages all follow the active workspace context
+
+If a user accepts a team invite, the client attempts to activate that workspace immediately before navigating them into `/dashboard/team`.
 
 ### Plan Schema for Teams
 
@@ -873,7 +912,10 @@ A built-in support ticket system for user-admin communication.
 
 - **User:** `/dashboard/support` — create tickets, view replies
 - **Admin:** `/admin/support` — view all open tickets, reply, manage status
-- **API:** `/api/support/tickets`
+- **User APIs:** `/api/support/tickets`, `/api/support/tickets/[ticketId]`, `/api/support/tickets/[ticketId]/reply`
+- **Admin APIs:** `/api/admin/support/tickets`, `/api/admin/support/tickets/[ticketId]`, `/api/admin/support/tickets/[ticketId]/reply`
+
+The support center is already integrated into the wider product flow: billing pages link users there for refund/help requests, notifications can deep-link back into ticket threads, and support email templates notify the relevant side when a ticket or reply is created.
 
 ---
 
@@ -921,6 +963,8 @@ Similar layout with refund-specific details:
 
 Provider-specific routes also exist as aliases: `/api/stripe/webhook` (Stripe), `/api/webhooks/paystack` (Paystack), `/api/webhooks/paddle` (Paddle).
 
+Stripe also exposes `/api/webhooks/stripe` as an alias route. Razorpay currently relies on the centralized `/api/webhooks/payments` route rather than a dedicated provider-specific alias.
+
 ### Clerk webhook
 
 `/api/webhooks/clerk` handles:
@@ -945,7 +989,7 @@ Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>
 
 Run this periodically (hourly or daily) to:
 - Expire stale ACTIVE subscriptions past their `expiresAt`.
-- Dismantle "zombie" organizations whose owner's subscription has lapsed.
+- Apply the configured organization-expiry policy to "zombie" organizations whose owner's subscription has lapsed. The default is to suspend access instead of dismantling the local workspace record.
 - Process the subscription queue for batch operations.
 
 **In production**, unauthorized requests return `404`. The route accepts any one of these bearer tokens:
@@ -971,23 +1015,25 @@ As a fallback, `app/dashboard/(valid)/layout.tsx` calls `getCurrentUserWithFallb
 
 ---
 
-## File & Logo Storage (S3)
+## File Storage (S3)
 
-By default, uploaded logos are stored on the local filesystem. Switch to S3 (or any S3-compatible provider):
+By default, uploaded files are stored on the local filesystem. Switch to S3 (or any S3-compatible provider):
 
 ```bash
-LOGO_STORAGE="s3"
-LOGO_S3_BUCKET="my-bucket-name"
+FILE_STORAGE="s3"
+FILE_S3_BUCKET="my-bucket-name"
 AWS_REGION=""
 AWS_ACCESS_KEY_ID=""
 AWS_SECRET_ACCESS_KEY=""
-LOGO_CDN_DOMAIN=""        # Optional: CloudFront distribution domain (recommended)
-LOGO_S3_ENDPOINT=""       # Optional: Custom S3-compatible endpoint (Cloudflare R2, MinIO, DigitalOcean Spaces)
+FILE_CDN_DOMAIN=""        # Optional: CloudFront distribution domain (recommended)
+FILE_S3_ENDPOINT=""       # Optional: Custom S3-compatible endpoint (Cloudflare R2, MinIO, DigitalOcean Spaces)
 ```
 
-> **S3-compatible providers:** Set `LOGO_S3_ENDPOINT` to your provider's endpoint URL (e.g. `https://<account>.r2.cloudflarestorage.com` for Cloudflare R2). Leave it blank for standard AWS S3.
+> **S3-compatible providers:** Set `FILE_S3_ENDPOINT` to your provider's endpoint URL (e.g. `https://<account>.r2.cloudflarestorage.com` for Cloudflare R2). Leave it blank for standard AWS S3.
 
-When `LOGO_CDN_DOMAIN` is set, the upload handler returns CDN URLs (`https://<LOGO_CDN_DOMAIN>/logos/<file>`) instead of raw S3 links.
+When `FILE_CDN_DOMAIN` is set, the upload handler returns CDN URLs instead of raw S3 links.
+
+Legacy aliases are still accepted by the runtime: `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `LOGO_S3_ENDPOINT`, and `LOGO_CDN_DOMAIN`.
 
 **File upload scoping:** The `saveAdminFile` helper in `lib/fileStorage.js` scopes uploads to sub-directories based on context (e.g. `/logos/`, `/files/`) to keep the bucket organized.
 
@@ -1144,6 +1190,7 @@ The `AdminActionLog` model records all admin/moderator actions:
 - `X-XSS-Protection: 1; mode=block`
 - `Permissions-Policy` — disables camera, microphone, geolocation, payment
 - API routes: `Cache-Control: no-store, max-age=0`
+- `Content-Security-Policy` — source allowlist for scripts, frames, embeds, and outbound connections
 
 ### Error Sanitization
 
@@ -1155,11 +1202,15 @@ The `AdminActionLog` model records all admin/moderator actions:
 
 ### Other Security Features
 
-- **`ENCRYPTION_SECRET`** — encrypts sensitive DB fields (e.g. card last4)
+- **`ENCRYPTION_SECRET`** — encrypts sensitive DB fields at rest, including reusable payment authorization codes
 - **Webhook signature verification** with rotation support (comma-separated secrets)
 - **Price validation** on webhook events
-- **Password policy** enforcement (`lib/password-policy.ts`)
+- **Bcrypt password hashing** for NextAuth credentials users (12 salt rounds)
+- **Single-use password reset flow** — reset tokens are generated with cryptographic randomness, stored hashed, expire after 1 hour, and active sessions are revoked after reset
+- **Password policy** enforcement (`lib/password-policy.ts`) — minimum 8 chars, uppercase, lowercase, and number by default
 - **Token version** tracking — incremented on password change to invalidate existing sessions
+- **Secure credentials cookies** — `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS for the built-in credentials sign-in route
+- **Generic auth recovery responses** on forgot-password and resend-verification routes to reduce email enumeration risk
 
 ---
 
@@ -1223,10 +1274,10 @@ The admin dashboard (`/admin`) is organized into logical groups:
 
 ### Notable Admin Features
 
-- **Admin API Docs** (`/admin/api`) — curated API reference backed by the auto-discovered inventory in `lib/admin-api.inventory.ts`
+- **Public API Docs** (`/docs/api`) — curated API reference backed by the maintained inventory in `lib/admin-api.inventory.ts`
 - **Maintenance Tools** (`/admin/maintenance`) — cleanup, repair utilities, and maintenance mode toggle
 - **System Logs** (`/admin/logs`) — persisted WARN/ERROR logs with filtering
-- **One-Time Plans** (`/admin/one-time-plans`) — manage non-recurring plan offerings
+- **One-Time Plans** (`/admin/one-time-plans`) — manage non-recurring offers, including fixed-duration and lifetime access plans
 
 ---
 
@@ -1244,13 +1295,15 @@ The user dashboard (`/dashboard`) provides users with a full self-service experi
 | **Team** | `/dashboard/team` | Team management (invites, members, settings) |
 | **Profile** | `/dashboard/profile` | Unified account hub for profile details, preferences, session security, export, and account deletion |
 | **Account** | `/dashboard/account` | Legacy redirect to `/dashboard/profile` |
-| **Settings** | `/dashboard/settings` | Preferences (email notifications, timezone, etc.) |
+| **Settings** | `/dashboard/settings` | Legacy entry point that redirects into the unified profile/settings experience |
 | **Notifications** | `/dashboard/notifications` | In-app notification center |
 | **Support** | `/dashboard/support` | Support ticket creation and history |
 | **Coupons** | `/dashboard/coupons` | Redeemed coupons and pending redemptions |
 | **Legacy redirects** | `/dashboard/editor`, `/dashboard/sassyapp` | Redirect to `/dashboard` |
 
 The main dashboard page is the place to replace the demo SaaSyApp experience with your own product logic.
+
+Users can also switch workspace context from the dashboard sidebar footer. That switcher is important because a personal workspace and a team workspace can expose different billing state, token pools, and feature access.
 
 ---
 
@@ -1331,7 +1384,7 @@ SaaSyBase does not need much Vercel-specific config, but there are a few product
 2. Set production env vars in the Vercel project settings.
 3. Use PostgreSQL, not SQLite.
 4. Run `npx prisma migrate deploy` against the production database before the first live release and on future schema changes. Vercel does not apply Prisma migrations for you automatically.
-5. If you need admin-managed uploads (logos, blog assets, similar files), use `LOGO_STORAGE="s3"` plus S3-compatible credentials. Vercel's local filesystem is not suitable for durable app-managed uploads.
+5. If you need admin-managed uploads (logos, blog assets, similar files), use `FILE_STORAGE="s3"` plus S3-compatible credentials. Vercel's local filesystem is not suitable for durable app-managed uploads.
 6. Set `CRON_SECRET` in Vercel if you want the built-in Vercel cron job to call `/api/cron/process-expiry`. The shipped `vercel.json` schedules that route once per day at `03:00 UTC`.
 
 Notes:
@@ -1349,7 +1402,7 @@ Notes:
 ### Stripe webhook (production)
 
 1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint.
-2. URL: `https://yourproductiondomain.com/api/webhooks/payments` (or `/api/stripe/webhook`)
+2. URL: `https://yourproductiondomain.com/api/webhooks/payments` (or `/api/webhooks/stripe` or `/api/stripe/webhook`)
 3. Enable the recommended events listed in the [Stripe](#stripe) section above.
 4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
@@ -1364,7 +1417,7 @@ STRIPE_WEBHOOK_SECRET="whsec_primary,whsec_rotating"
 - `NEXT_PUBLIC_APP_URL` matches the production domain exactly.
 - `AUTH_PROVIDER` and `PAYMENT_PROVIDER` are set deliberately.
 - `CRON_SECRET` is configured if using the bundled Vercel cron.
-- `LOGO_STORAGE="s3"` is configured if you need durable uploads.
+- `FILE_STORAGE="s3"` is configured if you need durable uploads.
 - Clerk and payment webhooks point at the production domain.
 
 ### Support ticket emails
@@ -1505,7 +1558,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Currency | `PADDLE_CURRENCY`, `PAYSTACK_CURRENCY`, `RAZORPAY_CURRENCY` | Per-provider currency overrides |
 | Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | Switch between SMTP/Nodemailer and Resend |
 | Geolocation | `IPINFO_LITE_TOKEN` | Optional; activity geolocation falls back to `country.is` when unset |
-| Storage | `LOGO_STORAGE`, `LOGO_S3_BUCKET`, `LOGO_S3_ENDPOINT`, `AWS_*`, `LOGO_CDN_DOMAIN` | Local fs, S3, or S3-compatible (R2, MinIO) |
+| Storage | `FILE_STORAGE`, `FILE_S3_BUCKET`, `FILE_S3_ENDPOINT`, `AWS_*`, `FILE_CDN_DOMAIN` | Local fs, S3, or S3-compatible (R2, MinIO). Legacy `LOGO_*` aliases still work |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN`, `CRON_SECRET` | Server-side secrets |
 | Demo | `DEMO_READ_ONLY_MODE` | Read-only demo mode |

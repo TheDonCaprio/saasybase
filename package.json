@@ -16,13 +16,12 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio --config prisma.config.ts",
     "typecheck": "tsc --noEmit",
-    "check:admin-api-parity": "tsx scripts/check-admin-api-parity.ts",
+    "public:export": "node scripts/public-export.mjs",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:org-switcher": "playwright test tests/e2e/org-switcher-regression.spec.ts",
-    "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts",
-    "ops:reencrypt-payment-authorizations": "tsx scripts/reencrypt-payment-authorizations.ts"
+    "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

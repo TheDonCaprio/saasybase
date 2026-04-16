@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
+import { Logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
 	const { userId } = await authService.getSession();
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
 		return NextResponse.json({ revoked, failed });
 	} catch (error) {
-		console.error('Failed to revoke other sessions:', error);
+		Logger.error('Failed to revoke other sessions', error);
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 	}
 }

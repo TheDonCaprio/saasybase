@@ -42,6 +42,7 @@ export type SubscriptionMinAggregateOutputType = {
   status: string | null
   startedAt: Date | null
   expiresAt: Date | null
+  isLifetime: boolean | null
   lastPaymentAmountCents: number | null
   canceledAt: Date | null
   paymentProvider: string | null
@@ -64,6 +65,7 @@ export type SubscriptionMaxAggregateOutputType = {
   status: string | null
   startedAt: Date | null
   expiresAt: Date | null
+  isLifetime: boolean | null
   lastPaymentAmountCents: number | null
   canceledAt: Date | null
   paymentProvider: string | null
@@ -86,6 +88,7 @@ export type SubscriptionCountAggregateOutputType = {
   status: number
   startedAt: number
   expiresAt: number
+  isLifetime: number
   lastPaymentAmountCents: number
   canceledAt: number
   paymentProvider: number
@@ -118,6 +121,7 @@ export type SubscriptionMinAggregateInputType = {
   status?: true
   startedAt?: true
   expiresAt?: true
+  isLifetime?: true
   lastPaymentAmountCents?: true
   canceledAt?: true
   paymentProvider?: true
@@ -140,6 +144,7 @@ export type SubscriptionMaxAggregateInputType = {
   status?: true
   startedAt?: true
   expiresAt?: true
+  isLifetime?: true
   lastPaymentAmountCents?: true
   canceledAt?: true
   paymentProvider?: true
@@ -162,6 +167,7 @@ export type SubscriptionCountAggregateInputType = {
   status?: true
   startedAt?: true
   expiresAt?: true
+  isLifetime?: true
   lastPaymentAmountCents?: true
   canceledAt?: true
   paymentProvider?: true
@@ -271,6 +277,7 @@ export type SubscriptionGroupByOutputType = {
   status: string
   startedAt: Date
   expiresAt: Date
+  isLifetime: boolean
   lastPaymentAmountCents: number | null
   canceledAt: Date | null
   paymentProvider: string | null
@@ -316,6 +323,7 @@ export type SubscriptionWhereInput = {
   status?: Prisma.StringFilter<"Subscription"> | string
   startedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   expiresAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
+  isLifetime?: Prisma.BoolFilter<"Subscription"> | boolean
   lastPaymentAmountCents?: Prisma.IntNullableFilter<"Subscription"> | number | null
   canceledAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   paymentProvider?: Prisma.StringNullableFilter<"Subscription"> | string | null
@@ -343,6 +351,7 @@ export type SubscriptionOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   lastPaymentAmountCents?: Prisma.SortOrderInput | Prisma.SortOrder
   canceledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -374,6 +383,7 @@ export type SubscriptionWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.StringFilter<"Subscription"> | string
   startedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   expiresAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
+  isLifetime?: Prisma.BoolFilter<"Subscription"> | boolean
   lastPaymentAmountCents?: Prisma.IntNullableFilter<"Subscription"> | number | null
   canceledAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   paymentProvider?: Prisma.StringNullableFilter<"Subscription"> | string | null
@@ -400,6 +410,7 @@ export type SubscriptionOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   lastPaymentAmountCents?: Prisma.SortOrderInput | Prisma.SortOrder
   canceledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -430,6 +441,7 @@ export type SubscriptionScalarWhereWithAggregatesInput = {
   status?: Prisma.StringWithAggregatesFilter<"Subscription"> | string
   startedAt?: Prisma.DateTimeWithAggregatesFilter<"Subscription"> | Date | string
   expiresAt?: Prisma.DateTimeWithAggregatesFilter<"Subscription"> | Date | string
+  isLifetime?: Prisma.BoolWithAggregatesFilter<"Subscription"> | boolean
   lastPaymentAmountCents?: Prisma.IntNullableWithAggregatesFilter<"Subscription"> | number | null
   canceledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Subscription"> | Date | string | null
   paymentProvider?: Prisma.StringNullableWithAggregatesFilter<"Subscription"> | string | null
@@ -449,6 +461,7 @@ export type SubscriptionCreateInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -475,6 +488,7 @@ export type SubscriptionUncheckedCreateInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -495,6 +509,7 @@ export type SubscriptionUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -521,6 +536,7 @@ export type SubscriptionUncheckedUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -544,6 +560,7 @@ export type SubscriptionCreateManyInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -563,6 +580,7 @@ export type SubscriptionUpdateManyMutationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -584,6 +602,7 @@ export type SubscriptionUncheckedUpdateManyInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -616,6 +635,7 @@ export type SubscriptionCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   lastPaymentAmountCents?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   paymentProvider?: Prisma.SortOrder
@@ -642,6 +662,7 @@ export type SubscriptionMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   lastPaymentAmountCents?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   paymentProvider?: Prisma.SortOrder
@@ -664,6 +685,7 @@ export type SubscriptionMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   lastPaymentAmountCents?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   paymentProvider?: Prisma.SortOrder
@@ -876,6 +898,7 @@ export type SubscriptionCreateWithoutUserInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -900,6 +923,7 @@ export type SubscriptionUncheckedCreateWithoutUserInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -951,6 +975,7 @@ export type SubscriptionScalarWhereInput = {
   status?: Prisma.StringFilter<"Subscription"> | string
   startedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   expiresAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
+  isLifetime?: Prisma.BoolFilter<"Subscription"> | boolean
   lastPaymentAmountCents?: Prisma.IntNullableFilter<"Subscription"> | number | null
   canceledAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   paymentProvider?: Prisma.StringNullableFilter<"Subscription"> | string | null
@@ -970,6 +995,7 @@ export type SubscriptionCreateWithoutPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -994,6 +1020,7 @@ export type SubscriptionUncheckedCreateWithoutPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1023,6 +1050,7 @@ export type SubscriptionCreateWithoutScheduledPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1048,6 +1076,7 @@ export type SubscriptionUncheckedCreateWithoutScheduledPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1108,6 +1137,7 @@ export type SubscriptionCreateWithoutOrganizationInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1132,6 +1162,7 @@ export type SubscriptionUncheckedCreateWithoutOrganizationInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1177,6 +1208,7 @@ export type SubscriptionCreateWithoutPaymentsInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1202,6 +1234,7 @@ export type SubscriptionUncheckedCreateWithoutPaymentsInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1237,6 +1270,7 @@ export type SubscriptionUpdateWithoutPaymentsInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1262,6 +1296,7 @@ export type SubscriptionUncheckedUpdateWithoutPaymentsInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1283,6 +1318,7 @@ export type SubscriptionCreateManyUserInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1302,6 +1338,7 @@ export type SubscriptionUpdateWithoutUserInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1326,6 +1363,7 @@ export type SubscriptionUncheckedUpdateWithoutUserInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1348,6 +1386,7 @@ export type SubscriptionUncheckedUpdateManyWithoutUserInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1369,6 +1408,7 @@ export type SubscriptionCreateManyPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1391,6 +1431,7 @@ export type SubscriptionCreateManyScheduledPlanInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1409,6 +1450,7 @@ export type SubscriptionUpdateWithoutPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1433,6 +1475,7 @@ export type SubscriptionUncheckedUpdateWithoutPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1455,6 +1498,7 @@ export type SubscriptionUncheckedUpdateManyWithoutPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1474,6 +1518,7 @@ export type SubscriptionUpdateWithoutScheduledPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1499,6 +1544,7 @@ export type SubscriptionUncheckedUpdateWithoutScheduledPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1521,6 +1567,7 @@ export type SubscriptionUncheckedUpdateManyWithoutScheduledPlanInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1541,6 +1588,7 @@ export type SubscriptionCreateManyOrganizationInput = {
   status?: string
   startedAt?: Date | string
   expiresAt: Date | string
+  isLifetime?: boolean
   lastPaymentAmountCents?: number | null
   canceledAt?: Date | string | null
   paymentProvider?: string | null
@@ -1560,6 +1608,7 @@ export type SubscriptionUpdateWithoutOrganizationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1584,6 +1633,7 @@ export type SubscriptionUncheckedUpdateWithoutOrganizationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1606,6 +1656,7 @@ export type SubscriptionUncheckedUpdateManyWithoutOrganizationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastPaymentAmountCents?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   paymentProvider?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1659,6 +1710,7 @@ export type SubscriptionSelect<ExtArgs extends runtime.Types.Extensions.Internal
   status?: boolean
   startedAt?: boolean
   expiresAt?: boolean
+  isLifetime?: boolean
   lastPaymentAmountCents?: boolean
   canceledAt?: boolean
   paymentProvider?: boolean
@@ -1687,6 +1739,7 @@ export type SubscriptionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   status?: boolean
   startedAt?: boolean
   expiresAt?: boolean
+  isLifetime?: boolean
   lastPaymentAmountCents?: boolean
   canceledAt?: boolean
   paymentProvider?: boolean
@@ -1713,6 +1766,7 @@ export type SubscriptionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   status?: boolean
   startedAt?: boolean
   expiresAt?: boolean
+  isLifetime?: boolean
   lastPaymentAmountCents?: boolean
   canceledAt?: boolean
   paymentProvider?: boolean
@@ -1739,6 +1793,7 @@ export type SubscriptionSelectScalar = {
   status?: boolean
   startedAt?: boolean
   expiresAt?: boolean
+  isLifetime?: boolean
   lastPaymentAmountCents?: boolean
   canceledAt?: boolean
   paymentProvider?: boolean
@@ -1753,7 +1808,7 @@ export type SubscriptionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "planId" | "organizationId" | "status" | "startedAt" | "expiresAt" | "lastPaymentAmountCents" | "canceledAt" | "paymentProvider" | "externalSubscriptionId" | "externalSubscriptionIds" | "clearPaidTokensOnExpiry" | "cancelAtPeriodEnd" | "scheduledPlanId" | "scheduledPlanDate" | "prorationPendingSince" | "createdAt" | "updatedAt", ExtArgs["result"]["subscription"]>
+export type SubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "planId" | "organizationId" | "status" | "startedAt" | "expiresAt" | "isLifetime" | "lastPaymentAmountCents" | "canceledAt" | "paymentProvider" | "externalSubscriptionId" | "externalSubscriptionIds" | "clearPaidTokensOnExpiry" | "cancelAtPeriodEnd" | "scheduledPlanId" | "scheduledPlanDate" | "prorationPendingSince" | "createdAt" | "updatedAt", ExtArgs["result"]["subscription"]>
 export type SubscriptionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   plan?: boolean | Prisma.PlanDefaultArgs<ExtArgs>
@@ -1792,6 +1847,7 @@ export type $SubscriptionPayload<ExtArgs extends runtime.Types.Extensions.Intern
     status: string
     startedAt: Date
     expiresAt: Date
+    isLifetime: boolean
     lastPaymentAmountCents: number | null
     canceledAt: Date | null
     paymentProvider: string | null
@@ -2239,6 +2295,7 @@ export interface SubscriptionFieldRefs {
   readonly status: Prisma.FieldRef<"Subscription", 'String'>
   readonly startedAt: Prisma.FieldRef<"Subscription", 'DateTime'>
   readonly expiresAt: Prisma.FieldRef<"Subscription", 'DateTime'>
+  readonly isLifetime: Prisma.FieldRef<"Subscription", 'Boolean'>
   readonly lastPaymentAmountCents: Prisma.FieldRef<"Subscription", 'Int'>
   readonly canceledAt: Prisma.FieldRef<"Subscription", 'DateTime'>
   readonly paymentProvider: Prisma.FieldRef<"Subscription", 'String'>

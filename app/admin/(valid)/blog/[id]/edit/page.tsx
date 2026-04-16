@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { notFound } from 'next/navigation';
-import PageEditor from '@/components/admin/pages/PageEditor';
+import BlogPostEditor from '@/components/admin/blog/BlogPostEditor';
 import { getBlogPostById, listBlogCategories, toBlogPostDTO } from '@/lib/blog';
 import { requireAdminSectionAccess } from '@/lib/route-guards';
+import { Logger } from '@/lib/logger';
 
 interface EditBlogPostPageProps {
   params: Promise<{ id: string }>;
@@ -44,7 +45,7 @@ async function loadEditBlogPostData(postId: string) {
       postDTO: toBlogPostDTO(post),
     };
   } catch (error) {
-    console.error('Error loading blog post:', error);
+    Logger.error('Error loading blog post', error);
     return null;
   }
 }
@@ -59,7 +60,7 @@ export default async function EditBlogPostPage({ params }: EditBlogPostPageProps
   }
 
   return (
-    <PageEditor
+    <BlogPostEditor
       mode="edit"
       initialPage={data.postDTO}
       apiBasePath="/api/admin/blog"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../../lib/auth';
 import { recordAdminAction } from '../../../../../../lib/admin-actions';
+import { Logger } from '../../../../../../lib/logger';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ ticketId: string }> }) {
   const params = await ctx.params;
@@ -39,7 +40,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ ticke
 
     return NextResponse.json({ ticket });
   } catch (error) {
-    console.error('Error updating ticket status:', error);
+    Logger.error('Error updating ticket status', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ ticketI
 
     return NextResponse.json(mapped);
   } catch (err) {
-    console.error('Error fetching admin support ticket:', err);
+    Logger.error('Error fetching admin support ticket', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

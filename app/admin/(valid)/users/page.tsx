@@ -9,6 +9,7 @@ import type { AdminStatCardProps } from '../../../../components/admin/AdminStatC
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faUserShield, faRepeat, faHourglassHalf, faUserGroup } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
+import { Logger } from '../../../../lib/logger';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -128,7 +129,7 @@ export default async function AdminUsersPage() {
           } : null
         };
       } catch (error) {
-        console.warn(`Failed to fetch Clerk data for user ${user.id}:`, error);
+        Logger.warn(`Failed to fetch Clerk data for user ${user.id}`, error);
         return {
           ...user,
           clerkData: null

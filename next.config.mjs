@@ -4,6 +4,130 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+function buildContentSecurityPolicy() {
+  const directives = [
+    [
+      'default-src',
+      "'self'",
+    ],
+    [
+      'base-uri',
+      "'self'",
+    ],
+    [
+      'object-src',
+      "'none'",
+    ],
+    [
+      'frame-ancestors',
+      "'none'",
+    ],
+    [
+      'form-action',
+      "'self'",
+    ],
+    [
+      'script-src',
+      "'self'",
+      "'unsafe-inline'",
+      ...(isDevelopment ? ["'unsafe-eval'"] : []),
+      'https://pagead2.googlesyndication.com',
+      'https://googleads.g.doubleclick.net',
+      'https://securepubads.g.doubleclick.net',
+      'https://tpc.googlesyndication.com',
+      'https://www.googletagmanager.com',
+      'https://js.stripe.com',
+      'https://platform.twitter.com',
+      'https://js.paystack.co',
+      'https://checkout.razorpay.com',
+      'https://cdn.paddle.com',
+    ],
+    [
+      'style-src',
+      "'self'",
+      "'unsafe-inline'",
+    ],
+    [
+      'img-src',
+      "'self'",
+      'data:',
+      'blob:',
+      'https:',
+    ],
+    [
+      'font-src',
+      "'self'",
+      'data:',
+      'https://fonts.gstatic.com',
+    ],
+    [
+      'connect-src',
+      "'self'",
+      'https://pagead2.googlesyndication.com',
+      'https://googleads.g.doubleclick.net',
+      'https://securepubads.g.doubleclick.net',
+      'https://tpc.googlesyndication.com',
+      'https://api.stripe.com',
+      'https://js.stripe.com',
+      'https://hooks.stripe.com',
+      'https://m.stripe.network',
+      'https://q.stripe.com',
+      'https://r.stripe.com',
+      'https://www.google-analytics.com',
+      'https://region1.google-analytics.com',
+      'https://stats.g.doubleclick.net',
+      'https://www.googletagmanager.com',
+      'https://platform.twitter.com',
+      'https://syndication.twitter.com',
+      'https://*.paystack.co',
+      'https://*.razorpay.com',
+      'https://*.paddle.com',
+      ...(isDevelopment ? ['http://localhost:*', 'ws://localhost:*'] : []),
+    ],
+    [
+      'frame-src',
+      "'self'",
+      'https://pagead2.googlesyndication.com',
+      'https://googleads.g.doubleclick.net',
+      'https://securepubads.g.doubleclick.net',
+      'https://tpc.googlesyndication.com',
+      'https://js.stripe.com',
+      'https://hooks.stripe.com',
+      'https://platform.twitter.com',
+      'https://syndication.twitter.com',
+      'https://js.paystack.co',
+      'https://checkout.razorpay.com',
+      'https://cdn.paddle.com',
+      'https://*.paddle.com',
+    ],
+    [
+      'worker-src',
+      "'self'",
+      'blob:',
+    ],
+    [
+      'media-src',
+      "'self'",
+      'blob:',
+      'data:',
+    ],
+    [
+      'manifest-src',
+      "'self'",
+    ],
+    ...(!isDevelopment ? [[
+      'upgrade-insecure-requests',
+    ]] : []),
+  ];
+
+  return directives
+    .map(([name, ...values]) => `${name} ${values.join(' ')}`.trim())
+    .join('; ');
+}
+
+const contentSecurityPolicy = buildContentSecurityPolicy();
 
 const nextConfig = {
   // Allow accessing the dev server from local network devices and the current
@@ -72,6 +196,10 @@ const nextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: contentSecurityPolicy,
           },
         ],
       },

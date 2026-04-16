@@ -42,6 +42,7 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
+    "dist",
     "node_modules"
   ]
 }

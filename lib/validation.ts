@@ -130,6 +130,7 @@ export const apiSchemas = {
     shortDescription: z.union([z.string().max(200), z.null()]).optional(),
     description: z.union([z.string().max(2000), z.null()]).optional(),
     durationHours: z.number().int().min(1).max(8760),
+    isLifetime: z.boolean().optional().default(false),
     priceCents: z.number().int().min(0).max(500000),
     active: z.boolean().default(true),
     sortOrder: z.number().int().min(-1000).max(10000).default(0),
@@ -143,12 +144,21 @@ export const apiSchemas = {
     supportsOrganizations: z.boolean().optional().default(false),
     organizationSeatLimit: z.union([z.number().int().min(1), z.null()]).optional(),
     organizationTokenPoolStrategy: z.union([commonSchemas.organizationTokenPoolStrategy, z.null()]).optional(),
+  }).superRefine((data, ctx) => {
+    if (data.autoRenew && data.isLifetime) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['isLifetime'],
+        message: 'Lifetime access is only supported for one-time plans.',
+      });
+    }
   }),
   adminPlanUpdate: z.object({
     name: z.string().min(1).max(120).optional(),
     shortDescription: z.union([z.string().max(200), z.null()]).optional(),
     description: z.union([z.string().max(2000), z.null()]).optional(),
     durationHours: z.number().int().min(1).max(8760).optional(),
+    isLifetime: z.boolean().optional(),
     priceCents: z.number().int().min(0).max(500000).optional(),
     active: z.boolean().optional(),
     sortOrder: z.number().int().min(-1000).max(10000).optional(),
@@ -163,8 +173,21 @@ export const apiSchemas = {
     organizationSeatLimit: z.union([z.number().int().min(1), z.null()]).optional(),
     organizationTokenPoolStrategy: z.union([commonSchemas.organizationTokenPoolStrategy, z.null()]).optional(),
     createStripePrice: z.boolean().optional().default(false),
-  }).refine(data => Object.keys(data).length > 0, {
-    message: 'At least one field must be provided',
+  }).superRefine((data, ctx) => {
+    if (Object.keys(data).length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'At least one field must be provided',
+      });
+    }
+
+    if (data.autoRenew === true && data.isLifetime === true) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['isLifetime'],
+        message: 'Lifetime access is only supported for one-time plans.',
+      });
+    }
   }),
   adminPlanToggle: z.object({
     active: z.boolean(),

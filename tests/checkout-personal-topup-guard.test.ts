@@ -4,8 +4,11 @@ import { NextRequest } from 'next/server';
 let providerName = 'stripe';
 const createPaymentIntentMock = vi.hoisted(() => vi.fn());
 const createSubscriptionIntentMock = vi.hoisted(() => vi.fn());
+const createCustomerMock = vi.hoisted(() => vi.fn(async () => 'cus_embedded_1'));
 
-const authMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'user_1', orgId: null })));
+const authMock = vi.hoisted(
+  () => vi.fn(async (): Promise<{ userId: string; orgId: string | null }> => ({ userId: 'user_1', orgId: null }))
+);
 
 const rateLimitMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -31,6 +34,7 @@ const prismaMock = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
     findFirst: vi.fn(),
+    update: vi.fn(),
   },
   coupon: {
     findUnique: vi.fn(),
@@ -75,8 +79,9 @@ vi.mock('../lib/payment/service', () => ({
       get name() {
         return providerName;
       },
+      createCheckoutSession: vi.fn(async () => ({ url: 'https://checkout.example.com/session_1' })),
+      createCustomer: createCustomerMock,
     },
-    createCheckoutSession: vi.fn(),
     createPaymentIntent: createPaymentIntentMock,
     createSubscriptionIntent: createSubscriptionIntentMock,
   },
@@ -107,6 +112,8 @@ describe('checkout personal one-time guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     providerName = 'stripe';
+    authMock.mockResolvedValue({ userId: 'user_1', orgId: null });
+    createCustomerMock.mockResolvedValue('cus_embedded_1');
     createPaymentIntentMock.mockResolvedValue({ clientSecret: 'order_mock', paymentIntentId: 'order_mock' });
     createSubscriptionIntentMock.mockResolvedValue({ clientSecret: 'sub_mock', subscriptionId: 'sub_mock' });
 
@@ -126,10 +133,17 @@ describe('checkout personal one-time guard', () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user_1',
       email: 'user@example.com',
+      name: 'Test User',
+      externalCustomerId: null,
+      externalCustomerIds: null,
     });
+
+    prismaMock.user.update.mockResolvedValue({ id: 'user_1' });
   });
 
-  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout', async () => {
+  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout when the team workspace is active', async () => {
+    authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+
     const req = new NextRequest('http://localhost/api/checkout', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -145,7 +159,24 @@ describe('checkout personal one-time guard', () => {
     expect(body.error).toContain('Personal one-time top-ups are unavailable');
   });
 
-  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout/embedded', async () => {
+  it('allows /api/checkout in the personal workspace even if a team subscription exists', async () => {
+    const req = new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ planId: 'plan_personal_ot' }),
+    });
+
+    const res = await checkoutPost(req);
+    const body = (await res.json()) as { code?: string; url?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.code).toBeUndefined();
+    expect(body.url).toBe('https://checkout.example.com/session_1');
+  });
+
+  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout/embedded when the team workspace is active', async () => {
+    authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+
     const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
       method: 'GET',
     });
@@ -157,6 +188,20 @@ describe('checkout personal one-time guard', () => {
     expect(body.code).toBe('PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION');
     expect(body.redirectTo).toBe('/dashboard/team');
     expect(body.error).toContain('Personal one-time top-ups are unavailable');
+  });
+
+  it('allows /api/checkout/embedded in the personal workspace even if a team subscription exists', async () => {
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { code?: string; clientSecret?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.code).toBeUndefined();
+    expect(body.clientSecret).toBe('order_mock');
+    expect(createPaymentIntentMock).toHaveBeenCalledTimes(1);
   });
 
   it('uses dashboard cancel redirect for Razorpay embedded checkout', async () => {

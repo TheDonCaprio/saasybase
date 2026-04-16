@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   // Never expose in production without explicit secret
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
     
   } catch (error) {
-    console.error('Visit tracking API error:', error);
+    Logger.error('Visit tracking API error', error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }

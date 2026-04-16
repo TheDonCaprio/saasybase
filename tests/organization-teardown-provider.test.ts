@@ -14,6 +14,7 @@ const prismaMock = vi.hoisted(() => ({
     updateMany: vi.fn(async () => ({ count: 1 })),
   },
   subscription: {
+    findFirst: vi.fn(),
     updateMany: vi.fn(async () => ({ count: 1 })),
   },
   payment: {
@@ -23,6 +24,7 @@ const prismaMock = vi.hoisted(() => ({
     deleteMany: vi.fn(async () => ({ count: 1 })),
   },
   organizationInvite: {
+    updateMany: vi.fn(async () => ({ count: 1 })),
     deleteMany: vi.fn(async () => ({ count: 1 })),
   },
 }));
@@ -30,6 +32,11 @@ const prismaMock = vi.hoisted(() => ({
 vi.mock('../lib/auth-provider', () => ({ authService: authServiceMock }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+vi.mock('../lib/settings', () => ({
+  getOrganizationExpiryMode: vi.fn(async () => 'SUSPEND'),
+  getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24),
+  shouldResetPaidTokensOnExpiryForPlanAutoRenew: vi.fn(async (autoRenew?: boolean | null) => autoRenew === true),
+}));
 
 import { deactivateOrganizationsByIds } from '../lib/organization-access';
 
@@ -39,6 +46,7 @@ describe('organization teardown by provider', () => {
     prismaMock.organization.findMany.mockResolvedValue([
       { id: 'org_1', clerkOrganizationId: 'provider_org_1', ownerUserId: 'user_1' },
     ]);
+    prismaMock.subscription.findFirst.mockResolvedValue(null);
   });
 
   it('skips provider deletion for NextAuth and tears down local records directly', async () => {
@@ -71,5 +79,50 @@ describe('organization teardown by provider', () => {
 
     expect(deleteOrganizationMock).toHaveBeenCalledWith('provider_org_1');
     expect(prismaMock.organization.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['org_1'] } } });
+  });
+
+  it('keeps org tokens on expiry-driven suspension when the one-time expiry reset setting is disabled', async () => {
+    authServiceMock.providerName = 'clerk';
+    prismaMock.subscription.findFirst
+      .mockResolvedValueOnce({ plan: { autoRenew: false } })
+      .mockResolvedValueOnce(null);
+
+    await deactivateOrganizationsByIds(['org_1'], {
+      userId: 'user_1',
+      reason: 'validate-org-access',
+      mode: 'SUSPEND',
+      useExpiryTokenResetPolicy: true,
+    });
+
+    expect(deleteOrganizationMock).toHaveBeenCalledWith('provider_org_1');
+    expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['org_1'] } },
+      data: { clerkOrganizationId: null },
+    });
+    expect(prismaMock.organization.updateMany).not.toHaveBeenCalledWith({
+      where: { id: { in: ['org_1'] } },
+      data: { tokenBalance: 0 },
+    });
+  });
+
+  it('zeros org tokens on expiry-driven suspension when the recurring expiry reset setting is enabled', async () => {
+    authServiceMock.providerName = 'clerk';
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({ plan: { autoRenew: true } });
+
+    await deactivateOrganizationsByIds(['org_1'], {
+      userId: 'user_1',
+      reason: 'validate-org-access',
+      mode: 'SUSPEND',
+      useExpiryTokenResetPolicy: true,
+    });
+
+    expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['org_1'] } },
+      data: { clerkOrganizationId: null },
+    });
+    expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['org_1'] } },
+      data: { tokenBalance: 0 },
+    });
   });
 });

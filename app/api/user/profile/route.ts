@@ -8,6 +8,7 @@ import { validateAndFormatPersonName } from '../../../../lib/name-validation';
 import { sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
 import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { formatDateServer } from '../../../../lib/formatDate.server';
+import { Logger } from '../../../../lib/logger';
 import {
   getEffectiveMemberTokenCap,
   getMemberCapStrategy,
@@ -220,7 +221,7 @@ export async function GET() {
       // fall through to generic handling
     }
 
-    console.error('Profile fetch error:', error);
+    Logger.error('Profile fetch error', error);
     return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
   }
 }
@@ -336,7 +337,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ user: updated, verificationRequired, emailChangePending, pendingEmail });
   } catch (error: unknown) {
-    console.error('Profile update error:', error);
+    Logger.error('Profile update error', error);
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
   }
 }

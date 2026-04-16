@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSiteName, getDefaultTokenLabel } from '@/lib/settings';
+import { Logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
       tokenLabel: defaultTokenLabel
     });
   } catch (error) {
-    console.error('Failed to fetch site info:', error);
+    Logger.error('Failed to fetch site info', error);
     return NextResponse.json(
       { error: 'Failed to fetch site info' },
       { status: 500 }

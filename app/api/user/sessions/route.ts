@@ -9,6 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
+import { Logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -29,7 +30,7 @@ export async function GET() {
       }))
     );
   } catch (err) {
-    console.error('Failed to fetch sessions:', err);
+    Logger.error('Failed to fetch sessions', err);
     return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 });
   }
 }

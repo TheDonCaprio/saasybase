@@ -14,6 +14,7 @@ import { authService } from '@/lib/auth-provider';
 import { prisma } from '@/lib/prisma';
 import { ACTIVE_ORG_COOKIE, getActiveOrgCookieOptions } from '@/lib/active-organization';
 import { getActiveTeamSubscription } from '@/lib/organization-access';
+import { Logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -75,7 +76,7 @@ export async function GET() {
 
     return NextResponse.json({ activeOrgId: validActiveOrg, organizations });
   } catch (err) {
-    console.error('Active org fetch error:', err);
+    Logger.error('Active org fetch error', err);
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(ACTIVE_ORG_COOKIE, orgId, getActiveOrgCookieOptions({ maxAge: 60 * 60 * 24 * 365 }));
     return response;
   } catch (err) {
-    console.error('Set active org error:', err);
+    Logger.error('Set active org error', err);
     return NextResponse.json({ error: 'Failed to set active organization' }, { status: 500 });
   }
 }

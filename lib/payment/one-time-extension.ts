@@ -5,6 +5,7 @@ import { creditOrganizationSharedTokens, creditAllocatedPerMemberTokens, resetAl
 import { updateSubscriptionLastPaymentAmount } from '../payments';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import { getDefaultTokenLabel } from '../settings';
+import { getSubscriptionExpiryForPlan, isLifetimePlan } from '../subscription-lifetime';
 import { toError } from '../runtime-guards';
 import type { Prisma, Plan } from '@/lib/prisma-client';
 import type { OrganizationPlanContext } from '../user-plan-context';
@@ -33,7 +34,12 @@ export async function processOneTimeNonRecurringExtension(params: {
     providerKey: string;
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
 }): Promise<void> {
-    const newExpires = new Date(params.latestActive.expiresAt.getTime() + params.periodMs);
+    const lifetimeAccess = isLifetimePlan(params.planToUse);
+    const newExpires = getSubscriptionExpiryForPlan({
+        plan: params.planToUse,
+        baseDate: params.latestActive.expiresAt,
+        periodMs: lifetimeAccess ? 0 : params.periodMs,
+    });
     const shouldResetTokensOnOneTimeRenewal = await shouldClearPaidTokensOnRenewal(false);
 
     await prisma.$transaction(async (tx) => {
@@ -116,7 +122,9 @@ export async function processOneTimeNonRecurringExtension(params: {
         const tokenName = planTokenName || await getDefaultTokenLabel();
 
         const notificationTitle = 'Subscription Extended';
-        const notificationMessage = `Your subscription has been extended by ${params.planToUse.durationHours} hours.`;
+        const notificationMessage = lifetimeAccess
+            ? 'Your lifetime access remains active.'
+            : `Your subscription has been extended by ${params.planToUse.durationHours} hours.`;
 
         await sendBillingNotification({
             userId: params.userId,
@@ -126,7 +134,7 @@ export async function processOneTimeNonRecurringExtension(params: {
             variables: {
                 planName: params.planToUse.name,
                 amount: `$${(params.resolvedAmountCents / 100).toFixed(2)}`,
-                newExpiry: newExpires.toLocaleDateString(),
+                newExpiry: lifetimeAccess ? 'Lifetime' : newExpires.toLocaleDateString(),
                 tokensAdded: params.planToUse.tokenLimit ? String(params.planToUse.tokenLimit) : '0',
                 tokenName,
                 transactionId: (params.finalPaymentIntent || params.session.id) as string
@@ -142,7 +150,7 @@ export async function processOneTimeNonRecurringExtension(params: {
             variables: {
                 planName: params.planToUse.name,
                 amount: `$${(params.resolvedAmountCents / 100).toFixed(2)}`,
-                newExpiry: newExpires.toLocaleString(),
+                newExpiry: lifetimeAccess ? 'Lifetime' : newExpires.toLocaleString(),
                 transactionId: (params.finalPaymentIntent || params.session.id) as string
             }
         });

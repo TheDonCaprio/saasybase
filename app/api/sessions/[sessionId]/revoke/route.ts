@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
 import { toError } from '../../../../../lib/runtime-guards';
+import { Logger } from '@/lib/logger';
 
 export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
 	const params = await ctx.params;
@@ -26,7 +27,7 @@ export async function POST(_request: NextRequest, ctx: { params: Promise<{ sessi
 
 		return NextResponse.json({ revoked: true });
 	} catch (error: unknown) {
-		console.error('Failed to revoke session:', toError(error));
+		Logger.error('Failed to revoke session', toError(error));
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 	}
 }

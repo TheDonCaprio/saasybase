@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authService } from '@/lib/auth-provider';
+import { Logger } from '@/lib/logger';
 
 async function handleMarkRead(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
@@ -21,7 +22,7 @@ async function handleMarkRead(request: NextRequest, ctx: { params: Promise<{ id:
     // notification.count will be 1 if updated, 0 if not found/owned
     return NextResponse.json({ updated: notification.count });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    Logger.error('Error marking notification as read', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

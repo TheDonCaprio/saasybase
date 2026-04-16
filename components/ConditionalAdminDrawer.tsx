@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faTachometerAlt, faUsers, faFileInvoiceDollar, faListAlt, faLifeRing, faBell, faChartLine, faTrafficLight, faClipboardList, faCogs, faShoppingCart, faTicketAlt, faTriangleExclamation, faEnvelope, faUserShield, faPalette, faFileLines, faNewspaper, faWrench, faSitemap } from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faUsers, faFileInvoiceDollar, faListAlt, faLifeRing, faBell, faChartLine, faTrafficLight, faClipboardList, faCogs, faShoppingCart, faTicketAlt, faTriangleExclamation, faEnvelope, faUserShield, faPalette, faFileLines, faNewspaper, faWrench, faSitemap, faServer } from '@fortawesome/free-solid-svg-icons';
 
 const AdminHeaderDrawer = dynamic(
   () => import('./admin/AdminHeaderDrawer').then(mod => ({ default: mod.AdminHeaderDrawer })),
@@ -71,9 +71,9 @@ const adminNavGroups: AdminNavGroup[] = [
   {
     title: 'Developer',
     items: [
-      { href: '/admin/api', label: 'API Docs', icon: faListAlt },
       { href: '/admin/logs', label: 'Logs', icon: faTriangleExclamation },
       { href: '/admin/maintenance', label: 'Maintenance', icon: faWrench },
+      { href: '/admin/system', label: 'System', icon: faServer },
     ],
   },
 ];

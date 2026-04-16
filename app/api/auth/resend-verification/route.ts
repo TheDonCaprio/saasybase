@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
+import { Logger } from '@/lib/logger';
 
 const GENERIC_SUCCESS_MESSAGE = 'If that account exists and is awaiting verification, a verification email has been sent.';
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, message: GENERIC_SUCCESS_MESSAGE });
   } catch (error) {
-    console.error('Resend verification failed:', error);
+    Logger.error('Resend verification failed', error);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

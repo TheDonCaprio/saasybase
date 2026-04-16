@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, activated: true, subscriptionId: pending.id, startsAt: now.toISOString(), expiresAt: newExpires.toISOString() });
   } catch (e: unknown) {
     const err = toError(e);
-    console.error('Activate pending subscription error', err);
+    Logger.error('Activate pending subscription error', err);
     return jsonError(err.message || 'Error', 500, 'SUBSCRIPTION_ACTIVATE_FAILED');
   }
 }

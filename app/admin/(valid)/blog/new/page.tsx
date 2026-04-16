@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
-import PageEditor from '@/components/admin/pages/PageEditor';
+import BlogPostEditor from '@/components/admin/blog/BlogPostEditor';
 import { requireAdminSectionAccess } from '@/lib/route-guards';
 import { listBlogCategories } from '@/lib/blog';
 
@@ -17,7 +17,7 @@ export default async function NewBlogPostPage() {
   const categories = await listBlogCategories();
 
   return (
-    <PageEditor
+    <BlogPostEditor
       mode="create"
       apiBasePath="/api/admin/blog"
       editBasePath="/admin/blog"

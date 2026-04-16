@@ -27,6 +27,7 @@ type DBPlan = {
   description?: string | null;
   priceCents: number;
   durationHours: number;
+  isLifetime?: boolean | null;
   autoRenew: boolean;
   recurringInterval?: string | null;
   tokenLimit?: number | null;
@@ -110,6 +111,15 @@ type OwnedActiveSubscriptionSummary = {
   planSupportsOrganizations: boolean;
   expiresAt: string | null;
 };
+
+function getActiveWorkspaceFamily(payload: unknown): 'personal' | 'team' {
+  const record = asRecord(payload);
+  if (record?.source === 'organization') {
+    return 'team';
+  }
+
+  return 'personal';
+}
 
 function getOwnedActiveSubscriptions(payload: unknown): OwnedActiveSubscriptionSummary[] {
   const record = asRecord(payload);
@@ -920,16 +930,17 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
       }
 
       const ownedActiveSubscriptions = getOwnedActiveSubscriptions(sub);
+      const activeWorkspaceFamily = getActiveWorkspaceFamily(sub);
       const matchingOwnedSubscription = ownedActiveSubscriptions.find((subscription) => subscription.family === planFamily) ?? null;
       const hasAnyOwnedTeamRecurring = ownedActiveSubscriptions.some((subscription) => subscription.planAutoRenew && subscription.planSupportsOrganizations);
 
       // Check if user has an active subscription
       if (res.ok && matchingOwnedSubscription) {
         const hasRecurring = matchingOwnedSubscription.planAutoRenew === true;
-        const hasTeamRecurring = hasAnyOwnedTeamRecurring;
+        const hasTeamRecurringInCurrentWorkspace = activeWorkspaceFamily === 'team' && hasAnyOwnedTeamRecurring;
         const buyingRecurring = plan.autoRenew;
 
-        if (hasTeamRecurring && !buyingRecurring && !isTeamPlan) {
+        if (hasTeamRecurringInCurrentWorkspace && !buyingRecurring && !isTeamPlan) {
           showToast('Personal one-time top-ups are blocked while your Team subscription is active. Buy a Team top-up from workspace billing.', 'info');
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -989,6 +1000,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const intervalLabel = plan.recurringInterval
     ? plan.recurringInterval.replace(/_/g, ' ').toLowerCase()
     : 'billing period';
+  const isLifetimePlan = plan.autoRenew !== true && plan.isLifetime === true;
   const durationDays = Number.isFinite(plan.durationHours) && plan.durationHours > 0
     ? Math.max(1, Math.round(plan.durationHours / 24))
     : null;
@@ -1000,11 +1012,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const features = [
     plan.autoRenew
       ? { icon: faArrowRotateRight, label: `Auto-renews every ${intervalLabel}` }
-      : { icon: faBolt, label: 'No auto-renewal ' },
+      : { icon: faBolt, label: isLifetimePlan ? 'One-time payment' : 'No auto-renewal ' },
     plan.tokenLimit !== null && plan.tokenLimit !== undefined
       ? { icon: faCheck, label: `${plan.tokenLimit.toLocaleString()} ${tokenLabel} included` }
       : { icon: faInfinity, label: `Unlimited ${tokenLabel}` },
-    durationDays
+    isLifetimePlan
+      ? { icon: faInfinity, label: 'Lifetime access' }
+      : durationDays
       ? { icon: faClock, label: `${durationDays} day${durationDays === 1 ? '' : 's'} of access` }
       : null,
     ...(isTeamPlan
@@ -1031,7 +1045,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         },
       ]),
   ].filter(Boolean) as { icon: IconDefinition; label: string }[];
-  const priceFrequency = plan.autoRenew ? `per ${intervalLabel}` : 'one-off';
+  const priceFrequency = plan.autoRenew ? `per ${intervalLabel}` : isLifetimePlan ? 'lifetime' : 'one-off';
   const badge = plan.autoRenew
     ? {
       text: 'recurring',
@@ -1039,7 +1053,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         'border border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200'
     }
     : {
-      text: 'one-time',
+      text: isLifetimePlan ? 'lifetime' : 'one-time',
       className:
         'border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-300/40 dark:bg-amber-400/10 dark:text-amber-200'
     };
@@ -1188,7 +1202,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                   Purchasing <strong>{plan.name}</strong> will:
                 </p>
                 <ul className="ml-4 mt-1 list-disc space-y-1 text-xs">
-                  <li>Extend your access by {Math.floor(plan.durationHours / 24)} day{Math.floor(plan.durationHours / 24) !== 1 ? 's' : ''}</li>
+                  <li>{isLifetimePlan ? 'Keep lifetime access active without an expiry date.' : `Extend your access by ${Math.floor(plan.durationHours / 24)} day${Math.floor(plan.durationHours / 24) !== 1 ? 's' : ''}`}</li>
                   {plan.tokenLimit && plan.tokenLimit > 0 && (
                     oneTimeRenewalResetsTokens
                       ? <li>Reset your {plan.tokenName || 'tokens'} balance to {plan.tokenLimit.toLocaleString()} {plan.tokenName || 'tokens'}</li>

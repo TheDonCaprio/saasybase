@@ -4,6 +4,11 @@ import Script from 'next/script';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+function debugLog(...args: unknown[]) {
+  if (process.env.NODE_ENV !== 'development') return;
+  console.log(...args);
+}
+
 declare global {
   interface Window {
     // Paddle.js v2 attaches itself to window.Paddle
@@ -62,7 +67,7 @@ export default function PaddlePayClient() {
       eventCallback: (evt: unknown) => {
         // Helpful diagnostics for "Something went wrong" overlay.
         // (The overlay is often triggered by domain approval/token mismatch.)
-        console.log('[Paddle event]', evt);
+        debugLog('[Paddle event]', evt);
       },
     });
 

@@ -53,6 +53,25 @@ import {
 } from './subscription-paystack-post-processing';
 import { cancelSupersededOneTimeSubscriptions as cancelSupersededOneTimeSubscriptionsExternal } from './subscription-cancellation';
 import {
+    processOneTimeNonRecurringExtension,
+} from './one-time-extension';
+import {
+    resolvePlanForOneTimeCheckout,
+    resolveOneTimeCheckoutDisposition,
+} from './one-time-plan-resolution';
+import {
+    resolveOneTimeCheckoutPricing,
+} from './one-time-pricing';
+import {
+    processOneTimeSubscriptionCreation,
+} from './one-time-subscription-creation';
+import {
+    expirePriorActiveSubscriptionsForOneTimeCheckout,
+} from './one-time-subscription-expiry';
+import {
+    processOneTimeRecurringTopup,
+} from './one-time-topup';
+import {
     linkPendingPaymentToSubscription as linkPendingPaymentToSubscriptionExternal,
     ensureRazorpayFallbackSubscriptionPaymentOnUpdate as ensureRazorpayFallbackSubscriptionPaymentOnUpdateExternal,
     handleNewlyCreatedActiveSubscriptionUpdate as handleNewlyCreatedActiveSubscriptionUpdateExternal,
@@ -71,17 +90,8 @@ import {
     resolveActiveProviderOrganizationIdFromMetadata,
 } from './organization-context';
 import {
-    resolvePlanForOneTimeCheckout as resolvePlanForOneTimeCheckoutExternal,
-    resolveOneTimeCheckoutDisposition as resolveOneTimeCheckoutDispositionExternal,
-} from './one-time-plan-resolution';
-import {
     processInvoicePaidEvent as processInvoicePaidEventExternal,
 } from './invoice-payment-recording';
-import { resolveOneTimeCheckoutPricing as resolveOneTimeCheckoutPricingExternal } from './one-time-pricing';
-import { expirePriorActiveSubscriptionsForOneTimeCheckout as expirePriorActiveSubscriptionsForOneTimeCheckoutExternal } from './one-time-subscription-expiry';
-import { processOneTimeNonRecurringExtension as processOneTimeNonRecurringExtensionExternal } from './one-time-extension';
-import { processOneTimeRecurringTopup as processOneTimeRecurringTopupExternal } from './one-time-topup';
-import { processOneTimeSubscriptionCreation as processOneTimeSubscriptionCreationExternal } from './one-time-subscription-creation';
 import { handleInvoiceCreatedCancellation as handleInvoiceCreatedCancellationExternal } from './invoice-created-cancellation';
 import { handleInvoiceUpcomingReminder as handleInvoiceUpcomingReminderExternal } from './invoice-upcoming-reminder';
 import { handlePaymentFailureEvent as handlePaymentFailureEventExternal } from './payment-failure-handler';
@@ -608,7 +618,7 @@ export class PaymentService {
         const priceId = session.lineItems?.[0]?.priceId || session.metadata?.priceId || session.metadata?.planPriceId;
         if (!priceId) return;
 
-        const planToUse = await resolvePlanForOneTimeCheckoutExternal({
+        const planToUse = await resolvePlanForOneTimeCheckout({
             priceId,
             metadataPlanId: session.metadata?.planId,
             findPlanByPriceIdentifier: this.findPlanByPriceIdentifier.bind(this),
@@ -624,7 +634,7 @@ export class PaymentService {
             resolvedSubtotalCents,
             resolvedDiscountCents,
             couponCode,
-        } = resolveOneTimeCheckoutPricingExternal({
+        } = resolveOneTimeCheckoutPricing({
             session,
             planToUse,
         });
@@ -632,16 +642,16 @@ export class PaymentService {
         // Prefer transactionId for providers like Paystack that use numeric IDs for dashboard URLs
         const finalPaymentIntent: string | undefined = session.transactionId || session.paymentIntentId;
 
-        await expirePriorActiveSubscriptionsForOneTimeCheckoutExternal(userId);
+        await expirePriorActiveSubscriptionsForOneTimeCheckout(userId);
 
-        const { latestActive, mode } = await resolveOneTimeCheckoutDispositionExternal({
+        const { latestActive, mode } = await resolveOneTimeCheckoutDisposition({
             userId,
             now,
             planSupportsOrganizations: planToUse.supportsOrganizations === true,
         });
 
         if (mode === 'extend_non_recurring' && latestActive) {
-            await processOneTimeNonRecurringExtensionExternal({
+            await processOneTimeNonRecurringExtension({
                 latestActive,
                 userId,
                 planToUse,
@@ -656,7 +666,7 @@ export class PaymentService {
                 ...this.getOneTimeSharedDeps(),
             });
         } else if (mode === 'topup_recurring') {
-            await processOneTimeRecurringTopupExternal({
+            await processOneTimeRecurringTopup({
                 userId,
                 planToUse,
                 resolvedAmountCents,
@@ -685,7 +695,7 @@ export class PaymentService {
                 });
             }
 
-            await processOneTimeSubscriptionCreationExternal({
+            await processOneTimeSubscriptionCreation({
                 userId,
                 planToUse,
                 now,

@@ -19,12 +19,32 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendNextAuthMagicLinkEmail, sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
 import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { Logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const BCRYPT_SALT_ROUNDS = 12;
+
+function shouldTrustAuthHost(): boolean {
+  if (process.env.AUTH_TRUST_HOST === 'true') {
+    return true;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    return true;
+  }
+
+  const configuredUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+
+  try {
+    const parsed = new URL(configuredUrl);
+    return ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 
 function getRequestHeader(headers: unknown, key: string): string | null {
   if (!headers || typeof headers !== 'object') return null;
@@ -227,6 +247,7 @@ function buildProviders(): NextAuthConfig['providers'] {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: createPrismaAdapter(),
   providers: buildProviders(),
+  trustHost: shouldTrustAuthHost(),
   session: { strategy: 'database' },
   pages: {
     signIn: '/sign-in',
@@ -249,15 +270,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       ) {
         return; // Expected — don't log
       }
-      console.error('[auth][error]', error);
+      Logger.error('[auth][error]', error);
     },
     warn(code) {
-      console.warn('[auth][warn]', code);
+      Logger.warn('[auth][warn]', { code });
     },
     debug(message, metadata) {
       // Only log in development if needed
       if (process.env.AUTH_DEBUG === 'true') {
-        console.debug('[auth][debug]', message, metadata);
+        Logger.debug('[auth][debug]', { message, metadata });
       }
     },
   },

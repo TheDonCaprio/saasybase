@@ -141,6 +141,8 @@ export const SETTING_KEYS = {
   DEFAULT_TOKEN_LABEL: 'DEFAULT_TOKEN_LABEL',
   SUPPORT_AUTO_SET_IN_PROGRESS: 'SUPPORT_AUTO_SET_IN_PROGRESS',
   ENABLE_RECURRING_PRORATION: 'ENABLE_RECURRING_PRORATION',
+  FORMAT_MODE: 'format.mode',
+  FORMAT_TIMEZONE: 'format.timezone',
   DEFAULT_CURRENCY: 'DEFAULT_CURRENCY',
   ANNOUNCEMENT_MESSAGE: 'ANNOUNCEMENT_MESSAGE',
   MAINTENANCE_MODE: 'MAINTENANCE_MODE',
@@ -185,6 +187,7 @@ export const SETTING_KEYS = {
   ,TOKENS_RESET_ON_RENEWAL_ONE_TIME: 'TOKENS_RESET_ON_RENEWAL_ONE_TIME'
   ,TOKENS_RESET_ON_RENEWAL_RECURRING: 'TOKENS_RESET_ON_RENEWAL_RECURRING'
   ,TOKENS_NATURAL_EXPIRY_GRACE_HOURS: 'TOKENS_NATURAL_EXPIRY_GRACE_HOURS'
+  ,ORGANIZATION_EXPIRY_MODE: 'ORGANIZATION_EXPIRY_MODE'
   ,ADMIN_ACTION_NOTIFICATION_ACTIONS: 'ADMIN_ACTION_NOTIFICATION_ACTIONS'
   ,ADMIN_ALERT_EMAIL_TYPES: 'ADMIN_ALERT_EMAIL_TYPES'
   ,SUPPORT_EMAIL_NOTIFICATION_TYPES: 'SUPPORT_EMAIL_NOTIFICATION_TYPES'
@@ -368,13 +371,13 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     stickyHeaderShadowBlur: 30,
     stickyHeaderShadowSpread: -23,
     pageGradientFrom: '#ffffff',
-    pageGradientVia: '#d8ecfa',
+    pageGradientVia: '#eef7fd',
     pageGradientTo: '#ffffff',
     heroGradientFrom: '#f0f9ff00',
     heroGradientVia: '#eef2ff',
     heroGradientTo: '#ffffff',
     cardGradientFrom: '#f0f9ff',
-    cardGradientVia: '#eef2ff',
+    cardGradientVia: '#d9e1ff',
     cardGradientTo: '#ffffff',
     tabsGradientFrom: '#ffffff',
     tabsGradientVia: '#eef2ff',
@@ -438,7 +441,7 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     stickyHeaderShadowBlur: 30,
     stickyHeaderShadowSpread: -19,
     pageGradientFrom: '#171717',
-    pageGradientVia: '#312e81',
+    pageGradientVia: '#100c5c',
     pageGradientTo: '#0a0a0a',
     heroGradientFrom: '#171717',
     heroGradientVia: '#312e81',
@@ -466,10 +469,12 @@ export const SETTING_DEFAULTS = {
   // When true, admin replies will automatically set an OPEN ticket to IN_PROGRESS
   [SETTING_KEYS.SUPPORT_AUTO_SET_IN_PROGRESS]: 'true',
   [SETTING_KEYS.ENABLE_RECURRING_PRORATION]: 'true',
+  [SETTING_KEYS.FORMAT_MODE]: 'numeric-dmy-24',
+  [SETTING_KEYS.FORMAT_TIMEZONE]: '',
   [SETTING_KEYS.ANNOUNCEMENT_MESSAGE]: '',
   [SETTING_KEYS.MAINTENANCE_MODE]: 'false',
-  [SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]: '5',
-  [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'daily', // 'unlimited', 'daily', 'monthly', 'one-time'
+  [SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]: '50',
+  [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'monthly', // 'unlimited', 'daily', 'monthly', 'one-time'
   [SETTING_KEYS.FREE_PLAN_TOKEN_NAME]: '', // empty means use default token label
   [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":true,"transactions":true,"purchases":true,"subscriptions":true,"support":true,"notifications":true,"blog":true,"analytics":false,"traffic":false}',
   [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Home","href":"/"},{"label":"Dashboard","href":"/dashboard"},{"label":"Pricing","href":"/pricing"}]',
@@ -486,7 +491,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.BLOG_SIDEBAR_CONTENT]: '',
   [SETTING_KEYS.BLOG_SIDEBAR_HTML]: '',
   [SETTING_KEYS.BLOG_SIDEBAR_WIDGET_ORDER]: 'recent-posts,rich-content,raw-html',
-  [SETTING_KEYS.BLOG_RELATED_POSTS_ENABLED]: 'false',
+  [SETTING_KEYS.BLOG_RELATED_POSTS_ENABLED]: 'true',
   [SETTING_KEYS.BLOG_HTML_BEFORE_FIRST_PARAGRAPH]: '',
   [SETTING_KEYS.BLOG_HTML_AFTER_LAST_PARAGRAPH]: '',
   [SETTING_KEYS.BLOG_HTML_MIDDLE_OF_POST]: '',
@@ -506,9 +511,10 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.HEADER_STICKY_HEIGHT]: '50'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_ONE_TIME]: 'true'
   ,[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_RECURRING]: 'true'
-  ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_ONE_TIME]: 'false'
-  ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_RECURRING]: 'false'
+  ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_ONE_TIME]: 'true'
+  ,[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_RECURRING]: 'true'
   ,[SETTING_KEYS.TOKENS_NATURAL_EXPIRY_GRACE_HOURS]: '24'
+  ,[SETTING_KEYS.ORGANIZATION_EXPIRY_MODE]: 'SUSPEND'
   ,[SETTING_KEYS.ADMIN_ACTION_NOTIFICATION_ACTIONS]: '[]'
   ,[SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES]: '["refund","new_purchase","renewal","upgrade","downgrade","payment_failed","dispute","other"]'
   ,[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]: '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
@@ -838,8 +844,8 @@ export async function getDefaultTokenLabel(): Promise<string> {
 }
 
 export async function getFormatSetting(): Promise<{ mode: AppFormatMode; timezone?: string }> {
-  const mode = (await getSetting('format.mode', 'short')) as AppFormatMode;
-  const timezone = await getSetting('format.timezone', '');
+  const mode = (await getSetting(SETTING_KEYS.FORMAT_MODE, SETTING_DEFAULTS[SETTING_KEYS.FORMAT_MODE])) as AppFormatMode;
+  const timezone = await getSetting(SETTING_KEYS.FORMAT_TIMEZONE, SETTING_DEFAULTS[SETTING_KEYS.FORMAT_TIMEZONE]);
   return { mode, timezone: timezone || undefined };
 }
 
@@ -1074,6 +1080,17 @@ export async function getPaidTokensNaturalExpiryGraceHours(): Promise<number> {
     return Number.parseInt(SETTING_DEFAULTS[SETTING_KEYS.TOKENS_NATURAL_EXPIRY_GRACE_HOURS], 10) || 24;
   }
   return parsed;
+}
+
+export type OrganizationExpiryMode = 'SUSPEND' | 'DISMANTLE';
+
+export async function getOrganizationExpiryMode(): Promise<OrganizationExpiryMode> {
+  const raw = await getSetting(
+    SETTING_KEYS.ORGANIZATION_EXPIRY_MODE,
+    SETTING_DEFAULTS[SETTING_KEYS.ORGANIZATION_EXPIRY_MODE]
+  );
+
+  return raw === 'DISMANTLE' ? 'DISMANTLE' : 'SUSPEND';
 }
 
 /**

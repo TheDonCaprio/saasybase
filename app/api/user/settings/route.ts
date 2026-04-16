@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
+import { Logger } from '@/lib/logger';
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, setting });
   } catch (error) {
-    console.error('User settings update error:', error);
+    Logger.error('User settings update error', error);
     return NextResponse.json({ error: 'Failed to update setting' }, { status: 500 });
   }
 }
@@ -60,7 +61,7 @@ export async function GET() {
 
     return NextResponse.json({ settings });
   } catch (error) {
-    console.error('User settings fetch error:', error);
+    Logger.error('User settings fetch error', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }

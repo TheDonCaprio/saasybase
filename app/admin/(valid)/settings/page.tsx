@@ -1,6 +1,5 @@
 import React from 'react';
 export const dynamic = 'force-dynamic';
-import os from 'os';
 import { requireAdminPageAccess } from '../../../../lib/route-guards';
 import { prisma } from '../../../../lib/prisma';
 import { toError } from '../../../../lib/runtime-guards';
@@ -11,25 +10,8 @@ import { fetchModeratorPermissions } from '../../../../lib/moderator';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSliders } from '@fortawesome/free-solid-svg-icons';
-
-function formatBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** exponent;
-  return `${value >= 10 || exponent === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[exponent]}`;
-}
-
-function formatDuration(totalSeconds: number) {
-  const seconds = Math.max(0, Math.floor(totalSeconds));
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
+import { Logger } from '../../../../lib/logger';
+import { getAdminEnvironmentSettings } from '../../../../lib/admin-system-snapshot';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -50,7 +32,7 @@ export default async function AdminSettingsPage() {
     // requireAdminPageAccess already redirected, so just swallow here
     // but log unexpected errors for observability
     const e = toError(err);
-    console.warn('Admin settings: requireAdmin check failed or redirected', e?.message);
+    Logger.warn('Admin settings: requireAdmin check failed or redirected', { error: e?.message });
   }
 
   // Get database settings
@@ -59,35 +41,7 @@ export default async function AdminSettingsPage() {
 
   // Environment settings (read-only)
   // NOTE: SITE_NAME is intentionally not listed here so it can be edited and persisted via the Admin UI.
-  const envSettings = [
-    { key: 'STRIPE_MODE', value: process.env.STRIPE_SECRET_KEY?.includes('_test_') ? 'TEST' : 'LIVE', description: 'Stripe environment mode' },
-    { key: 'DATABASE_TYPE', value: process.env.DATABASE_URL?.includes('sqlite') ? 'SQLite' : 'PostgreSQL', description: 'Database engine' },
-    { key: 'CLERK_DOMAIN', value: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.includes('_test_') ? 'TEST' : 'LIVE', description: 'Clerk environment' },
-    { key: 'NODE_ENV', value: process.env.NODE_ENV || 'development', description: 'Application environment' },
-    { key: 'AUTH_PROVIDER', value: process.env.AUTH_PROVIDER || 'clerk', description: 'Active authentication provider' },
-    { key: 'PAYMENT_PROVIDER', value: process.env.PAYMENT_PROVIDER || 'stripe', description: 'Active payment provider' },
-    { key: 'DEMO_READ_ONLY_MODE', value: process.env.DEMO_READ_ONLY_MODE === 'true' ? 'ENABLED' : 'DISABLED', description: 'Global demo write protection' }
-  ];
-
-  const memoryUsage = process.memoryUsage();
-  const runtimeSnapshot = {
-    nodeVersion: process.version,
-    runtime: process.release.name,
-    deploymentTarget: process.env.VERCEL ? 'Vercel' : 'Node server',
-    authProvider: process.env.AUTH_PROVIDER || 'clerk',
-    paymentProvider: process.env.PAYMENT_PROVIDER || 'stripe',
-    demoMode: process.env.DEMO_READ_ONLY_MODE === 'true' ? 'Enabled' : 'Disabled',
-    platform: `${os.type()} ${os.release()}`,
-    architecture: os.arch(),
-    cpuCores: `${os.cpus().length} logical cores`,
-    totalMemory: formatBytes(os.totalmem()),
-    freeMemory: formatBytes(os.freemem()),
-    rssMemory: formatBytes(memoryUsage.rss),
-    heapUsed: formatBytes(memoryUsage.heapUsed),
-    appUptime: formatDuration(process.uptime()),
-    hostUptime: formatDuration(os.uptime()),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-  };
+  const envSettings = await getAdminEnvironmentSettings();
 
   const readSetting = (key: string, fallback = '') => settings.find((setting) => setting.key === key)?.value ?? fallback;
 
@@ -120,9 +74,7 @@ export default async function AdminSettingsPage() {
 
       <AdminSettingsTabs
         databaseSettings={settings}
-        environmentSettings={envSettings}
         moderatorPermissions={moderatorPermissions}
-        runtimeSnapshot={runtimeSnapshot}
       />
     </div>
   );

@@ -49,6 +49,25 @@ async function resolveSharedContext(params: {
 > {
   const { userId, organizationId, tx } = params;
 
+  async function findValidOwnerTeamSubscription(ownerUserId: string, targetOrganizationId?: string) {
+    const now = new Date();
+    const graceHours = await getPaidTokensNaturalExpiryGraceHours();
+    const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
+
+    return tx.subscription.findFirst({
+      where: {
+        userId: ownerUserId,
+        ...(targetOrganizationId ? { organizationId: targetOrganizationId } : {}),
+        plan: { supportsOrganizations: true },
+        OR: [
+          { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
+          { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
+        ],
+      },
+      select: { id: true },
+    });
+  }
+
   if (!organizationId) {
     return { ok: false, status: 400, error: 'no_shared_context' };
   }
@@ -125,6 +144,11 @@ async function resolveSharedContext(params: {
       return { ok: false, status: 400, error: 'no_shared_context' };
     }
 
+    const ownerSub = await findValidOwnerTeamSubscription(userId, ownedOrganization.id);
+    if (!ownerSub) {
+      return { ok: false, status: 403, error: 'owner_subscription_expired' };
+    }
+
     const ownedStrategy = (ownedOrganization.tokenPoolStrategy || 'SHARED_FOR_ORG').toUpperCase() as 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
 
     return {
@@ -145,20 +169,7 @@ async function resolveSharedContext(params: {
   // Verify the organization owner still has a valid team subscription.
   const ownerUserId = membership.organization.ownerUserId;
   if (ownerUserId) {
-    const now = new Date();
-    const graceHours = await getPaidTokensNaturalExpiryGraceHours();
-    const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
-    const ownerSub = await tx.subscription.findFirst({
-      where: {
-        userId: ownerUserId,
-        plan: { supportsOrganizations: true },
-        OR: [
-          { status: { not: 'EXPIRED' }, expiresAt: { gt: now } },
-          { status: { in: ['EXPIRED', 'CANCELLED', 'PAST_DUE'] }, expiresAt: { gt: graceCutoff, lte: now } },
-        ],
-      },
-      select: { id: true },
-    });
+    const ownerSub = await findValidOwnerTeamSubscription(ownerUserId, membership.organization.id);
     if (!ownerSub) {
       return { ok: false, status: 403, error: 'owner_subscription_expired' };
     }
@@ -365,6 +376,17 @@ export async function POST(req: NextRequest) {
         }
 
         if (effectiveBucket === 'paid') {
+          if (!hasActiveSubscription) {
+            return {
+              status: 403,
+              body: {
+                ok: false,
+                error: 'paid_subscription_expired',
+                bucket: 'paid',
+              },
+            };
+          }
+
           if (!hasUnlimitedPaidAccess) {
             const updated = await tx.user.updateMany({
               where: { id: userId, tokenBalance: { gte: amount } },

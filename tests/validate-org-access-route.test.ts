@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireUserMock = vi.hoisted(() => vi.fn());
 const getGraceHoursMock = vi.hoisted(() => vi.fn());
+const getOrganizationExpiryModeMock = vi.hoisted(() => vi.fn());
 const deactivateOrganizationsByIdsMock = vi.hoisted(() => vi.fn());
 const supportsFeatureMock = vi.hoisted(() => vi.fn());
 const getOrganizationMock = vi.hoisted(() => vi.fn());
@@ -35,6 +36,7 @@ vi.mock('../lib/organization-access', () => ({
 
 vi.mock('../lib/settings', () => ({
   getPaidTokensNaturalExpiryGraceHours: getGraceHoursMock,
+  getOrganizationExpiryMode: getOrganizationExpiryModeMock,
 }));
 
 import { POST } from '../app/api/user/validate-org-access/route';
@@ -44,6 +46,7 @@ describe('POST /api/user/validate-org-access', () => {
     vi.clearAllMocks();
     requireUserMock.mockResolvedValue('user_1');
     getGraceHoursMock.mockResolvedValue(24);
+    getOrganizationExpiryModeMock.mockResolvedValue('SUSPEND');
     supportsFeatureMock.mockReturnValue(false);
     getOrganizationMock.mockResolvedValue(null);
     prismaMock.subscription.findMany.mockResolvedValue([]);
@@ -102,5 +105,41 @@ describe('POST /api/user/validate-org-access', () => {
       activeOrgReason: 'active_org_provider_missing',
     });
     expect(getOrganizationMock).toHaveBeenCalledWith('org_clerk_missing');
+  });
+
+  it('uses suspend mode for expiry-driven organization cleanup by default', async () => {
+    prismaMock.organizationMembership.findMany.mockResolvedValue([
+      {
+        organization: {
+          id: 'org_local_1',
+          clerkOrganizationId: 'org_provider_1',
+          ownerUserId: 'owner_1',
+        },
+      },
+    ]);
+    prismaMock.subscription.findMany.mockResolvedValue([]);
+    prismaMock.subscription.findFirst.mockResolvedValue({
+      expiresAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
+
+    const response = await POST(new Request('http://localhost/api/user/validate-org-access', {
+      method: 'POST',
+      body: JSON.stringify({ activeOrgId: 'org_provider_1' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ valid: false, reason: 'org_expired' });
+    expect(deactivateOrganizationsByIdsMock).toHaveBeenCalledWith(
+      ['org_local_1'],
+      expect.objectContaining({
+        mode: 'SUSPEND',
+        reason: 'validate-org-access',
+        userId: 'user_1',
+        useExpiryTokenResetPolicy: true,
+      })
+    );
   });
 });

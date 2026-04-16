@@ -76,8 +76,6 @@ Use `AUTH_PROVIDER="clerk"` or `AUTH_PROVIDER="nextauth"`. Use `PAYMENT_PROVIDER
 - `TECH_STACK.md` — stack, versions, and rationale.
 - `CONTRIBUTING.md` — contribution workflow.
 - `docs/adding-payment-providers.md` — payment provider extension guide.
-- `docs/token-usage-and-deduction.md` — token spend API guide.
-- `docs/organization-rollout-plan.md` — organization rollout status and history.
 
 ## Useful Environment Groups
 

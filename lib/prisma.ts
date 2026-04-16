@@ -1,5 +1,6 @@
 import { PrismaClient } from '@/lib/prisma-client';
 import { createPrismaClient } from './create-prisma-client';
+import { Logger } from './logger';
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -32,7 +33,7 @@ export async function checkDatabaseConnection() {
     await prisma.$queryRaw`SELECT 1`;
     return { healthy: true };
   } catch (error) {
-    console.error('Database connection failed:', error);
+    Logger.error('Database connection failed', error);
     return { 
       healthy: false, 
       error: error instanceof Error ? error.message : 'Unknown database error' 

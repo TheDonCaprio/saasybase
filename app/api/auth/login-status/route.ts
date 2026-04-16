@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
+import { Logger } from '@/lib/logger';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 
 export async function POST(request: NextRequest) {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     );
   } catch (err) {
-    console.error('Login status check failed:', err);
+    Logger.error('Login status check failed', err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

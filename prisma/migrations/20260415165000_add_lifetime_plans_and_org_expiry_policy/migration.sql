@@ -1,0 +1,5 @@
+ALTER TABLE "Plan"
+ADD COLUMN "isLifetime" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "Subscription"
+ADD COLUMN "isLifetime" BOOLEAN NOT NULL DEFAULT false;

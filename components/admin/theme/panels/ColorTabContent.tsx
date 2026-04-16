@@ -9,7 +9,7 @@ import { faChevronDown, faFloppyDisk, faPaintBrush, faTrash } from '@fortawesome
 
 import { ConfirmModal } from '../../../ui/ConfirmModal';
 import { ColorPickerWithAlpha } from '../ColorPickerWithAlpha';
-import { getHexAlpha01 } from '../colorUtils';
+import { getHexAlpha01, hexToRgb } from '../colorUtils';
 import {
   COLOR_GROUPS,
   COLOR_LABELS,
@@ -120,9 +120,17 @@ export function ColorTabContent({
     if (!Number.isFinite(num)) return fallback;
     return Math.max(min, Math.min(max, Math.round(num)));
   };
+  const toMultipliedRgba = (hex: string, alphaMultiplier: number) => {
+    const [red, green, blue] = hexToRgb(hex);
+    const alpha = Math.max(0, Math.min(1, getHexAlpha01(hex) * alphaMultiplier));
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  };
   const surfaceRadius = clampInt(colors.surfaceRadius, 0, 32, 16);
   const statCardAccentTop = clampInt(colors.statCardAccentTop, 0, 8, 0);
   const statCardAccentLeft = clampInt(colors.statCardAccentLeft, 0, 8, 0);
+  const statCardSurfaceWash = toMultipliedRgba(colors.bgSecondary, colorMode === 'dark' ? 0.58 : 0.78);
+  const statCardBorderColor = toMultipliedRgba(colors.borderPrimary, 0.7);
+  const statCardTopBorderColor = toMultipliedRgba(colors.accentPrimary, 0.92);
 
   return (
     <div className="space-y-8">
@@ -1057,10 +1065,12 @@ export function ColorTabContent({
                     key={label}
                     className="relative overflow-hidden px-3 py-2.5"
                     style={{
-                      background: `linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
+                      background: `linear-gradient(135deg, ${statCardSurfaceWash}, ${statCardSurfaceWash}), linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
                       borderStyle: 'solid',
-                      borderColor: colors.borderPrimary,
+                      borderColor: statCardBorderColor,
                       borderWidth: '1px',
+                      borderTopWidth: `${statCardAccentTop}px`,
+                      borderTopColor: statCardTopBorderColor,
                       borderRadius: `${surfaceRadius}px`,
                       boxShadow: `0 12px ${clampInt(colors.cardShadowBlur, 0, 80, 24)}px ${clampInt(colors.cardShadowSpread, -80, 80, -18)}px ${colors.cardShadow}`,
                     }}

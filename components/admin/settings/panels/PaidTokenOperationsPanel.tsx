@@ -11,6 +11,7 @@ export function PaidTokenOperationsPanel() {
   const [renewalRecurring, setRenewalRecurring] = useState<boolean | null>(null);
   const [graceHoursRaw, setGraceHoursRaw] = useState<string>('');
   const [lastSavedGraceHours, setLastSavedGraceHours] = useState<string>('');
+  const [organizationExpiryMode, setOrganizationExpiryMode] = useState<'SUSPEND' | 'DISMANTLE'>('SUSPEND');
 
   const fetchValue = async (key: string): Promise<string | null> => {
     try {
@@ -28,12 +29,13 @@ export function PaidTokenOperationsPanel() {
     async function load() {
       setLoading(true);
       try {
-        const [e1, eR, r1, rR, gH] = await Promise.all([
+        const [e1, eR, r1, rR, gH, orgMode] = await Promise.all([
           fetchValue('TOKENS_RESET_ON_EXPIRY_ONE_TIME'),
           fetchValue('TOKENS_RESET_ON_EXPIRY_RECURRING'),
           fetchValue('TOKENS_RESET_ON_RENEWAL_ONE_TIME'),
           fetchValue('TOKENS_RESET_ON_RENEWAL_RECURRING'),
-          fetchValue('TOKENS_NATURAL_EXPIRY_GRACE_HOURS')
+          fetchValue('TOKENS_NATURAL_EXPIRY_GRACE_HOURS'),
+          fetchValue('ORGANIZATION_EXPIRY_MODE')
         ]);
         if (!mounted) return;
         setExpiryOneTime(e1 === 'true');
@@ -43,6 +45,7 @@ export function PaidTokenOperationsPanel() {
         const nextGrace = (gH ?? '').trim();
         setGraceHoursRaw(nextGrace);
         setLastSavedGraceHours(nextGrace);
+        setOrganizationExpiryMode(orgMode === 'DISMANTLE' ? 'DISMANTLE' : 'SUSPEND');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -127,6 +130,28 @@ export function PaidTokenOperationsPanel() {
               aria-label="Natural expiry grace hours"
             />
           </div>
+        </div>
+      </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-medium">Organization expiry policy</div>
+            <div className="text-sm text-slate-600">After grace ends for a team plan, either suspend workspace access and preserve the local organization or dismantle it completely.</div>
+          </div>
+          <select
+            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+            value={organizationExpiryMode}
+            disabled={loading}
+            onChange={async (e) => {
+              const nextValue = e.target.value === 'DISMANTLE' ? 'DISMANTLE' : 'SUSPEND';
+              setOrganizationExpiryMode(nextValue);
+              await saveRaw('ORGANIZATION_EXPIRY_MODE', nextValue);
+            }}
+            aria-label="Organization expiry policy"
+          >
+            <option value="SUSPEND">Suspend workspace access</option>
+            <option value="DISMANTLE">Dismantle the organization</option>
+          </select>
         </div>
       </div>
       <fieldset className="grid gap-3 sm:grid-cols-2">

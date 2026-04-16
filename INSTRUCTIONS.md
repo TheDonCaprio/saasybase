@@ -37,9 +37,7 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 | `npm run typecheck` | TypeScript type checking |
 | `npm run lint` | ESLint |
 | `npm run prisma:studio` | Visual database browser |
-| `npm run check:admin-api-parity` | Verify curated admin API docs match discovered routes |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
-| `npm run ops:reencrypt-payment-authorizations` | Re-encrypt stored payment authorizations |
 
 ---
 
@@ -286,7 +284,7 @@ if (!response.ok) {
 }
 ```
 
-See `docs/token-usage-and-deduction.md` for full integration guide.
+See `PATTERNS.md` and the token helpers in `lib/paidTokens.ts` for the integration details.
 
 ---
 
@@ -386,7 +384,7 @@ Key groups in `.env.local`:
 | Payments | `PAYMENT_PROVIDER`, `STRIPE_*` or others | Pick one provider |
 | Email | `EMAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `EMAIL_FROM`, `SUPPORT_EMAIL` | `EMAIL_PROVIDER` defaults to `nodemailer`; Resend ignores `SMTP_*` |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN` | Required for production |
-| Storage | `LOGO_STORAGE`, `AWS_*` | Optional S3/CDN |
+| Storage | `FILE_STORAGE`, `FILE_S3_*`, `AWS_*`, `FILE_CDN_DOMAIN` | Optional S3/CDN; legacy `LOGO_*` aliases still work |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Optional GA4 |
 
 The `validate-env.js` script runs automatically before `dev` and `build` to check for required variables.

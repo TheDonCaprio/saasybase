@@ -3,7 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import { Logger } from '../../../../lib/logger';
 import { deactivateUserOrganizations } from '../../../../lib/organization-access';
 import { toError } from '../../../../lib/runtime-guards';
-import { getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
+import { getOrganizationExpiryMode, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../../../../lib/paidTokenCleanup';
 
 import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
     const graceHours = await getPaidTokensNaturalExpiryGraceHours();
+    const organizationExpiryMode = await getOrganizationExpiryMode();
     const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
     const results = {
         expiredSubscriptions: 0,
@@ -166,7 +167,10 @@ export async function GET(request: NextRequest) {
                             ownerId: org.ownerUserId
                         });
 
-                        await deactivateUserOrganizations(org.ownerUserId);
+                        await deactivateUserOrganizations(org.ownerUserId, {
+                            mode: organizationExpiryMode,
+                            reason: 'cron-process-expiry',
+                        });
                         results.dismantledOrganizations++;
                     }
                 } catch (err) {

@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
+import { Logger } from '@/lib/logger';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error('Change password error:', error);
+    Logger.error('Change password error', error);
     return NextResponse.json({ error: 'Failed to change password' }, { status: 500 });
   }
 }

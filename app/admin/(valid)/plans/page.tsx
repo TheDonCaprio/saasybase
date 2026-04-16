@@ -143,6 +143,7 @@ export default async function AdminPlansPage() {
     description: plan.description,
     priceCents: plan.priceCents,
     durationHours: plan.durationHours,
+    isLifetime: plan.isLifetime,
     active: plan.active,
     sortOrder: plan.sortOrder,
     externalPriceId: plan.externalPriceId,

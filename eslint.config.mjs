@@ -8,7 +8,6 @@ const config = [
       '.next/**',
       'dist/**',
       'scripts/**',
-      'prisma/seed.js',
       'tests/**/*.js',
       'tests/**/*.cjs',
       'tests/**/*.mjs',

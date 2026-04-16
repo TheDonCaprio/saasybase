@@ -1,4 +1,4 @@
-import { createPrismaClient } from '../scripts/create-prisma-client';
+import { createPrismaClient } from '../lib/create-prisma-client';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';

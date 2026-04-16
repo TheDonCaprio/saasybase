@@ -64,6 +64,7 @@ export type PlanMinAggregateOutputType = {
   recurringIntervalCount: number | null
   active: boolean | null
   durationHours: number | null
+  isLifetime: boolean | null
   priceCents: number | null
   sortOrder: number | null
   tokenLimit: number | null
@@ -94,6 +95,7 @@ export type PlanMaxAggregateOutputType = {
   recurringIntervalCount: number | null
   active: boolean | null
   durationHours: number | null
+  isLifetime: boolean | null
   priceCents: number | null
   sortOrder: number | null
   tokenLimit: number | null
@@ -124,6 +126,7 @@ export type PlanCountAggregateOutputType = {
   recurringIntervalCount: number
   active: number
   durationHours: number
+  isLifetime: number
   priceCents: number
   sortOrder: number
   tokenLimit: number
@@ -180,6 +183,7 @@ export type PlanMinAggregateInputType = {
   recurringIntervalCount?: true
   active?: true
   durationHours?: true
+  isLifetime?: true
   priceCents?: true
   sortOrder?: true
   tokenLimit?: true
@@ -210,6 +214,7 @@ export type PlanMaxAggregateInputType = {
   recurringIntervalCount?: true
   active?: true
   durationHours?: true
+  isLifetime?: true
   priceCents?: true
   sortOrder?: true
   tokenLimit?: true
@@ -240,6 +245,7 @@ export type PlanCountAggregateInputType = {
   recurringIntervalCount?: true
   active?: true
   durationHours?: true
+  isLifetime?: true
   priceCents?: true
   sortOrder?: true
   tokenLimit?: true
@@ -357,6 +363,7 @@ export type PlanGroupByOutputType = {
   recurringIntervalCount: number
   active: boolean
   durationHours: number
+  isLifetime: boolean
   priceCents: number
   sortOrder: number
   tokenLimit: number | null
@@ -410,6 +417,7 @@ export type PlanWhereInput = {
   recurringIntervalCount?: Prisma.IntFilter<"Plan"> | number
   active?: Prisma.BoolFilter<"Plan"> | boolean
   durationHours?: Prisma.IntFilter<"Plan"> | number
+  isLifetime?: Prisma.BoolFilter<"Plan"> | boolean
   priceCents?: Prisma.IntFilter<"Plan"> | number
   sortOrder?: Prisma.IntFilter<"Plan"> | number
   tokenLimit?: Prisma.IntNullableFilter<"Plan"> | number | null
@@ -446,6 +454,7 @@ export type PlanOrderByWithRelationInput = {
   recurringIntervalCount?: Prisma.SortOrder
   active?: Prisma.SortOrder
   durationHours?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   priceCents?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   tokenLimit?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -485,6 +494,7 @@ export type PlanWhereUniqueInput = Prisma.AtLeast<{
   recurringIntervalCount?: Prisma.IntFilter<"Plan"> | number
   active?: Prisma.BoolFilter<"Plan"> | boolean
   durationHours?: Prisma.IntFilter<"Plan"> | number
+  isLifetime?: Prisma.BoolFilter<"Plan"> | boolean
   priceCents?: Prisma.IntFilter<"Plan"> | number
   sortOrder?: Prisma.IntFilter<"Plan"> | number
   tokenLimit?: Prisma.IntNullableFilter<"Plan"> | number | null
@@ -521,6 +531,7 @@ export type PlanOrderByWithAggregationInput = {
   recurringIntervalCount?: Prisma.SortOrder
   active?: Prisma.SortOrder
   durationHours?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   priceCents?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   tokenLimit?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -559,6 +570,7 @@ export type PlanScalarWhereWithAggregatesInput = {
   recurringIntervalCount?: Prisma.IntWithAggregatesFilter<"Plan"> | number
   active?: Prisma.BoolWithAggregatesFilter<"Plan"> | boolean
   durationHours?: Prisma.IntWithAggregatesFilter<"Plan"> | number
+  isLifetime?: Prisma.BoolWithAggregatesFilter<"Plan"> | boolean
   priceCents?: Prisma.IntWithAggregatesFilter<"Plan"> | number
   sortOrder?: Prisma.IntWithAggregatesFilter<"Plan"> | number
   tokenLimit?: Prisma.IntNullableWithAggregatesFilter<"Plan"> | number | null
@@ -589,6 +601,7 @@ export type PlanCreateInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -625,6 +638,7 @@ export type PlanUncheckedCreateInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -661,6 +675,7 @@ export type PlanUpdateInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -697,6 +712,7 @@ export type PlanUncheckedUpdateInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -733,6 +749,7 @@ export type PlanCreateManyInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -763,6 +780,7 @@ export type PlanUpdateManyMutationInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -793,6 +811,7 @@ export type PlanUncheckedUpdateManyInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -823,6 +842,7 @@ export type PlanCountOrderByAggregateInput = {
   recurringIntervalCount?: Prisma.SortOrder
   active?: Prisma.SortOrder
   durationHours?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   priceCents?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   tokenLimit?: Prisma.SortOrder
@@ -865,6 +885,7 @@ export type PlanMaxOrderByAggregateInput = {
   recurringIntervalCount?: Prisma.SortOrder
   active?: Prisma.SortOrder
   durationHours?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   priceCents?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   tokenLimit?: Prisma.SortOrder
@@ -895,6 +916,7 @@ export type PlanMinOrderByAggregateInput = {
   recurringIntervalCount?: Prisma.SortOrder
   active?: Prisma.SortOrder
   durationHours?: Prisma.SortOrder
+  isLifetime?: Prisma.SortOrder
   priceCents?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   tokenLimit?: Prisma.SortOrder
@@ -1049,6 +1071,7 @@ export type PlanCreateWithoutPricesInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1084,6 +1107,7 @@ export type PlanUncheckedCreateWithoutPricesInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1135,6 +1159,7 @@ export type PlanUpdateWithoutPricesInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1170,6 +1195,7 @@ export type PlanUncheckedUpdateWithoutPricesInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1205,6 +1231,7 @@ export type PlanCreateWithoutOrganizationsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1240,6 +1267,7 @@ export type PlanUncheckedCreateWithoutOrganizationsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1291,6 +1319,7 @@ export type PlanUpdateWithoutOrganizationsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1326,6 +1355,7 @@ export type PlanUncheckedUpdateWithoutOrganizationsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1361,6 +1391,7 @@ export type PlanCreateWithoutSubscriptionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1396,6 +1427,7 @@ export type PlanUncheckedCreateWithoutSubscriptionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1436,6 +1468,7 @@ export type PlanCreateWithoutScheduledBySubscriptionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1471,6 +1504,7 @@ export type PlanUncheckedCreateWithoutScheduledBySubscriptionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1522,6 +1556,7 @@ export type PlanUpdateWithoutSubscriptionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1557,6 +1592,7 @@ export type PlanUncheckedUpdateWithoutSubscriptionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1603,6 +1639,7 @@ export type PlanUpdateWithoutScheduledBySubscriptionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1638,6 +1675,7 @@ export type PlanUncheckedUpdateWithoutScheduledBySubscriptionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1673,6 +1711,7 @@ export type PlanCreateWithoutPaymentsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1708,6 +1747,7 @@ export type PlanUncheckedCreateWithoutPaymentsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1759,6 +1799,7 @@ export type PlanUpdateWithoutPaymentsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1794,6 +1835,7 @@ export type PlanUncheckedUpdateWithoutPaymentsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1829,6 +1871,7 @@ export type PlanCreateWithoutCouponRestrictionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1864,6 +1907,7 @@ export type PlanUncheckedCreateWithoutCouponRestrictionsInput = {
   recurringIntervalCount?: number
   active?: boolean
   durationHours: number
+  isLifetime?: boolean
   priceCents: number
   sortOrder?: number
   tokenLimit?: number | null
@@ -1915,6 +1959,7 @@ export type PlanUpdateWithoutCouponRestrictionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1950,6 +1995,7 @@ export type PlanUncheckedUpdateWithoutCouponRestrictionsInput = {
   recurringIntervalCount?: Prisma.IntFieldUpdateOperationsInput | number
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   durationHours?: Prisma.IntFieldUpdateOperationsInput | number
+  isLifetime?: Prisma.BoolFieldUpdateOperationsInput | boolean
   priceCents?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   tokenLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -2061,6 +2107,7 @@ export type PlanSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   recurringIntervalCount?: boolean
   active?: boolean
   durationHours?: boolean
+  isLifetime?: boolean
   priceCents?: boolean
   sortOrder?: boolean
   tokenLimit?: boolean
@@ -2098,6 +2145,7 @@ export type PlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   recurringIntervalCount?: boolean
   active?: boolean
   durationHours?: boolean
+  isLifetime?: boolean
   priceCents?: boolean
   sortOrder?: boolean
   tokenLimit?: boolean
@@ -2128,6 +2176,7 @@ export type PlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   recurringIntervalCount?: boolean
   active?: boolean
   durationHours?: boolean
+  isLifetime?: boolean
   priceCents?: boolean
   sortOrder?: boolean
   tokenLimit?: boolean
@@ -2158,6 +2207,7 @@ export type PlanSelectScalar = {
   recurringIntervalCount?: boolean
   active?: boolean
   durationHours?: boolean
+  isLifetime?: boolean
   priceCents?: boolean
   sortOrder?: boolean
   tokenLimit?: boolean
@@ -2174,7 +2224,7 @@ export type PlanSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "shortDescription" | "description" | "externalPriceId" | "externalProductId" | "externalPriceIds" | "externalProductIds" | "autoRenew" | "recurringInterval" | "recurringIntervalCount" | "active" | "durationHours" | "priceCents" | "sortOrder" | "tokenLimit" | "tokenName" | "scope" | "minSeats" | "maxSeats" | "seatPriceCents" | "tokenPoolStrategy" | "supportsOrganizations" | "organizationSeatLimit" | "organizationTokenPoolStrategy" | "createdAt" | "updatedAt", ExtArgs["result"]["plan"]>
+export type PlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "shortDescription" | "description" | "externalPriceId" | "externalProductId" | "externalPriceIds" | "externalProductIds" | "autoRenew" | "recurringInterval" | "recurringIntervalCount" | "active" | "durationHours" | "isLifetime" | "priceCents" | "sortOrder" | "tokenLimit" | "tokenName" | "scope" | "minSeats" | "maxSeats" | "seatPriceCents" | "tokenPoolStrategy" | "supportsOrganizations" | "organizationSeatLimit" | "organizationTokenPoolStrategy" | "createdAt" | "updatedAt", ExtArgs["result"]["plan"]>
 export type PlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   subscriptions?: boolean | Prisma.Plan$subscriptionsArgs<ExtArgs>
   scheduledBySubscriptions?: boolean | Prisma.Plan$scheduledBySubscriptionsArgs<ExtArgs>
@@ -2211,6 +2261,7 @@ export type $PlanPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     recurringIntervalCount: number
     active: boolean
     durationHours: number
+    isLifetime: boolean
     priceCents: number
     sortOrder: number
     tokenLimit: number | null
@@ -2667,6 +2718,7 @@ export interface PlanFieldRefs {
   readonly recurringIntervalCount: Prisma.FieldRef<"Plan", 'Int'>
   readonly active: Prisma.FieldRef<"Plan", 'Boolean'>
   readonly durationHours: Prisma.FieldRef<"Plan", 'Int'>
+  readonly isLifetime: Prisma.FieldRef<"Plan", 'Boolean'>
   readonly priceCents: Prisma.FieldRef<"Plan", 'Int'>
   readonly sortOrder: Prisma.FieldRef<"Plan", 'Int'>
   readonly tokenLimit: Prisma.FieldRef<"Plan", 'Int'>

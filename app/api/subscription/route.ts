@@ -143,7 +143,7 @@ export async function GET() {
     return NextResponse.json(response);
   } catch (err: unknown) {
     const message = toError(err).message;
-    console.error('subscription GET error', message);
+    Logger.error('subscription GET error', { error: message });
     return jsonError(message || 'Failed to fetch subscription', 500, 'SUBSCRIPTION_FETCH_FAILED');
   }
 }

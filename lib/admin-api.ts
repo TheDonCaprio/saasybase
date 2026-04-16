@@ -3834,7 +3834,7 @@ export async function getAdminApiCatalog(): Promise<AdminApiCatalog> {
         'Access is determined per endpoint: admin endpoints require an authenticated session whose resolved role is ADMIN, or moderator access where the handler explicitly allows it; user endpoints require an authenticated session from the active auth provider; public endpoints are unauthenticated; internal endpoints require a server-to-server Bearer token.',
       notes: [
         'Dashboard requests automatically forward the active auth-provider session cookies.',
-        'The /admin/api page itself uses requireAdminPageAccess() and redirects unauthenticated users to sign-in or non-admins to /access-denied; API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
+        'The /docs/api page is the public API reference; the /admin/api route redirects to it. API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
         'User-scoped endpoints validate the requester against the resource owner and will return 403 when mismatched.',
         'Internal endpoints (e.g. /api/internal/*) are intended for server-to-server calls: use Authorization: Bearer <INTERNAL_API_TOKEN>. In non-prod environments, some internal endpoints also accept X-Internal-API: true for local tooling.',
         'Some internal endpoints intentionally respond with 404 when unauthorized to reduce endpoint discovery.'

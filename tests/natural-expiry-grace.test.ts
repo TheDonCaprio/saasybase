@@ -18,6 +18,7 @@ vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 
 vi.mock('../lib/settings', () => ({
   getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24),
+  getOrganizationExpiryMode: vi.fn(async () => 'SUSPEND'),
   shouldResetPaidTokensOnExpiryForPlanAutoRenew: vi.fn(async () => true),
 }));
 

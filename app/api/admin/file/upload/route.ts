@@ -4,6 +4,7 @@ import { requireAdmin, toAuthGuardErrorResponse } from '../../../../../lib/auth'
 import { recordAdminAction } from '../../../../../lib/admin-actions';
 import { saveAdminFile, saveLogo } from '../../../../../lib/fileStorage';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
+import { Logger } from '../../../../../lib/logger';
 
 const ALLOWED_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']);
 const EXTENSIONS: Record<string, string> = {
@@ -44,7 +45,7 @@ async function detectMime(buffer: Buffer): Promise<string | null> {
     }
   } catch (error) {
     // Detection failure is non-fatal; fall back to header hint below.
-    console.warn('file-type detection failed', error);
+    Logger.warn('file-type detection failed', error);
   }
   if (looksLikeSvg(buffer)) {
     return 'image/svg+xml';
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ url });
   } catch (error: unknown) {
-    console.error('file upload error', toErrorMessage(error));
+    Logger.error('file upload error', { error: toErrorMessage(error) });
     if (process.env.NODE_ENV !== 'production') {
       const message = toErrorMessage(error);
       return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });

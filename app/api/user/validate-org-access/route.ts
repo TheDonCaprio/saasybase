@@ -5,7 +5,7 @@ import { prisma } from '../../../../lib/prisma';
 import { deactivateOrganizationsByIds } from '../../../../lib/organization-access';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
-import { getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
+import { getOrganizationExpiryMode, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 
 type ValidateOrgAccessPayload = {
     activeOrgId?: string | null;
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
 
         const now = new Date();
         const graceHours = await getPaidTokensNaturalExpiryGraceHours();
+        const organizationExpiryMode = await getOrganizationExpiryMode();
         const graceCutoff = new Date(now.getTime() - graceHours * 60 * 60 * 1000);
 
         // Check all active memberships for the user.
@@ -140,6 +141,8 @@ export async function POST(request: Request) {
             await deactivateOrganizationsByIds(deletableOrgIds, {
                 userId,
                 reason: 'validate-org-access',
+                mode: organizationExpiryMode,
+                useExpiryTokenResetPolicy: organizationExpiryMode === 'SUSPEND',
             });
         } catch (err) {
             Logger.warn('Lazy Check: Failed to deactivate organizations (scoped)', {

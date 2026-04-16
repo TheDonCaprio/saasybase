@@ -3,6 +3,7 @@ import { Logger } from '../logger';
 import { creditOrganizationSharedTokens } from '../teams';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../notifications';
 import { getDefaultTokenLabel } from '../settings';
+import { getSubscriptionExpiryForPlan, isLifetimePlan } from '../subscription-lifetime';
 import { toError } from '../runtime-guards';
 import type { Prisma, Plan } from '@/lib/prisma-client';
 import type { StandardizedCheckoutSession } from './types';
@@ -24,7 +25,12 @@ export async function processOneTimeSubscriptionCreation(params: {
     mergeIdMap: (existing: unknown, key: string, value?: string | null) => string | null;
 }): Promise<void> {
     try {
-        const newExpires = new Date(params.now.getTime() + params.periodMs);
+        const newExpires = getSubscriptionExpiryForPlan({
+            plan: params.planToUse,
+            baseDate: params.now,
+            periodMs: params.periodMs,
+        });
+        const lifetimeAccess = isLifetimePlan(params.planToUse);
         await prisma.$transaction(async (tx) => {
             const sub = await tx.subscription.create({
                 data: {
@@ -33,6 +39,7 @@ export async function processOneTimeSubscriptionCreation(params: {
                     status: 'ACTIVE',
                     startedAt: params.now,
                     expiresAt: newExpires,
+                    isLifetime: lifetimeAccess,
                     paymentProvider: params.providerKey,
                 }
             });
@@ -89,7 +96,7 @@ export async function processOneTimeSubscriptionCreation(params: {
                     amount: `$${(params.resolvedAmountCents / 100).toFixed(2)}`,
                     transactionId: (params.finalPaymentIntent || params.session.id) as string,
                     startedAt: params.now.toLocaleDateString(),
-                    expiresAt: newExpires.toLocaleDateString(),
+                    expiresAt: lifetimeAccess ? 'Lifetime' : newExpires.toLocaleDateString(),
                     tokensAdded: params.planToUse.tokenLimit ? String(params.planToUse.tokenLimit) : '0',
                     tokenName
                 }

@@ -65,6 +65,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
                 description: true,
                 priceCents: true,
                 durationHours: true,
+                isLifetime: true,
                 autoRenew: true,
                 recurringInterval: true,
                 tokenLimit: true,
@@ -141,6 +142,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
     description?: string | null;
     priceCents?: number | null;
     durationHours?: number | null;
+    isLifetime?: boolean | null;
     autoRenew?: boolean | null;
     recurringInterval?: string | null;
   };
@@ -166,6 +168,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
       description: typeof rec.description === 'string' ? rec.description : null,
       priceCents: coerceNumber(rec.priceCents),
       durationHours: coerceNumber(rec.durationHours),
+      isLifetime: typeof rec.isLifetime === 'boolean' ? rec.isLifetime : (rec.isLifetime != null ? Boolean(rec.isLifetime) : null),
       autoRenew: typeof rec.autoRenew === 'boolean' ? rec.autoRenew : (rec.autoRenew != null ? Boolean(rec.autoRenew) : null),
       recurringInterval: typeof rec.recurringInterval === 'string' ? rec.recurringInterval : null,
     };
@@ -249,6 +252,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
           return 'Recurring billing';
       }
     }
+    if (currentPlan.isLifetime) return 'Lifetime access';
     const hours = currentPlan.durationHours ?? 0;
     if (hours >= 8760) return 'Annual access';
     if (hours >= 720) return 'Monthly access';

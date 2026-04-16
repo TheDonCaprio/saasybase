@@ -47,4 +47,21 @@ describe('resolveOneTimeCheckoutDisposition plan-family guard', () => {
 
     expect(result.mode).toBe('extend_non_recurring');
   });
+
+  it('returns create_new when active recurring family mismatches purchased one-time family', async () => {
+    prismaMock.subscription.findFirst.mockResolvedValueOnce({
+      id: 'sub_active_team_recurring',
+      expiresAt: new Date('2026-04-01T00:00:00.000Z'),
+      plan: { autoRenew: true, supportsOrganizations: true },
+    });
+
+    const result = await resolveOneTimeCheckoutDisposition({
+      userId: 'user_1',
+      now: new Date('2026-03-01T00:00:00.000Z'),
+      planSupportsOrganizations: false,
+    });
+
+    expect(result.mode).toBe('create_new');
+    expect(result.latestActive?.id).toBe('sub_active_team_recurring');
+  });
 });

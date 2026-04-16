@@ -3,6 +3,7 @@ import { prisma } from '../../../../../lib/prisma';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
 import { adminRateLimit } from '../../../../../lib/rateLimit';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
+import { Logger } from '../../../../../lib/logger';
 
 // Small runtime helpers to avoid `any` and safely narrow `unknown` inputs
 function asRecord(v: unknown): Record<string, unknown> {
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error creating notification:', toErrorMessage(error));
+    Logger.error('Error creating notification', { error: toErrorMessage(error) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

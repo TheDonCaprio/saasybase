@@ -4,6 +4,11 @@ import { useEffect } from 'react';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
+function debugWarn(message: string, error: unknown) {
+  if (process.env.NODE_ENV !== 'development') return;
+  console.warn(message, error);
+}
+
 export default function TwitterLoader() {
   const pathname = usePathname();
 
@@ -16,8 +21,7 @@ export default function TwitterLoader() {
           w.widgets.load();
         }
       } catch (e) {
-        // Non-fatal; just log for debugging
-        console.warn('twttr.widgets.load error', e);
+        debugWarn('twttr.widgets.load error', e);
       }
     };
 
@@ -39,7 +43,7 @@ export default function TwitterLoader() {
             w.widgets.load();
           }
         } catch (e) {
-          console.warn('twttr.widgets.load onLoad error', e);
+          debugWarn('twttr.widgets.load onLoad error', e);
         }
       }}
     />

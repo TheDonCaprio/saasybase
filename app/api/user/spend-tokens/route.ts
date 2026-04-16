@@ -216,41 +216,6 @@ async function resolveSharedContext(params: {
   };
 }
 
-function getAvailableSharedTokens(shared: {
-  poolBalance: number;
-  tokenPoolStrategy: 'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER';
-  memberAllocatedBalance: number;
-  effectiveMemberCap: number | null;
-  memberCapStrategy: 'SOFT' | 'HARD' | 'DISABLED';
-  memberCapResetIntervalHours: number | null;
-  memberTokenUsage: number;
-  memberTokenUsageWindowStart: Date | null;
-}): number {
-  // ALLOCATED_PER_MEMBER: use the member's individual balance directly
-  if (shared.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER') {
-    return Math.max(0, shared.memberAllocatedBalance);
-  }
-
-  // SHARED_FOR_ORG (default)
-  const poolBalance = Math.max(0, Number(shared.poolBalance ?? 0));
-  const cap = shared.effectiveMemberCap;
-  const resetHours = shared.memberCapResetIntervalHours;
-  const now = Date.now();
-  const windowStartMs = shared.memberTokenUsageWindowStart ? shared.memberTokenUsageWindowStart.getTime() : null;
-  const windowExpired =
-    resetHours != null &&
-    (windowStartMs == null || now - windowStartMs >= resetHours * 60 * 60 * 1000);
-  const usage = windowExpired ? 0 : Math.max(0, Number(shared.memberTokenUsage ?? 0));
-  const remainingCap = cap == null ? null : Math.max(0, cap - usage);
-
-  const hardCapEnabled = shared.memberCapStrategy === 'HARD' && cap != null;
-  if (!hardCapEnabled) {
-    return poolBalance;
-  }
-
-  return Math.max(0, Math.min(poolBalance, remainingCap ?? 0));
-}
-
 const rateLimited = withRateLimit(
   async (req) => {
     const { userId } = await getAuthSafe();

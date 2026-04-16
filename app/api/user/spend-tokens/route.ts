@@ -317,28 +317,24 @@ export async function POST(req: NextRequest) {
 
         let effectiveBucket: Exclude<SpendBucket, 'auto'>;
         if (bucket === 'auto') {
-          // Resolve shared once so we never duplicate the DB call.
-          sharedContext = await resolveSharedContext({ userId, organizationId, tx });
-          const sharedAvail = sharedContext.ok ? getAvailableSharedTokens(sharedContext) : 0;
-
-          // 1st pass – pick the first bucket that can fully cover the requested amount.
-          if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance >= amount)) {
-            effectiveBucket = 'paid';
-          } else if (sharedAvail >= amount) {
+          if (organizationId) {
+            sharedContext = await resolveSharedContext({ userId, organizationId, tx });
+            if (!sharedContext.ok) {
+              return {
+                status: sharedContext.status,
+                body: { ok: false, error: sharedContext.error },
+              };
+            }
             effectiveBucket = 'shared';
+          } else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance >= amount)) {
+            effectiveBucket = 'paid';
           } else if (freeBalance >= amount) {
             effectiveBucket = 'free';
-          }
-          // 2nd pass – any bucket with a positive balance (will surface insufficient_tokens).
-          else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance > 0)) {
+          } else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance > 0)) {
             effectiveBucket = 'paid';
-          } else if (sharedAvail > 0) {
-            effectiveBucket = 'shared';
           } else if (freeBalance > 0) {
             effectiveBucket = 'free';
-          }
-          // 3rd pass – legacy fallback when every balance is 0.
-          else if (hasActiveSubscription) {
+          } else if (hasActiveSubscription) {
             effectiveBucket = 'paid';
           } else {
             effectiveBucket = 'free';

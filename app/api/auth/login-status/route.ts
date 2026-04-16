@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { Logger } from '@/lib/logger';
+import { getUserSuspensionDetails } from '@/lib/account-suspension';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 
 export async function POST(request: NextRequest) {
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest) {
         name: true,
         password: true,
         emailVerified: true,
+        suspendedAt: true,
+        suspensionReason: true,
+        suspensionIsPermanent: true,
       },
     });
 
@@ -47,6 +51,19 @@ export async function POST(request: NextRequest) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json({ error: INVALID_CREDENTIALS_MESSAGE }, { status: 401 });
+    }
+
+    if (user.suspendedAt) {
+      const suspension = await getUserSuspensionDetails(user);
+      return NextResponse.json(
+        {
+          ok: false,
+          canSignIn: false,
+          code: suspension.code,
+          error: suspension.message,
+        },
+        { status: 403 }
+      );
     }
 
     if (user.emailVerified) {

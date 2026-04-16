@@ -2695,6 +2695,9 @@ export const UserScalarFieldEnum = {
   name: 'name',
   imageUrl: 'imageUrl',
   role: 'role',
+  suspendedAt: 'suspendedAt',
+  suspensionReason: 'suspensionReason',
+  suspensionIsPermanent: 'suspensionIsPermanent',
   password: 'password',
   tokenVersion: 'tokenVersion',
   emailVerified: 'emailVerified',
@@ -2770,6 +2773,8 @@ export const OrganizationScalarFieldEnum = {
   ownerUserId: 'ownerUserId',
   planId: 'planId',
   billingEmail: 'billingEmail',
+  suspendedAt: 'suspendedAt',
+  suspensionReason: 'suspensionReason',
   seatLimit: 'seatLimit',
   tokenPoolStrategy: 'tokenPoolStrategy',
   memberTokenCap: 'memberTokenCap',
@@ -3225,13 +3230,6 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -3242,6 +3240,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 

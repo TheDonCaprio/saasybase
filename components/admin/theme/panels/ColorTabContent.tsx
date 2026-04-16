@@ -1067,8 +1067,10 @@ export function ColorTabContent({
                     style={{
                       background: `linear-gradient(135deg, ${statCardSurfaceWash}, ${statCardSurfaceWash}), linear-gradient(135deg, ${colors.cardGradientFrom ?? colors.pageGradientFrom}, ${colors.cardGradientVia ?? colors.pageGradientVia}, ${colors.cardGradientTo ?? colors.pageGradientTo})`,
                       borderStyle: 'solid',
-                      borderColor: statCardBorderColor,
                       borderWidth: '1px',
+                      borderLeftColor: statCardBorderColor,
+                      borderRightColor: statCardBorderColor,
+                      borderBottomColor: statCardBorderColor,
                       borderTopWidth: `${statCardAccentTop}px`,
                       borderTopColor: statCardTopBorderColor,
                       borderRadius: `${surfaceRadius}px`,

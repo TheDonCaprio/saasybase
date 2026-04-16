@@ -97,7 +97,11 @@ describe('organization teardown by provider', () => {
     expect(deleteOrganizationMock).toHaveBeenCalledWith('provider_org_1');
     expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },
-      data: { clerkOrganizationId: null },
+      data: {
+        clerkOrganizationId: null,
+        suspendedAt: expect.any(Date),
+        suspensionReason: 'validate-org-access',
+      },
     });
     expect(prismaMock.organization.updateMany).not.toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },
@@ -118,7 +122,11 @@ describe('organization teardown by provider', () => {
 
     expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },
-      data: { clerkOrganizationId: null },
+      data: {
+        clerkOrganizationId: null,
+        suspendedAt: expect.any(Date),
+        suspensionReason: 'validate-org-access',
+      },
     });
     expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },

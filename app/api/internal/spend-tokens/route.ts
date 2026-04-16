@@ -221,20 +221,35 @@ export async function POST(req: NextRequest) {
       const hasActiveSubscription = Boolean(activePaidSubscription);
       const hasUnlimitedPaidAccess = hasUnlimitedPaidPersonalAccess(activePaidSubscription);
 
+      let sharedContext: Awaited<ReturnType<typeof resolveSharedContext>> | null = null;
       let effectiveBucket: Exclude<SpendBucket, 'auto'>;
       if (bucket === 'auto') {
-        // Prefer personal paid subscription when active; fall back to shared workspace pool; then free.
-        if (hasActiveSubscription) {
+        if (organizationId) {
+          sharedContext = await resolveSharedContext({ userId, organizationId, tx });
+          if (!sharedContext.ok) {
+            return {
+              status: sharedContext.status,
+              body: { ok: false, error: sharedContext.error },
+            };
+          }
+          effectiveBucket = 'shared';
+        } else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance >= amount)) {
+          effectiveBucket = 'paid';
+        } else if (freeBalance >= amount) {
+          effectiveBucket = 'free';
+        } else if (hasActiveSubscription && (hasUnlimitedPaidAccess || paidBalance > 0)) {
+          effectiveBucket = 'paid';
+        } else if (freeBalance > 0) {
+          effectiveBucket = 'free';
+        } else if (hasActiveSubscription) {
           effectiveBucket = 'paid';
         } else {
-          const shared = await resolveSharedContext({ userId, organizationId, tx });
-          effectiveBucket = shared.ok ? 'shared' : 'free';
+          effectiveBucket = 'free';
         }
       } else {
         effectiveBucket = bucket;
       }
 
-      let sharedContext: Awaited<ReturnType<typeof resolveSharedContext>> | null = null;
       let warnings:
         | Array<{ code: 'soft_cap_exceeded'; message: string; cap: number; usageBefore: number; usageAfter: number }>
         | undefined;
@@ -251,7 +266,7 @@ export async function POST(req: NextRequest) {
           }
         | undefined;
 
-      if (effectiveBucket === 'shared') {
+      if (effectiveBucket === 'shared' && !sharedContext) {
         sharedContext = await resolveSharedContext({ userId, organizationId, tx });
         if (!sharedContext.ok) {
           return {

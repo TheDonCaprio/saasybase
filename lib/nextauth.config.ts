@@ -20,6 +20,7 @@ import bcrypt from 'bcryptjs';
 import { sendNextAuthMagicLinkEmail, sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
 import { rateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { Logger } from '@/lib/logger';
+import { getUserSuspensionDetails } from '@/lib/account-suspension';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -164,6 +165,8 @@ function buildProviders(): NextAuthConfig['providers'] {
           return null;
         }
 
+        if (user.suspendedAt) return null;
+
         return {
           id: user.id,
           email: user.email,
@@ -284,6 +287,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account, email }) {
+      const resolvedUser = user.id
+        ? await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              suspendedAt: true,
+              suspensionReason: true,
+              suspensionIsPermanent: true,
+            },
+          })
+        : user.email
+          ? await prisma.user.findUnique({
+              where: { email: user.email.toLowerCase().trim() },
+              select: {
+                suspendedAt: true,
+                suspensionReason: true,
+                suspensionIsPermanent: true,
+              },
+            })
+          : null;
+
+      if (resolvedUser?.suspendedAt) {
+        const suspension = await getUserSuspensionDetails(resolvedUser);
+        return `/sign-in?error=${encodeURIComponent(suspension.code.toLowerCase().replace(/_/g, '-'))}`;
+      }
+
       if (account?.provider === 'nodemailer' && !email?.verificationRequest) {
         const emailAddress = (user.email || '').toLowerCase().trim();
         if (!emailAddress) {
@@ -317,10 +345,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: true,
           role: true,
           imageUrl: true,
+          suspendedAt: true,
         },
       });
 
-      if (!dbUser || !session.user) {
+      if (!dbUser || dbUser.suspendedAt || !session.user) {
         return {
           ...session,
           user: undefined,

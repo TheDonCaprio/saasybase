@@ -220,6 +220,8 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
   });
 
   it('uses free bucket for auto when paid has no spendable balance', async () => {
+    getAuthSafeMock.mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
     txMock.user.findUnique.mockReset();
     txMock.user.findUnique
       .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 0, freeTokenBalance: 8 })
@@ -227,10 +229,6 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
 
     // Simulate an active subscription so auto logic still must prefer available balance.
     txMock.subscription.findFirst.mockResolvedValueOnce({ id: 'sub_active_1' });
-
-    // Ensure no shared context is available for this scenario.
-    txMock.organizationMembership.findFirst.mockResolvedValueOnce(null);
-    txMock.organization.findFirst.mockResolvedValueOnce(null);
 
     txMock.user.updateMany.mockResolvedValueOnce({ count: 1 });
 
@@ -261,6 +259,8 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
   });
 
   it('auto prefers free over paid when paid balance is too small to cover the amount', async () => {
+    getAuthSafeMock.mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
     txMock.user.findUnique.mockReset();
     // User has 1 paid token but 50 free tokens. Spend request is for 10.
     txMock.user.findUnique
@@ -269,10 +269,6 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
 
     // Active subscription exists, so paid would normally be preferred.
     txMock.subscription.findFirst.mockResolvedValueOnce({ id: 'sub_active_2' });
-
-    // No shared context.
-    txMock.organizationMembership.findFirst.mockResolvedValueOnce(null);
-    txMock.organization.findFirst.mockResolvedValueOnce(null);
 
     txMock.user.updateMany.mockResolvedValueOnce({ count: 1 });
 
@@ -354,6 +350,8 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
   });
 
   it('bypasses paid-balance enforcement when the active personal plan is unlimited', async () => {
+    getAuthSafeMock.mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
     txMock.user.findUnique.mockReset();
     txMock.user.findUnique
       .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 0, freeTokenBalance: 8 })
@@ -364,9 +362,6 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       expiresAt: new Date(Date.now() + 60_000),
       plan: { tokenLimit: null, tokenName: 'credits' },
     });
-
-    txMock.organizationMembership.findFirst.mockResolvedValueOnce(null);
-    txMock.organization.findFirst.mockResolvedValueOnce(null);
 
     const req = new NextRequest('http://localhost/api/user/spend-tokens', {
       method: 'POST',
@@ -382,6 +377,114 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       ok: true,
       bucket: 'paid',
       amount: 3,
+    });
+    expect(txMock.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('auto uses shared in organization context even when paid and free balances exist', async () => {
+    txMock.user.findUnique.mockReset();
+    txMock.user.findUnique
+      .mockResolvedValueOnce({ id: 'user_1', tokenBalance: 25, freeTokenBalance: 40 })
+      .mockResolvedValueOnce({ tokenBalance: 25, freeTokenBalance: 40 });
+
+    txMock.subscription.findFirst.mockReset();
+    txMock.subscription.findFirst
+      .mockResolvedValueOnce({ id: 'sub_active_personal_1' })
+      .mockResolvedValueOnce({ id: 'sub_owner_1' });
+
+    txMock.organizationMembership.findFirst.mockResolvedValueOnce({
+      id: 'membership_shared_1',
+      organizationId: 'org_db_1',
+      memberTokenCapOverride: null,
+      memberTokenUsageWindowStart: null,
+      memberTokenUsage: 0,
+      sharedTokenBalance: 0,
+      organization: {
+        id: 'org_db_1',
+        clerkOrganizationId: 'org_clerk_123',
+        ownerUserId: 'owner_1',
+        tokenBalance: 100,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        memberTokenCap: null,
+        memberCapStrategy: 'SOFT',
+        memberCapResetIntervalHours: null,
+        ownerExemptFromCaps: false,
+        invites: [],
+      },
+    });
+
+    txMock.organization.updateMany.mockResolvedValueOnce({ count: 1 });
+    txMock.organizationMembership.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 10, bucket: 'auto', feature: 'org-auto-shared-first' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      bucket: 'shared',
+      amount: 10,
+      organizationId: 'org_db_1',
+    });
+    expect(txMock.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org_db_1', tokenBalance: { gte: 10 } },
+      data: { tokenBalance: { decrement: 10 } },
+    });
+    expect(txMock.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to personal buckets in organization context when shared tokens are insufficient', async () => {
+    txMock.user.findUnique.mockReset();
+    txMock.user.findUnique.mockResolvedValueOnce({ id: 'user_1', tokenBalance: 25, freeTokenBalance: 40 });
+
+    txMock.subscription.findFirst.mockReset();
+    txMock.subscription.findFirst
+      .mockResolvedValueOnce({ id: 'sub_active_personal_2' })
+      .mockResolvedValueOnce({ id: 'sub_owner_2' });
+
+    txMock.organizationMembership.findFirst.mockResolvedValueOnce({
+      id: 'membership_shared_2',
+      organizationId: 'org_db_1',
+      memberTokenCapOverride: null,
+      memberTokenUsageWindowStart: null,
+      memberTokenUsage: 0,
+      sharedTokenBalance: 0,
+      organization: {
+        id: 'org_db_1',
+        clerkOrganizationId: 'org_clerk_123',
+        ownerUserId: 'owner_1',
+        tokenBalance: 4,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        memberTokenCap: null,
+        memberCapStrategy: 'SOFT',
+        memberCapResetIntervalHours: null,
+        ownerExemptFromCaps: false,
+        invites: [],
+      },
+    });
+
+    const req = new NextRequest('http://localhost/api/user/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amount: 10, bucket: 'auto', feature: 'org-auto-no-fallback' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body).toMatchObject({
+      ok: false,
+      error: 'insufficient_tokens',
+      bucket: 'shared',
+      required: 10,
+      available: 4,
     });
     expect(txMock.user.updateMany).not.toHaveBeenCalled();
   });
@@ -444,3 +547,4 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
     expect(txMock.organization.updateMany).not.toHaveBeenCalled();
   });
 });
+

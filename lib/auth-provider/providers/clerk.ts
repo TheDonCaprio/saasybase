@@ -22,6 +22,8 @@ import type {
 } from '../types';
 import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
+import { prisma } from '../../prisma';
+import { getUserSuspensionStatus } from '../../account-suspension';
 
 // ---------------------------------------------------------------------------
 // Lazy imports — keep the module loadable even when @clerk/nextjs isn't
@@ -122,8 +124,22 @@ export class ClerkAuthProvider implements AuthProvider {
     try {
       const mod = await getClerkServer();
       const result = await mod.auth();
+      const userId = (result as Record<string, unknown>).userId as string | null ?? null;
+      if (userId) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            suspendedAt: true,
+            suspensionReason: true,
+            suspensionIsPermanent: true,
+          },
+        });
+        if (getUserSuspensionStatus(dbUser).isSuspended) {
+          return { userId: null, orgId: null, sessionId: null };
+        }
+      }
       return {
-        userId: (result as Record<string, unknown>).userId as string | null ?? null,
+        userId,
         orgId: (result as Record<string, unknown>).orgId as string | null ?? null,
         sessionId: (result as Record<string, unknown>).sessionId as string | null ?? null,
       };
@@ -138,6 +154,15 @@ export class ClerkAuthProvider implements AuthProvider {
       const mod = await getClerkServer();
       const user = await mod.currentUser();
       if (!user) return null;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          suspendedAt: true,
+          suspensionReason: true,
+          suspensionIsPermanent: true,
+        },
+      });
+      if (getUserSuspensionStatus(dbUser).isSuspended) return null;
       return toAuthUser(user as unknown as Record<string, unknown>);
     } catch (err) {
       Logger.debug('ClerkAuthProvider.getCurrentUser failed', { error: toError(err) });

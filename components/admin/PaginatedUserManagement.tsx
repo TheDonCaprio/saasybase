@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { formatDate } from '../../lib/formatDate';
+import { formatDate, type FormatMode } from '../../lib/formatDate';
 import { getCanonicalActiveSubscription, SubRecord } from '../../lib/subscriptions';
 import { useFormatSettings } from '../FormatSettingsProvider';
 import { UserActions } from './UserActions';
@@ -43,11 +43,73 @@ interface User {
   email: string | null;
   name: string | null;
   role: string;
+  suspendedAt?: string | Date | null;
+  suspensionReason?: string | null;
+  suspensionIsPermanent?: boolean;
   createdAt: Date;
   subscriptions: SubRecord[];
   _count: { payments: number };
   clerkData: ClerkData | null;
   tokenBalance: number;
+}
+
+function getAccessBadgeClasses(user: Pick<User, 'suspendedAt' | 'suspensionIsPermanent'>) {
+  if (!user.suspendedAt) {
+    return 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200';
+  }
+
+  return user.suspensionIsPermanent
+    ? 'border border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200'
+    : 'border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200';
+}
+
+function getSuspensionLabel(user: Pick<User, 'suspendedAt' | 'suspensionIsPermanent'>) {
+  if (!user.suspendedAt) return 'Active';
+  return user.suspensionIsPermanent ? 'Suspended' : 'Suspended';
+}
+
+function formatSuspensionTimestamp(value: string | Date | null | undefined, mode: FormatMode, timezone?: string | null) {
+  if (!value) return 'Unknown date';
+  return formatDate(value, { mode, timezone: timezone ?? undefined });
+}
+
+function UserSuspensionBadge({
+  user,
+  mode,
+  timezone,
+}: {
+  user: Pick<User, 'suspendedAt' | 'suspensionIsPermanent' | 'suspensionReason'>;
+  mode: FormatMode;
+  timezone?: string | null;
+}) {
+  const isSuspended = Boolean(user.suspendedAt);
+  const label = getSuspensionLabel(user);
+  const details = isSuspended
+    ? [
+        `Type: ${user.suspensionIsPermanent ? 'Permanent' : 'Temporary'}`,
+        `Date: ${formatSuspensionTimestamp(user.suspendedAt, mode, timezone)}`,
+        `Reason: ${user.suspensionReason?.trim() || 'No reason provided'}`,
+      ]
+    : [];
+
+  return (
+    <div className="group relative inline-flex">
+      <span
+        className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition group-hover:ring-2 group-hover:ring-offset-2 group-hover:ring-offset-white dark:group-hover:ring-offset-neutral-950 ${getAccessBadgeClasses(user)} ${isSuspended ? 'cursor-help group-hover:ring-current/30' : ''}`}
+        title={isSuspended ? details.join(' | ') : label}
+      >
+        {label}
+      </span>
+      {isSuspended ? (
+        <div className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-20 hidden w-64 -translate-x-1/2 rounded-xl border border-slate-200 bg-white/95 p-3 text-left text-xs text-slate-600 shadow-xl group-hover:block dark:border-neutral-700 dark:bg-neutral-950/95 dark:text-neutral-200">
+          <div className="font-semibold text-slate-900 dark:text-white">{label}</div>
+          <div className="mt-1">Type: {user.suspensionIsPermanent ? 'Permanent' : 'Temporary'}</div>
+          <div className="mt-1">Date: {formatSuspensionTimestamp(user.suspendedAt, mode, timezone)}</div>
+          <div className="mt-1 leading-5">Reason: {user.suspensionReason?.trim() || 'No reason provided'}</div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 
@@ -73,6 +135,7 @@ export function PaginatedUserManagement({
 }: PaginatedUserManagementProps) {
   const itemsPerPage = 50;
   const { search, setSearch, debouncedSearch, status, setStatus } = useListFilterState('', 'ALL');
+  const [accessFilter, setAccessFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   const [sortBy, setSortBy] = useState<'createdAt' | 'name' | 'payments'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -104,6 +167,7 @@ export function PaginatedUserManagement({
         search: debouncedSearch || undefined,
         role: roleFilter,
         billing: billingFilter,
+        suspension: accessFilter !== 'ALL' ? accessFilter : undefined,
         sortBy,
         sortOrder
       };
@@ -207,7 +271,7 @@ export function PaginatedUserManagement({
   useEffect(() => {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
+  }, [accessFilter, debouncedSearch, status]);
 
   const settings = useFormatSettings();
 
@@ -230,6 +294,11 @@ export function PaginatedUserManagement({
           statusOptions={['ALL', 'USER', 'MODERATOR', 'ADMIN', 'PAID', 'FREE']}
           currentStatus={status}
           onStatusChange={(s) => handleRoleFilterChange(s)}
+          secondaryOptions={['ALL', 'ACTIVE', 'SUSPENDED']}
+          currentSecondary={accessFilter}
+          onSecondaryChange={(value) => setAccessFilter(value as 'ALL' | 'ACTIVE' | 'SUSPENDED')}
+          secondaryLabel="Access"
+          secondaryAllLabel="All access states"
           onRefresh={refreshUsers}
           placeholder="Search by email, name, or user ID..."
           sortOptions={[{ value: 'createdAt', label: 'Date registered' }, { value: 'name', label: 'Name' }, { value: 'payments', label: 'Purchases' }]}
@@ -266,6 +335,8 @@ export function PaginatedUserManagement({
           <>
             <div className="lg:hidden space-y-3 p-3 sm:p-4">
               {users.map((user) => (
+                (() => {
+                  return (
                 <div
                   key={user.id}
                   className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 sm:p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-indigo-500/40"
@@ -298,17 +369,20 @@ export function PaginatedUserManagement({
                         Joined {formatDate(user.createdAt, { mode: settings.mode, timezone: settings.timezone })}
                       </div>
                     </div>
-                    <span
-                      className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold ${
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <span
+                        className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold ${
                         user.role === 'ADMIN'
                           ? 'border border-purple-200 bg-purple-50 text-purple-600 dark:border-purple-500/40 dark:bg-purple-500/10 dark:text-purple-200'
                           : user.role === 'MODERATOR'
                           ? 'border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
                           : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100'
-                      }`}
-                    >
-                      {user.role}
-                    </span>
+                        }`}
+                      >
+                        {user.role}
+                      </span>
+                      <UserSuspensionBadge user={user} mode={settings.mode} timezone={settings.timezone} />
+                    </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -344,13 +418,19 @@ export function PaginatedUserManagement({
                         email: user.email,
                         name: user.name,
                         role: user.role,
+                        suspendedAt: user.suspendedAt,
+                        suspensionReason: user.suspensionReason,
+                        suspensionIsPermanent: user.suspensionIsPermanent,
                         createdAt: user.createdAt
                       }}
                       onEdit={() => handleEditUser(user)}
+                      onUpdated={(updatedUser) => handleUserUpdate(updatedUser)}
                       currentAdminId={currentAdminId}
                     />
                   </div>
                 </div>
+                  );
+                })()
               ))}
             </div>
 
@@ -369,6 +449,8 @@ export function PaginatedUserManagement({
 
               <div className="divide-y divide-slate-200/70 dark:divide-neutral-800/70">
                 {users.map((user) => (
+                  (() => {
+                    return (
                   <div key={user.id} className="px-6 py-4 transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
                     <div className="grid grid-cols-[1.5fr_1.2fr_0.7fr_1fr_1.2fr_0.7fr_0.7fr] items-center gap-4">
                       <div className="min-w-0 text-sm">
@@ -395,17 +477,20 @@ export function PaginatedUserManagement({
                         {user.email || 'No email'}
                       </div>
                       <div>
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${
                             user.role === 'ADMIN'
                               ? 'border border-purple-200 bg-purple-50 text-purple-600 dark:border-purple-500/40 dark:bg-purple-500/10 dark:text-purple-200'
                               : user.role === 'MODERATOR'
                               ? 'border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
                               : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100'
-                          }`}
-                        >
-                          {user.role}
-                        </span>
+                            }`}
+                          >
+                            {user.role}
+                          </span>
+                          <UserSuspensionBadge user={user} mode={settings.mode} timezone={settings.timezone} />
+                        </div>
                       </div>
                       <div className="text-xs text-slate-500 dark:text-neutral-400">
                         {formatDate(user.createdAt, { mode: settings.mode, timezone: settings.timezone })}
@@ -439,14 +524,20 @@ export function PaginatedUserManagement({
                             email: user.email,
                             name: user.name,
                             role: user.role,
+                              suspendedAt: user.suspendedAt,
+                              suspensionReason: user.suspensionReason,
+                              suspensionIsPermanent: user.suspensionIsPermanent,
                             createdAt: user.createdAt
                           }}
                           onEdit={() => handleEditUser(user)}
+                            onUpdated={(updatedUser) => handleUserUpdate(updatedUser)}
                           currentAdminId={currentAdminId}
                         />
                       </div>
                     </div>
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             </div>

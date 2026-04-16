@@ -126,13 +126,19 @@ export default async function AdminUsersPage() {
             lastSignInAt: null,
             createdAt: user.createdAt.getTime(),
             updatedAt: user.updatedAt.getTime()
-          } : null
+          } : null,
+          suspendedAt: user.suspendedAt,
+          suspensionReason: user.suspensionReason,
+          suspensionIsPermanent: user.suspensionIsPermanent,
         };
       } catch (error) {
         Logger.warn(`Failed to fetch Clerk data for user ${user.id}`, error);
         return {
           ...user,
-          clerkData: null
+          clerkData: null,
+          suspendedAt: user.suspendedAt,
+          suspensionReason: user.suspensionReason,
+          suspensionIsPermanent: user.suspensionIsPermanent,
         };
       }
     })

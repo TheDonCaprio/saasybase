@@ -382,7 +382,7 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     tabsGradientFrom: '#ffffff',
     tabsGradientVia: '#eef2ff',
     tabsGradientTo: '#ffffff',
-    pageGlow: '#3b82f673',
+    pageGlow: '#3b82f643',
     glowOpacity: 1,
   },
   dark: {

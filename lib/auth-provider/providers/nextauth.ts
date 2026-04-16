@@ -25,6 +25,7 @@ import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
 import { ACTIVE_ORG_COOKIE } from '../../active-organization';
 import { validateAndFormatPersonName } from '../../name-validation';
+import { getUserSuspensionStatus } from '../../account-suspension';
 import {
   parseUserAgent,
   resolveSessionActivityFromHeaders,
@@ -244,10 +245,19 @@ export class NextAuthProvider implements AuthProvider {
       const prisma = await getPrisma();
       const dbUser = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { id: true },
+        select: {
+          id: true,
+          suspendedAt: true,
+          suspensionReason: true,
+          suspensionIsPermanent: true,
+        },
       });
 
-      if (!dbUser?.id) {
+      if (!dbUser?.id || getUserSuspensionStatus(dbUser).isSuspended) {
+        const currentSession = await getCurrentSessionRecord();
+        if (currentSession?.userId === session.user.id) {
+          await prisma.session.deleteMany({ where: { id: currentSession.id } });
+        }
         return { userId: null, orgId: null, sessionId: null };
       }
 
@@ -309,7 +319,7 @@ export class NextAuthProvider implements AuthProvider {
         }),
       ]);
 
-      if (!user) return null;
+      if (!user || getUserSuspensionStatus(user).isSuspended) return null;
       const authUser = toAuthUser(user as unknown as Record<string, unknown>);
       return {
         ...authUser,
@@ -327,7 +337,7 @@ export class NextAuthProvider implements AuthProvider {
     try {
       const prisma = await getPrisma();
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (!user) return null;
+      if (!user || getUserSuspensionStatus(user).isSuspended) return null;
       return toAuthUser(user as unknown as Record<string, unknown>);
     } catch (err) {
       Logger.warn('NextAuthProvider.getUser failed', { userId, error: toError(err).message });

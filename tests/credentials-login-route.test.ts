@@ -128,4 +128,29 @@ describe('POST /api/auth/credentials-login', () => {
     });
     expect(cookieHeader).toContain('authjs.session-token=');
   });
+
+  it('rejects suspended users with an explicit suspension code', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_2',
+      password: 'hashed',
+      emailVerified: new Date(),
+      suspendedAt: new Date(),
+      suspensionReason: 'Policy violation',
+      suspensionIsPermanent: true,
+    });
+    compareMock.mockResolvedValue(true);
+
+    const request = new NextRequest('http://localhost/api/auth/credentials-login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'test@example.com', password: 'secret123' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.code).toBe('USER_SUSPENDED_PERMANENT');
+    expect(prismaMock.session.create).not.toHaveBeenCalled();
+  });
 });

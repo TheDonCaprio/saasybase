@@ -60,10 +60,18 @@ interface User {
   email: string | null;
   name: string | null;
   role: string;
+  suspendedAt?: string | Date | null;
+  suspensionReason?: string | null;
+  suspensionIsPermanent?: boolean;
   createdAt: Date;
   clerkData: ClerkData | null;
   tokenBalance: number;
   subscriptions: SubRecord[];
+}
+
+function formatSuspensionDate(value: string | Date | null | undefined) {
+  if (!value) return 'Unknown date';
+  return new Date(value).toLocaleString();
 }
 
 interface PlanOption {
@@ -508,6 +516,21 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
         </div>
       </div>
 
+      {user.suspendedAt ? (
+        <div className={`rounded-md border px-4 py-3 shadow-sm ${user.suspensionIsPermanent ? 'border-red-200 bg-red-50/90 dark:border-red-900/60 dark:bg-red-950/20' : 'border-amber-200 bg-amber-50/90 dark:border-amber-900/60 dark:bg-amber-950/20'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Suspension</h3>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${user.suspensionIsPermanent ? 'border border-red-200 bg-red-100 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200' : 'border border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'}`}>
+              {user.suspensionIsPermanent ? 'Permanent' : 'Temporary'}
+            </span>
+          </div>
+          <div className="mt-2 space-y-1 text-sm text-neutral-700 dark:text-neutral-300">
+            <div>Suspended on: {formatSuspensionDate(user.suspendedAt)}</div>
+            <div>Reason: {user.suspensionReason?.trim() || 'No reason provided'}</div>
+          </div>
+        </div>
+      ) : null}
+
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">First Name</label>
@@ -574,7 +597,7 @@ export function UserEditModal({ user, isOpen, onClose, onUserUpdate, onUserDelet
                   {user.clerkData.lastSignInAt && (
                     <div>Last sign in: {new Date(user.clerkData.lastSignInAt).toLocaleString()}</div>
                   )}
-                  <div>Clerk created: {new Date(user.clerkData.createdAt).toLocaleString()}</div>
+                  <div>Created: {new Date(user.clerkData.createdAt).toLocaleString()}</div>
                   {user.clerkData.phoneNumbers?.length > 0 && (
                     <div>Phone: {user.clerkData.phoneNumbers[0].phoneNumber}</div>
                   )}

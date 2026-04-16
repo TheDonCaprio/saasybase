@@ -48,6 +48,8 @@ export type OrganizationMinAggregateOutputType = {
   ownerUserId: string | null
   planId: string | null
   billingEmail: string | null
+  suspendedAt: Date | null
+  suspensionReason: string | null
   seatLimit: number | null
   tokenPoolStrategy: string | null
   memberTokenCap: number | null
@@ -67,6 +69,8 @@ export type OrganizationMaxAggregateOutputType = {
   ownerUserId: string | null
   planId: string | null
   billingEmail: string | null
+  suspendedAt: Date | null
+  suspensionReason: string | null
   seatLimit: number | null
   tokenPoolStrategy: string | null
   memberTokenCap: number | null
@@ -86,6 +90,8 @@ export type OrganizationCountAggregateOutputType = {
   ownerUserId: number
   planId: number
   billingEmail: number
+  suspendedAt: number
+  suspensionReason: number
   seatLimit: number
   tokenPoolStrategy: number
   memberTokenCap: number
@@ -121,6 +127,8 @@ export type OrganizationMinAggregateInputType = {
   ownerUserId?: true
   planId?: true
   billingEmail?: true
+  suspendedAt?: true
+  suspensionReason?: true
   seatLimit?: true
   tokenPoolStrategy?: true
   memberTokenCap?: true
@@ -140,6 +148,8 @@ export type OrganizationMaxAggregateInputType = {
   ownerUserId?: true
   planId?: true
   billingEmail?: true
+  suspendedAt?: true
+  suspensionReason?: true
   seatLimit?: true
   tokenPoolStrategy?: true
   memberTokenCap?: true
@@ -159,6 +169,8 @@ export type OrganizationCountAggregateInputType = {
   ownerUserId?: true
   planId?: true
   billingEmail?: true
+  suspendedAt?: true
+  suspensionReason?: true
   seatLimit?: true
   tokenPoolStrategy?: true
   memberTokenCap?: true
@@ -265,6 +277,8 @@ export type OrganizationGroupByOutputType = {
   ownerUserId: string
   planId: string | null
   billingEmail: string | null
+  suspendedAt: Date | null
+  suspensionReason: string | null
   seatLimit: number | null
   tokenPoolStrategy: string
   memberTokenCap: number | null
@@ -307,6 +321,8 @@ export type OrganizationWhereInput = {
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
+  suspendedAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
+  suspensionReason?: Prisma.StringNullableFilter<"Organization"> | string | null
   seatLimit?: Prisma.IntNullableFilter<"Organization"> | number | null
   tokenPoolStrategy?: Prisma.StringFilter<"Organization"> | string
   memberTokenCap?: Prisma.IntNullableFilter<"Organization"> | number | null
@@ -332,6 +348,8 @@ export type OrganizationOrderByWithRelationInput = {
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
   billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  suspendedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  suspensionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   seatLimit?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenPoolStrategy?: Prisma.SortOrder
   memberTokenCap?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -360,6 +378,8 @@ export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
+  suspendedAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
+  suspensionReason?: Prisma.StringNullableFilter<"Organization"> | string | null
   seatLimit?: Prisma.IntNullableFilter<"Organization"> | number | null
   tokenPoolStrategy?: Prisma.StringFilter<"Organization"> | string
   memberTokenCap?: Prisma.IntNullableFilter<"Organization"> | number | null
@@ -385,6 +405,8 @@ export type OrganizationOrderByWithAggregationInput = {
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
   billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  suspendedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  suspensionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   seatLimit?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenPoolStrategy?: Prisma.SortOrder
   memberTokenCap?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -412,6 +434,8 @@ export type OrganizationScalarWhereWithAggregatesInput = {
   ownerUserId?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   planId?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
+  suspendedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Organization"> | Date | string | null
+  suspensionReason?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   seatLimit?: Prisma.IntNullableWithAggregatesFilter<"Organization"> | number | null
   tokenPoolStrategy?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   memberTokenCap?: Prisma.IntNullableWithAggregatesFilter<"Organization"> | number | null
@@ -429,6 +453,8 @@ export type OrganizationCreateInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -454,6 +480,8 @@ export type OrganizationUncheckedCreateInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -475,6 +503,8 @@ export type OrganizationUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -500,6 +530,8 @@ export type OrganizationUncheckedUpdateInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -523,6 +555,8 @@ export type OrganizationCreateManyInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -540,6 +574,8 @@ export type OrganizationUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -559,6 +595,8 @@ export type OrganizationUncheckedUpdateManyInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -588,6 +626,8 @@ export type OrganizationCountOrderByAggregateInput = {
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
+  suspendedAt?: Prisma.SortOrder
+  suspensionReason?: Prisma.SortOrder
   seatLimit?: Prisma.SortOrder
   tokenPoolStrategy?: Prisma.SortOrder
   memberTokenCap?: Prisma.SortOrder
@@ -614,6 +654,8 @@ export type OrganizationMaxOrderByAggregateInput = {
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
+  suspendedAt?: Prisma.SortOrder
+  suspensionReason?: Prisma.SortOrder
   seatLimit?: Prisma.SortOrder
   tokenPoolStrategy?: Prisma.SortOrder
   memberTokenCap?: Prisma.SortOrder
@@ -633,6 +675,8 @@ export type OrganizationMinOrderByAggregateInput = {
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
+  suspendedAt?: Prisma.SortOrder
+  suspensionReason?: Prisma.SortOrder
   seatLimit?: Prisma.SortOrder
   tokenPoolStrategy?: Prisma.SortOrder
   memberTokenCap?: Prisma.SortOrder
@@ -811,6 +855,8 @@ export type OrganizationCreateWithoutOwnerInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -834,6 +880,8 @@ export type OrganizationUncheckedCreateWithoutOwnerInput = {
   slug: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -885,6 +933,8 @@ export type OrganizationScalarWhereInput = {
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
+  suspendedAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
+  suspensionReason?: Prisma.StringNullableFilter<"Organization"> | string | null
   seatLimit?: Prisma.IntNullableFilter<"Organization"> | number | null
   tokenPoolStrategy?: Prisma.StringFilter<"Organization"> | string
   memberTokenCap?: Prisma.IntNullableFilter<"Organization"> | number | null
@@ -902,6 +952,8 @@ export type OrganizationCreateWithoutPlanInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -925,6 +977,8 @@ export type OrganizationUncheckedCreateWithoutPlanInput = {
   slug: string
   ownerUserId: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -971,6 +1025,8 @@ export type OrganizationCreateWithoutMembershipsInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -995,6 +1051,8 @@ export type OrganizationUncheckedCreateWithoutMembershipsInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1031,6 +1089,8 @@ export type OrganizationUpdateWithoutMembershipsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1055,6 +1115,8 @@ export type OrganizationUncheckedUpdateWithoutMembershipsInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1075,6 +1137,8 @@ export type OrganizationCreateWithoutInvitesInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1099,6 +1163,8 @@ export type OrganizationUncheckedCreateWithoutInvitesInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1135,6 +1201,8 @@ export type OrganizationUpdateWithoutInvitesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1159,6 +1227,8 @@ export type OrganizationUncheckedUpdateWithoutInvitesInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1179,6 +1249,8 @@ export type OrganizationCreateWithoutSubscriptionsInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1203,6 +1275,8 @@ export type OrganizationUncheckedCreateWithoutSubscriptionsInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1239,6 +1313,8 @@ export type OrganizationUpdateWithoutSubscriptionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1263,6 +1339,8 @@ export type OrganizationUncheckedUpdateWithoutSubscriptionsInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1283,6 +1361,8 @@ export type OrganizationCreateWithoutPaymentsInput = {
   name: string
   slug: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1307,6 +1387,8 @@ export type OrganizationUncheckedCreateWithoutPaymentsInput = {
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1343,6 +1425,8 @@ export type OrganizationUpdateWithoutPaymentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1367,6 +1451,8 @@ export type OrganizationUncheckedUpdateWithoutPaymentsInput = {
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1388,6 +1474,8 @@ export type OrganizationCreateManyOwnerInput = {
   slug: string
   planId?: string | null
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1405,6 +1493,8 @@ export type OrganizationUpdateWithoutOwnerInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1428,6 +1518,8 @@ export type OrganizationUncheckedUpdateWithoutOwnerInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1450,6 +1542,8 @@ export type OrganizationUncheckedUpdateManyWithoutOwnerInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1468,6 +1562,8 @@ export type OrganizationCreateManyPlanInput = {
   slug: string
   ownerUserId: string
   billingEmail?: string | null
+  suspendedAt?: Date | string | null
+  suspensionReason?: string | null
   seatLimit?: number | null
   tokenPoolStrategy?: string
   memberTokenCap?: number | null
@@ -1485,6 +1581,8 @@ export type OrganizationUpdateWithoutPlanInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1508,6 +1606,8 @@ export type OrganizationUncheckedUpdateWithoutPlanInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1530,6 +1630,8 @@ export type OrganizationUncheckedUpdateManyWithoutPlanInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   seatLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tokenPoolStrategy?: Prisma.StringFieldUpdateOperationsInput | string
   memberTokenCap?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1607,6 +1709,8 @@ export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
+  suspendedAt?: boolean
+  suspensionReason?: boolean
   seatLimit?: boolean
   tokenPoolStrategy?: boolean
   memberTokenCap?: boolean
@@ -1633,6 +1737,8 @@ export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
+  suspendedAt?: boolean
+  suspensionReason?: boolean
   seatLimit?: boolean
   tokenPoolStrategy?: boolean
   memberTokenCap?: boolean
@@ -1654,6 +1760,8 @@ export type OrganizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
+  suspendedAt?: boolean
+  suspensionReason?: boolean
   seatLimit?: boolean
   tokenPoolStrategy?: boolean
   memberTokenCap?: boolean
@@ -1675,6 +1783,8 @@ export type OrganizationSelectScalar = {
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
+  suspendedAt?: boolean
+  suspensionReason?: boolean
   seatLimit?: boolean
   tokenPoolStrategy?: boolean
   memberTokenCap?: boolean
@@ -1686,7 +1796,7 @@ export type OrganizationSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clerkOrganizationId" | "name" | "slug" | "ownerUserId" | "planId" | "billingEmail" | "seatLimit" | "tokenPoolStrategy" | "memberTokenCap" | "memberCapStrategy" | "memberCapResetIntervalHours" | "ownerExemptFromCaps" | "tokenBalance" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
+export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clerkOrganizationId" | "name" | "slug" | "ownerUserId" | "planId" | "billingEmail" | "suspendedAt" | "suspensionReason" | "seatLimit" | "tokenPoolStrategy" | "memberTokenCap" | "memberCapStrategy" | "memberCapResetIntervalHours" | "ownerExemptFromCaps" | "tokenBalance" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
 export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   plan?: boolean | Prisma.Organization$planArgs<ExtArgs>
@@ -1723,6 +1833,8 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     ownerUserId: string
     planId: string | null
     billingEmail: string | null
+    suspendedAt: Date | null
+    suspensionReason: string | null
     seatLimit: number | null
     tokenPoolStrategy: string
     memberTokenCap: number | null
@@ -2168,6 +2280,8 @@ export interface OrganizationFieldRefs {
   readonly ownerUserId: Prisma.FieldRef<"Organization", 'String'>
   readonly planId: Prisma.FieldRef<"Organization", 'String'>
   readonly billingEmail: Prisma.FieldRef<"Organization", 'String'>
+  readonly suspendedAt: Prisma.FieldRef<"Organization", 'DateTime'>
+  readonly suspensionReason: Prisma.FieldRef<"Organization", 'String'>
   readonly seatLimit: Prisma.FieldRef<"Organization", 'Int'>
   readonly tokenPoolStrategy: Prisma.FieldRef<"Organization", 'String'>
   readonly memberTokenCap: Prisma.FieldRef<"Organization", 'Int'>

@@ -11,6 +11,9 @@ type OrganizationDetail = {
   name: string;
   slug: string;
   billingEmail: string | null;
+  hasCustomBillingEmail?: boolean;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
   plan: { id: string; name: string } | null;
   owner: { id: string; name: string | null; email: string | null } | null;
   tokenBalance: number;

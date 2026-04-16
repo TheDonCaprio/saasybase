@@ -6,6 +6,7 @@ import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';
 import { GracePeriodNotice } from '../../../components/dashboard/GracePeriodNotice';
 import { PurchaseNotice } from '../../../components/dashboard/PurchaseNotice';
 import { getAnnouncementMessage } from '../../../lib/settings';
+import { getOrganizationSuspensionMessage } from '../../../lib/account-suspension';
 import { getPendingEmailChangeForUser } from '../../../lib/nextauth-email-verification';
 import { PendingEmailChangeNotice } from '../../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../../lib/user-helpers';
@@ -29,8 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let supportBadge: string | undefined = undefined;
   let teamBadge: string | undefined = undefined;
   let pendingEmailChange: { newEmail: string; expires: string } | null = null;
+  let suspendedOrganizationNotice: string | null = null;
   try {
-    const { userId } = await authService.getSession();
+    const { userId, orgId } = await authService.getSession();
     if (userId) {
       // Find if any ticket for this user has at least one admin reply created after the ticket
       const hasNew = await prisma.supportTicket.findFirst({
@@ -78,6 +80,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
           };
         }
       }
+
+      if (orgId) {
+        const activeOrganization = await prisma.organization.findFirst({
+          where: {
+            OR: [
+              { id: orgId },
+              { clerkOrganizationId: orgId },
+            ],
+          },
+          select: {
+            suspendedAt: true,
+          },
+        });
+
+        if (activeOrganization?.suspendedAt) {
+          suspendedOrganizationNotice = await getOrganizationSuspensionMessage();
+        }
+      }
     }
   } catch (err) {
     Logger.warn('Failed to compute support badge', err);
@@ -119,6 +139,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <GracePeriodNotice />
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />
+        {suspendedOrganizationNotice && (
+          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+            {suspendedOrganizationNotice}
+          </div>
+        )}
         {pendingEmailChange && (
           <PendingEmailChangeNotice pendingEmail={pendingEmailChange.newEmail} expiresAt={pendingEmailChange.expires} />
         )}

@@ -5,6 +5,7 @@ import { adminRateLimit } from '../../../../../lib/rateLimit';
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
 import { recordAdminAction } from '../../../../../lib/admin-actions';
+import { restoreSuspendedOrganizationById } from '../../../../../lib/organization-access';
 import type { Prisma } from '@/lib/prisma-client';
 
 const adminOrganizationInclude = {
@@ -21,6 +22,7 @@ type AdminOrganizationRecord = Prisma.OrganizationGetPayload<{
 const VALID_TOKEN_POOL_STRATEGIES = new Set(['SHARED_FOR_ORG', 'ALLOCATED_PER_MEMBER']);
 
 function buildOrgPayload(org: AdminOrganizationRecord) {
+  const effectiveBillingEmail = org.billingEmail ?? org.owner?.email ?? null;
   const effectiveTokenPoolStrategy = org.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
     || org.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
     ? 'ALLOCATED_PER_MEMBER'
@@ -40,7 +42,10 @@ function buildOrgPayload(org: AdminOrganizationRecord) {
     id: org.id,
     name: org.name,
     slug: org.slug,
-    billingEmail: org.billingEmail,
+    billingEmail: effectiveBillingEmail,
+    hasCustomBillingEmail: Boolean(org.billingEmail),
+    suspendedAt: org.suspendedAt,
+    suspensionReason: org.suspensionReason,
     plan: org.plan ? { id: org.plan.id, name: org.plan.name } : null,
     owner: org.owner ? { id: org.owner.id, name: org.owner.name, email: org.owner.email } : null,
     tokenBalance: effectiveTokenBalance,
@@ -113,6 +118,33 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ o
     }
 
     const body = asRecord(await request.json()) ?? {};
+    const action = typeof body.action === 'string' ? body.action : null;
+
+    if (action === 'clearSuspension') {
+      const restored = await restoreSuspendedOrganizationById(orgId, {
+        userId: actor.userId,
+        reason: 'admin.organizations.unsuspend',
+      });
+      const refreshed = (await prisma.organization.findUnique({
+        where: { id: restored.id },
+        include: adminOrganizationInclude,
+      })) as AdminOrganizationRecord | null;
+
+      if (!refreshed) {
+        return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+      }
+
+      await recordAdminAction({
+        actorId: actor.userId,
+        actorRole: actor.role,
+        action: 'organizations.unsuspend',
+        targetType: 'ORGANIZATION',
+        details: { orgId, name: refreshed.name },
+      });
+
+      return NextResponse.json({ success: true, organization: buildOrgPayload(refreshed) });
+    }
+
     const data: Record<string, unknown> = {};
     const changes: Record<string, unknown> = {};
 

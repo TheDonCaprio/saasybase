@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const limitParam = Number(url.searchParams.get('limit') ?? 25);
     const search = url.searchParams.get('search')?.trim() ?? '';
     const statusFilter = url.searchParams.get('status')?.toUpperCase()?.trim() ?? '';
+    const suspensionFilter = url.searchParams.get('suspension')?.toUpperCase()?.trim() ?? '';
     const rawSortBy = url.searchParams.get('sortBy')?.toLowerCase() ?? 'createdat';
     const rawSortOrder = url.searchParams.get('sortOrder')?.toLowerCase() ?? 'desc';
 
@@ -99,6 +100,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (suspensionFilter && suspensionFilter !== 'ALL') {
+      if (suspensionFilter === 'SUSPENDED') {
+        andFilters.push({ suspendedAt: { not: null } });
+      } else if (suspensionFilter === 'ACTIVE') {
+        andFilters.push({ suspendedAt: null });
+      }
+    }
+
     if (andFilters.length) {
       where.AND = andFilters;
     }
@@ -132,6 +141,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const payload = organizations.map((org) => {
+      const effectiveBillingEmail = org.billingEmail ?? org.owner?.email ?? null;
       const activeMembers = org.memberships.filter((m) => m.status === 'ACTIVE').length;
       const pendingInvites = org.invites.filter((invite) => invite.status === 'PENDING').length;
       const effectiveTokenPoolStrategy = org.plan?.organizationTokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
@@ -153,7 +163,10 @@ export async function GET(request: NextRequest) {
         name: org.name,
         slug: org.slug,
         owner: org.owner ? { id: org.owner.id, name: org.owner.name, email: org.owner.email } : null,
-        billingEmail: org.billingEmail,
+        billingEmail: effectiveBillingEmail,
+        hasCustomBillingEmail: Boolean(org.billingEmail),
+        suspendedAt: org.suspendedAt,
+        suspensionReason: org.suspensionReason,
         plan: org.plan ? { id: org.plan.id, name: org.plan.name } : null,
         tokenBalance: effectiveTokenBalance,
         memberTokenCap: org.memberTokenCap,

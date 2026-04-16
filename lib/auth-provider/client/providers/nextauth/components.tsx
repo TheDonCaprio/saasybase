@@ -445,6 +445,16 @@ function SignInForm({
 
     if (errorParam === 'verification-failed') {
       setError('We could not verify your email. Please try again or request a new verification email.');
+      return;
+    }
+
+    if (errorParam === 'user-suspended-temporary') {
+      setError('Your account is temporarily suspended. Contact support to restore access.');
+      return;
+    }
+
+    if (errorParam === 'user-suspended-permanent') {
+      setError('Your account has been permanently suspended. Contact support if you believe this is a mistake.');
     }
   }, [onMagicLinkSentChange]);
 

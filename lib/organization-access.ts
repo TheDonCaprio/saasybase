@@ -363,6 +363,8 @@ async function suspendOrganizationsByIds(
     where: { id: { in: orgs.map((org) => org.id) } },
     data: {
       clerkOrganizationId: null,
+      suspendedAt: new Date(),
+      suspensionReason: context?.reason ?? 'organization_suspended',
     },
   });
 
@@ -498,6 +500,8 @@ export async function deactivateOrganizationsByIds(
         data: {
           clerkOrganizationId: null,
           planId: null,
+          suspendedAt: null,
+          suspensionReason: null,
           seatLimit: null,
           tokenBalance: 0,
         },
@@ -536,6 +540,104 @@ export async function deactivateUserOrganizations(
       useExpiryTokenResetPolicy: opts?.useExpiryTokenResetPolicy,
     }
   );
+}
+
+export async function restoreSuspendedOrganizationById(
+  organizationId: string,
+  context?: { userId?: string; reason?: string }
+) {
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      ownerUserId: true,
+      clerkOrganizationId: true,
+      suspendedAt: true,
+      planId: true,
+      seatLimit: true,
+      tokenPoolStrategy: true,
+      memberships: {
+        where: { status: 'ACTIVE' },
+        select: { userId: true, role: true },
+      },
+    },
+  });
+
+  if (!organization) {
+    throw new Error('Organization not found');
+  }
+
+  let providerOrganizationId = organization.clerkOrganizationId;
+
+  if (workspaceService.usesExternalProviderOrganizations) {
+    if (!organization.ownerUserId) {
+      throw new Error('Organization owner is missing');
+    }
+
+    if (!providerOrganizationId) {
+      const created = await workspaceService.createProviderOrganization({
+        name: organization.name,
+        slug: organization.slug,
+        createdByUserId: organization.ownerUserId,
+        maxAllowedMemberships: organization.seatLimit ?? undefined,
+        publicMetadata: {
+          ...(organization.planId ? { planId: organization.planId } : {}),
+          ...(organization.seatLimit != null ? { seatLimit: organization.seatLimit } : {}),
+          tokenPoolStrategy: organization.tokenPoolStrategy,
+        },
+      });
+      providerOrganizationId = created.id;
+    }
+  }
+
+  const updated = await prisma.organization.update({
+    where: { id: organization.id },
+    data: {
+      clerkOrganizationId: providerOrganizationId ?? null,
+      suspendedAt: null,
+      suspensionReason: null,
+    },
+  });
+
+  if (workspaceService.usesExternalProviderOrganizations && providerOrganizationId) {
+    await Promise.all(
+      organization.memberships
+        .filter((membership) => membership.userId !== organization.ownerUserId)
+        .map(async (membership) => {
+          try {
+            await workspaceService.createProviderMembership({
+              organizationId: providerOrganizationId,
+              userId: membership.userId,
+              role: membership.role === 'ADMIN' ? 'org:admin' : 'org:member',
+            });
+          } catch (err: unknown) {
+            const error = toError(err);
+            const message = error.message.toLowerCase();
+            if (!message.includes('already') && !message.includes('exists')) {
+              Logger.warn('Failed to restore provider organization membership', {
+                organizationId: organization.id,
+                providerOrganizationId,
+                membershipUserId: membership.userId,
+                error: error.message,
+                reason: context?.reason,
+              });
+            }
+          }
+        })
+    );
+  }
+
+  Logger.info('Restored suspended organization access', {
+    organizationId: organization.id,
+    providerOrganizationId,
+    userId: context?.userId,
+    reason: context?.reason,
+    wasSuspended: Boolean(organization.suspendedAt),
+  });
+
+  return updated;
 }
 
 function slugify(value: string): string {

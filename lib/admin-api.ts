@@ -402,18 +402,20 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           search: 'string? — matches email, name, or id (contains)',
           role: "string? — 'ADMIN' | 'USER' | 'ALL'",
           billing: "string? — 'ALL' | 'PAID' | 'FREE'",
+          suspension: "string? — 'ALL' | 'ACTIVE' | 'SUSPENDED'",
           sortBy: "string? — 'createdAt' | 'name' | 'payments' (alias: sort)",
           sortOrder: "'asc' | 'desc'? (alias: order)"
         },
         notes: [
           'Auth: requires admin/moderator via requireAdminOrModerator("users").',
           'Rate limit: admin-users:list (limit 240 / 120s).',
-          'Clerk data enrichment is best-effort; failures return clerkData:null for that user.'
+          'Clerk data enrichment is best-effort; failures return clerkData:null for that user.',
+          'Suspension state is included so the admin UI can lock or restore sign-in access inline.'
         ],
         rateLimitTier: 'admin',
         example: { query: { page: '1', limit: '25', search: 'jane', role: 'USER', billing: 'PAID', sortBy: 'createdAt', sortOrder: 'desc' } },
         response: {
-          users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', createdAt: '2026-01-10T08:00:00.000Z', paymentsCount: 3, _count: { payments: 3 }, subscriptions: [{ id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-01T00:00:00.000Z', plan: { id: 'plan_pro', name: 'Pro Monthly' } }], clerkData: null }],
+          users: [{ id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', suspendedAt: null, suspensionReason: null, suspensionIsPermanent: false, createdAt: '2026-01-10T08:00:00.000Z', paymentsCount: 3, _count: { payments: 3 }, subscriptions: [{ id: 'sub_1', status: 'ACTIVE', expiresAt: '2026-05-01T00:00:00.000Z', plan: { id: 'plan_pro', name: 'Pro Monthly' } }], clerkData: null }],
           totalCount: 1,
           currentPage: 1,
           totalPages: 1,
@@ -445,7 +447,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("users").'],
         rateLimitTier: 'admin',
         example: { path: { userId: 'user_abc' } },
-        response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', tokenBalance: 150, createdAt: '2026-01-10T08:00:00.000Z', subscriptions: [{ id: 'sub_1', status: 'ACTIVE', plan: { id: 'plan_pro', name: 'Pro Monthly' }, createdAt: '2026-04-01T08:00:00.000Z' }], payments: [{ id: 'pay_1', amountCents: 2900, currency: 'usd', createdAt: '2026-04-01T08:00:00.000Z' }] } }
+        response: { user: { id: 'user_abc', email: 'jane@example.com', name: 'Jane Doe', role: 'USER', suspendedAt: null, suspensionReason: null, suspensionIsPermanent: false, tokenBalance: 150, createdAt: '2026-01-10T08:00:00.000Z', subscriptions: [{ id: 'sub_1', status: 'ACTIVE', plan: { id: 'plan_pro', name: 'Pro Monthly' }, createdAt: '2026-04-01T08:00:00.000Z' }], payments: [{ id: 'pay_1', amountCents: 2900, currency: 'usd', createdAt: '2026-04-01T08:00:00.000Z' }] } }
       },
       {
         method: 'PATCH',
@@ -455,7 +457,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Performs one of several action-based mutations. Request must be JSON and include an action string and action-specific fields.',
         access: 'admin',
         body: {
-          action: "'updateProfile' | 'adjustTokens' | 'assignPlan' | 'updateRole' | 'expireSubscription'",
+          action: "'updateProfile' | 'adjustTokens' | 'assignPlan' | 'updateRole' | 'expireSubscription' | 'setSuspension' | 'clearSuspension'",
           role: "'USER' | 'ADMIN'? — only used for action=updateRole (admins only)",
           data: {
             updateProfile: {
@@ -474,17 +476,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
             expireSubscription: {
               clearPaidTokens: 'boolean? — when true, may clear token balance depending on paid-token policy',
             },
+            setSuspension: {
+              reason: 'string — required',
+              permanent: 'boolean? — true for permanent suspension, false for temporary',
+            },
           },
         },
         notes: [
           'Auth: requires admin/moderator via requireAdminOrModerator("users").',
           'Rate limit: admin-users:action (limit 60 / 120s).',
           'action=updateRole is admin-only; moderators will receive 403.',
+          'action=setSuspension immediately deletes active NextAuth DB sessions for the target user.',
           'On invalid action, returns 400 { error: "Invalid action" }.'
         ],
         rateLimitTier: 'admin',
-        example: { action: 'adjustTokens', amount: 50, reason: 'Bonus for early adopter' },
-        response: { success: true, user: { id: 'user_abc', tokenBalance: 150 } }
+        example: { action: 'setSuspension', data: { reason: 'Chargeback abuse', permanent: false } },
+        response: { success: true, user: { id: 'user_abc', suspendedAt: '2026-04-16T09:00:00.000Z', suspensionReason: 'Chargeback abuse', suspensionIsPermanent: false } }
       },
       {
         method: 'DELETE',
@@ -1666,17 +1673,19 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           limit: 'number? — default 25, max 100',
           search: 'string? — contains match against name, slug, billingEmail, owner.name, owner.email',
           status: "string? — 'ALL' | 'SEAT_LIMITED' | 'UNLIMITED_SEATS' | 'HARD_CAP' | 'SOFT_CAP' | 'NO_CAP'",
+          suspension: "string? — 'ALL' | 'ACTIVE' | 'SUSPENDED'",
           sortBy: "string? — 'createdAt'(default) | 'name' | 'members' | 'tokenBalance' | 'pendingInvites'",
           sortOrder: "string? — 'asc' | 'desc' (default desc)",
         },
         notes: [
           'Auth: requires admin section access via requireAdminSectionAccess("organizations").',
           'Rate limit: admin-orgs:list (240 / 120s).',
+          'billingEmail falls back to owner.email when the organization has no custom billing inbox.',
         ],
         rateLimitTier: 'admin',
         example: { query: { page: '1', limit: '25', status: 'SOFT_CAP', search: 'acme', sortBy: 'members', sortOrder: 'desc' } },
         response: {
-          data: [{ id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, billingEmail: 'billing@acme.com', plan: { id: 'plan_business', name: 'Business' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, activeMembers: 6, pendingInvites: 2, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }],
+          data: [{ id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, billingEmail: 'owner@example.com', hasCustomBillingEmail: false, suspendedAt: null, suspensionReason: null, plan: { id: 'plan_business', name: 'Business' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, activeMembers: 6, pendingInvites: 2, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }],
           totalCount: 1,
           totalPages: 1,
           page: 1,
@@ -1697,8 +1706,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'admin',
         example: { path: { orgId: 'org_1' } },
         response: {
-          organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', billingEmail: 'billing@acme.com', plan: { id: 'plan_business', name: 'Business' }, owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, ownerExemptFromCaps: true, stats: { activeMembers: 6, totalMembers: 6, pendingInvites: 2 }, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }
+          organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', billingEmail: 'owner@example.com', hasCustomBillingEmail: false, suspendedAt: '2026-04-16T09:00:00.000Z', suspensionReason: 'admin.organizations.suspend', plan: { id: 'plan_business', name: 'Business' }, owner: { id: 'user_owner', name: 'Jane Owner', email: 'owner@example.com' }, tokenBalance: 4200, memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, tokenPoolStrategy: 'SHARED_FOR_ORG', seatLimit: 10, ownerExemptFromCaps: true, stats: { activeMembers: 6, totalMembers: 6, pendingInvites: 2 }, createdAt: '2026-04-01T08:00:00.000Z', updatedAt: '2026-04-04T09:30:00.000Z' }
         }
+      },
+      {
+        method: 'POST',
+        path: '/api/admin/organizations/[orgId]/suspend',
+        summary: 'Suspend organization access',
+        description: 'Suspends a workspace without deleting its local organization row. Pending invites are expired and provider-org linkage is removed when applicable.',
+        access: 'admin',
+        notes: [
+          'Auth: requires admin section access via requireAdminSectionAccess("organizations").',
+          'Rate limit: admin-orgs:suspend (60 / 120s).',
+        ],
+        rateLimitTier: 'admin',
+        example: { path: { orgId: 'org_1' } },
+        response: { success: true, organizationId: 'org_1' }
       },
       {
         method: 'PATCH',
@@ -1707,6 +1730,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Updates allowed organization fields. Rejects empty updates and validates slug/limits.',
         access: 'admin',
         body: {
+          action: "'clearSuspension'? — restore a suspended organization instead of editing fields",
           name: 'string? — trimmed; must be non-empty if provided',
           slug: 'string? — /^[a-z0-9-]{3,64}$/ (lowercased)',
           billingEmail: 'string|null? — empty string clears to null',
@@ -1720,6 +1744,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'Auth: requires admin section access via requireAdminSectionAccess("organizations").',
           'Rate limit: admin-orgs:update (120 / 120s).',
+          'action=clearSuspension recreates the provider organization when external organization support is enabled, then restores active memberships.',
           'Returns 400 when slug is already used (Prisma P2002).',
         ],
         rateLimitTier: 'admin',
@@ -3021,7 +3046,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'Auth: production requires Authorization: Bearer INTERNAL_API_TOKEN and returns 404 for unauthorized calls to reduce endpoint discovery.',
           'Non-prod: also accepts X-Internal-API: true for dev convenience; unauthorized calls return 401 { error: "Unauthorized" }.',
-          "bucket=auto chooses: active personal subscription → paid; else active workspace membership → shared; else free.",
+          'bucket=auto is context-aware: with organizationId it uses shared only; without organizationId it uses paid first and then free.',
           'On insufficient funds, returns 409 { error: "insufficient_tokens", required, available, bucket }.',
         ],
         rateLimitTier: 'internal',
@@ -3207,6 +3232,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: [
           'Auth: requires an authenticated session.',
           'Rate limited under the general API limiter.',
+          'bucket=auto is context-aware: with organization context it spends from shared only; in personal context it uses paid first and then free.',
           'Returns 409 with error="insufficient_tokens" when the chosen bucket cannot satisfy the spend.'
         ],
         rateLimitTier: 'user',
@@ -3641,6 +3667,15 @@ const RATE_LIMITS: AdminApiRateLimit[] = [
 ];
 
 const CHANGELOG = [
+  {
+    version: '2026.04.16',
+    releasedAt: '2026-04-16T00:00:00.000Z',
+    notes: [
+      'Added admin organization suspension endpoint coverage and documented suspended-workspace response fields.',
+      'Expanded admin user endpoint docs to include suspension state and the new setSuspension/clearSuspension actions.',
+      'Updated organization billingEmail docs to note owner-email fallback when no dedicated billing inbox is stored.'
+    ]
+  },
   {
     version: '2026.04',
     releasedAt: '2026-04-06T00:00:00.000Z',

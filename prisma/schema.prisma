@@ -18,6 +18,9 @@ model User {
   name                   String?
   imageUrl               String?
   role                   String   @default("USER")
+  suspendedAt            DateTime?
+  suspensionReason       String?
+  suspensionIsPermanent  Boolean  @default(false)
   // Password hash for credentials-based auth (NextAuth). Null when using Clerk or OAuth-only.
   password               String?
   // Incremented on password change/reset to invalidate existing JWT tokens.
@@ -144,6 +147,8 @@ model Organization {
   ownerUserId          String
   planId               String?
   billingEmail         String?
+  suspendedAt          DateTime?
+  suspensionReason     String?
   seatLimit            Int?
   tokenPoolStrategy    String   @default("SHARED_FOR_ORG")
   memberTokenCap       Int?

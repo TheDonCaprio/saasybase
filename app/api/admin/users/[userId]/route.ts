@@ -15,6 +15,7 @@ import { syncOrganizationEligibilityForUser } from '../../../../../lib/organizat
 import { resetOrganizationSharedTokens } from '../../../../../lib/teams';
 import { getProviderCurrency } from '../../../../../lib/payment/registry';
 import { getCurrentProviderKey } from '../../../../../lib/utils/provider-ids';
+import { getUserSuspensionDetails } from '../../../../../lib/account-suspension';
 
 export async function PATCH(
   request: NextRequest,
@@ -57,6 +58,128 @@ export async function PATCH(
     const adminOnlyActions = new Set(['updateRole']);
     if (!isAdmin && adminOnlyActions.has(actionKey)) {
       return NextResponse.json({ error: 'Only admins can perform this action' }, { status: 403 });
+    }
+
+    if (action === 'setSuspension') {
+      if (params.userId === actorId) {
+        return NextResponse.json({ error: 'You cannot suspend your own account.' }, { status: 400 });
+      }
+
+      const targetUser = await prisma.user.findUnique({
+        where: { id: params.userId },
+        select: {
+          id: true,
+          role: true,
+        },
+      });
+
+      if (!targetUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      if (!isAdmin && targetUser.role === 'ADMIN') {
+        return NextResponse.json({ error: 'Only admins can suspend admin accounts' }, { status: 403 });
+      }
+
+      const reason = typeof dataRec.reason === 'string' ? dataRec.reason.trim() : '';
+      if (!reason) {
+        return NextResponse.json({ error: 'A suspension reason is required' }, { status: 400 });
+      }
+
+      const permanent = dataRec.permanent === true;
+      const updatedUser = await prisma.user.update({
+        where: { id: params.userId },
+        data: {
+          suspendedAt: new Date(),
+          suspensionReason: reason,
+          suspensionIsPermanent: permanent,
+          sessions: {
+            deleteMany: {},
+          },
+        },
+        select: {
+          id: true,
+          suspendedAt: true,
+          suspensionReason: true,
+          suspensionIsPermanent: true,
+        },
+      });
+
+      await recordAdminAction({
+        actorId,
+        actorRole,
+        action: 'users.suspend',
+        targetUserId: params.userId,
+        details: {
+          permanent,
+          reason,
+        }
+      });
+
+      const suspension = await getUserSuspensionDetails(updatedUser);
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: updatedUser.id,
+          suspendedAt: updatedUser.suspendedAt?.toISOString() ?? null,
+          suspensionReason: updatedUser.suspensionReason,
+          suspensionIsPermanent: updatedUser.suspensionIsPermanent,
+        },
+        suspension: {
+          code: suspension.code,
+          message: suspension.message,
+        },
+      });
+    }
+
+    if (action === 'clearSuspension') {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: params.userId },
+        select: {
+          id: true,
+          role: true,
+        },
+      });
+
+      if (!targetUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      if (!isAdmin && targetUser.role === 'ADMIN') {
+        return NextResponse.json({ error: 'Only admins can restore admin accounts' }, { status: 403 });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: params.userId },
+        data: {
+          suspendedAt: null,
+          suspensionReason: null,
+          suspensionIsPermanent: false,
+        },
+        select: {
+          id: true,
+          suspendedAt: true,
+          suspensionReason: true,
+          suspensionIsPermanent: true,
+        },
+      });
+
+      await recordAdminAction({
+        actorId,
+        actorRole,
+        action: 'users.unsuspend',
+        targetUserId: params.userId,
+      });
+
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: updatedUser.id,
+          suspendedAt: null,
+          suspensionReason: null,
+          suspensionIsPermanent: false,
+        },
+      });
     }
 
     if (action === 'updateProfile') {
@@ -640,6 +763,9 @@ export async function GET(
       email: user.email ?? null,
       name: user.name ?? null,
       role: user.role,
+      suspendedAt: user.suspendedAt?.toISOString?.() ?? null,
+      suspensionReason: user.suspensionReason ?? null,
+      suspensionIsPermanent: user.suspensionIsPermanent === true,
       tokenBalance: user.tokenBalance,
       createdAt: user.createdAt?.toISOString?.() ?? null,
       subscriptions: Array.isArray(user.subscriptions)

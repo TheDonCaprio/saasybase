@@ -98,4 +98,31 @@ describe('auth login-status route', () => {
     expect(res.status).toBe(401);
     expect(body.error).toBe('Invalid email or password. Please try again.');
   });
+
+  it('returns a suspension message for suspended users with valid credentials', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_4',
+      email: 'suspended@example.com',
+      name: 'Suspended User',
+      password: 'hashed',
+      emailVerified: new Date(),
+      suspendedAt: new Date(),
+      suspensionReason: 'Chargeback abuse',
+      suspensionIsPermanent: false,
+    });
+    compareMock.mockResolvedValue(true);
+
+    const req = new NextRequest('http://localhost/api/auth/login-status', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'suspended@example.com', password: 'secret' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('USER_SUSPENDED_TEMPORARY');
+    expect(body.error).toContain('temporarily suspended');
+  });
 });

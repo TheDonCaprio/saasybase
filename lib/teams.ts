@@ -150,6 +150,8 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 			if (snapshot.planId !== undefined) updateData.planId = snapshot.planId;
 			if (snapshot.seatLimit !== undefined && snapshot.seatLimit !== null) updateData.seatLimit = snapshot.seatLimit;
 			if (normalizedTokenPoolStrategy) updateData.tokenPoolStrategy = normalizedTokenPoolStrategy;
+			updateData.suspendedAt = null;
+			updateData.suspensionReason = null;
 			// Set tokenBalance if provided in snapshot
 			if (snapshot.tokenBalance !== undefined && snapshot.tokenBalance !== null) {
 				updateData.tokenBalance = snapshot.tokenBalance;
@@ -175,6 +177,8 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 				slug: snapshot.slug!,
 				ownerUserId: snapshot.ownerUserId!,
 				billingEmail: snapshot.billingEmail ?? null,
+				suspendedAt: null,
+				suspensionReason: null,
 				planId: snapshot.planId ?? null,
 				seatLimit: snapshot.seatLimit ?? null,
 				tokenPoolStrategy: normalizeTokenPoolStrategy(snapshot.tokenPoolStrategy) ?? 'SHARED_FOR_ORG',

@@ -9,7 +9,7 @@ import { Pagination } from '../ui/Pagination';
 import { OrganizationMembersModal } from './OrganizationMembersModal';
 import EditOrganizationModal from './EditOrganizationModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faPenToSquare, faTrash, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faPenToSquare, faTrash, faCircleNotch, faPause, faPlay } from '@fortawesome/free-solid-svg-icons';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { showToast } from '../ui/Toast';
 
@@ -30,6 +30,9 @@ export type OrganizationRecord = {
   slug: string;
   owner: OrganizationOwner | null;
   billingEmail: string | null;
+  hasCustomBillingEmail?: boolean;
+  suspendedAt?: string | Date | null;
+  suspensionReason?: string | null;
   plan: OrganizationPlan | null;
   tokenBalance: number;
   memberTokenCap: number | null;
@@ -51,6 +54,12 @@ function formatTokenPoolStrategyLabel(strategy: string | null) {
   return strategy === 'ALLOCATED_PER_MEMBER' ? 'Per-member allocation' : 'Shared pool';
 }
 
+function getAccessBadgeClasses(isSuspended: boolean) {
+  return isSuspended
+    ? 'border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+    : 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200';
+}
+
 type PageInfo = {
   page: number;
   limit: number;
@@ -68,16 +77,18 @@ type Props = {
 export function OrganizationsClient({ initialOrganizations, initialPageInfo }: Props) {
   const itemsPerPage = initialPageInfo.limit ?? 25;
   const { search, setSearch, debouncedSearch, status, setStatus } = useListFilterState('', 'ALL');
+  const [accessFilter, setAccessFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   const [sortBy, setSortBy] = useState<'createdAt' | 'name' | 'members' | 'tokenBalance' | 'pendingInvites'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const filters = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       status: status !== 'ALL' ? status : undefined,
+      suspension: accessFilter !== 'ALL' ? accessFilter : undefined,
       sortBy,
       sortOrder
     }),
-    [debouncedSearch, sortBy, sortOrder, status]
+    [accessFilter, debouncedSearch, sortBy, sortOrder, status]
   );
 
   const {
@@ -101,8 +112,10 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
 
   const [membersOrg, setMembersOrg] = useState<OrganizationRecord | null>(null);
   const [editOrg, setEditOrg] = useState<OrganizationRecord | null>(null);
+  const [orgToSuspend, setOrgToSuspend] = useState<OrganizationRecord | null>(null);
   const [orgToDelete, setOrgToDelete] = useState<OrganizationRecord | null>(null);
   const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
+  const [suspendingOrgId, setSuspendingOrgId] = useState<string | null>(null);
 
   const handleOrganizationUpdated = (updated: Partial<OrganizationRecord> & { id: string }) => {
     setItems((prev) => prev.map((org) => (org.id === updated.id ? { ...org, ...updated } : org)));
@@ -131,6 +144,39 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
       showToast(message, 'error');
     } finally {
       setDeletingOrgId(null);
+    }
+  };
+
+  const handleSuspendOrganization = async () => {
+    if (!orgToSuspend) return;
+
+    setSuspendingOrgId(orgToSuspend.id);
+    try {
+      const isSuspended = Boolean(orgToSuspend.suspendedAt);
+      const response = await fetch(
+        isSuspended ? `/api/admin/organizations/${orgToSuspend.id}` : `/api/admin/organizations/${orgToSuspend.id}/suspend`,
+        isSuspended
+          ? {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'clearSuspension' })
+            }
+          : { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(typeof payload?.error === 'string' ? payload.error : `Failed to ${isSuspended ? 'restore' : 'suspend'} organization`);
+      }
+
+      showToast(`${isSuspended ? 'Restored' : 'Suspended'} organization "${orgToSuspend.name}"`, 'success');
+      setOrgToSuspend(null);
+      refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update organization access';
+      showToast(message, 'error');
+    } finally {
+      setSuspendingOrgId(null);
     }
   };
 
@@ -163,6 +209,11 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
           statusOptions={statusOptions}
           currentStatus={status}
           onStatusChange={handleStatusChange}
+          secondaryOptions={['ALL', 'ACTIVE', 'SUSPENDED']}
+          currentSecondary={accessFilter}
+          onSecondaryChange={(value) => setAccessFilter(value as 'ALL' | 'ACTIVE' | 'SUSPENDED')}
+          secondaryLabel="Access"
+          secondaryAllLabel="All access states"
           sortOptions={[
             { value: 'createdAt', label: 'Created date' },
             { value: 'name', label: 'Name' },
@@ -215,6 +266,9 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
           <>
             <div className="min-[1025px]:hidden space-y-3 p-3 sm:p-4">
               {organizations.map((org) => (
+                (() => {
+                  const isSuspended = Boolean(org.suspendedAt);
+                  return (
                 <div
                   key={org.id}
                   className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-950/60 sm:p-4"
@@ -222,6 +276,11 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-neutral-50">{org.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${getAccessBadgeClasses(isSuspended)}`}>
+                          {isSuspended ? 'Suspended' : 'Active'}
+                        </span>
+                      </div>
                       <div className="mt-0.5 flex flex-col gap-0.5 text-xs text-slate-500 dark:text-neutral-400">
                         <span className="truncate">ID: {org.id}</span>
                         <div className="flex items-center gap-1.5">
@@ -252,6 +311,19 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                         title="Edit Organization"
                       >
                         <FontAwesomeIcon icon={faPenToSquare} className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-white transition disabled:opacity-50 disabled:cursor-not-allowed ${isSuspended ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600' : 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600'}`}
+                        onClick={() => setOrgToSuspend(org)}
+                        disabled={suspendingOrgId === org.id}
+                        title={isSuspended ? 'Restore Organization' : 'Suspend Organization'}
+                      >
+                        {suspendingOrgId === org.id ? (
+                          <FontAwesomeIcon icon={faCircleNotch} className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <FontAwesomeIcon icon={isSuspended ? faPlay : faPause} className="h-3 w-3" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -286,6 +358,8 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                     )}
                   </div>
                 </div>
+                  );
+                })()
               ))}
             </div>
 
@@ -304,9 +378,17 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white dark:divide-neutral-800 dark:bg-neutral-950/60">
                   {organizations.map((org) => (
+                    (() => {
+                      const isSuspended = Boolean(org.suspendedAt);
+                      return (
                     <tr key={org.id} className="hover:bg-slate-50/70 dark:hover:bg-neutral-900/50">
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900 dark:text-neutral-50">{org.name}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-semibold text-slate-900 dark:text-neutral-50">{org.name}</div>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${getAccessBadgeClasses(isSuspended)}`}>
+                            {isSuspended ? 'Suspended' : 'Active'}
+                          </span>
+                        </div>
                         <div className="text-[10px] font-mono text-slate-500 dark:text-neutral-500 uppercase tracking-tight">ID: {org.id}</div>
                         <div className="text-xs text-slate-500 dark:text-neutral-400">/{org.slug}</div>
                       </td>
@@ -353,6 +435,19 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                           </button>
                           <button
                             type="button"
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-white transition disabled:opacity-50 disabled:cursor-not-allowed ${isSuspended ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600' : 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600'}`}
+                            onClick={() => setOrgToSuspend(org)}
+                            disabled={suspendingOrgId === org.id}
+                            title={isSuspended ? 'Restore Organization' : 'Suspend Organization'}
+                          >
+                            {suspendingOrgId === org.id ? (
+                              <FontAwesomeIcon icon={faCircleNotch} className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <FontAwesomeIcon icon={isSuspended ? faPlay : faPause} className="h-3 w-3" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
                             className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-500 dark:hover:bg-red-600"
                             onClick={() => setOrgToDelete(org)}
                             disabled={deletingOrgId === org.id}
@@ -367,6 +462,8 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
                         </div>
                       </td>
                     </tr>
+                      );
+                    })()
                   ))}
                 </tbody>
               </table>
@@ -405,6 +502,18 @@ export function OrganizationsClient({ initialOrganizations, initialPageInfo }: P
           onUpdated={(updated) => handleOrganizationUpdated(updated)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!orgToSuspend}
+        onClose={() => setOrgToSuspend(null)}
+        onConfirm={handleSuspendOrganization}
+        title={orgToSuspend?.suspendedAt ? 'Restore Organization' : 'Suspend Organization'}
+        description={orgToSuspend?.suspendedAt
+          ? `Restore "${orgToSuspend?.name}"? This reprovisions workspace access and clears the current suspension state.`
+          : `Suspend "${orgToSuspend?.name}"? This removes the linked provider organization, expires pending invites, and blocks workspace access until it is restored.`}
+        confirmLabel={orgToSuspend?.suspendedAt ? 'Restore' : 'Suspend'}
+        loading={suspendingOrgId === orgToSuspend?.id}
+      />
 
       <ConfirmModal
         isOpen={!!orgToDelete}

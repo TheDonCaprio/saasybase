@@ -592,12 +592,18 @@ The app ships with a multi-bucket token system for metering usage:
 
 | Bucket | Behavior |
 |---|---|
-| `auto` | Multi-pass selection across paid, shared, and free balances |
+| `auto` | Context-aware selection: shared-only in organization context, or paid-then-free in personal context |
 | `paid` | Only deducts from paid tokens |
 | `free` | Only deducts from free tokens |
 | `shared` | Deducts from the active organization context |
 
-In other words, `auto` is not just “paid then free.” The real selection logic also considers workspace shared balance when the user is operating inside an organization.
+There is also a first-party user route at `POST /api/user/spend-tokens` with the same bucket semantics for authenticated product flows.
+
+In practice, `auto` now follows the active workspace boundary instead of blending balances across contexts:
+
+- In an organization workspace, `auto` spends from shared workspace balance only.
+- In a personal workspace, `auto` spends from paid first and then free.
+- `auto` never silently falls back from a workspace request into personal paid/free balance, and it never reaches into shared workspace balance from a personal workspace.
 
 ### Organization Token Pools
 
@@ -646,6 +652,11 @@ The admin settings surface also exposes the paid-token operations controls under
 | `TOKENS_NATURAL_EXPIRY_GRACE_HOURS` | Grace window before natural-expiry cleanup clears paid tokens and applies the organization access cleanup policy |
 | `ORGANIZATION_EXPIRY_MODE` | Expiry policy for organization access: suspend workspaces by default or dismantle them explicitly |
 
+`ORGANIZATION_EXPIRY_MODE` currently supports two operational modes:
+
+- `SUSPEND` — preserve the local workspace record, expire invites, remove provider-side access when applicable, and show an in-dashboard suspension notice.
+- `DISMANTLE` — fully tear down the workspace and related access instead of leaving it in a recoverable suspended state.
+
 ---
 
 ## Team Plans & Organizations
@@ -656,6 +667,7 @@ Team subscriptions provision managed organizations and keep them in sync with bi
 - **Token strategies:** Team plans can use either a shared workspace pool or allocated-per-member balances. The effective dashboard strategy follows the attached team plan so older organizations with legacy defaults still render correctly.
 - **Member entitlements:** When a workspace uses `ALLOCATED_PER_MEMBER`, joining members receive the plan token allowance in their membership balance, renewals reset those balances, and top-ups/extensions credit each active member instead of the org pool.
 - **Cleanup:** `syncOrganizationEligibilityForUser` runs whenever subscription status changes (checkout, activation, webhook, admin override). When a plan lapses beyond the grace window, the helper suspends workspace access by default, clears member access, and can be switched to full dismantling through `ORGANIZATION_EXPIRY_MODE`.
+- **Admin intervention:** admins can explicitly suspend and later restore an organization from `/admin/organizations`. Suspended workspaces keep their local record, show a workspace notice in the dashboard, and use the owner email as the billing-contact fallback when no dedicated billing email is stored.
 - **Dashboard:** `/dashboard/team` hosts the management UI with invites, member removal, provisioning refresh, strategy-aware balance labels, and shared-pool cap controls that only appear when the workspace actually uses `SHARED_FOR_ORG`.
 - **Invite acceptance:** `/invite/[token]` — token-based invite acceptance page for new and existing users.
 - **API routes:** `/api/team/invite`, `/api/team/invite/revoke`, `/api/team/members/remove`, `/api/team/summary`, `/api/team/provision`, `/api/team/settings`.
@@ -1211,6 +1223,7 @@ The `AdminActionLog` model records all admin/moderator actions:
 - **Token version** tracking — incremented on password change to invalidate existing sessions
 - **Secure credentials cookies** — `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS for the built-in credentials sign-in route
 - **Generic auth recovery responses** on forgot-password and resend-verification routes to reduce email enumeration risk
+- **Account suspension controls** — admins can temporarily or permanently suspend users, which blocks new sign-ins and invalidates provider-backed access checks consistently across Clerk and NextAuth
 
 ---
 
@@ -1270,14 +1283,15 @@ The admin dashboard (`/admin`) is organized into logical groups:
 | **Finances** | Transactions, One-Time Sales, Subscriptions, Coupons |
 | **Platform** | Theme, Pages, Blog, Plans, Email Templates, Settings |
 | **Support & Analytics** | Support Tickets, Notifications, Analytics (GA4), Traffic |
-| **Developer** | API Docs, System Logs, Maintenance |
+| **Developer** | System, System Logs, Maintenance |
 
 ### Notable Admin Features
 
-- **Public API Docs** (`/docs/api`) — curated API reference backed by the maintained inventory in `lib/admin-api.inventory.ts`
+- **System** (`/admin/system`) — live environment readiness, runtime/build details, storage, webhook, bearer-token, and maintenance status snapshot for operators
 - **Maintenance Tools** (`/admin/maintenance`) — cleanup, repair utilities, and maintenance mode toggle
 - **System Logs** (`/admin/logs`) — persisted WARN/ERROR logs with filtering
 - **One-Time Plans** (`/admin/one-time-plans`) — manage non-recurring offers, including fixed-duration and lifetime access plans
+- **Account controls** (`/admin/users`, `/admin/organizations`) — suspend users with temporary/permanent messaging, inspect suspension reason/date in admin UI, and suspend or restore organizations without deleting the local workspace record
 
 ---
 

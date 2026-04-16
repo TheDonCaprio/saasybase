@@ -349,7 +349,7 @@ export const DEFAULT_LIGHT_COLORS: ColorTokens = {
   tabsGradientFrom: '#ffffff',
   tabsGradientVia: '#eef2ff',
   tabsGradientTo: '#ffffff',
-  pageGlow: '#3b82f673',
+  pageGlow: '#3b82f643',
   glowOpacity: 1,
 };
 

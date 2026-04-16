@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const role = searchParams.get('role');
     const billing = searchParams.get('billing'); // ALL | PAID | FREE
+    const suspension = searchParams.get('suspension'); // ALL | ACTIVE | SUSPENDED
     const sort = searchParams.get('sortBy') || searchParams.get('sort') || 'createdAt';
     const sortOrder = (searchParams.get('sortOrder') || searchParams.get('order') || 'desc') as 'asc' | 'desc';
 
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest) {
       } else if (billing === 'FREE') {
         // users with no active subscriptions
         where.subscriptions = { none: { status: 'ACTIVE', expiresAt: { gt: new Date() } } };
+      }
+    }
+
+    if (suspension && suspension !== 'ALL') {
+      if (suspension === 'SUSPENDED') {
+        where.suspendedAt = { not: null };
+      } else if (suspension === 'ACTIVE') {
+        where.suspendedAt = null;
       }
     }
 
@@ -274,6 +283,9 @@ export async function GET(request: NextRequest) {
             email: typeof uRec.email === 'string' ? uRec.email : null,
             name: typeof uRec.name === 'string' ? uRec.name : null,
             role: typeof uRec.role === 'string' ? uRec.role : null,
+            suspendedAt: uRec.suspendedAt instanceof Date ? uRec.suspendedAt.toISOString() : (typeof uRec.suspendedAt === 'string' ? uRec.suspendedAt : null),
+            suspensionReason: typeof uRec.suspensionReason === 'string' ? uRec.suspensionReason : null,
+            suspensionIsPermanent: uRec.suspensionIsPermanent === true,
             createdAt: uRec.createdAt instanceof Date ? uRec.createdAt.toISOString() : (typeof uRec.createdAt === 'string' ? new Date(uRec.createdAt).toISOString() : null),
             tokenBalance: typeof uRec.tokenBalance === 'number' ? uRec.tokenBalance : Number(uRec.tokenBalance ?? 0),
             subscriptions: Array.isArray(uRec.subscriptions) ? (uRec.subscriptions as unknown[]).map((s) => {
@@ -315,6 +327,9 @@ export async function GET(request: NextRequest) {
             email: typeof uRec.email === 'string' ? uRec.email : null,
             name: typeof uRec.name === 'string' ? uRec.name : null,
             role: typeof uRec.role === 'string' ? uRec.role : null,
+            suspendedAt: uRec.suspendedAt instanceof Date ? uRec.suspendedAt.toISOString() : (typeof uRec.suspendedAt === 'string' ? uRec.suspendedAt : null),
+            suspensionReason: typeof uRec.suspensionReason === 'string' ? uRec.suspensionReason : null,
+            suspensionIsPermanent: uRec.suspensionIsPermanent === true,
             createdAt: uRec.createdAt instanceof Date ? uRec.createdAt.toISOString() : (typeof uRec.createdAt === 'string' ? new Date(uRec.createdAt).toISOString() : null),
             tokenBalance: typeof uRec.tokenBalance === 'number' ? uRec.tokenBalance : Number(uRec.tokenBalance ?? 0),
             subscriptions: [],

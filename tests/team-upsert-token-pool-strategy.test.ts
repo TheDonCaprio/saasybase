@@ -31,7 +31,11 @@ describe('upsertOrganization token pool strategy', () => {
 
     expect(prismaMock.organization.update).toHaveBeenCalledWith({
       where: { id: 'org_1' },
-      data: { name: 'Updated Org' },
+      data: {
+        name: 'Updated Org',
+        suspendedAt: null,
+        suspensionReason: null,
+      },
     });
   });
 

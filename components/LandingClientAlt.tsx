@@ -2177,7 +2177,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </h1>
 
               <p className="lp-hero-sub">
-                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 300+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
+                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 360+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
               </p>
 
               <div className="lp-cta-row">
@@ -2204,7 +2204,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     tone: 'auth',
                   },
                   {
-                    value: 'Over 300 tests',
+                    value: 'Over 360 tests',
                     copy: 'Regression coverage for webhooks, resurrection, proration, expiry, org access, and checkout flows.',
                     meta: 'Regression coverage',
                     tone: 'tests',
@@ -2362,7 +2362,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               { icon: faShield, label: 'Secure logger with secret redaction' },
               { icon: faBolt, label: 'Edge cases tested before you launch' },
               { icon: faLock, label: 'Provider-agnostic auth and billing adapters' },
-              { icon: faChartLine, label: '300+ regression tests across critical flows' },
+              { icon: faChartLine, label: '360+ regression tests across critical flows' },
               { icon: faTriangleExclamation, label: 'Rate limits, request IDs, sanitized errors' },
               { icon: faBuilding, label: 'Dual-column compatibility for safe migrations' },
               { icon: faCreditCard, label: 'Proration, retries, refunds, and lifecycle states' },
@@ -2379,10 +2379,10 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         {/* ── METRICS ─────────────────────────────────────── */}
         <div className="lp-metrics">
           {[
-            { num: 47, label: 'built-in API routes',   suffix: '+' },
+            { num: 180, label: 'built-in API routes',   suffix: '+' },
             { num: 4,  label: 'payment providers',      suffix: '' },
-            { num: 300, label: 'regression tests',      suffix: '' },
-            { num: 0,  label: 'config headaches',       suffix: '' },
+            { num: 360, label: 'regression tests',      suffix: '+' },
+            { num: 2,  label: 'auth providers',       suffix: '' },
           ].map((m, i) => (
             <div key={i} className="lp-metric-item">
               <div className="lp-metric-num">

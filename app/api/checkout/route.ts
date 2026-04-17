@@ -23,6 +23,7 @@ import { getProviderCurrency, getProviderDefaultCurrency } from '../../../lib/pa
 import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 import { canUseLocalhostDevBypass } from '../../../lib/dev-admin-bypass';
+import { resolveCheckoutWorkspaceContext } from '../../../lib/checkout-workspace-context';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -42,10 +43,6 @@ function jsonError(message: string, status: number, code: string, extra?: Record
   return NextResponse.json({ error: message, code, ...(extra || {}) }, { status });
 }
 
-function isTeamWorkspace(orgId: string | null | undefined): boolean {
-  return typeof orgId === 'string' && orgId.length > 0;
-}
-
 function teamWorkspaceOwnerRequiredResponse() {
   return jsonError(
     'Only the workspace owner can purchase or change team plans for this workspace.',
@@ -62,6 +59,24 @@ function personalWorkspacePurchaseRequiredResponse() {
     'PERSONAL_PLAN_BLOCKED_IN_WORKSPACE',
     { redirectTo: '/pricing' }
   );
+}
+
+function resolveExplicitActiveOrganizationId(payload: Record<string, unknown> | null | undefined): string | null {
+  if (!payload) return null;
+
+  const candidates = [
+    payload.activeOrganizationId,
+    payload.organizationId,
+    payload.localOrganizationId,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -127,10 +142,16 @@ export async function POST(req: NextRequest) {
     let couponCode: string | null = null;
     let skipProrationCheck = false;
     let prorationFallbackReason: string | null = null;
+    let requestedActiveOrganizationId: string | null = null;
     const contentType = req.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
       const body = await req.json();
+      const bodyRecord = asRecord(body);
+      requestedActiveOrganizationId = resolveExplicitActiveOrganizationId(bodyRecord)
+        ?? req.nextUrl.searchParams.get('activeOrganizationId')
+        ?? req.nextUrl.searchParams.get('organizationId')
+        ?? req.nextUrl.searchParams.get('localOrganizationId');
 
       const validation = validateInput(apiSchemas.checkout, body);
       if (!validation.success) {
@@ -154,6 +175,14 @@ export async function POST(req: NextRequest) {
       planId = String(form.get('planId') || '');
       const rawCoupon = form.get('couponCode');
       couponCode = rawCoupon ? String(rawCoupon) : null;
+      requestedActiveOrganizationId = resolveExplicitActiveOrganizationId({
+        activeOrganizationId: form.get('activeOrganizationId'),
+        organizationId: form.get('organizationId'),
+        localOrganizationId: form.get('localOrganizationId'),
+      })
+        ?? req.nextUrl.searchParams.get('activeOrganizationId')
+        ?? req.nextUrl.searchParams.get('organizationId')
+        ?? req.nextUrl.searchParams.get('localOrganizationId');
     }
 
     if (couponCode) {
@@ -297,7 +326,13 @@ export async function POST(req: NextRequest) {
     }
 
     const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
-    if (!selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
+    const requestedOrganizationRef = requestedActiveOrganizationId ?? activeClerkOrgId ?? null;
+    const checkoutWorkspaceContext = requestedOrganizationRef
+      ? await resolveCheckoutWorkspaceContext(userId!, requestedOrganizationRef)
+      : null;
+    const hasActiveWorkspace = Boolean(activeClerkOrgId) || Boolean(checkoutWorkspaceContext);
+
+    if (!selectedPlanIsTeam && hasActiveWorkspace) {
       return personalWorkspacePurchaseRequiredResponse();
     }
 
@@ -306,11 +341,11 @@ export async function POST(req: NextRequest) {
       return jsonError('User email is required for checkout', 400, 'USER_EMAIL_REQUIRED');
     }
 
-    const activeOrganizationContext = selectedPlanIsTeam
-      ? await getOrganizationPlanContext(userId!, activeClerkOrgId)
+    const activeOrganizationContext = selectedPlanIsTeam && checkoutWorkspaceContext?.role === 'OWNER'
+      ? await getOrganizationPlanContext(userId!, checkoutWorkspaceContext.organizationId)
       : null;
 
-    if (selectedPlanIsTeam && activeOrganizationContext?.role === 'MEMBER') {
+    if (selectedPlanIsTeam && checkoutWorkspaceContext?.role === 'MEMBER') {
       return teamWorkspaceOwnerRequiredResponse();
     }
 
@@ -650,15 +685,21 @@ export async function POST(req: NextRequest) {
       }
       const base = getEnv().NEXT_PUBLIC_APP_URL;
       const metadata: Record<string, string> = { planId };
-      if (activeOrganizationContext?.organization.id) {
-        metadata.activeOrganizationId = activeOrganizationContext.organization.id;
-        metadata.organizationId = activeOrganizationContext.organization.id;
+      const resolvedLocalOrganizationId = checkoutWorkspaceContext?.organizationId
+        ?? activeOrganizationContext?.organization.id
+        ?? null;
+      if (resolvedLocalOrganizationId) {
+        metadata.activeOrganizationId = resolvedLocalOrganizationId;
+        metadata.organizationId = resolvedLocalOrganizationId;
       }
-      if (authService.providerName === 'clerk' && activeClerkOrgId) {
-        metadata.activeProviderOrganizationId = activeClerkOrgId;
-        metadata.activeClerkOrgId = activeClerkOrgId;
-        metadata.clerkOrgId = activeClerkOrgId;
-        metadata.orgId = activeClerkOrgId;
+      const resolvedProviderOrganizationId = authService.providerName === 'clerk'
+        ? (activeClerkOrgId ?? checkoutWorkspaceContext?.providerOrganizationId ?? null)
+        : null;
+      if (resolvedProviderOrganizationId) {
+        metadata.activeProviderOrganizationId = resolvedProviderOrganizationId;
+        metadata.activeClerkOrgId = resolvedProviderOrganizationId;
+        metadata.clerkOrgId = resolvedProviderOrganizationId;
+        metadata.orgId = resolvedProviderOrganizationId;
       }
       if (priceId) {
         metadata.priceId = priceId;

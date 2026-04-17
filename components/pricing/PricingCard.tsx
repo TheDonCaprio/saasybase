@@ -166,7 +166,7 @@ function getOwnedActiveSubscriptions(payload: unknown): OwnedActiveSubscriptionS
   }];
 }
 
-export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string; teamPlanPurchaseDisabled?: boolean; teamPlanPurchaseDisabledMessage?: string; personalPlanPurchaseDisabled?: boolean; personalPlanPurchaseDisabledMessage?: string }) {
+export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency, activeOrganizationId = null, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string; activeOrganizationId?: string | null; teamPlanPurchaseDisabled?: boolean; teamPlanPurchaseDisabledMessage?: string; personalPlanPurchaseDisabled?: boolean; personalPlanPurchaseDisabledMessage?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -279,6 +279,9 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
     start(() => {
       const params = new URLSearchParams();
       params.set('planId', plan.id);
+      if (activeOrganizationId) {
+        params.set('activeOrganizationId', activeOrganizationId);
+      }
       if (options?.couponCode) {
         params.set('couponCode', options.couponCode);
       }
@@ -1026,6 +1029,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const personalPurchaseBlockedMessage = personalPlanPurchaseDisabledMessage ?? 'Personal plans can only be purchased from your personal workspace. Switch out of this organization workspace and try again.';
   const purchaseBlocked = teamPurchaseBlocked || personalPurchaseBlocked;
   const purchaseBlockedMessage = teamPurchaseBlocked ? teamPurchaseBlockedMessage : personalPurchaseBlockedMessage;
+  const purchaseBlockedTooltipId = purchaseBlocked ? `pricing-card-lock-${plan.id}` : undefined;
   const planFamily = getPricingPlanFamily(plan.supportsOrganizations);
   const normalizedSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
   const tokenPoolStrategyLabel = getTeamTokenPoolStrategyLabel(plan.organizationTokenPoolStrategy);
@@ -1143,7 +1147,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const isButtonDisabled = purchaseBlocked || pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || pendingProviderConfirmation || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
-            <div className="theme-shadow-card group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-6 transition-transform duration-300 hover:-translate-y-1" title={purchaseBlocked ? purchaseBlockedMessage : undefined} aria-label={purchaseBlocked ? purchaseBlockedMessage : undefined}>
+            <div className="theme-shadow-card group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-6 transition-transform duration-300 hover:-translate-y-1">
       <div className="relative flex flex-col gap-5">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-6">
@@ -1201,21 +1205,35 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
       </div>
 
       <div className="relative mt-auto flex flex-col gap-4 pt-6">
+        <div className="group/cta relative w-full">
         <button
           disabled={isButtonDisabled}
           onClick={onBuyClick}
-          className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(90deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.78)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)))] px-5 py-3 text-sm font-semibold text-white text-actual-white shadow-[0_20px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28))] transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(90deg,rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.78)),rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95)))] px-5 py-3 text-sm font-semibold text-white text-actual-white shadow-[0_20px_45px_rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.28))] transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))] disabled:cursor-not-allowed disabled:opacity-60"
           aria-disabled={isButtonDisabled}
+          aria-label={purchaseBlocked ? purchaseBlockedMessage : buttonLabel}
+          aria-describedby={purchaseBlockedTooltipId}
           title={pendingProviderConfirmation
             ? `Another plan change${pendingProviderConfirmationPlanName ? ` (${pendingProviderConfirmationPlanName})` : ''} is awaiting Paystack payment confirmation.`
             : purchaseBlocked
-              ? purchaseBlockedMessage
+              ? undefined
             : isCurrentAutoRenewPlan
               ? `You are already subscribed to this ${isTeamPlan ? 'team' : 'personal'} plan.`
               : undefined}
         >
           {buttonLabel}
         </button>
+        {purchaseBlocked ? (
+          <div
+            id={purchaseBlockedTooltipId}
+            role="tooltip"
+            className="pointer-events-none absolute bottom-[calc(100%+0.75rem)] left-1/2 z-20 w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-center text-xs leading-relaxed text-slate-50 [color:#f8fafc] opacity-0 shadow-xl transition-opacity duration-75 group-hover/cta:opacity-100 group-focus-within/cta:opacity-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:[color:#f8fafc]"
+          >
+            {purchaseBlockedMessage}
+            <div className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-slate-800 bg-slate-950 dark:border-slate-700 dark:bg-slate-950" />
+          </div>
+        ) : null}
+        </div>
 
         {pendingProviderConfirmation ? (
           <p className="text-center text-xs text-amber-700 dark:text-amber-200">

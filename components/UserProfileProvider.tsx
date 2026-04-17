@@ -108,6 +108,9 @@ function isAbortError(error: unknown): boolean {
   return Boolean(
     (error instanceof DOMException && error.name === 'AbortError')
     || (error instanceof Error && error.name === 'AbortError')
+    || error === 'profile-refresh'
+    || error === 'profile-reset'
+    || error === 'profile-provider-unmount'
   );
 }
 
@@ -131,12 +134,16 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const inFlightPromiseRef = useRef<Promise<SharedUserProfile | null> | null>(null);
   const prevOrgIdRef = useRef(currentOrgId);
 
-  const resetProfile = useCallback(() => {
-    abortControllerRef.current?.abort('profile-reset');
+  const abortActiveProfileRequest = useCallback(() => {
+    abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+  }, []);
+
+  const resetProfile = useCallback(() => {
+    abortActiveProfileRequest();
     inFlightPromiseRef.current = null;
     setProfileState(createInitialState(currentOrgId));
-  }, [currentOrgId]);
+  }, [abortActiveProfileRequest, currentOrgId]);
 
   const executeFetch = useCallback(async (options: FetchProfileOptions = {}) => {
     const {
@@ -162,7 +169,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    abortControllerRef.current?.abort('profile-refresh');
+    abortActiveProfileRequest();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -280,7 +287,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         abortControllerRef.current = null;
       }
     }
-  }, [currentOrgId, isLoaded, isSignedIn, profileState.loaded, profileState.orgId, profileState.profile]);
+  }, [abortActiveProfileRequest, currentOrgId, isLoaded, isSignedIn, profileState.loaded, profileState.orgId, profileState.profile]);
 
   const ensureProfile = useCallback((options: FetchProfileOptions = {}) => {
     return executeFetch(options);
@@ -332,11 +339,10 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort('profile-provider-unmount');
-      abortControllerRef.current = null;
+      abortActiveProfileRequest();
       inFlightPromiseRef.current = null;
     };
-  }, []);
+  }, [abortActiveProfileRequest]);
 
   const value = useMemo<UserProfileContextValue>(() => ({
     currentOrgId,

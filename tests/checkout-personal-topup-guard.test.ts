@@ -45,10 +45,12 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
+const resolveCheckoutWorkspaceContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
 
 vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/user-plan-context', () => ({ getOrganizationPlanContext: getOrganizationPlanContextMock }));
+vi.mock('../lib/checkout-workspace-context', () => ({ resolveCheckoutWorkspaceContext: resolveCheckoutWorkspaceContextMock }));
 vi.mock('../lib/rateLimit', () => ({
   rateLimit: rateLimitMock,
   createRateLimitKey: vi.fn(() => 'checkout:rate-limit-key'),
@@ -117,6 +119,7 @@ describe('checkout personal one-time guard', () => {
     providerName = 'stripe';
     authMock.mockResolvedValue({ userId: 'user_1', orgId: null });
     getOrganizationPlanContextMock.mockResolvedValue(null);
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue(null);
     createCustomerMock.mockResolvedValue('cus_embedded_1');
     createPaymentIntentMock.mockResolvedValue({ clientSecret: 'order_mock', paymentIntentId: 'order_mock' });
     createSubscriptionIntentMock.mockResolvedValue({ clientSecret: 'sub_mock', subscriptionId: 'sub_mock' });
@@ -147,6 +150,11 @@ describe('checkout personal one-time guard', () => {
 
   it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout when an organization workspace is active', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organizationId: 'org_team_1',
+      providerOrganizationId: null,
+    });
 
     const req = new NextRequest('http://localhost/api/checkout', {
       method: 'POST',
@@ -180,6 +188,11 @@ describe('checkout personal one-time guard', () => {
 
   it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout/embedded when an organization workspace is active', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organizationId: 'org_team_1',
+      providerOrganizationId: null,
+    });
 
     const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
       method: 'GET',
@@ -243,9 +256,10 @@ describe('checkout personal one-time guard', () => {
       sortOrder: 1,
     });
     prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
-    getOrganizationPlanContextMock.mockResolvedValueOnce({
+    resolveCheckoutWorkspaceContextMock.mockResolvedValueOnce({
       role: 'MEMBER',
-      organization: { id: 'org_team_1' },
+      organizationId: 'org_team_1',
+      providerOrganizationId: null,
     });
 
     const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_team_sub', {
@@ -263,6 +277,11 @@ describe('checkout personal one-time guard', () => {
 
   it('rejects recurring personal checkout in an organization workspace', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organizationId: 'org_team_1',
+      providerOrganizationId: null,
+    });
     prismaMock.plan.findUnique.mockResolvedValueOnce({
       id: 'plan_personal_sub',
       name: 'Personal Subscription',
@@ -285,5 +304,40 @@ describe('checkout personal one-time guard', () => {
     expect(body.code).toBe('PERSONAL_PLAN_BLOCKED_IN_WORKSPACE');
     expect(body.redirectTo).toBe('/pricing');
     expect(body.error).toContain('Personal plans can only be purchased');
+  });
+
+  it('uses an explicit local organization id when auth orgId is absent for embedded team checkout', async () => {
+    prismaMock.plan.findUnique.mockResolvedValueOnce({
+      id: 'plan_team_sub',
+      name: 'Team Subscription',
+      autoRenew: true,
+      supportsOrganizations: true,
+      externalPriceId: 'price_team_sub',
+      priceCents: 5000,
+      durationHours: 720,
+      sortOrder: 1,
+    });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organizationId: 'org_team_1',
+      providerOrganizationId: null,
+    });
+
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_team_sub&activeOrganizationId=org_team_1', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { clientSecret?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.clientSecret).toBe('sub_mock');
+    expect(createSubscriptionIntentMock).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: expect.objectContaining({
+        activeOrganizationId: 'org_team_1',
+        organizationId: 'org_team_1',
+      }),
+    }));
   });
 });

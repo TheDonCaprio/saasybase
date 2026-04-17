@@ -10,6 +10,7 @@ import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 
 interface PaymentManagementProps {
   isActive: boolean;
+  activeOrganizationId?: string | null;
   canManageBilling?: boolean;
   ownerManagedMessage?: string;
   /** Currency code to use for display/formatting (central currency setting). */
@@ -37,6 +38,7 @@ interface PaymentManagementProps {
 
 export default function PaymentManagement({
   isActive,
+  activeOrganizationId = null,
   canManageBilling = true,
   ownerManagedMessage,
   displayCurrency,
@@ -213,7 +215,11 @@ export default function PaymentManagement({
                       onClick={async () => {
                         setIsUndoing(true);
                         try {
-                          const res = await fetch('/api/billing/undo-cancel', { method: 'POST' });
+                          const res = await fetch('/api/billing/undo-cancel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ activeOrganizationId }),
+                          });
                           const j = await res.json();
                           if (!res.ok || !j.ok) {
                             showToast('Unable to undo cancellation: ' + (j?.error || 'Unknown error'), 'error');
@@ -319,7 +325,11 @@ export default function PaymentManagement({
         onConfirm={async () => {
           setIsCancelling(true);
           try {
-            const res = await fetch('/api/billing/cancel', { method: 'POST' });
+            const res = await fetch('/api/billing/cancel', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ activeOrganizationId }),
+            });
             const j = await res.json();
             if (!res.ok || !j.ok) {
               showToast('Unable to cancel subscription: ' + (j?.error || 'Unknown error'), 'error');

@@ -54,6 +54,8 @@ describe('organization teardown by provider', () => {
         id: 'org_1',
         name: 'Acme Workspace',
         clerkOrganizationId: 'provider_org_1',
+        suspendedAt: null,
+        suspensionReason: null,
         ownerUserId: 'user_1',
         billingEmail: null,
         owner: { email: 'owner@example.com', name: 'Owner User' },
@@ -166,6 +168,30 @@ describe('organization teardown by provider', () => {
       ],
       'cron-process-expiry'
     );
+  });
+
+  it('does not notify again when an organization is already suspended', async () => {
+    authServiceMock.providerName = 'clerk';
+    prismaMock.organization.findMany.mockResolvedValueOnce([
+      {
+        id: 'org_1',
+        name: 'Acme Workspace',
+        clerkOrganizationId: null,
+        suspendedAt: new Date('2026-04-17T08:00:00.000Z'),
+        suspensionReason: 'validate-org-access',
+        ownerUserId: 'user_1',
+        billingEmail: null,
+        owner: { email: 'owner@example.com', name: 'Owner User' },
+      },
+    ]);
+
+    await deactivateOrganizationsByIds(['org_1'], {
+      userId: 'user_1',
+      reason: 'validate-org-access',
+      mode: 'SUSPEND',
+    });
+
+    expect(notifySuspendedOrganizationOwnersMock).toHaveBeenCalledWith([], 'validate-org-access');
   });
 
   it('notifies workspace owners when an organization is removed', async () => {

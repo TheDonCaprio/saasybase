@@ -252,6 +252,9 @@ export async function syncOrganizationEligibilityForUser(userId: string, opts?: 
     includeCancelled: !opts?.ignoreGrace,
   });
   if (subscription && subscription.plan) {
+    await restoreLinkedSuspendedOrganizationForUser(userId, subscription, {
+      reason: 'syncOrganizationEligibilityForUser',
+    });
     return { allowed: true, kind: 'OWNER', subscription, plan: subscription.plan } satisfies TeamSubscriptionStatus;
   }
   const mode: OrganizationExpiryMode = opts?.ignoreGrace ? 'DISMANTLE' : await getOrganizationExpiryMode();
@@ -261,6 +264,34 @@ export async function syncOrganizationEligibilityForUser(userId: string, opts?: 
     useExpiryTokenResetPolicy: mode === 'SUSPEND',
   });
   return { allowed: false, reason: 'NO_PLAN' } satisfies TeamSubscriptionStatus;
+}
+
+async function restoreLinkedSuspendedOrganizationForUser(
+  userId: string,
+  subscription: Awaited<ReturnType<typeof getActiveTeamSubscription>>,
+  context?: { reason?: string }
+) {
+  if (!subscription?.organizationId) {
+    return;
+  }
+
+  const linkedOrganization = await prisma.organization.findUnique({
+    where: { id: subscription.organizationId },
+    select: {
+      id: true,
+      ownerUserId: true,
+      suspendedAt: true,
+    },
+  });
+
+  if (!linkedOrganization?.suspendedAt || linkedOrganization.ownerUserId !== userId) {
+    return;
+  }
+
+  await restoreSuspendedOrganizationById(linkedOrganization.id, {
+    userId,
+    reason: context?.reason,
+  });
 }
 
 async function resolveSuspendedOrganizationTokenResetMap(orgs: Array<{ id: string; ownerUserId: string }>) {
@@ -327,6 +358,8 @@ async function suspendOrganizationsByIds(
       id: true,
       name: true,
       clerkOrganizationId: true,
+      suspendedAt: true,
+      suspensionReason: true,
       ownerUserId: true,
       billingEmail: true,
       owner: {
@@ -338,6 +371,8 @@ async function suspendOrganizationsByIds(
     },
   });
   if (orgs.length === 0) return;
+
+  const orgsNeedingSuspensionTransition = orgs.filter((org) => !org.suspendedAt);
 
   const tokenResetByOrgId = context?.useExpiryTokenResetPolicy
     ? await resolveSuspendedOrganizationTokenResetMap(
@@ -371,14 +406,16 @@ async function suspendOrganizationsByIds(
     data: { status: 'EXPIRED', expiresAt: new Date() },
   });
 
-  await prisma.organization.updateMany({
-    where: { id: { in: orgs.map((org) => org.id) } },
-    data: {
-      clerkOrganizationId: null,
-      suspendedAt: new Date(),
-      suspensionReason: context?.reason ?? 'organization_suspended',
-    },
-  });
+  if (orgsNeedingSuspensionTransition.length > 0) {
+    await prisma.organization.updateMany({
+      where: { id: { in: orgsNeedingSuspensionTransition.map((org) => org.id) } },
+      data: {
+        clerkOrganizationId: null,
+        suspendedAt: new Date(),
+        suspensionReason: context?.reason ?? 'organization_suspended',
+      },
+    });
+  }
 
   const orgIdsToZero = orgs
     .filter((org) => (tokenResetByOrgId ? tokenResetByOrgId[org.id] !== false : true))
@@ -392,7 +429,7 @@ async function suspendOrganizationsByIds(
   }
 
   await notifySuspendedOrganizationOwners(
-    orgs
+    orgsNeedingSuspensionTransition
       .filter((org): org is typeof org & { ownerUserId: string } => typeof org.ownerUserId === 'string' && org.ownerUserId.length > 0)
       .map((org) => ({
         id: org.id,
@@ -407,6 +444,7 @@ async function suspendOrganizationsByIds(
   Logger.info('Suspended local organizations after losing team access', {
     userId: context?.userId,
     organizationIds: orgs.map((org) => org.id),
+    newlySuspendedOrganizationIds: orgsNeedingSuspensionTransition.map((org) => org.id),
     tokenResetOrganizationIds: orgIdsToZero,
     reason: context?.reason,
     providerName,

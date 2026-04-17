@@ -482,6 +482,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <section className="lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-6 lg:shadow-sm lg:transition-shadow dark:lg:border-neutral-800 dark:lg:bg-neutral-900/60 dark:lg:shadow-[0_0_25px_rgba(15,23,42,0.45)]">
             <PaymentManagement
               isActive={planActive}
+              activeOrganizationId={workspaceOrganizationId}
               canManageBilling={canManageWorkspaceBilling}
               ownerManagedMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner.` : undefined}
               displayCurrency={activeCurrency}

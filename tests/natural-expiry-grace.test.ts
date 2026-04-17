@@ -10,6 +10,8 @@ const prismaMock = vi.hoisted(() => ({
   },
   organization: {
     findMany: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn(),
     deleteMany: vi.fn(),
   },
 }));
@@ -24,6 +26,13 @@ vi.mock('../lib/settings', () => ({
 
 vi.mock('../lib/teams', () => ({
   resetOrganizationSharedTokens: vi.fn(async () => undefined),
+}));
+
+vi.mock('../lib/workspace-service', () => ({
+  workspaceService: {
+    providerName: 'nextauth',
+    usesExternalProviderOrganizations: false,
+  },
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({
@@ -209,5 +218,60 @@ describe('Natural expiry grace', () => {
     expect(res.allowed).toBe(false);
     expect((res as EligibilityResult & { reason?: string }).reason).toBe('NO_PLAN');
     expect(prismaMock.organization.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores a suspended linked organization when team eligibility becomes valid again', async () => {
+    prismaMock.subscription.findFirst
+      .mockResolvedValueOnce({
+        id: 'sub_1',
+        userId: 'user_1',
+        organizationId: 'org_1',
+        status: 'ACTIVE',
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        plan: {
+          id: 'plan_1',
+          name: 'Team',
+          tokenLimit: 100,
+          organizationSeatLimit: 5,
+          organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+          supportsOrganizations: true,
+        },
+      });
+    prismaMock.organization.findUnique
+      .mockResolvedValueOnce({
+        id: 'org_1',
+        ownerUserId: 'user_1',
+        suspendedAt: new Date('2026-04-17T12:30:44.347Z'),
+      })
+      .mockResolvedValueOnce({
+        id: 'org_1',
+        name: 'GuyT',
+        slug: 'guyt',
+        ownerUserId: 'user_1',
+        clerkOrganizationId: null,
+        suspendedAt: new Date('2026-04-17T12:30:44.347Z'),
+        planId: 'plan_1',
+        seatLimit: 5,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        memberships: [],
+      });
+    prismaMock.organization.update.mockResolvedValueOnce({
+      id: 'org_1',
+      clerkOrganizationId: null,
+      suspendedAt: null,
+      suspensionReason: null,
+    });
+
+    const res = await syncOrganizationEligibilityForUser('user_1');
+
+    expect(res.allowed).toBe(true);
+    expect(prismaMock.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: {
+        clerkOrganizationId: null,
+        suspendedAt: null,
+        suspensionReason: null,
+      },
+    });
   });
 });

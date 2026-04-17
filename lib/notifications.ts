@@ -3,7 +3,7 @@ import { Logger } from './logger';
 import { toError } from './runtime-guards';
 import { sendEmail, getSupportEmail, getSiteLogo, getSiteName } from './email';
 import { getSetting, SETTING_DEFAULTS, SETTING_KEYS, parseStringListSetting } from './settings';
-import { EmailVariables } from './email-templates';
+import { EmailVariables, getRenderedTemplate } from './email-templates';
 
 const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
@@ -239,12 +239,17 @@ export async function sendBillingNotification(
       const siteName = emailVariables.siteName || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
 
       const expectedSubject = `${siteName}: ${title}`;
+      const renderedTemplate = await getRenderedTemplate(templateKey, emailVariables as EmailVariables).catch(() => null);
+      const renderedSubject = typeof renderedTemplate?.subject === 'string' && renderedTemplate.subject.trim().length > 0
+        ? renderedTemplate.subject.trim()
+        : null;
+      const dedupeSubject = renderedSubject || expectedSubject;
       const recentEmail = await prisma.emailLog.findFirst({
         where: {
           userId,
           to: resolvedEmail,
           template: templateKey,
-          subject: expectedSubject,
+          subject: dedupeSubject,
           status: 'SENT',
           createdAt: { gte: dedupeSince },
         },
@@ -256,7 +261,7 @@ export async function sendBillingNotification(
           templateKey,
           emailLogId: recentEmail.id,
           to: resolvedEmail,
-          subject: expectedSubject,
+          subject: dedupeSubject,
         });
         return { notificationCreated, emailSent: true };
       }
@@ -268,7 +273,7 @@ export async function sendBillingNotification(
       const result = await sendEmail({
         to: resolvedEmail,
         userId,
-        subject: expectedSubject, // Fallback subject
+        subject: dedupeSubject, // Fallback subject
         text: message, // Fallback plain text
         templateKey,
         variables: emailVariables,

@@ -5,17 +5,57 @@ import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
 import { sendBillingNotification } from '../../../../lib/notifications';
 import { paymentService } from '../../../../lib/payment/service';
+import { getOrganizationPlanContext, getPlanScope, getSubscriptionScopeFilter } from '../../../../lib/user-plan-context';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ ok: false, error: message, code }, { status });
 }
 
+function resolveExplicitActiveOrganizationId(payload?: Record<string, unknown> | null): string | null {
+  if (!payload) return null;
+
+  const candidates = [payload.activeOrganizationId, payload.organizationId, payload.localOrganizationId];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+}
+
 export async function POST(req: Request) {
-  const { userId } = await authService.getSession();
+  const { userId, orgId } = await authService.getSession();
   if (!userId) return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
 
-  // Find active subscription for user
-  const subscription = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } }, include: { plan: true } });
+  const requestBody = await req.json().catch(() => null) as Record<string, unknown> | null;
+  const requestedActiveOrganizationId = resolveExplicitActiveOrganizationId(requestBody) ?? orgId ?? null;
+  const planScope = getPlanScope(requestedActiveOrganizationId);
+  const organizationPlan = planScope === 'WORKSPACE'
+    ? await getOrganizationPlanContext(userId, requestedActiveOrganizationId)
+    : null;
+
+  if (planScope === 'WORKSPACE' && organizationPlan?.role === 'MEMBER') {
+    return jsonError('Only the workspace owner can cancel this workspace subscription', 403, 'WORKSPACE_BILLING_OWNER_REQUIRED');
+  }
+
+  const scopedUserId = planScope === 'WORKSPACE' && organizationPlan?.organization.ownerUserId
+    ? organizationPlan.organization.ownerUserId
+    : userId;
+  const scopedOrganizationId = planScope === 'WORKSPACE'
+    ? organizationPlan?.organization.id ?? null
+    : null;
+
+  const subscription = await prisma.subscription.findFirst({
+    where: {
+      userId: scopedUserId,
+      status: 'ACTIVE',
+      expiresAt: { gt: new Date() },
+      ...getSubscriptionScopeFilter(planScope),
+      ...(scopedOrganizationId ? { organizationId: scopedOrganizationId } : {}),
+    },
+    include: { plan: true },
+  });
 
   if (!subscription) {
     return jsonError('No active subscription found', 400, 'SUBSCRIPTION_NOT_ACTIVE');
@@ -61,7 +101,14 @@ export async function POST(req: Request) {
 
     // Audit log the cancellation scheduling (include client IP when available)
     const ip = req?.headers?.get?.('x-forwarded-for') ?? req?.headers?.get?.('x-real-ip') ?? 'unknown';
-    Logger.info('User scheduled subscription cancellation', { userId, subscriptionId: subscription.id, externalSubscriptionId: subId, ip });
+    Logger.info('User scheduled subscription cancellation', {
+      userId,
+      scopedUserId,
+      activeOrganizationId: scopedOrganizationId,
+      subscriptionId: subscription.id,
+      externalSubscriptionId: subId,
+      ip,
+    });
 
     // Send cancellation notification (email + in-app) - do this before returning
     const expiresDate = periodEnd || subscription.expiresAt;

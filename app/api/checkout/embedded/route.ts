@@ -13,7 +13,6 @@ import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { PaymentError } from '../../../../lib/payment/errors';
 import { formatCurrency } from '../../../../lib/utils/currency';
-import { getOrganizationPlanContext } from '../../../../lib/user-plan-context';
 import {
     calculateCouponDiscountCents,
     ensureProviderCoupon,
@@ -30,6 +29,7 @@ import {
     setCachedDiscountedSubscriptionPriceId,
     tryAcquireDiscountedSubscriptionPriceKey,
 } from '../../../../lib/payment/discountedSubscriptionPriceCache';
+import { resolveCheckoutWorkspaceContext } from '../../../../lib/checkout-workspace-context';
 
 const couponWithPlansInclude = {
     applicablePlans: {
@@ -49,10 +49,6 @@ function jsonError(message: string, status: number, code: string, extra?: Record
     return NextResponse.json({ error: message, code, ...(extra || {}) }, { status });
 }
 
-function isTeamWorkspace(orgId: string | null | undefined): boolean {
-    return typeof orgId === 'string' && orgId.length > 0;
-}
-
 function teamWorkspaceOwnerRequiredResponse() {
     return jsonError(
         'Only the workspace owner can purchase or change team plans for this workspace.',
@@ -69,6 +65,24 @@ function personalWorkspacePurchaseRequiredResponse() {
         'PERSONAL_PLAN_BLOCKED_IN_WORKSPACE',
         { redirectTo: '/pricing' },
     );
+}
+
+function resolveExplicitActiveOrganizationId(payload: Record<string, unknown> | null | undefined): string | null {
+    if (!payload) return null;
+
+    const candidates = [
+        payload.activeOrganizationId,
+        payload.organizationId,
+        payload.localOrganizationId,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === 'string' && candidate.trim().length > 0) {
+            return candidate.trim();
+        }
+    }
+
+    return null;
 }
 
 function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown } {
@@ -124,6 +138,9 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             mode: params.get('mode') || undefined,
             dedupeKey: params.get('dedupeKey') || undefined,
             couponCode: params.get('couponCode') || undefined,
+            activeOrganizationId: params.get('activeOrganizationId') || undefined,
+            organizationId: params.get('organizationId') || undefined,
+            localOrganizationId: params.get('localOrganizationId') || undefined,
             skipProrationCheck: params.get('skipProrationCheck') || undefined,
             prorationFallbackReason: params.get('prorationFallbackReason') || undefined,
         };
@@ -138,6 +155,11 @@ async function handleEmbeddedCheckout(req: NextRequest) {
         const currency = typeof payload.currency === 'string' ? payload.currency : undefined;
         const planId = typeof payload.planId === 'string' ? payload.planId : undefined;
         let { priceId, mode = 'payment' } = payload as { priceId?: string; mode?: string };
+        const requestedActiveOrganizationId = resolveExplicitActiveOrganizationId(payload)
+            || req.nextUrl.searchParams.get('activeOrganizationId')
+            || req.nextUrl.searchParams.get('organizationId')
+            || req.nextUrl.searchParams.get('localOrganizationId')
+            || null;
         const rawCouponCode = typeof (payload as { couponCode?: unknown })?.couponCode === 'string' ? String((payload as { couponCode?: unknown }).couponCode) : '';
         const couponCode = rawCouponCode.trim() || null;
         const skipProrationCheck = (payload as { skipProrationCheck?: unknown })?.skipProrationCheck === true
@@ -257,15 +279,18 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             mode = dbPlanRecord && dbPlanRecord['autoRenew'] === true ? 'subscription' : 'payment';
 
             const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
-            if (!selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
+            const requestedOrganizationRef = requestedActiveOrganizationId ?? activeClerkOrgId ?? null;
+            const checkoutWorkspaceContext = requestedOrganizationRef
+                ? await resolveCheckoutWorkspaceContext(userId, requestedOrganizationRef)
+                : null;
+            const hasActiveWorkspace = Boolean(activeClerkOrgId) || Boolean(checkoutWorkspaceContext);
+
+            if (!selectedPlanIsTeam && hasActiveWorkspace) {
                 return personalWorkspacePurchaseRequiredResponse();
             }
 
-            if (selectedPlanIsTeam) {
-                const activeOrganizationContext = await getOrganizationPlanContext(userId, activeClerkOrgId);
-                if (activeOrganizationContext?.role === 'MEMBER') {
-                    return teamWorkspaceOwnerRequiredResponse();
-                }
+            if (selectedPlanIsTeam && checkoutWorkspaceContext?.role === 'MEMBER') {
+                return teamWorkspaceOwnerRequiredResponse();
             }
 
             // If using Paystack but we don't have a Paystack plan code, fall back to one-time payment
@@ -647,10 +672,21 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
         const base = getEnv().NEXT_PUBLIC_APP_URL;
         const metadata: Record<string, string> = { userId };
-        if (activeClerkOrgId) {
-            metadata.activeClerkOrgId = activeClerkOrgId;
-            metadata.clerkOrgId = activeClerkOrgId;
-            metadata.orgId = activeClerkOrgId;
+        const requestedOrganizationRef = requestedActiveOrganizationId ?? activeClerkOrgId ?? null;
+        const checkoutWorkspaceContext = requestedOrganizationRef
+            ? await resolveCheckoutWorkspaceContext(userId, requestedOrganizationRef)
+            : null;
+        if (checkoutWorkspaceContext?.organizationId) {
+            metadata.activeOrganizationId = checkoutWorkspaceContext.organizationId;
+            metadata.organizationId = checkoutWorkspaceContext.organizationId;
+        }
+        const resolvedProviderOrganizationId = authService.providerName === 'clerk'
+            ? (activeClerkOrgId ?? checkoutWorkspaceContext?.providerOrganizationId ?? null)
+            : null;
+        if (resolvedProviderOrganizationId) {
+            metadata.activeClerkOrgId = resolvedProviderOrganizationId;
+            metadata.clerkOrgId = resolvedProviderOrganizationId;
+            metadata.orgId = resolvedProviderOrganizationId;
         }
         if (typeof planId === 'string') metadata.planId = planId;
         if (typeof priceId === 'string') metadata.priceId = priceId;

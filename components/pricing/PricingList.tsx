@@ -40,6 +40,7 @@ interface PricingListProps {
 export default function PricingList({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, gridClasses, currency, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: PricingListProps) {
   const { orgId, isSignedIn, isLoaded: authLoaded } = useAuthSession();
   const { profile, loaded: profileLoaded, loading: profileLoading, ensureProfile } = useUserProfile();
+  const activeOrganizationId = profile?.organization?.id ?? orgId ?? null;
 
   useEffect(() => {
     if (!authLoaded || !isSignedIn || !orgId || profileLoaded || profileLoading) {
@@ -88,7 +89,7 @@ export default function PricingList({ plans, activeRecurringPlansByFamily, sched
       {recurringPlans.length > 0 && (
         <div className={recurringGridClasses}>
           {recurringPlans.map(p => (
-            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} teamPlanPurchaseDisabled={effectiveTeamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={effectiveTeamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={effectivePersonalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={effectivePersonalPlanPurchaseDisabledMessage} />
+            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} activeOrganizationId={activeOrganizationId} teamPlanPurchaseDisabled={effectiveTeamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={effectiveTeamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={effectivePersonalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={effectivePersonalPlanPurchaseDisabledMessage} />
           ))}
         </div>
       )}
@@ -104,7 +105,7 @@ export default function PricingList({ plans, activeRecurringPlansByFamily, sched
       {oneTimePlans.length > 0 && (
         <div className={oneTimeGridClasses}>
           {oneTimePlans.map(p => (
-            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} teamPlanPurchaseDisabled={effectiveTeamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={effectiveTeamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={effectivePersonalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={effectivePersonalPlanPurchaseDisabledMessage} />
+            <PricingCard key={p.id} plan={p} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} currency={currency} activeOrganizationId={activeOrganizationId} teamPlanPurchaseDisabled={effectiveTeamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={effectiveTeamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={effectivePersonalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={effectivePersonalPlanPurchaseDisabledMessage} />
           ))}
         </div>
       )}

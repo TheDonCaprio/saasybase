@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const authMock = vi.hoisted(() => ({
-  getSession: vi.fn(async () => ({ userId: 'user_1', orgId: 'org_local_1' })),
+  getSession: vi.fn<[], Promise<{ userId: string; orgId: string | null }>>(async () => ({ userId: 'user_1', orgId: 'org_local_1' })),
   providerName: 'nextauth',
 }));
 
@@ -50,9 +50,18 @@ const getOrganizationPlanContextMock = vi.hoisted(() =>
   }))
 );
 
+const resolveCheckoutWorkspaceContextMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    role: 'OWNER',
+    organizationId: 'org_local_1',
+    providerOrganizationId: null,
+  }))
+);
+
 vi.mock('../lib/auth-provider', () => ({ authService: authMock }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/user-plan-context', () => ({ getOrganizationPlanContext: getOrganizationPlanContextMock }));
+vi.mock('../lib/checkout-workspace-context', () => ({ resolveCheckoutWorkspaceContext: resolveCheckoutWorkspaceContextMock }));
 vi.mock('../lib/rateLimit', () => ({
   rateLimit: rateLimitMock,
   createRateLimitKey: vi.fn(() => 'checkout:rate-limit-key'),
@@ -110,6 +119,16 @@ import { POST as checkoutPost } from '../app/api/checkout/route';
 describe('checkout metadata for NextAuth team purchases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authMock.getSession.mockResolvedValue({ userId: 'user_1', orgId: 'org_local_1' });
+    resolveCheckoutWorkspaceContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organizationId: 'org_local_1',
+      providerOrganizationId: null,
+    });
+    getOrganizationPlanContextMock.mockResolvedValue({
+      role: 'OWNER',
+      organization: { id: 'org_local_1' },
+    });
 
     prismaMock.plan.findUnique.mockResolvedValue({
       id: 'plan_team_sub',
@@ -166,12 +185,48 @@ describe('checkout metadata for NextAuth team purchases', () => {
     });
 
     expect(getOrganizationPlanContextMock).toHaveBeenCalledWith('user_1', 'org_local_1');
+    expect(resolveCheckoutWorkspaceContextMock).toHaveBeenCalledWith('user_1', 'org_local_1');
+  });
+
+  it('sends local organization metadata when the request provides an explicit org id but auth orgId is absent', async () => {
+    authMock.getSession.mockResolvedValueOnce({ userId: 'user_1', orgId: null });
+
+    const req = new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ planId: 'plan_team_sub', activeOrganizationId: 'org_local_1' }),
+    });
+
+    const res = await checkoutPost(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.url).toBe('https://checkout.example.com/session_1');
+
+    const firstCall = createCheckoutSessionMock.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+
+    const call = firstCall?.at(0) as unknown as {
+      metadata: Record<string, string | undefined>;
+      subscriptionMetadata?: Record<string, string | undefined>;
+    };
+
+    expect(call.metadata).toMatchObject({
+      activeOrganizationId: 'org_local_1',
+      organizationId: 'org_local_1',
+    });
+    expect(call.subscriptionMetadata).toMatchObject({
+      activeOrganizationId: 'org_local_1',
+      organizationId: 'org_local_1',
+    });
+    expect(resolveCheckoutWorkspaceContextMock).toHaveBeenCalledWith('user_1', 'org_local_1');
   });
 
   it('rejects team checkout when the active workspace user is only a member', async () => {
-    getOrganizationPlanContextMock.mockResolvedValueOnce({
+    resolveCheckoutWorkspaceContextMock.mockResolvedValueOnce({
       role: 'MEMBER',
-      organization: { id: 'org_local_1' },
+      organizationId: 'org_local_1',
+      providerOrganizationId: null,
     });
 
     const req = new NextRequest('http://localhost/api/checkout', {

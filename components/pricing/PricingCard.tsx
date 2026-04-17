@@ -9,6 +9,7 @@ import { showToast } from '../ui/Toast';
 import { formatPrice } from '../../lib/plans-shared';
 import { formatCurrency as formatCurrencyUtil } from '../../lib/utils/currency';
 import { asRecord } from '../../lib/runtime-guards';
+import { getPlanTokenAllowanceLabel, getTeamTokenPoolStrategyLabel, isMemberLockedTeamWorkspace } from './pricing-card-guards';
 import {
   createEmptyActiveRecurringPlansByFamily,
   createEmptyScheduledPlanIdsByFamily,
@@ -165,7 +166,7 @@ function getOwnedActiveSubscriptions(payload: unknown): OwnedActiveSubscriptionS
   }];
 }
 
-export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string }) {
+export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string; teamPlanPurchaseDisabled?: boolean; teamPlanPurchaseDisabledMessage?: string; personalPlanPurchaseDisabled?: boolean; personalPlanPurchaseDisabledMessage?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -894,6 +895,11 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   // Scenario 2: Recurring active + buying non-recurring → add tokens, no expiry extension
   // Scenario 3: Non-recurring active + buying non-recurring → extend time + add tokens
   async function onBuyClick() {
+    if (purchaseBlocked) {
+      showToast(purchaseBlockedMessage, 'info');
+      return;
+    }
+
     if (isCurrentAutoRenewPlan) {
       showToast('You are already on this subscription.', 'info');
       return;
@@ -931,8 +937,15 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
 
       const ownedActiveSubscriptions = getOwnedActiveSubscriptions(sub);
       const activeWorkspaceFamily = getActiveWorkspaceFamily(sub);
+      const memberLockedWorkspace = isMemberLockedTeamWorkspace(sub);
       const matchingOwnedSubscription = ownedActiveSubscriptions.find((subscription) => subscription.family === planFamily) ?? null;
       const hasAnyOwnedTeamRecurring = ownedActiveSubscriptions.some((subscription) => subscription.planAutoRenew && subscription.planSupportsOrganizations);
+
+      if (isTeamPlan && memberLockedWorkspace) {
+        showToast('Only the workspace owner can purchase or change team plans for this workspace.', 'info');
+        setIfMounted(setCheckingExisting)(false);
+        return;
+      }
 
       // Check if user has an active subscription
       if (res.ok && matchingOwnedSubscription) {
@@ -1006,16 +1019,32 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
     : null;
   const tokenLabel = plan.tokenName || 'tokens';
   const isTeamPlan = plan.supportsOrganizations === true;
+  const isPersonalPlan = !isTeamPlan;
+  const teamPurchaseBlocked = isTeamPlan && teamPlanPurchaseDisabled;
+  const teamPurchaseBlockedMessage = teamPlanPurchaseDisabledMessage ?? 'Only the workspace owner can purchase or change team plans for this workspace.';
+  const personalPurchaseBlocked = isPersonalPlan && personalPlanPurchaseDisabled;
+  const personalPurchaseBlockedMessage = personalPlanPurchaseDisabledMessage ?? 'Personal plans can only be purchased from your personal workspace. Switch out of this organization workspace and try again.';
+  const purchaseBlocked = teamPurchaseBlocked || personalPurchaseBlocked;
+  const purchaseBlockedMessage = teamPurchaseBlocked ? teamPurchaseBlockedMessage : personalPurchaseBlockedMessage;
   const planFamily = getPricingPlanFamily(plan.supportsOrganizations);
   const normalizedSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
-  const tokenPoolStrategyLabel = 'Shared workspace token pool';
+  const tokenPoolStrategyLabel = getTeamTokenPoolStrategyLabel(plan.organizationTokenPoolStrategy);
+  const tokenAllowanceLabel = isTeamPlan
+    ? getPlanTokenAllowanceLabel({
+        tokenLimit: plan.tokenLimit,
+        tokenName: tokenLabel,
+        organizationTokenPoolStrategy: plan.organizationTokenPoolStrategy,
+      })
+    : plan.tokenLimit !== null && plan.tokenLimit !== undefined
+      ? `${plan.tokenLimit.toLocaleString()} ${tokenLabel} included`
+      : `Unlimited ${tokenLabel}`;
   const features = [
     plan.autoRenew
       ? { icon: faArrowRotateRight, label: `Auto-renews every ${intervalLabel}` }
       : { icon: faBolt, label: isLifetimePlan ? 'One-time payment' : 'No auto-renewal ' },
     plan.tokenLimit !== null && plan.tokenLimit !== undefined
-      ? { icon: faCheck, label: `${plan.tokenLimit.toLocaleString()} ${tokenLabel} included` }
-      : { icon: faInfinity, label: `Unlimited ${tokenLabel}` },
+      ? { icon: faCheck, label: tokenAllowanceLabel }
+      : { icon: faInfinity, label: tokenAllowanceLabel },
     isLifetimePlan
       ? { icon: faInfinity, label: 'Lifetime access' }
       : durationDays
@@ -1085,7 +1114,11 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   })();
 
   let buttonLabel: string;
-  if (pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming) {
+  if (teamPurchaseBlocked) {
+    buttonLabel = 'Workspace owner only';
+  } else if (personalPurchaseBlocked) {
+    buttonLabel = 'Personal workspace only';
+  } else if (pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming) {
     buttonLabel = 'Preparing checkout…';
   } else if (pendingProviderConfirmation) {
     buttonLabel = 'Awaiting payment confirmation';
@@ -1107,10 +1140,10 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
     }
   }
 
-  const isButtonDisabled = pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || pendingProviderConfirmation || isCurrentAutoRenewPlan || isScheduledPlan;
+  const isButtonDisabled = purchaseBlocked || pending || checkingExisting || loadingCoupons || prorationLoading || prorationConfirming || pendingProviderConfirmation || isCurrentAutoRenewPlan || isScheduledPlan;
 
   return (
-            <div className="theme-shadow-card group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-6 transition-transform duration-300 hover:-translate-y-1">
+            <div className="theme-shadow-card group relative mx-auto flex h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.84))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-6 transition-transform duration-300 hover:-translate-y-1" title={purchaseBlocked ? purchaseBlockedMessage : undefined} aria-label={purchaseBlocked ? purchaseBlockedMessage : undefined}>
       <div className="relative flex flex-col gap-5">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-6">
@@ -1175,6 +1208,8 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
           aria-disabled={isButtonDisabled}
           title={pendingProviderConfirmation
             ? `Another plan change${pendingProviderConfirmationPlanName ? ` (${pendingProviderConfirmationPlanName})` : ''} is awaiting Paystack payment confirmation.`
+            : purchaseBlocked
+              ? purchaseBlockedMessage
             : isCurrentAutoRenewPlan
               ? `You are already subscribed to this ${isTeamPlan ? 'team' : 'personal'} plan.`
               : undefined}

@@ -536,7 +536,15 @@ export default async function PlanPage({ searchParams }: PageProps) {
                 Full pricing page
               </Link>
             </div>
-            <DashboardPricingListServerWrapper plans={plansForPricing} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} />
+            <DashboardPricingListServerWrapper
+              plans={plansForPricing}
+              activeRecurringPlansByFamily={activeRecurringPlansByFamily}
+              scheduledPlanIdsByFamily={scheduledPlanIdsByFamily}
+              teamPlanPurchaseDisabled={workspaceMemberView}
+              teamPlanPurchaseDisabledMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner. Members cannot purchase or change team plans from this workspace.` : undefined}
+              personalPlanPurchaseDisabled={planScope === 'WORKSPACE'}
+              personalPlanPurchaseDisabledMessage={planScope === 'WORKSPACE' ? `Personal plans can only be purchased from your personal workspace. Switch out of ${organizationPlan?.organization.name ?? 'this workspace'} and try again.` : undefined}
+            />
           </section>
         </div>
 

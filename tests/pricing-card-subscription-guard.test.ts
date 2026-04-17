@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { asRecord } from '../lib/runtime-guards';
+import { getPlanTokenAllowanceLabel, getTeamTokenPoolStrategyLabel, isMemberLockedTeamWorkspace, resolvePersonalPlanPurchaseDisabled, resolveTeamPlanPurchaseDisabled } from '../components/pricing/pricing-card-guards';
 
 function hasPendingProviderConfirmation(payload: unknown): boolean {
   const record = asRecord(payload);
@@ -47,5 +48,79 @@ describe('pricing card subscription guard', () => {
         pendingConfirmation: true,
       },
     })).toBe('24 Hour Team');
+  });
+
+  it('detects member-managed workspace context for team plan guards', () => {
+    expect(isMemberLockedTeamWorkspace({
+      source: 'organization',
+      organization: {
+        id: 'org_1',
+        role: 'MEMBER',
+      },
+    })).toBe(true);
+
+    expect(isMemberLockedTeamWorkspace({
+      source: 'organization',
+      organization: {
+        id: 'org_1',
+        role: 'OWNER',
+      },
+    })).toBe(false);
+  });
+
+  it('keeps team checkout disabled until workspace role is resolved client-side', () => {
+    expect(resolveTeamPlanPurchaseDisabled({
+      serverDisabled: false,
+      activeOrgId: 'org_1',
+      profileLoaded: false,
+      profileOrganizationId: null,
+      profileOrganizationRole: null,
+    })).toBe(true);
+
+    expect(resolveTeamPlanPurchaseDisabled({
+      serverDisabled: false,
+      activeOrgId: 'org_1',
+      profileLoaded: true,
+      profileOrganizationId: 'org_1',
+      profileOrganizationRole: 'MEMBER',
+    })).toBe(true);
+
+    expect(resolveTeamPlanPurchaseDisabled({
+      serverDisabled: false,
+      activeOrgId: 'org_1',
+      profileLoaded: true,
+      profileOrganizationId: 'org_1',
+      profileOrganizationRole: 'OWNER',
+    })).toBe(false);
+  });
+
+  it('keeps personal checkout disabled whenever an organization workspace is active', () => {
+    expect(resolvePersonalPlanPurchaseDisabled({
+      serverDisabled: false,
+      activeOrgId: 'org_1',
+    })).toBe(true);
+
+    expect(resolvePersonalPlanPurchaseDisabled({
+      serverDisabled: false,
+      activeOrgId: null,
+    })).toBe(false);
+  });
+
+  it('uses per-member copy for allocated workspace token strategies', () => {
+    expect(getTeamTokenPoolStrategyLabel('ALLOCATED_PER_MEMBER')).toBe('Per-member token allocation');
+    expect(getPlanTokenAllowanceLabel({
+      tokenLimit: 150,
+      tokenName: 'Exports',
+      organizationTokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+    })).toBe('150 Exports per member included');
+  });
+
+  it('keeps shared-pool copy for default workspace token strategies', () => {
+    expect(getTeamTokenPoolStrategyLabel('SHARED_FOR_ORG')).toBe('Shared workspace token pool');
+    expect(getPlanTokenAllowanceLabel({
+      tokenLimit: 150,
+      tokenName: 'Exports',
+      organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+    })).toBe('150 Exports included');
   });
 });

@@ -616,6 +616,131 @@ export async function notifyExpiredSubscriptions(subscriptionIds: string[]) {
   }
 }
 
+function getSuspendedWorkspaceNotice(reason?: string | null) {
+  switch (reason) {
+    case 'cron-process-expiry':
+    case 'syncOrganizationEligibilityForUser':
+    case 'validate-org-access':
+      return {
+        message: 'Your workspace has been suspended because the team subscription expired and the grace period ended.',
+        reasonText: 'The team subscription expired and the grace period ended.',
+      };
+    case 'admin.organizations.suspend':
+      return {
+        message: 'Your workspace has been suspended by an administrator. Contact support if you need help restoring access.',
+        reasonText: 'The workspace was suspended by an administrator.',
+      };
+    default:
+      return {
+        message: 'Your workspace has been suspended. Contact support if you need help restoring access.',
+        reasonText: 'The workspace was suspended.',
+      };
+  }
+}
+
+function getRemovedWorkspaceNotice(reason?: string | null) {
+  switch (reason) {
+    case 'cron-process-expiry':
+    case 'syncOrganizationEligibilityForUser':
+    case 'validate-org-access':
+      return {
+        message: 'Your workspace has been removed because the team subscription expired and the grace period ended.',
+        reasonText: 'The team subscription expired and the grace period ended.',
+      };
+    default:
+      return {
+        message: 'Your workspace has been removed because team access ended.',
+        reasonText: 'Team access ended and the workspace was removed.',
+      };
+  }
+}
+
+export async function notifySuspendedOrganizationOwners(
+  organizations: Array<{
+    id: string;
+    name: string;
+    ownerUserId: string;
+    billingEmail?: string | null;
+    owner?: { email?: string | null; name?: string | null } | null;
+  }>,
+  reason?: string | null,
+) {
+  if (organizations.length === 0) return;
+
+  const notice = getSuspendedWorkspaceNotice(reason);
+
+  await Promise.all(
+    organizations.map(async (organization) => {
+      try {
+        await sendBillingNotification({
+          userId: organization.ownerUserId,
+          title: 'Workspace Suspended',
+          message: `${organization.name}: ${notice.message}`,
+          templateKey: 'organization_suspended',
+          fallbackEmail: organization.billingEmail ?? organization.owner?.email ?? null,
+          fallbackName: organization.owner?.name ?? null,
+          variables: {
+            organizationName: organization.name,
+            reason: notice.reasonText,
+            dashboardUrl: `${DEFAULT_BASE_URL}/dashboard/team`,
+          },
+        });
+      } catch (err: unknown) {
+        const error = toError(err);
+        Logger.warn('Failed to notify workspace owner about suspension', {
+          organizationId: organization.id,
+          ownerUserId: organization.ownerUserId,
+          reason,
+          error: error.message,
+        });
+      }
+    })
+  );
+}
+
+export async function notifyRemovedOrganizationOwners(
+  organizations: Array<{
+    id: string;
+    name: string;
+    ownerUserId: string;
+    billingEmail?: string | null;
+    owner?: { email?: string | null; name?: string | null } | null;
+  }>,
+  reason?: string | null,
+) {
+  if (organizations.length === 0) return;
+
+  const notice = getRemovedWorkspaceNotice(reason);
+
+  await Promise.all(
+    organizations.map(async (organization) => {
+      try {
+        await sendBillingNotification({
+          userId: organization.ownerUserId,
+          title: 'Workspace Removed',
+          message: `${organization.name}: ${notice.message}`,
+          templateKey: 'organization_removed',
+          fallbackEmail: organization.billingEmail ?? organization.owner?.email ?? null,
+          fallbackName: organization.owner?.name ?? null,
+          variables: {
+            organizationName: organization.name,
+            reason: notice.reasonText,
+            billingUrl: `${DEFAULT_BASE_URL}/pricing`,
+          },
+        });
+      } catch (err: unknown) {
+        const error = toError(err);
+        Logger.warn('Failed to notify workspace owner about removal', {
+          organizationId: organization.id,
+          ownerUserId: organization.ownerUserId,
+          reason,
+          error: error.message,
+        });
+      }
+    })
+  );
+}
+
 export async function createSupportNotification(userId: string, message: string) {
   return createNotification(userId, 'Support Update', message, 'SUPPORT');
 }

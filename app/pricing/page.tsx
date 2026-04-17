@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import PricingList from '../../components/pricing/PricingList';
 import { prisma } from '../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
@@ -124,6 +126,9 @@ export default async function PricingPage() {
   ]);
 
   const { activeRecurringPlansByFamily, scheduledPlanIdsByFamily } = buildPricingCardRecurringState(ownedRecurringSubscriptionsForCards);
+  const workspaceOrganizationId = planScope === 'WORKSPACE' ? organizationPlan?.organization.id : null;
+  const workspaceMemberView = planScope === 'WORKSPACE' && organizationPlan?.role === 'MEMBER' && !!workspaceOrganizationId;
+  const canManageWorkspaceBilling = !workspaceMemberView;
 
   const pendingSubscriptions = await Promise.all(
     pendingSubscriptionsRaw.map(async (sub) => ({
@@ -356,7 +361,7 @@ export default async function PricingPage() {
                   heading: "You're currently on the free tier",
                   description: 'Upgrade to unlock premium features',
                 }}
-              extra={<PlanBillingActions displayCurrency={activeCurrency} />}
+              extra={<PlanBillingActions displayCurrency={activeCurrency} canManageBilling={canManageWorkspaceBilling} workspaceName={organizationPlan?.organization.name ?? null} />}
           />
         )}
 
@@ -455,7 +460,17 @@ export default async function PricingPage() {
           </section>
         ) : null}
         
-    <PricingList plans={plans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={activeCurrency} />
+    <PricingList
+      plans={plans}
+      activeRecurringPlansByFamily={activeRecurringPlansByFamily}
+      scheduledPlanIdsByFamily={scheduledPlanIdsByFamily}
+      gridClasses={gridClasses}
+      currency={activeCurrency}
+      teamPlanPurchaseDisabled={workspaceMemberView}
+      teamPlanPurchaseDisabledMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner. Members cannot purchase or change team plans from this workspace.` : undefined}
+      personalPlanPurchaseDisabled={planScope === 'WORKSPACE'}
+      personalPlanPurchaseDisabledMessage={planScope === 'WORKSPACE' ? `Personal plans can only be purchased from your personal workspace. Switch out of ${organizationPlan?.organization.name ?? 'this workspace'} and try again.` : undefined}
+    />
         <div className="text-xs text-neutral-500 space-y-1">
           <p>• <span className="text-blue-400">●</span> Auto-renewing plans will automatically charge and extend your access</p>
           <p>• <span className="text-yellow-400">●</span> One-time plans require manual renewal when they expire</p>

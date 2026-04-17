@@ -13,6 +13,7 @@ import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { PaymentError } from '../../../../lib/payment/errors';
 import { formatCurrency } from '../../../../lib/utils/currency';
+import { getOrganizationPlanContext } from '../../../../lib/user-plan-context';
 import {
     calculateCouponDiscountCents,
     ensureProviderCoupon,
@@ -50,6 +51,24 @@ function jsonError(message: string, status: number, code: string, extra?: Record
 
 function isTeamWorkspace(orgId: string | null | undefined): boolean {
     return typeof orgId === 'string' && orgId.length > 0;
+}
+
+function teamWorkspaceOwnerRequiredResponse() {
+    return jsonError(
+        'Only the workspace owner can purchase or change team plans for this workspace.',
+        403,
+        'WORKSPACE_BILLING_OWNER_REQUIRED',
+        { redirectTo: '/dashboard/plan' },
+    );
+}
+
+function personalWorkspacePurchaseRequiredResponse() {
+    return jsonError(
+        'Personal plans can only be purchased from your personal workspace. Switch out of the active organization workspace and try again.',
+        409,
+        'PERSONAL_PLAN_BLOCKED_IN_WORKSPACE',
+        { redirectTo: '/pricing' },
+    );
 }
 
 function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown } {
@@ -237,29 +256,15 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             // Determine mode
             mode = dbPlanRecord && dbPlanRecord['autoRenew'] === true ? 'subscription' : 'payment';
 
-            const selectedPlanIsOneTime = dbPlanRecord?.['autoRenew'] !== true;
             const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
-            if (selectedPlanIsOneTime && !selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
-                const activeTeamSubscription = await prisma.subscription.findFirst({
-                    where: {
-                        userId,
-                        status: 'ACTIVE',
-                        expiresAt: { gt: new Date() },
-                        plan: {
-                            autoRenew: true,
-                            supportsOrganizations: true,
-                        },
-                    },
-                    select: { id: true },
-                });
+            if (!selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
+                return personalWorkspacePurchaseRequiredResponse();
+            }
 
-                if (activeTeamSubscription?.id) {
-                    return jsonError(
-                        'Personal one-time top-ups are unavailable while your Team subscription is active. Buy a Team top-up from your workspace billing.',
-                        409,
-                        'PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION',
-                        { redirectTo: '/dashboard/team' },
-                    );
+            if (selectedPlanIsTeam) {
+                const activeOrganizationContext = await getOrganizationPlanContext(userId, activeClerkOrgId);
+                if (activeOrganizationContext?.role === 'MEMBER') {
+                    return teamWorkspaceOwnerRequiredResponse();
                 }
             }
 

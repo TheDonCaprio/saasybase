@@ -5,6 +5,7 @@ import { deactivateUserOrganizations } from '../../../../lib/organization-access
 import { toError } from '../../../../lib/runtime-guards';
 import { getOrganizationExpiryMode, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 import { maybeClearPaidTokensAfterNaturalExpiryGrace } from '../../../../lib/paidTokenCleanup';
+import { notifyExpiredSubscriptions } from '../../../../lib/notifications';
 
 import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 
@@ -74,20 +75,42 @@ export async function GET(request: NextRequest) {
     try {
         // 2. Expire 'ACTIVE' subscriptions that have passed their expiry date
         // This handles cases where the subscription naturally ended but wasn't updated
-        const expiredActiveSubs = await prisma.subscription.updateMany({
+        const subscriptionsToExpire = await prisma.subscription.findMany({
             where: {
                 status: 'ACTIVE',
                 expiresAt: { lt: now }
             },
-            data: {
-                status: 'EXPIRED'
-            }
+            select: { id: true }
         });
+
+        const expiredSubscriptionIds = subscriptionsToExpire.map((subscription) => subscription.id);
+
+        const expiredActiveSubs = expiredSubscriptionIds.length > 0
+            ? await prisma.subscription.updateMany({
+                where: {
+                    id: { in: expiredSubscriptionIds },
+                    status: 'ACTIVE',
+                },
+                data: {
+                    status: 'EXPIRED'
+                }
+            })
+            : { count: 0 };
 
         results.expiredSubscriptions = expiredActiveSubs.count;
 
         if (expiredActiveSubs.count > 0) {
             Logger.info('Cron: Expired active subscriptions', { count: expiredActiveSubs.count });
+            try {
+                await notifyExpiredSubscriptions(expiredSubscriptionIds);
+            } catch (err) {
+                const error = toError(err);
+                Logger.warn('Cron: Failed to notify expired subscriptions', {
+                    subscriptionIds: expiredSubscriptionIds,
+                    error: error.message,
+                });
+                results.errors.push(`ExpiredSubscriptionNotifications: ${error.message}`);
+            }
         }
 
         // 2b. Clear paid tokens for users whose ended subscriptions are beyond the grace cutoff.

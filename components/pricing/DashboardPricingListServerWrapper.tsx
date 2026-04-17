@@ -27,9 +27,13 @@ interface DashboardPricingListServerWrapperProps {
   plans: unknown[];
   activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily;
   scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily;
+  teamPlanPurchaseDisabled?: boolean;
+  teamPlanPurchaseDisabledMessage?: string;
+  personalPlanPurchaseDisabled?: boolean;
+  personalPlanPurchaseDisabledMessage?: string;
 }
 
-export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily }: DashboardPricingListServerWrapperProps) {
+export default async function DashboardPricingListServerWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: DashboardPricingListServerWrapperProps) {
   // Localized cast: callers pass `unknown[]` to this server wrapper (from DB
   // layers); cast here to the client component's expected `DBPlan[]`.
   const typedPlans = plans as DBPlan[];
@@ -46,5 +50,5 @@ export default async function DashboardPricingListServerWrapper({ plans, activeR
   // Resolve currency on server and pass to client for consistent display
   const currency = await getActiveCurrencyAsync();
   
-  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} />;
+  return <DashboardPricingListWrapper plans={typedPlans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} teamPlanPurchaseDisabled={teamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={teamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={personalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={personalPlanPurchaseDisabledMessage} />;
 }

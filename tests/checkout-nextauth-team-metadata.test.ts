@@ -167,4 +167,53 @@ describe('checkout metadata for NextAuth team purchases', () => {
 
     expect(getOrganizationPlanContextMock).toHaveBeenCalledWith('user_1', 'org_local_1');
   });
+
+  it('rejects team checkout when the active workspace user is only a member', async () => {
+    getOrganizationPlanContextMock.mockResolvedValueOnce({
+      role: 'MEMBER',
+      organization: { id: 'org_local_1' },
+    });
+
+    const req = new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ planId: 'plan_team_sub' }),
+    });
+
+    const res = await checkoutPost(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('WORKSPACE_BILLING_OWNER_REQUIRED');
+    expect(body.redirectTo).toBe('/dashboard/plan');
+    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects personal checkout when an organization workspace is active', async () => {
+    prismaMock.plan.findUnique.mockResolvedValueOnce({
+      id: 'plan_personal_sub',
+      name: 'Personal Subscription',
+      autoRenew: true,
+      supportsOrganizations: false,
+      externalPriceId: 'price_personal_sub',
+      priceCents: 1500,
+      durationHours: 720,
+      sortOrder: 1,
+      externalPriceIds: null,
+    });
+
+    const req = new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ planId: 'plan_personal_sub' }),
+    });
+
+    const res = await checkoutPost(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe('PERSONAL_PLAN_BLOCKED_IN_WORKSPACE');
+    expect(body.redirectTo).toBe('/pricing');
+    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
+  });
 });

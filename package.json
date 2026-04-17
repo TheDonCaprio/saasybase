@@ -17,6 +17,7 @@
     "prisma:studio": "prisma studio --config prisma.config.ts",
     "typecheck": "tsc --noEmit",
     "public:export": "node scripts/public-export.mjs",
+    "public:publish": "bash scripts/publish-public-export.sh",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

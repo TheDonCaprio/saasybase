@@ -44,8 +44,11 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
+const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
+
 vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
+vi.mock('../lib/user-plan-context', () => ({ getOrganizationPlanContext: getOrganizationPlanContextMock }));
 vi.mock('../lib/rateLimit', () => ({
   rateLimit: rateLimitMock,
   createRateLimitKey: vi.fn(() => 'checkout:rate-limit-key'),
@@ -113,6 +116,7 @@ describe('checkout personal one-time guard', () => {
     vi.clearAllMocks();
     providerName = 'stripe';
     authMock.mockResolvedValue({ userId: 'user_1', orgId: null });
+    getOrganizationPlanContextMock.mockResolvedValue(null);
     createCustomerMock.mockResolvedValue('cus_embedded_1');
     createPaymentIntentMock.mockResolvedValue({ clientSecret: 'order_mock', paymentIntentId: 'order_mock' });
     createSubscriptionIntentMock.mockResolvedValue({ clientSecret: 'sub_mock', subscriptionId: 'sub_mock' });
@@ -141,7 +145,7 @@ describe('checkout personal one-time guard', () => {
     prismaMock.user.update.mockResolvedValue({ id: 'user_1' });
   });
 
-  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout when the team workspace is active', async () => {
+  it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout when an organization workspace is active', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
 
     const req = new NextRequest('http://localhost/api/checkout', {
@@ -154,9 +158,9 @@ describe('checkout personal one-time guard', () => {
     const body = (await res.json()) as { code?: string; redirectTo?: string; error?: string };
 
     expect(res.status).toBe(409);
-    expect(body.code).toBe('PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION');
-    expect(body.redirectTo).toBe('/dashboard/team');
-    expect(body.error).toContain('Personal one-time top-ups are unavailable');
+    expect(body.code).toBe('PERSONAL_PLAN_BLOCKED_IN_WORKSPACE');
+    expect(body.redirectTo).toBe('/pricing');
+    expect(body.error).toContain('Personal plans can only be purchased');
   });
 
   it('allows /api/checkout in the personal workspace even if a team subscription exists', async () => {
@@ -174,7 +178,7 @@ describe('checkout personal one-time guard', () => {
     expect(body.url).toBe('https://checkout.example.com/session_1');
   });
 
-  it('returns PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION from /api/checkout/embedded when the team workspace is active', async () => {
+  it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout/embedded when an organization workspace is active', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
 
     const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
@@ -185,9 +189,9 @@ describe('checkout personal one-time guard', () => {
     const body = (await res.json()) as { code?: string; redirectTo?: string; error?: string };
 
     expect(res.status).toBe(409);
-    expect(body.code).toBe('PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION');
-    expect(body.redirectTo).toBe('/dashboard/team');
-    expect(body.error).toContain('Personal one-time top-ups are unavailable');
+    expect(body.code).toBe('PERSONAL_PLAN_BLOCKED_IN_WORKSPACE');
+    expect(body.redirectTo).toBe('/pricing');
+    expect(body.error).toContain('Personal plans can only be purchased');
   });
 
   it('allows /api/checkout/embedded in the personal workspace even if a team subscription exists', async () => {
@@ -224,5 +228,62 @@ describe('checkout personal one-time guard', () => {
       cancelUrl: '/dashboard?purchase=cancelled&provider=razorpay&status=cancelled',
       mode: 'payment',
     }));
+  });
+
+  it('rejects /api/checkout/embedded for team plans when the active workspace user is only a member', async () => {
+    authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+    prismaMock.plan.findUnique.mockResolvedValueOnce({
+      id: 'plan_team_sub',
+      name: 'Team Subscription',
+      autoRenew: true,
+      supportsOrganizations: true,
+      externalPriceId: 'price_team_sub',
+      priceCents: 5000,
+      durationHours: 720,
+      sortOrder: 1,
+    });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    getOrganizationPlanContextMock.mockResolvedValueOnce({
+      role: 'MEMBER',
+      organization: { id: 'org_team_1' },
+    });
+
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_team_sub', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { code?: string; redirectTo?: string; error?: string };
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('WORKSPACE_BILLING_OWNER_REQUIRED');
+    expect(body.redirectTo).toBe('/dashboard/plan');
+    expect(body.error).toContain('Only the workspace owner');
+  });
+
+  it('rejects recurring personal checkout in an organization workspace', async () => {
+    authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
+    prismaMock.plan.findUnique.mockResolvedValueOnce({
+      id: 'plan_personal_sub',
+      name: 'Personal Subscription',
+      autoRenew: true,
+      supportsOrganizations: false,
+      externalPriceId: 'price_personal_sub',
+      priceCents: 2500,
+      durationHours: 720,
+      sortOrder: 1,
+    });
+
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_sub', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { code?: string; redirectTo?: string; error?: string };
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe('PERSONAL_PLAN_BLOCKED_IN_WORKSPACE');
+    expect(body.redirectTo).toBe('/pricing');
+    expect(body.error).toContain('Personal plans can only be purchased');
   });
 });

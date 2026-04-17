@@ -46,6 +46,24 @@ function isTeamWorkspace(orgId: string | null | undefined): boolean {
   return typeof orgId === 'string' && orgId.length > 0;
 }
 
+function teamWorkspaceOwnerRequiredResponse() {
+  return jsonError(
+    'Only the workspace owner can purchase or change team plans for this workspace.',
+    403,
+    'WORKSPACE_BILLING_OWNER_REQUIRED',
+    { redirectTo: '/dashboard/plan' }
+  );
+}
+
+function personalWorkspacePurchaseRequiredResponse() {
+  return jsonError(
+    'Personal plans can only be purchased from your personal workspace. Switch out of the active organization workspace and try again.',
+    409,
+    'PERSONAL_PLAN_BLOCKED_IN_WORKSPACE',
+    { redirectTo: '/pricing' }
+  );
+}
+
 export async function POST(req: NextRequest) {
   let userId: string | null = null;
 
@@ -278,30 +296,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const selectedPlanIsOneTime = dbPlanRecord?.['autoRenew'] !== true;
     const selectedPlanIsTeam = dbPlanRecord?.['supportsOrganizations'] === true;
-    if (selectedPlanIsOneTime && !selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
-      const activeTeamSubscription = await prisma.subscription.findFirst({
-        where: {
-          userId,
-          status: 'ACTIVE',
-          expiresAt: { gt: new Date() },
-          plan: {
-            autoRenew: true,
-            supportsOrganizations: true,
-          },
-        },
-        select: { id: true },
-      });
-
-      if (activeTeamSubscription?.id) {
-        return jsonError(
-          'Personal one-time top-ups are unavailable while your Team subscription is active. Buy a Team top-up from your workspace billing.',
-          409,
-          'PERSONAL_TOPUP_BLOCKED_FOR_TEAM_SUBSCRIPTION',
-          { redirectTo: '/dashboard/team' }
-        );
-      }
+    if (!selectedPlanIsTeam && isTeamWorkspace(activeClerkOrgId)) {
+      return personalWorkspacePurchaseRequiredResponse();
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId! } });
@@ -312,6 +309,10 @@ export async function POST(req: NextRequest) {
     const activeOrganizationContext = selectedPlanIsTeam
       ? await getOrganizationPlanContext(userId!, activeClerkOrgId)
       : null;
+
+    if (selectedPlanIsTeam && activeOrganizationContext?.role === 'MEMBER') {
+      return teamWorkspaceOwnerRequiredResponse();
+    }
 
     // Get priceId either from environment (predefined plans) or directly from DB (custom plans)
     let priceId: string | undefined;

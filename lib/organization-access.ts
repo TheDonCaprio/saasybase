@@ -9,6 +9,7 @@ import {
   shouldResetPaidTokensOnExpiryForPlanAutoRenew,
   type OrganizationExpiryMode,
 } from './settings';
+import { notifyRemovedOrganizationOwners, notifySuspendedOrganizationOwners } from './notifications';
 import { workspaceService } from './workspace-service';
 
 const TEAM_SUB_STATUSES = ['ACTIVE', 'PENDING', 'CANCELLED', 'PAST_DUE'] as const;
@@ -322,14 +323,25 @@ async function suspendOrganizationsByIds(
 
   const orgs = await prisma.organization.findMany({
     where: { id: { in: uniqueOrgIds } },
-    select: { id: true, clerkOrganizationId: true, ownerUserId: true },
+    select: {
+      id: true,
+      name: true,
+      clerkOrganizationId: true,
+      ownerUserId: true,
+      billingEmail: true,
+      owner: {
+        select: {
+          email: true,
+          name: true,
+        },
+      },
+    },
   });
   if (orgs.length === 0) return;
 
   const tokenResetByOrgId = context?.useExpiryTokenResetPolicy
     ? await resolveSuspendedOrganizationTokenResetMap(
         orgs
-          .filter((org): org is { id: string; clerkOrganizationId: string | null; ownerUserId: string } => typeof org.ownerUserId === 'string' && org.ownerUserId.length > 0)
           .map((org) => ({ id: org.id, ownerUserId: org.ownerUserId }))
       )
     : null;
@@ -379,6 +391,19 @@ async function suspendOrganizationsByIds(
     });
   }
 
+  await notifySuspendedOrganizationOwners(
+    orgs
+      .filter((org): org is typeof org & { ownerUserId: string } => typeof org.ownerUserId === 'string' && org.ownerUserId.length > 0)
+      .map((org) => ({
+        id: org.id,
+        name: org.name,
+        ownerUserId: org.ownerUserId,
+        billingEmail: org.billingEmail ?? null,
+        owner: org.owner,
+      })),
+    context?.reason,
+  );
+
   Logger.info('Suspended local organizations after losing team access', {
     userId: context?.userId,
     organizationIds: orgs.map((org) => org.id),
@@ -405,7 +430,19 @@ export async function deactivateOrganizationsByIds(
 
   const orgs = await prisma.organization.findMany({
     where: { id: { in: uniqueOrgIds } },
-    select: { id: true, clerkOrganizationId: true, ownerUserId: true },
+    select: {
+      id: true,
+      name: true,
+      clerkOrganizationId: true,
+      ownerUserId: true,
+      billingEmail: true,
+      owner: {
+        select: {
+          email: true,
+          name: true,
+        },
+      },
+    },
   });
   if (orgs.length === 0) return;
 
@@ -474,6 +511,19 @@ export async function deactivateOrganizationsByIds(
       providerName,
     });
   }
+
+  await notifyRemovedOrganizationOwners(
+    orgs
+      .filter((org): org is typeof org & { ownerUserId: string } => typeof org.ownerUserId === 'string' && org.ownerUserId.length > 0)
+      .map((org) => ({
+        id: org.id,
+        name: org.name,
+        ownerUserId: org.ownerUserId,
+        billingEmail: org.billingEmail ?? null,
+        owner: org.owner,
+      })),
+    context?.reason,
+  );
 
   try {
     const result = await prisma.organization.deleteMany({ where: { id: { in: dbOrgIds } } });

@@ -1299,6 +1299,154 @@ The {{siteName}} Team`,
       })
     },
     {
+      key: 'organization_suspended',
+      name: 'Organization Suspended',
+      description: 'Sent when a workspace is suspended after team access is lost',
+      subject: '{{siteName}}: {{organizationName}} Workspace Suspended',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
+    .notice-box { background: #fff7ed; border-left: 4px solid #f97316; padding: 15px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="header">
+      <h1>Workspace Suspended</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+      <p>Your <strong>{{organizationName}}</strong> workspace has been suspended.</p>
+      <div class="notice-box">
+        <strong>Reason:</strong><br>
+        {{reason}}
+      </div>
+      <p>Workspace actions remain blocked until access is restored. You can review your account and renew team access from your dashboard.</p>
+      <p><a href="{{dashboardUrl}}" class="button">Open Dashboard</a></p>
+      <p>If you need help, contact us at {{supportEmail}}.</p>
+      <p>Best regards,<br>The {{siteName}} Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{siteName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Your {{organizationName}} workspace has been suspended.
+
+Reason:
+{{reason}}
+
+Workspace actions remain blocked until access is restored. You can review your account and renew team access from your dashboard: {{dashboardUrl}}
+
+If you need help, contact us at {{supportEmail}}.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User\'s first name',
+        organizationName: 'Workspace name',
+        reason: 'Why the workspace was suspended',
+        dashboardUrl: 'Link to the dashboard/team page',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
+      key: 'organization_removed',
+      name: 'Organization Removed',
+      description: 'Sent when a workspace is dismantled after team access is lost',
+      subject: '{{siteName}}: {{organizationName}} Workspace Removed',
+      active: true,
+      htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .brand { text-align: center; padding: 0 0 12px; }
+    .brand img { max-height: 56px; width: auto; display: inline-block; }
+    .header { background: linear-gradient(135deg, {{accentColor}} 0%, {{accentHoverColor}} 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; }
+    .notice-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; }
+    .button { display: inline-block; background: {{accentColor}}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <img src="{{siteLogo}}" alt="{{siteName}} logo" />
+    </div>
+    <div class="header">
+      <h1>Workspace Removed</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+      <p>Your <strong>{{organizationName}}</strong> workspace has been removed.</p>
+      <div class="notice-box">
+        <strong>Reason:</strong><br>
+        {{reason}}
+      </div>
+      <p>The previous workspace access path is no longer available. If you want to continue using team features, you can create or restore access by renewing team billing.</p>
+      <p><a href="{{billingUrl}}" class="button">Review Billing</a></p>
+      <p>If you need help, contact us at {{supportEmail}}.</p>
+      <p>Best regards,<br>The {{siteName}} Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{siteName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      textBody: `Hi {{firstName}},
+
+Your {{organizationName}} workspace has been removed.
+
+Reason:
+{{reason}}
+
+The previous workspace access path is no longer available. If you want to continue using team features, you can create or restore access by renewing team billing: {{billingUrl}}
+
+If you need help, contact us at {{supportEmail}}.
+
+Best regards,
+The {{siteName}} Team`,
+      variables: JSON.stringify({
+        firstName: 'User\'s first name',
+        organizationName: 'Workspace name',
+        reason: 'Why the workspace was removed',
+        billingUrl: 'Link to billing or pricing page',
+        siteName: 'Site name',
+        supportEmail: 'Support email address',
+        siteLogo: 'URL of the site logo image displayed at the top of the email'
+      })
+    },
+    {
       key: 'subscription_renewed',
       name: 'Subscription Renewed',
       description: 'Sent when a recurring subscription is successfully renewed',

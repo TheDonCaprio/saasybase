@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const deleteOrganizationMock = vi.hoisted(() => vi.fn(async () => undefined));
+const notifyRemovedOrganizationOwnersMock = vi.hoisted(() => vi.fn(async () => undefined));
+const notifySuspendedOrganizationOwnersMock = vi.hoisted(() => vi.fn(async () => undefined));
 
 const authServiceMock = vi.hoisted(() => ({
   providerName: 'nextauth',
@@ -32,6 +34,10 @@ const prismaMock = vi.hoisted(() => ({
 vi.mock('../lib/auth-provider', () => ({ authService: authServiceMock }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+vi.mock('../lib/notifications', () => ({
+  notifyRemovedOrganizationOwners: notifyRemovedOrganizationOwnersMock,
+  notifySuspendedOrganizationOwners: notifySuspendedOrganizationOwnersMock,
+}));
 vi.mock('../lib/settings', () => ({
   getOrganizationExpiryMode: vi.fn(async () => 'SUSPEND'),
   getPaidTokensNaturalExpiryGraceHours: vi.fn(async () => 24),
@@ -44,7 +50,14 @@ describe('organization teardown by provider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.organization.findMany.mockResolvedValue([
-      { id: 'org_1', clerkOrganizationId: 'provider_org_1', ownerUserId: 'user_1' },
+      {
+        id: 'org_1',
+        name: 'Acme Workspace',
+        clerkOrganizationId: 'provider_org_1',
+        ownerUserId: 'user_1',
+        billingEmail: null,
+        owner: { email: 'owner@example.com', name: 'Owner User' },
+      },
     ]);
     prismaMock.subscription.findFirst.mockResolvedValue(null);
   });
@@ -132,5 +145,47 @@ describe('organization teardown by provider', () => {
       where: { id: { in: ['org_1'] } },
       data: { tokenBalance: 0 },
     });
+  });
+
+  it('notifies workspace owners when an organization is suspended', async () => {
+    authServiceMock.providerName = 'clerk';
+
+    await deactivateOrganizationsByIds(['org_1'], {
+      userId: 'user_1',
+      reason: 'cron-process-expiry',
+      mode: 'SUSPEND',
+    });
+
+    expect(notifySuspendedOrganizationOwnersMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: 'org_1',
+          name: 'Acme Workspace',
+          ownerUserId: 'user_1',
+        }),
+      ],
+      'cron-process-expiry'
+    );
+  });
+
+  it('notifies workspace owners when an organization is removed', async () => {
+    authServiceMock.providerName = 'clerk';
+
+    await deactivateOrganizationsByIds(['org_1'], {
+      userId: 'user_1',
+      reason: 'cron-process-expiry',
+      mode: 'DISMANTLE',
+    });
+
+    expect(notifyRemovedOrganizationOwnersMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: 'org_1',
+          name: 'Acme Workspace',
+          ownerUserId: 'user_1',
+        }),
+      ],
+      'cron-process-expiry'
+    );
   });
 });

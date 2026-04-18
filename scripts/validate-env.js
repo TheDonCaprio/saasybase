@@ -25,7 +25,47 @@ function fail(msg) {
   process.exit(1);
 }
 
+function parseNodeVersion(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version || '');
+  if (!match) {
+    fail(`Unable to parse Node.js version: ${version || 'unknown'}`);
+  }
+
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+  };
+}
+
+function compareVersions(left, right) {
+  if (left.major !== right.major) {
+    return left.major - right.major;
+  }
+  if (left.minor !== right.minor) {
+    return left.minor - right.minor;
+  }
+  return left.patch - right.patch;
+}
+
+function isSupportedNodeVersion(version) {
+  if (version.major === 20) {
+    return compareVersions(version, { major: 20, minor: 19, patch: 0 }) >= 0;
+  }
+  if (version.major === 22) {
+    return compareVersions(version, { major: 22, minor: 12, patch: 0 }) >= 0;
+  }
+  return version.major >= 24;
+}
+
 try {
+  const currentNodeVersion = parseNodeVersion(process.versions.node);
+  if (!isSupportedNodeVersion(currentNodeVersion)) {
+    fail(
+      `Unsupported Node.js runtime ${process.versions.node}. Use Node.js ^20.19.0, ^22.12.0, or >=24.0.0.`
+    );
+  }
+
   const val = process.env.NEXT_PUBLIC_APP_URL;
   if (!val) {
     fail('NEXT_PUBLIC_APP_URL is not set. Set it in your environment or .env file.');

@@ -157,7 +157,9 @@ These files explain project-specific requirements like using the auth/payment ab
 
 ## Quick Start
 
-> **Requires:** Node.js 18+ and npm.
+> **Requires:** Node.js `^20.19.0`, `^22.12.0`, or `>=24.0.0`, plus npm.
+
+Node 18 is no longer supported. The current stack depends on Next.js 16 and Prisma 7, and Prisma 7 sets the effective minimum runtime floor.
 
 ```bash
 # 1. Copy env template
@@ -1449,6 +1451,8 @@ STRIPE_WEBHOOK_SECRET="whsec_primary,whsec_rotating"
 
 Coolify can deploy SaaSyBase as a standard Node/Next.js app without a custom Dockerfile.
 
+Pin the application runtime to a supported Node.js version before the first deploy. This project supports Node.js `^20.19.0`, `^22.12.0`, or `>=24.0.0`. Do not rely on older platform defaults such as Node 18.
+
 Recommended setup:
 
 1. Connect the repository as a Node or Nixpacks-style application.
@@ -1462,6 +1466,8 @@ Recommended setup:
 ### Linux VPS (Nginx or Apache)
 
 For bare-metal / VPS hosts (AlmaLinux, RHEL, Ubuntu):
+
+Install and pin a supported Node.js runtime first. Match the version policy in `package.json#engines`: Node.js `^20.19.0`, `^22.12.0`, or `>=24.0.0`.
 
 **Option 1 — systemd EnvironmentFile**
 

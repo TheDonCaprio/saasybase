@@ -6,6 +6,8 @@
 
 ## Development Setup
 
+Use a supported Node runtime before installing dependencies: `^20.19.0`, `^22.12.0`, or `>=24.0.0`.
+
 ```bash
 cp .env.example .env.local
 npm install

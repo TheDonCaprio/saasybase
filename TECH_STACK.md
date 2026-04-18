@@ -11,7 +11,9 @@
 | **Next.js** | 16.x | Full-stack React framework (App Router) | `next.config.mjs` |
 | **React** | 18.x | UI library | — |
 | **TypeScript** | 5.x | Type safety | `tsconfig.json` |
-| **Node.js** | 18+ | Runtime | — |
+| **Node.js** | ^20.19.0, ^22.12.0, or >=24.0.0 | Runtime | `package.json#engines` |
+
+Node 18 is not supported by the current stack. Next.js 16 requires Node 20.9+, and Prisma 7 raises the effective minimum to Node 20.19+.
 
 ---
 

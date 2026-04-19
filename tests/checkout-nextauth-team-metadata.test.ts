@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const authMock = vi.hoisted(() => ({
-  getSession: vi.fn<[], Promise<{ userId: string; orgId: string | null }>>(async () => ({ userId: 'user_1', orgId: 'org_local_1' })),
+  getSession: vi.fn(async (): Promise<{ userId: string; orgId: string | null }> => ({ userId: 'user_1', orgId: 'org_local_1' })),
   providerName: 'nextauth',
 }));
 

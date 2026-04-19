@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: [path.resolve(__dirname, 'tests/vitest.setup.ts')],
-    exclude: [...configDefaults.exclude, 'tests/e2e/**'],
+    exclude: [...configDefaults.exclude, 'tests/e2e/**', 'dist/public-export/**'],
   },
   resolve: {
     alias: {

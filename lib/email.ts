@@ -8,6 +8,8 @@ import { getRenderedTemplate, type EmailVariables } from './email-templates';
 
 type EmailProviderName = 'nodemailer' | 'resend';
 
+const SMTP_CONTROL_CHAR_PATTERN = /[\r\n]/;
+
 function escapeHtml(value: string): string {
 	return value
 		.replace(/&/g, '&amp;')
@@ -89,6 +91,39 @@ export type SendEmailOptions = {
 	replyTo?: string | null;
 };
 
+function assertNoSmtpControlChars(value: string | null | undefined, label: string): string | undefined {
+	if (value == null) return undefined;
+	if (SMTP_CONTROL_CHAR_PATTERN.test(value)) {
+		throw new Error(`${label} contains invalid control characters`);
+	}
+	return value;
+}
+
+function toSafeHostnameCandidate(value: string | null | undefined): string | null {
+	const normalized = assertNoSmtpControlChars(value, 'SMTP client name source')?.trim().toLowerCase();
+	if (!normalized) return null;
+
+	try {
+		const parsed = new URL(normalized);
+		if (/^[a-z0-9.-]+$/i.test(parsed.hostname)) {
+			return parsed.hostname;
+		}
+	} catch {
+		if (/^[a-z0-9.-]+$/i.test(normalized)) {
+			return normalized;
+		}
+	}
+
+	return null;
+}
+
+function getSafeSmtpClientName(): string {
+	return toSafeHostnameCandidate(process.env.NEXT_PUBLIC_APP_DOMAIN)
+		|| toSafeHostnameCandidate(process.env.NEXTAUTH_URL)
+		|| toSafeHostnameCandidate(process.env.NEXT_PUBLIC_APP_URL)
+		|| 'localhost';
+}
+
 let cachedTransport: nodemailer.Transporter | null = null;
 let cachedResend: Resend | null = null;
 
@@ -98,20 +133,24 @@ function getEmailProvider(): EmailProviderName {
 
 function createTransporter(): nodemailer.Transporter {
 	const defaultHost = '127.0.0.1';
-	const host = process.env.SMTP_HOST || defaultHost;
+	const host = assertNoSmtpControlChars(process.env.SMTP_HOST || defaultHost, 'SMTP_HOST') || defaultHost;
 	const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
-	const user = process.env.SMTP_USER || undefined;
+	const user = assertNoSmtpControlChars(process.env.SMTP_USER || undefined, 'SMTP_USER');
 	const pass = process.env.SMTP_PASS || undefined;
+	const name = getSafeSmtpClientName();
 
 	if (!host) {
-		return nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true });
+		return nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true, disableFileAccess: true, disableUrlAccess: true });
 	}
 
 	return nodemailer.createTransport({
 		host,
+		name,
 		port,
 		secure: port === 465,
 		auth: user && pass ? { user, pass } : undefined,
+		disableFileAccess: true,
+		disableUrlAccess: true,
 		// Give slow local mail catchers (MailHog, Mailpit) time to respond
 		connectionTimeout: 10_000,
 		greetingTimeout: 10_000,
@@ -296,15 +335,20 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 
 	const provider = getEmailProvider();
 	try {
+		const safeFrom = assertNoSmtpControlChars(from, 'Email from') || from;
+		const safeTo = assertNoSmtpControlChars(opts.to, 'Email recipient') || opts.to;
+		const safeReplyTo = assertNoSmtpControlChars(opts.replyTo ?? undefined, 'Email replyTo');
+		const safeSubject = assertNoSmtpControlChars(subject ?? fallbackSubject, 'Email subject') || fallbackSubject;
+
 		if (provider === 'resend') {
 			const resend = getResendClient();
 			const resendOptions = {
-				from,
-				to: opts.to,
-				subject: subject ?? fallbackSubject,
+				from: safeFrom,
+				to: safeTo,
+				subject: safeSubject,
 				text,
 				html,
-				replyTo: opts.replyTo ?? undefined,
+				replyTo: safeReplyTo,
 			} as Parameters<typeof resend.emails.send>[0];
 			const result = await resend.emails.send(resendOptions);
 
@@ -313,8 +357,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 			}
 		} else {
 			const transporter = getTransport();
-			const mailOptions: nodemailer.SendMailOptions = { from, to: opts.to, subject, text, html };
-			if (opts.replyTo) mailOptions.replyTo = opts.replyTo;
+			const mailOptions: nodemailer.SendMailOptions = { from: safeFrom, to: safeTo, subject: safeSubject, text, html };
+			if (safeReplyTo) mailOptions.replyTo = safeReplyTo;
 			await transporter.sendMail(mailOptions);
 		}
 		status = 'SENT';

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const sendMailMock = vi.hoisted(() => vi.fn(async () => ({ messageId: 'mail_123' })));
 const createTransportMock = vi.hoisted(() => vi.fn(() => ({ sendMail: sendMailMock })));
 const resendSendMock = vi.hoisted(() => vi.fn(async () => ({ data: { id: 'resend_123' }, error: null })));
-const resendCtorMock = vi.hoisted(() => vi.fn(() => ({ emails: { send: resendSendMock } })));
+const resendCtorMock = vi.hoisted(() => vi.fn(function () { return { emails: { send: resendSendMock } }; }));
 
 const prismaMock = vi.hoisted(() => ({
 	userSetting: { findFirst: vi.fn() },
@@ -49,6 +49,7 @@ describe('email provider switching', () => {
 		delete process.env.EMAIL_PROVIDER;
 		delete process.env.RESEND_API_KEY;
 		process.env.EMAIL_FROM = 'support@example.com';
+		process.env.NEXT_PUBLIC_APP_DOMAIN = 'example.com';
 	});
 
 	it('uses nodemailer by default', async () => {
@@ -64,6 +65,12 @@ describe('email provider switching', () => {
 
 		expect(result.success).toBe(true);
 		expect(createTransportMock).toHaveBeenCalledTimes(1);
+		expect(createTransportMock).toHaveBeenCalledWith(expect.objectContaining({
+			host: '127.0.0.1',
+			name: 'example.com',
+			disableFileAccess: true,
+			disableUrlAccess: true,
+		}));
 		expect(sendMailMock).toHaveBeenCalledTimes(1);
 		expect(resendCtorMock).not.toHaveBeenCalled();
 	});
@@ -92,5 +99,22 @@ describe('email provider switching', () => {
 			replyTo: undefined,
 		});
 		expect(sendMailMock).not.toHaveBeenCalled();
+	});
+
+	it('rejects header control characters before attempting delivery', async () => {
+		vi.resetModules();
+		const { sendEmail } = await import('../lib/email');
+
+		const result = await sendEmail({
+			to: 'user@example.com',
+			subject: 'Hello\r\nBCC: injected@example.com',
+			text: 'Hello',
+			userId: 'user_1',
+		});
+
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('Email subject contains invalid control characters');
+		expect(sendMailMock).not.toHaveBeenCalled();
+		expect(resendSendMock).not.toHaveBeenCalled();
 	});
 });

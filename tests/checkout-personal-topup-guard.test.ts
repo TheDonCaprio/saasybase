@@ -44,8 +44,8 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
-const resolveCheckoutWorkspaceContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
+const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn(async (): Promise<unknown | null> => null));
+const resolveCheckoutWorkspaceContextMock = vi.hoisted(() => vi.fn(async (): Promise<unknown | null> => null));
 
 vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));

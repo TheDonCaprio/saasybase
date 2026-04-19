@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const authMock = vi.hoisted(() => ({
-  getSession: vi.fn<[], Promise<{ userId: string; orgId: string | null }>>(async () => ({ userId: 'user_1', orgId: null })),
+  getSession: vi.fn(async (): Promise<{ userId: string; orgId: string | null }> => ({ userId: 'user_1', orgId: null })),
 }));
 
 const cancelSubscriptionMock = vi.hoisted(() => vi.fn(async () => ({ currentPeriodEnd: new Date('2026-05-01T00:00:00.000Z') })));
@@ -19,7 +19,7 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
+const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn(async (): Promise<unknown | null> => null));
 const sendBillingNotificationMock = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('../lib/auth-provider', () => ({ authService: authMock }));

@@ -34,9 +34,9 @@ vi.mock('../lib/moderator', () => ({
 const userPlanContextMock = vi.hoisted(() => ({
   getEffectiveMemberTokenCap: vi.fn(() => null),
   getMemberCapStrategy: vi.fn(() => null),
-  getMemberSharedTokenBalance: vi.fn<[], number | null>(() => null),
+  getMemberSharedTokenBalance: vi.fn((): number | null => null),
   getPlanScope: vi.fn((orgId?: string | null) => (orgId ? 'WORKSPACE' : 'PERSONAL')),
-  getOrganizationPlanContext: vi.fn<[], Promise<unknown>>(async () => null),
+  getOrganizationPlanContext: vi.fn(async (): Promise<unknown> => null),
   getSubscriptionScopeFilter: vi.fn((scope: 'PERSONAL' | 'WORKSPACE') => (scope === 'WORKSPACE'
     ? { plan: { supportsOrganizations: true } }
     : { NOT: { plan: { supportsOrganizations: true } } })),

@@ -28,7 +28,7 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const getAuthSafeMock = vi.hoisted(
-  () => vi.fn<[], Promise<{ userId: string; orgId: string | null }>>(async () => ({ userId: 'user_1', orgId: 'org_clerk_123' }))
+  () => vi.fn(async (): Promise<{ userId: string; orgId: string | null }> => ({ userId: 'user_1', orgId: 'org_clerk_123' }))
 );
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));

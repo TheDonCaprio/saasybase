@@ -9,7 +9,7 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const syncOrganizationEligibilityForUserMock = vi.hoisted(() => vi.fn(async () => undefined));
-const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn<[], Promise<unknown | null>>(async () => null));
+const getOrganizationPlanContextMock = vi.hoisted(() => vi.fn(async (): Promise<unknown | null> => null));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/auth', () => ({

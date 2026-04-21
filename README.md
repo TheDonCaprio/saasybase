@@ -1,6 +1,6 @@
 # SaaSyBase
 
-A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **dual auth provider system** (Clerk or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
+A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
 
 ## What Is SaaSyBase?
 
@@ -245,7 +245,7 @@ CLERK_WEBHOOK_SECRET=""   # Required for webhook-driven user init and welcome em
 
 - UI components (`<AuthSignIn>`, `<AuthSignUp>`, `<AuthLoaded>`, `<AuthLoading>`, etc.) are re-exported from `lib/auth-provider/client/components` and switch automatically.
 - Clerk's `ClerkProvider` wraps the app in `components/AppAuthProvider.tsx` with automatic dark mode theming via a `MutationObserver` on the `<html>` class.
-- Organization primitives are powered by Clerk and synced to the local DB via webhooks.
+- Clerk organizations are synced to the local DB via webhooks, while Better Auth and NextAuth use the self-hosted organization lane exposed through the auth abstraction.
 
 ### Better Auth
 
@@ -315,7 +315,7 @@ GOOGLE_CLIENT_SECRET=""
 
 Key differences from Clerk:
 - Users are stored entirely in your own DB (Prisma adapter).
-- No built-in organization primitives (teams are managed by the app layer).
+- Organization primitives stay primarily app-managed in the NextAuth lane, without external provider sync.
 - Email verification uses an in-app pending-change flow (`lib/nextauth-email-verification.ts`).
 
 ---

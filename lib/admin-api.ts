@@ -76,13 +76,13 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
   {
     id: 'auth',
     title: 'Authentication',
-    description: 'Register, sign in, verify email, and reset passwords. These routes are only active when AUTH_PROVIDER=nextauth.',
+    description: 'Register, sign in, verify email, and reset passwords across the self-hosted auth lanes. Availability depends on the active auth provider for each route.',
     endpoints: [
       {
         method: 'POST',
         path: '/api/auth/register',
         summary: 'Register a new user',
-        description: 'Creates a new NextAuth user with email and password, stores a hashed password, and sends an email verification link.',
+        description: 'Creates a new self-hosted auth user with email and password, stores a hashed password, and sends an email verification link.',
         access: 'public',
         body: {
           email: 'string — required; valid email',
@@ -93,7 +93,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Rate limit: AUTH tier (strict).',
-          'Only available when AUTH_PROVIDER=nextauth; Clerk handles registration via its own UI.',
+          'Available on the self-hosted auth lanes; Clerk handles registration via its own UI.',
           'Returns 409 if the email already exists.',
         ],
         rateLimitTier: 'public',
@@ -136,6 +136,28 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         rateLimitTier: 'public',
         example: { email: 'user@example.com', password: 'secureP@ss1' },
         response: { ok: true, canSignIn: true }
+      },
+      {
+        method: 'POST',
+        path: '/api/auth/magic-link',
+        summary: 'Request Better Auth magic-link sign-in',
+        description: 'Accepts an email address and asks Better Auth to send a magic-link sign-in email when that user exists and the Better Auth provider is active.',
+        access: 'public',
+        body: {
+          email: 'string — required; valid email',
+          callbackURL: 'string? — optional same-origin callback after sign-in',
+          errorCallbackURL: 'string? — optional same-origin error redirect',
+          newUserCallbackURL: 'string? — optional same-origin redirect for new-user flow',
+        },
+        notes: [
+          'Rate limit: AUTH tier (strict).',
+          'Only available when AUTH_PROVIDER=betterauth; other providers return 400 MAGIC_LINK_UNAVAILABLE.',
+          'Returns the same success message whether or not the user exists to reduce account enumeration.',
+          'Callback URLs are normalized to same-origin values; foreign origins are ignored.',
+        ],
+        rateLimitTier: 'public',
+        example: { email: 'user@example.com', callbackURL: '/dashboard' },
+        response: { message: 'If that email is eligible, a sign-in link has been sent.' }
       },
       {
         method: 'POST',
@@ -480,6 +502,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
               reason: 'string — required',
               permanent: 'boolean? — true for permanent suspension, false for temporary',
             },
+            clearSuspension: '{} — no additional fields',
           },
         },
         notes: [
@@ -487,11 +510,12 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Rate limit: admin-users:action (limit 60 / 120s).',
           'action=updateRole is admin-only; moderators will receive 403.',
           'action=setSuspension immediately deletes active NextAuth DB sessions for the target user.',
+          'action=setSuspension returns both the updated user slice and a normalized suspension payload with code/message.',
           'On invalid action, returns 400 { error: "Invalid action" }.'
         ],
         rateLimitTier: 'admin',
         example: { action: 'setSuspension', data: { reason: 'Chargeback abuse', permanent: false } },
-        response: { success: true, user: { id: 'user_abc', suspendedAt: '2026-04-16T09:00:00.000Z', suspensionReason: 'Chargeback abuse', suspensionIsPermanent: false } }
+        response: { success: true, user: { id: 'user_abc', suspendedAt: '2026-04-16T09:00:00.000Z', suspensionReason: 'Chargeback abuse', suspensionIsPermanent: false }, suspension: { code: 'ACCOUNT_SUSPENDED', message: 'Your account is temporarily suspended.' } }
       },
       {
         method: 'DELETE',
@@ -636,7 +660,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         notes: ['Auth: requires admin/moderator via requireAdminOrModerator("users"). Rate limit: admin-plans:list (limit 240 / 120s).'],
         rateLimitTier: 'admin',
         example: {},
-        response: [{ id: 'plan_1', name: 'Pro Monthly', shortDescription: 'For growing teams', description: '<p>Rich text description</p>', priceCents: 2900, durationHours: 720, active: true, stripePriceId: 'price_123', externalPriceId: 'price_123', externalPriceIds: '{"stripe":"price_123"}', externalProductIds: '{"stripe":"prod_123"}', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, sortOrder: 1, tokenLimit: 1000, tokenName: 'tokens', supportsOrganizations: true, organizationSeatLimit: 10, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' }]
+        response: [{ id: 'plan_1', name: 'Pro Monthly', shortDescription: 'For growing teams', description: '<p>Rich text description</p>', priceCents: 2900, durationHours: 720, isLifetime: false, active: true, stripePriceId: 'price_123', externalPriceId: 'price_123', externalPriceIds: '{"stripe":"price_123"}', externalProductIds: '{"stripe":"prod_123"}', autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, sortOrder: 1, tokenLimit: 1000, tokenName: 'tokens', supportsOrganizations: true, organizationSeatLimit: 10, organizationTokenPoolStrategy: 'SHARED_FOR_ORG' }]
       },
       {
         method: 'POST',
@@ -661,7 +685,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           tokenName: 'string? — display label for tokens (e.g. "credits")',
           supportsOrganizations: 'boolean? — when true allows this plan to be used by team workspaces',
           organizationSeatLimit: 'number? — max members allowed in the workspace',
-          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | 'PRIVATE_FOR_USER'? — default 'SHARED_FOR_ORG'",
+          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER'? — default 'SHARED_FOR_ORG'",
         },
         notes: [
           'Auth: requires ADMIN via requireAdmin().',
@@ -708,7 +732,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           tokenName: 'string | null?',
           supportsOrganizations: 'boolean?',
           organizationSeatLimit: 'number | null?',
-          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | null?",
+          organizationTokenPoolStrategy: "'SHARED_FOR_ORG' | 'ALLOCATED_PER_MEMBER' | null?",
           createStripePrice: 'boolean? — default false',
           recurringIntervalCount: 'number? — int 1..365',
           autoRenew: 'boolean? (immutable: cannot change)',
@@ -806,11 +830,12 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'user',
         body: {
           subject: 'string — required; trimmed; must be non-empty',
-          message: 'string — required; trimmed; must be non-empty'
+          message: 'string — required; trimmed; must be non-empty',
+          category: 'string? — normalized to a supported support ticket category; defaults to GENERAL'
         },
         notes: ['Rate limit: support-tickets:create (limit 30 / 60s).'],
         rateLimitTier: 'user',
-        example: { subject: 'Cannot access dashboard', message: 'After upgrading to Pro, my dashboard shows an error.' },
+        example: { subject: 'Cannot access dashboard', message: 'After upgrading to Pro, my dashboard shows an error.', category: 'BILLING' },
         response: { ticket: { id: 'ticket_abc', subject: 'Cannot access dashboard', message: 'After upgrading to Pro, my dashboard shows an error.', category: 'GENERAL', status: 'OPEN', createdAt: '2026-04-04T12:00:00.000Z' } }
       },
       {
@@ -1023,7 +1048,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           ownerExemptFromCaps: 'boolean? — when true, workspace owner bypasses member cap enforcement',
         },
         notes: [
-          'At least one of the three fields must be present (400 otherwise).',
+          'At least one supported field must be present (400 otherwise).',
           'Requires owner access; non-owners receive 403.',
         ],
         rateLimitTier: 'user',
@@ -1175,16 +1200,21 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         body: {
           planId: 'string — required (apiSchemas.checkout)',
           couponCode: 'string? — /^[A-Za-z0-9-]{3,64}$/ (must be redeemed by user first)',
+          activeOrganizationId: 'string? — explicit workspace id when purchasing for the active workspace',
+          organizationId: 'string? — alias for activeOrganizationId',
+          localOrganizationId: 'string? — legacy alias for activeOrganizationId',
           skipProrationCheck: 'boolean? — when true, bypasses proration guard for recurring plan changes',
           prorationFallbackReason: 'string? — 1..100; only used when skipProrationCheck=true',
         },
         notes: [
-          'Accepts application/json or form-data (planId, couponCode).',
+          'Accepts application/json or form-data (planId, couponCode, activeOrganizationId/organizationId/localOrganizationId).',
           'Rate limit: 10 / 60s (keyed by user id when available).',
-          'If recurring-proration is enabled and user is switching recurring plans, returns 409 { prorationRequired: true } unless skipProrationCheck is set.'
+          'If recurring-proration is enabled and user is switching recurring plans, returns 409 { code: "PRORATION_REQUIRED", prorationRequired: true } unless skipProrationCheck is set.',
+          'Team-plan purchases require the workspace owner and may return 403 WORKSPACE_BILLING_OWNER_REQUIRED.',
+          'Personal-plan purchases from an active organization workspace return 409 PERSONAL_PLAN_BLOCKED_IN_WORKSPACE.'
         ],
         rateLimitTier: 'user',
-        example: { planId: 'plan_pro_monthly', couponCode: 'SAVE20' },
+        example: { planId: 'plan_pro_monthly', couponCode: 'SAVE20', activeOrganizationId: 'org_1' },
         response: { url: 'https://checkout.stripe.com/pay/cs_live_abc123...' }
       },
       {
@@ -1195,6 +1225,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         access: 'user',
         params: {
           session_id: 'string? — provider checkout session id',
+          payment_id: 'string? — provider payment id fallback when session_id is unavailable (notably Razorpay)',
           recent: "'1'? — enable recent-payment polling mode",
           since: 'number? — epoch ms; used only when recent=1 to detect a new SUCCEEDED payment created >= since',
         },
@@ -1202,6 +1233,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Requires auth (dev fallback exists in non-production).',
           'Can also accept payment_id for providers like Razorpay when session_id is unavailable.',
           'Depending on state, may return completed=false, pending=true, already=true, or active subscription info for recent=1 polling.',
+          'Successful team-plan confirmations can also include requiresOrganizationSetup=true and setupUrl when the buyer still needs to provision a workspace.',
         ],
         rateLimitTier: 'user',
         example: { query: { session_id: 'cs_test_123' } },
@@ -1218,15 +1250,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           currency: 'string? — optional',
           planId: 'string? — plan seed id or DB plan id',
           priceId: 'string? — optional; may be overridden by planId resolution',
+          couponCode: 'string? — redeemed coupon code to apply to the checkout',
+          activeOrganizationId: 'string? — explicit workspace id when purchasing for the active workspace',
+          organizationId: 'string? — alias for activeOrganizationId',
+          localOrganizationId: 'string? — legacy alias for activeOrganizationId',
+          skipProrationCheck: 'boolean|string? — bypasses recurring-plan proration guard when truthy',
+          prorationFallbackReason: 'string? — 1..100 chars; only used with skipProrationCheck',
           mode: "'payment' | 'subscription'?",
           dedupeKey: 'string? — optional; defaults to random UUID',
         },
         notes: [
           'Also supports POST with JSON body using the same fields.',
-          'Success payload varies by provider: embedded-capable providers return clientSecret/paymentIntentId, while redirect-only flows return { redirect:true, url, sessionId }.',
+          'Success payload varies by provider: embedded-capable providers return a payment/subscription intent plus pricing metadata, while redirect-only flows return { redirect:true, url, sessionId } plus the same pricing/context fields.',
+          'Team-plan purchases require the workspace owner and may return 403 WORKSPACE_BILLING_OWNER_REQUIRED; personal-plan purchases from an active workspace return 409 PERSONAL_PLAN_BLOCKED_IN_WORKSPACE.',
         ],
         rateLimitTier: 'user',
-        example: { query: { planId: 'plan_pro_monthly', mode: 'payment', currency: 'USD' } },
+        example: { query: { planId: 'plan_pro_monthly', mode: 'payment', currency: 'USD', couponCode: 'SAVE20', activeOrganizationId: 'org_1' } },
         response: { clientSecret: 'pi_client_secret_123', paymentIntentId: 'pi_123', provider: 'stripe', amount: 2900, originalAmount: 2900, discountCents: 0, couponCode: null, email: 'jane@example.com', currency: 'USD', planName: 'Pro Monthly', metadata: { userId: 'user_abc', planId: 'plan_pro_monthly', priceId: 'price_123', checkoutMode: 'payment' } }
       },
       {
@@ -1240,10 +1279,19 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           currency: 'string? — optional',
           planId: 'string? — plan seed id or DB plan id',
           priceId: 'string? — optional; may be overridden by planId resolution',
+          couponCode: 'string? — redeemed coupon code to apply to the checkout',
+          activeOrganizationId: 'string? — explicit workspace id when purchasing for the active workspace',
+          organizationId: 'string? — alias for activeOrganizationId',
+          localOrganizationId: 'string? — legacy alias for activeOrganizationId',
+          skipProrationCheck: 'boolean? — bypasses recurring-plan proration guard when true',
+          prorationFallbackReason: 'string? — 1..100 chars; only used with skipProrationCheck',
           mode: "'payment' | 'subscription'?",
           dedupeKey: 'string? — optional',
         },
-        notes: ['Success payload mirrors GET /api/checkout/embedded and may be embedded or redirect-shaped depending on provider and mode.'],
+        notes: [
+          'Success payload mirrors GET /api/checkout/embedded and may be embedded or redirect-shaped depending on provider and mode.',
+          'Redirect payloads also include provider, amount/originalAmount, discountCents, couponCode, planName, email, metadata, tokenLimit, tokenName, durationHours, and shortDescription.',
+        ],
         rateLimitTier: 'user',
         example: { planId: 'plan_pro_monthly', mode: 'payment', currency: 'USD', couponCode: 'SAVE20' },
         response: { clientSecret: 'pi_client_secret_123', paymentIntentId: 'pi_123', provider: 'stripe', amount: 2320, originalAmount: 2900, discountCents: 580, couponCode: 'SAVE20', email: 'jane@example.com', currency: 'USD', planName: 'Pro Monthly', metadata: { userId: 'user_abc', planId: 'plan_pro_monthly', priceId: 'price_123', checkoutMode: 'payment', couponCode: 'SAVE20', couponId: 'coupon_1', couponRedemptionId: 'red_1', inAppDiscountCents: '580', originalPriceCents: '2900' } }
@@ -3080,22 +3128,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           'Auth: requires an authenticated session.',
           'Returns 409 when the requested email is already in use.',
           'For providers that stage email changes behind verification, the response can include emailChangePending=true until the verification link is completed.',
-          'The current implementation supports deferred email changes for NextAuth password accounts.'
+          'Deferred email-change flows are currently used by both Better Auth and NextAuth, with provider-specific verification handling.'
         ],
         rateLimitTier: 'user',
         example: { name: 'Jane Doe', email: 'jane.new@example.com' },
-        response: { user: { id: 'user_abc', name: 'Jane Doe', email: 'jane@example.com' }, verificationRequired: true, emailChangePending: true, pendingEmail: 'jane.new@example.com' }
+        response: { user: { id: 'user_abc', name: 'Jane Doe', email: 'jane@example.com' }, verificationRequired: false, emailChangePending: true, pendingEmail: 'jane.new@example.com' }
       },
       {
         method: 'GET',
         path: '/api/user/active-org',
         summary: 'Get active workspace selection',
-        description: 'Returns the organizations the user belongs to and the currently selected active organization for providers or clients that use the app-managed workspace cookie.',
+        description: 'Returns the organizations the user belongs to and the currently selected active organization for the app-managed workspace switcher.',
         access: 'user',
         notes: [
           'Auth: requires an authenticated session.',
           'If the active-org cookie points at a workspace the user no longer belongs to, the cookie is cleared and activeOrgId is returned as null.',
-          'Providers with native organization switching may not rely on this endpoint, but it remains useful for app-managed workspace selection flows.'
+          'Used directly by the Better Auth and NextAuth workspace switchers; Clerk can rely on its native organization selection flow.'
         ],
         rateLimitTier: 'user',
         example: {},
@@ -3105,13 +3153,14 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         method: 'POST',
         path: '/api/user/active-org',
         summary: 'Set active workspace selection',
-        description: 'Stores the active organization id in an httpOnly cookie or clears it to switch back to the personal workspace.',
+        description: 'Stores the active organization id in an httpOnly cookie, or delegates to Better Auth active-organization state when that provider is enabled. Null clears the active workspace and switches back to personal.',
         access: 'user',
         body: {
           orgId: 'string | null — target organization id; null clears the active workspace',
         },
         notes: [
           'Auth: requires an authenticated session.',
+          'When AUTH_PROVIDER=betterauth, the route also calls the Better Auth setActiveOrganization API before updating the local cookie.',
           'Returns 403 when the user is not an active member of the requested organization.'
         ],
         rateLimitTier: 'user',

@@ -1,11 +1,12 @@
 /**
- * Active Organization API Route (NextAuth)
+ * Active Organization API Route
  * ============================================
  * GET  — Returns the user's organizations + active org
  * POST — Sets the active organization (stores in an httpOnly cookie)
  *
- * Only meaningful for the NextAuth provider. Clerk manages active org
- * internally via its own session cookie.
+ * Used by the app-managed workspace switcher. Better Auth also routes active
+ * organization changes through its own API here, while Clerk manages active org
+ * internally via its session state.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

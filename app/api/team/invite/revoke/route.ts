@@ -4,7 +4,21 @@ import { prisma } from '../../../../../lib/prisma';
 import { expireOrganizationInvite } from '../../../../../lib/teams';
 import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
 import { Logger } from '../../../../../lib/logger';
+import { getOrganizationReferenceWhere as getOrganizationReferenceMatches } from '../../../../../lib/organization-reference';
 import { toError } from '../../../../../lib/runtime-guards';
+
+function getOrganizationReferenceWhere(userId: string, orgId?: string | null) {
+  return orgId
+    ? {
+        ownerUserId: userId,
+        OR: getOrganizationReferenceMatches(orgId),
+      }
+    : { ownerUserId: userId };
+}
+
+function getProviderOrganizationId(organization: { id: string; providerOrganizationId: string | null }) {
+  return organization.providerOrganizationId ?? organization.id;
+}
 
 export async function POST(request: NextRequest) {
   const { userId, orgId } = await authService.getSession();
@@ -28,20 +42,18 @@ export async function POST(request: NextRequest) {
   }
 
   const organization = await prisma.organization.findFirst({
-    where: orgId
-      ? {
-          ownerUserId: userId,
-          OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
-        }
-      : { ownerUserId: userId },
-    select: { id: true, clerkOrganizationId: true },
+    where: getOrganizationReferenceWhere(userId, orgId),
+    select: { id: true, providerOrganizationId: true },
   });
 
   if (!organization) {
     return NextResponse.json({ ok: false, error: 'No organization found.' }, { status: 400 });
   }
 
-  const providerOrganizationId = organization.clerkOrganizationId ?? organization.id;
+  const providerOrganizationId = getProviderOrganizationId({
+    id: organization.id,
+    providerOrganizationId: organization.providerOrganizationId,
+  });
 
   // Attempt provider-specific invitation revocation when supported.
   if (authService.supportsFeature('organization_invites')) {

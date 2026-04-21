@@ -7,6 +7,7 @@ import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/cl
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays, faBars, faFileInvoiceDollar, faSackDollar, faHouse } from '@fortawesome/free-solid-svg-icons';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
+import { ClientOnly } from '@/components/ui/ClientOnly';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 import { useUserProfile } from '@/components/UserProfileProvider';
 
@@ -212,15 +213,17 @@ export default function AccountMenu() {
               <div className="p-4 space-y-3">
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-500">Workspace</p>
-                  <div data-auth-org-switcher="account-menu">
-                    <AuthOrganizationSwitcher
-                      hidePersonal={false}
-                      appearance={getOrganizationSwitcherAppearance({
-                        variant: 'account-menu',
-                        canCreateOrganization: profile?.canCreateOrganization,
-                      })}
-                    />
-                  </div>
+                  <ClientOnly fallback={<div className="h-10 rounded-xl border border-neutral-200 dark:border-neutral-800" aria-hidden="true" />}>
+                    <div data-auth-org-switcher="account-menu">
+                      <AuthOrganizationSwitcher
+                        hidePersonal={false}
+                        appearance={getOrganizationSwitcherAppearance({
+                          variant: 'account-menu',
+                          canCreateOrganization: profile?.canCreateOrganization,
+                        })}
+                      />
+                    </div>
+                  </ClientOnly>
                 </div>
 
                 {/* Plan Info */}

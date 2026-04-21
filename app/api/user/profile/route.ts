@@ -6,6 +6,10 @@ import { authService } from '../../../../lib/auth-provider';
 import { getActiveTeamSubscriptionForOrganization } from '../../../../lib/organization-access';
 import { validateAndFormatPersonName } from '../../../../lib/name-validation';
 import { sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
+import {
+  clearBetterAuthPendingEmailChange,
+  recordBetterAuthPendingEmailChange,
+} from '../../../../lib/better-auth-email-change';
 import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { formatDateServer } from '../../../../lib/formatDate.server';
 import { Logger } from '../../../../lib/logger';
@@ -20,10 +24,83 @@ import {
 
 type BillingDateLabel = 'Expires' | 'Cancels' | 'Renews';
 
+type ProfileEmailChangeStrategy = 'direct-update' | 'nextauth-verification' | 'betterauth-managed';
+
 function getBillingDateLabel(params: { autoRenew?: boolean | null; canceledAt?: Date | null }): BillingDateLabel {
   if (params.canceledAt) return 'Cancels';
   if (params.autoRenew) return 'Renews';
   return 'Expires';
+}
+
+function normalizeCallbackUrl(request: Request, callbackURL?: string) {
+  if (!callbackURL) {
+    return undefined;
+  }
+
+  const requestOrigin = new URL(request.url).origin;
+
+  try {
+    if (callbackURL.startsWith('/')) {
+      return new URL(callbackURL, requestOrigin).toString();
+    }
+
+    const candidate = new URL(callbackURL);
+    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeBetterAuthProfileError(error: unknown): { status: number; message: string } | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const candidate = error as {
+    status?: number;
+    statusCode?: number;
+    body?: { message?: string };
+    message?: string;
+  };
+
+  const status = typeof candidate.status === 'number'
+    ? candidate.status
+    : typeof candidate.statusCode === 'number'
+      ? candidate.statusCode
+      : null;
+  const message = candidate.body?.message || candidate.message;
+
+  if (status && message) {
+    return { status, message };
+  }
+
+  return null;
+}
+
+function resolveProfileEmailChangeStrategy(params: {
+  providerName: string;
+  emailChanged: boolean;
+}): ProfileEmailChangeStrategy {
+  if (!params.emailChanged) {
+    return 'direct-update';
+  }
+
+  if (params.providerName === 'nextauth') {
+    return 'nextauth-verification';
+  }
+
+  if (params.providerName === 'betterauth') {
+    return 'betterauth-managed';
+  }
+
+  return 'direct-update';
+}
+
+function requiresPasswordBackedEmailChange(params: {
+  strategy: ProfileEmailChangeStrategy;
+  hasPassword: boolean;
+}): boolean {
+  return params.strategy === 'nextauth-verification' && !params.hasPassword;
 }
 
 export async function GET() {
@@ -243,6 +320,7 @@ export async function PATCH(request: Request) {
       firstName?: string;
       lastName?: string;
       email?: string;
+      callbackURL?: string;
     };
     const providerName = authService.providerName;
 
@@ -259,6 +337,7 @@ export async function PATCH(request: Request) {
     let verificationRequired = false;
     let emailChangePending = false;
     let pendingEmail: string | null = null;
+    let betterAuthEmailChangeRequested = false;
 
     if (typeof name === 'string' || typeof firstName === 'string' || typeof lastName === 'string') {
       const validatedName = validateAndFormatPersonName({
@@ -277,6 +356,10 @@ export async function PATCH(request: Request) {
     if (typeof email === 'string') {
       const trimmed = email.toLowerCase().trim();
       const emailChanged = trimmed.length > 0 && trimmed !== (currentUser.email ?? '').toLowerCase();
+      const emailChangeStrategy = resolveProfileEmailChangeStrategy({
+        providerName,
+        emailChanged,
+      });
       // Check if another user already has this email
       const existing = await prisma.user.findFirst({
         where: { email: trimmed, NOT: { id: userId } },
@@ -285,23 +368,29 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: 'This email is already in use by another account.' }, { status: 409 });
       }
 
-      if (emailChanged && providerName === 'nextauth' && !currentUser.password) {
+      if (requiresPasswordBackedEmailChange({
+        strategy: emailChangeStrategy,
+        hasPassword: Boolean(currentUser.password),
+      })) {
         return NextResponse.json(
           { error: 'Email changes are only supported for password-based accounts right now.' },
           { status: 400 }
         );
       }
 
-      if (emailChanged && providerName === 'nextauth') {
+      if (emailChangeStrategy === 'nextauth-verification') {
         verificationRequired = true;
         emailChangePending = true;
+        pendingEmail = trimmed;
+      } else if (emailChangeStrategy === 'betterauth-managed') {
+        betterAuthEmailChangeRequested = true;
         pendingEmail = trimmed;
       } else {
         data.email = trimmed;
       }
     }
 
-    if (Object.keys(data).length === 0 && !emailChangePending) {
+    if (Object.keys(data).length === 0 && !emailChangePending && !betterAuthEmailChangeRequested) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
@@ -319,6 +408,59 @@ export async function PATCH(request: Request) {
           name: currentUser.name,
           email: currentUser.email,
         };
+
+    if (betterAuthEmailChangeRequested && pendingEmail) {
+      try {
+        const { betterAuthServer } = await import('@/lib/better-auth');
+
+        await betterAuthServer.api.changeEmail({
+          headers: request.headers,
+          body: {
+            newEmail: pendingEmail,
+            callbackURL: normalizeCallbackUrl(request, body.callbackURL) ?? normalizeCallbackUrl(request, '/dashboard/profile?emailChange=success'),
+          },
+        });
+
+        const refreshedUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true, email: true },
+        });
+
+        const responseUser = refreshedUser ?? updated;
+        const normalizedEmail = responseUser.email?.toLowerCase().trim() ?? null;
+
+        if (normalizedEmail === pendingEmail) {
+          await clearBetterAuthPendingEmailChange(userId, pendingEmail);
+          verificationRequired = true;
+          emailChangePending = false;
+          pendingEmail = null;
+        } else {
+          if (currentUser.email) {
+            await recordBetterAuthPendingEmailChange({
+              userId,
+              currentEmail: currentUser.email,
+              newEmail: pendingEmail,
+            });
+          }
+          verificationRequired = false;
+          emailChangePending = true;
+        }
+
+        return NextResponse.json({
+          user: responseUser,
+          verificationRequired,
+          emailChangePending,
+          pendingEmail,
+        });
+      } catch (error) {
+        const normalized = normalizeBetterAuthProfileError(error);
+        if (normalized) {
+          return NextResponse.json({ error: normalized.message }, { status: normalized.status });
+        }
+
+        throw error;
+      }
+    }
 
     if (emailChangePending && pendingEmail && currentUser.email) {
       sendNextAuthEmailChangeVerification({

@@ -3,14 +3,17 @@
 /**
  * Auth Provider – Client-Side UI Components (Conditional Dispatch)
  * ==================================================================
+ * Self-hosted providers currently share the custom auth UI lane.
  * Same build-time conditional as hooks.tsx.
  * Webpack DCEs the unused provider branch.
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
-const _mod: Record<string, any> = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth'
-  ? require('./providers/nextauth/components')
-  : require('./providers/clerk/components');
+const _mod: Record<string, any> = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'betterauth'
+  ? require('./providers/betterauth/components')
+  : process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth'
+    ? require('./providers/nextauth/components')
+    : require('./providers/clerk/components');
 /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
 export const AuthSignIn = _mod.AuthSignIn;

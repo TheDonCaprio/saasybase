@@ -1,0 +1,1281 @@
+'use client';
+
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { betterAuthClient } from '@/lib/better-auth-client';
+import { useAuthInstance, useAuthSession, useAuthUser } from './hooks';
+
+type AuthModalMode = 'signin' | 'signup' | 'forgot-password' | 'reset-password' | 'magic-link';
+
+type AuthActionResult = {
+  data?: {
+    redirect?: boolean;
+    url?: string | null;
+  } | null;
+  error?: {
+    message?: string;
+    code?: string;
+    status?: number;
+  } | null;
+};
+
+function getRedirectTarget(explicit?: string, fallback?: string) {
+  return explicit || fallback || '/dashboard';
+}
+
+function getBasePath(path: string | undefined, fallback: string) {
+  return path && path.startsWith('/') ? path : fallback;
+}
+
+function withQueryParams(pathOrUrl: string, params: Record<string, string | undefined>) {
+  if (typeof window === 'undefined') {
+    return pathOrUrl;
+  }
+
+  const url = pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')
+    ? new URL(pathOrUrl)
+    : new URL(pathOrUrl, window.location.origin);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      url.searchParams.set(key, value);
+    } else {
+      url.searchParams.delete(key);
+    }
+  }
+
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return url.toString();
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function toAbsoluteUrl(pathOrUrl: string) {
+  if (typeof window === 'undefined') {
+    return pathOrUrl;
+  }
+
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return pathOrUrl;
+  }
+
+  return new URL(pathOrUrl, window.location.origin).toString();
+}
+
+function getSignInEntryUrl(signInUrl?: string, path?: string) {
+  return signInUrl || getBasePath(path, '/sign-in');
+}
+
+function buildVerificationSuccessUrl(options: {
+  signInUrl?: string;
+  path?: string;
+  redirectUrl: string;
+}) {
+  return withQueryParams(getSignInEntryUrl(options.signInUrl, options.path), {
+    verification: 'success',
+    redirect_url: options.redirectUrl,
+  });
+}
+
+function buildVerificationCheckEmailUrl(options: {
+  signInUrl?: string;
+  path?: string;
+  redirectUrl: string;
+  email?: string;
+}) {
+  return withQueryParams(getSignInEntryUrl(options.signInUrl, options.path), {
+    verification: 'check-email',
+    redirect_url: options.redirectUrl,
+    email: options.email,
+  });
+}
+
+function getVerificationErrorMessage(errorParam: string) {
+  switch (errorParam) {
+    case 'invalid-verification-link':
+    case 'invalid_token':
+    case 'invalid-token':
+      return 'That verification link is invalid. Please request a new verification email.';
+    case 'expired-verification-link':
+    case 'token_expired':
+    case 'expired_token':
+    case 'expired-token':
+      return 'That verification link has expired. Sign in to resend a fresh verification email.';
+    case 'verification-failed':
+    case 'user_not_found':
+      return 'We could not verify your email. Please try again or request a new verification email.';
+    case 'attempts_exceeded':
+    case 'attempts-exceeded':
+      return 'That sign-in link has already been used. Request a new magic link.';
+    case 'new_user_signup_disabled':
+    case 'new-user-signup-disabled':
+      return 'No account exists for this email. Sign up first or try another address.';
+    case 'user-suspended-temporary':
+      return 'Your account is temporarily suspended. Contact support to restore access.';
+    case 'user-suspended-permanent':
+      return 'Your account has been permanently suspended. Contact support if you believe this is a mistake.';
+    default:
+      return null;
+  }
+}
+
+function readSignInQueryState() {
+  if (typeof window === 'undefined') {
+    return {
+      email: '',
+      error: null as string | null,
+      success: null as string | null,
+      verificationEmail: null as string | null,
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get('email') || '';
+  const verification = params.get('verification');
+  const errorParam = params.get('error')?.toLowerCase() || '';
+  const verificationError = getVerificationErrorMessage(errorParam);
+
+  if (verificationError) {
+    return {
+      email,
+      error: verificationError,
+      success: null,
+      verificationEmail: email || null,
+    };
+  }
+
+  if (verification === 'success') {
+    return {
+      email,
+      error: null,
+      success: 'Your email has been verified. Sign in to continue.',
+      verificationEmail: null,
+    };
+  }
+
+  if (verification === 'check-email') {
+    return {
+      email,
+      error: null,
+      success: 'Verification link sent. Check your inbox, then sign in after you confirm your email.',
+      verificationEmail: email || null,
+    };
+  }
+
+  if (params.get('reset') === 'success') {
+    return {
+      email,
+      error: null,
+      success: 'Password updated. Sign in with your new password.',
+      verificationEmail: null,
+    };
+  }
+
+  return {
+    email,
+    error: null,
+    success: null,
+    verificationEmail: null,
+  };
+}
+
+function getResetRedirectTarget(path?: string) {
+  if (typeof window === 'undefined') {
+    return '/sign-in?mode=reset-password';
+  }
+
+  const resolvedPath = getBasePath(path, '/sign-in');
+  return `${window.location.origin}${resolvedPath}?mode=reset-password`;
+}
+
+function readUrlMode(pathnameFallback: AuthModalMode): AuthModalMode {
+  if (typeof window === 'undefined') {
+    return pathnameFallback;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  if (mode === 'forgot-password' || mode === 'reset-password' || mode === 'signup' || mode === 'signin' || mode === 'magic-link') {
+    return mode;
+  }
+
+  return pathnameFallback;
+}
+
+function readResetState() {
+  if (typeof window === 'undefined') {
+    return {
+      token: null as string | null,
+      error: null as string | null,
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const errorParam = params.get('error')?.toLowerCase() || '';
+
+  return {
+    token: params.get('token'),
+    error: errorParam === 'invalid_token' || errorParam === 'invalid-token'
+      ? 'This password reset link is invalid or has expired. Request a new one.'
+      : null,
+  };
+}
+
+function buildMagicLinkErrorUrl(options: {
+  signInUrl?: string;
+  path?: string;
+  redirectUrl: string;
+  email?: string;
+}) {
+  return withQueryParams(getSignInEntryUrl(options.signInUrl, options.path), {
+    redirect_url: options.redirectUrl,
+    email: options.email,
+  });
+}
+
+function maybeRedirect(result: AuthActionResult, fallbackUrl: string) {
+  const targetUrl = result.data?.url || fallbackUrl;
+  if (targetUrl) {
+    window.location.href = targetUrl;
+  }
+}
+
+function getErrorMessage(error: AuthActionResult['error'], fallback: string) {
+  return error?.message || fallback;
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-2 text-sm text-neutral-200">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-violet-400/70 focus:bg-white/10"
+    />
+  );
+}
+
+function Message({
+  tone,
+  children,
+}: {
+  tone: 'error' | 'success';
+  children: React.ReactNode;
+}) {
+  const className = tone === 'error'
+    ? 'border-red-500/30 bg-red-500/10 text-red-100'
+    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100';
+
+  return <div className={`rounded-xl border px-4 py-3 text-sm ${className}`}>{children}</div>;
+}
+
+function AuthCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-950/80 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+      {children}
+    </div>
+  );
+}
+
+function SignInForm({
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  signUpUrl,
+  path,
+  embedded = false,
+  onSwitch,
+}: {
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  signUpUrl?: string;
+  path?: string;
+  embedded?: boolean;
+  onSwitch?: (mode: AuthModalMode) => void;
+}) {
+  const initialQueryState = useMemo(() => readSignInQueryState(), []);
+  const [email, setEmail] = useState(initialQueryState.email);
+  const [password, setPassword] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(initialQueryState.error);
+  const [success, setSuccess] = useState<string | null>(initialQueryState.success);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(initialQueryState.verificationEmail);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+
+    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
+    const result = await betterAuthClient.signIn.email({
+      email,
+      password,
+      callbackURL: redirectUrl,
+      rememberMe: true,
+    }) as AuthActionResult;
+
+    setPending(false);
+
+    if (result.error) {
+      if (result.error.code === 'EMAIL_NOT_VERIFIED') {
+        setVerificationEmail(email);
+      }
+      setError(getErrorMessage(result.error, 'Unable to sign in.'));
+      return;
+    }
+
+    maybeRedirect(result, redirectUrl);
+  }
+
+  async function resendVerification() {
+    if (!verificationEmail) {
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
+    const result = await betterAuthClient.sendVerificationEmail({
+      email: verificationEmail,
+      callbackURL: toAbsoluteUrl(buildVerificationSuccessUrl({
+        path,
+        redirectUrl,
+      })),
+    }) as AuthActionResult;
+    setPending(false);
+
+    if (result.error) {
+      setError(getErrorMessage(result.error, 'Unable to resend verification email.'));
+      return;
+    }
+
+    setSuccess('Verification email sent. Check your inbox.');
+  }
+
+  const content = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-white">Sign in</h2>
+        <p className="text-sm text-neutral-400">Use your email and password to access your account.</p>
+      </div>
+
+      {error ? <Message tone="error">{error}</Message> : null}
+      {success ? <Message tone="success">{success}</Message> : null}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Email address">
+          <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </Field>
+
+        <Field label="Password">
+          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        </Field>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <button
+            type="button"
+            onClick={() => onSwitch ? onSwitch('forgot-password') : (window.location.href = `${getBasePath(path, '/sign-in')}?mode=forgot-password`)}
+            className="text-violet-300 transition hover:text-violet-200"
+          >
+            Forgot password?
+          </button>
+
+          {signUpUrl ? (
+            <Link href={signUpUrl} className="text-neutral-300 transition hover:text-white">
+              Create account
+            </Link>
+          ) : null}
+        </div>
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSwitch ? onSwitch('magic-link') : (window.location.href = `${getBasePath(path, '/sign-in')}?mode=magic-link`)}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+        >
+          Email me a magic link
+        </button>
+      </form>
+
+      {verificationEmail ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-neutral-300">
+          <p>Email verification is still required for this account.</p>
+          <button
+            type="button"
+            onClick={resendVerification}
+            disabled={pending}
+            className="mt-3 text-violet-300 transition hover:text-violet-200 disabled:opacity-60"
+          >
+            Resend verification email
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return embedded ? content : <AuthCard>{content}</AuthCard>;
+}
+
+function MagicLinkForm({
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  path,
+  embedded = false,
+  onSwitch,
+}: {
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  path?: string;
+  embedded?: boolean;
+  onSwitch?: (mode: AuthModalMode) => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+
+    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
+    const response = await fetch('/api/auth/magic-link', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        callbackURL: toAbsoluteUrl(redirectUrl),
+        errorCallbackURL: toAbsoluteUrl(buildMagicLinkErrorUrl({ path, redirectUrl, email })),
+      }),
+    });
+    const result = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+
+    setPending(false);
+
+    if (!response.ok) {
+      setError(result?.error || 'Unable to send a magic link right now.');
+      return;
+    }
+
+    setSuccess(result?.message || 'If that email is eligible, a sign-in link has been sent.');
+  }
+
+  const content = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-white">Sign in with a magic link</h2>
+        <p className="text-sm text-neutral-400">Enter your email and we will send you a secure one-time sign-in link.</p>
+      </div>
+
+      {error ? <Message tone="error">{error}</Message> : null}
+      {success ? <Message tone="success">{success}</Message> : null}
+
+      {!success ? (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Email address">
+            <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          </Field>
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? 'Sending...' : 'Send magic link'}
+          </button>
+        </form>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
+        className="text-sm text-violet-300 transition hover:text-violet-200"
+      >
+        Back to sign in with password
+      </button>
+    </div>
+  );
+
+  return embedded ? content : <AuthCard>{content}</AuthCard>;
+}
+
+function SignUpForm({
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  signInUrl,
+  embedded = false,
+}: {
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  signInUrl?: string;
+  embedded?: boolean;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+
+    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl || '/dashboard/onboarding');
+    const verificationSuccessUrl = buildVerificationSuccessUrl({
+      signInUrl,
+      redirectUrl,
+    });
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        callbackURL: toAbsoluteUrl(verificationSuccessUrl),
+      }),
+    });
+    const result = await response.json().catch(() => null) as { error?: string } | null;
+
+    setPending(false);
+
+    if (!response.ok) {
+      setError(result?.error || 'Unable to create account.');
+      return;
+    }
+
+    const nextUrl = buildVerificationCheckEmailUrl({
+      signInUrl,
+      redirectUrl,
+      email,
+    });
+
+    setSuccess('Verification link sent. Redirecting...');
+    window.location.href = nextUrl;
+  }
+
+  const content = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-white">Create account</h2>
+        <p className="text-sm text-neutral-400">Start with a personal workspace and upgrade later.</p>
+      </div>
+
+      {error ? <Message tone="error">{error}</Message> : null}
+      {success ? <Message tone="success">{success}</Message> : null}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Full name">
+          <Input value={name} onChange={(event) => setName(event.target.value)} required />
+        </Field>
+
+        <Field label="Email address">
+          <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </Field>
+
+        <Field label="Password">
+          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        </Field>
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? 'Creating account...' : 'Create account'}
+        </button>
+      </form>
+
+      {signInUrl ? (
+        <p className="text-sm text-neutral-400">
+          Already have an account?{' '}
+          <Link href={signInUrl} className="text-violet-300 transition hover:text-violet-200">
+            Sign in
+          </Link>
+        </p>
+      ) : null}
+    </div>
+  );
+
+  return embedded ? content : <AuthCard>{content}</AuthCard>;
+}
+
+function ForgotPasswordForm({
+  path,
+  embedded = false,
+  onSwitch,
+}: {
+  path?: string;
+  embedded?: boolean;
+  onSwitch?: (mode: AuthModalMode) => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+
+    const result = await betterAuthClient.requestPasswordReset({
+      email,
+      redirectTo: getResetRedirectTarget(path),
+    }) as AuthActionResult;
+
+    setPending(false);
+
+    if (result.error) {
+      setError(getErrorMessage(result.error, 'Unable to send reset email.'));
+      return;
+    }
+
+    setSuccess('If that email exists, a reset link has been sent.');
+  }
+
+  const content = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-white">Reset password</h2>
+        <p className="text-sm text-neutral-400">Enter your email and we will send you a reset link.</p>
+      </div>
+
+      {error ? <Message tone="error">{error}</Message> : null}
+      {success ? <Message tone="success">{success}</Message> : null}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Email address">
+          <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </Field>
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? 'Sending...' : 'Send reset link'}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
+        className="text-sm text-violet-300 transition hover:text-violet-200"
+      >
+        Back to sign in
+      </button>
+    </div>
+  );
+
+  return embedded ? content : <AuthCard>{content}</AuthCard>;
+}
+
+function ResetPasswordForm({
+  path,
+  embedded = false,
+  onSwitch,
+}: {
+  path?: string;
+  embedded?: boolean;
+  onSwitch?: (mode: AuthModalMode) => void;
+}) {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pending, setPending] = useState(false);
+  const resetState = useMemo(() => readResetState(), []);
+  const [error, setError] = useState<string | null>(resetState.error);
+  const [success, setSuccess] = useState<string | null>(null);
+  const token = resetState.token;
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) {
+      setError('Reset token is missing or invalid.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+
+    const result = await betterAuthClient.resetPassword({
+      token,
+      newPassword: password,
+    }) as AuthActionResult;
+
+    setPending(false);
+
+    if (result.error) {
+      setError(getErrorMessage(result.error, 'Unable to reset password.'));
+      return;
+    }
+
+    setSuccess('Password updated. Redirecting to sign in...');
+    const nextPath = withQueryParams(getBasePath(path, '/sign-in'), { reset: 'success' });
+    window.location.href = nextPath;
+  }
+
+  const content = (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-white">Choose a new password</h2>
+        <p className="text-sm text-neutral-400">Use a strong password you have not used elsewhere.</p>
+      </div>
+
+      {error ? <Message tone="error">{error}</Message> : null}
+      {success ? <Message tone="success">{success}</Message> : null}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="New password">
+          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        </Field>
+
+        <Field label="Confirm new password">
+          <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
+        </Field>
+
+        <button
+          type="submit"
+          disabled={pending || !token}
+          className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? 'Saving...' : 'Update password'}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
+        className="text-sm text-violet-300 transition hover:text-violet-200"
+      >
+        Back to sign in
+      </button>
+    </div>
+  );
+
+  return embedded ? content : <AuthCard>{content}</AuthCard>;
+}
+
+function AuthModalShell({
+  open,
+  mode,
+  onClose,
+  onSwitch,
+}: {
+  open: boolean;
+  mode: AuthModalMode;
+  onClose: () => void;
+  onSwitch: (mode: AuthModalMode) => void;
+}) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose, open]);
+
+  if (!open) {
+    return null;
+  }
+
+  let content: React.ReactNode;
+  if (mode === 'signup') {
+    content = <SignUpForm embedded signInUrl="/sign-in" />;
+  } else if (mode === 'magic-link') {
+    content = <MagicLinkForm embedded onSwitch={onSwitch} />;
+  } else if (mode === 'forgot-password') {
+    content = <ForgotPasswordForm embedded onSwitch={onSwitch} />;
+  } else if (mode === 'reset-password') {
+    content = <ResetPasswordForm embedded onSwitch={onSwitch} />;
+  } else {
+    content = <SignInForm embedded signUpUrl="/sign-up" onSwitch={onSwitch} />;
+  }
+
+  return (
+    <div data-auth-modal-root="true" className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl shadow-black/50">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 text-sm text-neutral-400 transition hover:text-white"
+        >
+          Close
+        </button>
+        {content}
+      </div>
+    </div>
+  );
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode; [key: string]: unknown }) {
+  return <>{children}</>;
+}
+
+export function AuthSignIn({
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  signUpUrl,
+  path,
+}: {
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  signUpUrl?: string;
+  path?: string;
+  [key: string]: unknown;
+}) {
+  const mode = readUrlMode('signin');
+
+  if (mode === 'forgot-password') {
+    return <ForgotPasswordForm path={path} />;
+  }
+
+  if (mode === 'magic-link') {
+    return <MagicLinkForm path={path} forceRedirectUrl={forceRedirectUrl} fallbackRedirectUrl={fallbackRedirectUrl} />;
+  }
+
+  if (mode === 'reset-password') {
+    return <ResetPasswordForm path={path} />;
+  }
+
+  return (
+    <SignInForm
+      forceRedirectUrl={forceRedirectUrl}
+      fallbackRedirectUrl={fallbackRedirectUrl}
+      signUpUrl={signUpUrl}
+      path={path}
+    />
+  );
+}
+
+export function AuthSignUp({
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  signInUrl,
+}: {
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  signInUrl?: string;
+  [key: string]: unknown;
+}) {
+  return (
+    <SignUpForm
+      forceRedirectUrl={forceRedirectUrl}
+      fallbackRedirectUrl={fallbackRedirectUrl}
+      signInUrl={signInUrl}
+    />
+  );
+}
+
+export function AuthSignInButton({
+  children,
+  mode,
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  ...rest
+}: {
+  children?: React.ReactNode;
+  mode?: string;
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  [key: string]: unknown;
+}) {
+  const [open, setOpen] = useState(false);
+  const [currentMode, setCurrentMode] = useState<AuthModalMode>('signin');
+  const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
+
+  const handleClick = () => {
+    if (mode === 'modal') {
+      setCurrentMode('signin');
+      setOpen(true);
+      return;
+    }
+
+    window.location.href = `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  if (children) {
+    return (
+      <>
+        <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && handleClick()} {...rest}>
+          {children}
+        </span>
+        <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button onClick={handleClick} className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500" {...rest}>
+        Sign In
+      </button>
+      <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+    </>
+  );
+}
+
+export function AuthSignUpButton({
+  children,
+  mode,
+  forceRedirectUrl,
+  fallbackRedirectUrl,
+  ...rest
+}: {
+  children?: React.ReactNode;
+  mode?: string;
+  forceRedirectUrl?: string;
+  fallbackRedirectUrl?: string;
+  [key: string]: unknown;
+}) {
+  const [open, setOpen] = useState(false);
+  const [currentMode, setCurrentMode] = useState<AuthModalMode>('signup');
+  const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl || '/dashboard/onboarding');
+
+  const handleClick = () => {
+    if (mode === 'modal') {
+      setCurrentMode('signup');
+      setOpen(true);
+      return;
+    }
+
+    window.location.href = `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  if (children) {
+    return (
+      <>
+        <span onClick={handleClick} role="button" tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && handleClick()} {...rest}>
+          {children}
+        </span>
+        <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button onClick={handleClick} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5" {...rest}>
+        Sign Up
+      </button>
+      <AuthModalShell open={open} mode={currentMode} onClose={() => setOpen(false)} onSwitch={setCurrentMode} />
+    </>
+  );
+}
+
+export function AuthSignOutButton({
+  children,
+  ...rest
+}: {
+  children?: React.ReactNode;
+  [key: string]: unknown;
+}) {
+  const { signOut } = useAuthInstance();
+
+  const handleClick = () => {
+    void signOut({ redirectUrl: '/' });
+  };
+
+  if (children && React.isValidElement(children)) {
+    const child = children as React.ReactElement<{ onClick?: () => void; type?: string }>;
+    return React.cloneElement(child, {
+      ...rest,
+      type: child.props.type || 'button',
+      onClick: () => {
+        child.props.onClick?.();
+        handleClick();
+      },
+    });
+  }
+
+  return (
+    <button onClick={handleClick} className="text-sm text-red-400 transition hover:text-red-300" {...rest}>
+      Sign Out
+    </button>
+  );
+}
+
+interface OrgItem {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  isOwner: boolean;
+  planName: string | null;
+}
+
+interface ActiveOrgResponse {
+  activeOrgId: string | null;
+  organizations: OrgItem[];
+}
+
+export function AuthOrganizationSwitcher({
+  hidePersonal = false,
+}: {
+  hidePersonal?: boolean;
+  [key: string]: unknown;
+}) {
+  const { isSignedIn, isLoaded } = useAuthSession();
+  const { setActiveOrganization } = useAuthInstance();
+  const [open, setOpen] = useState(false);
+  const [popoverDirection, setPopoverDirection] = useState<'up' | 'down'>('down');
+  const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+  const [orgs, setOrgs] = useState<OrgItem[]>([]);
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      setOrgs([]);
+      setActiveOrgId(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch('/api/user/active-org', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Failed to load organizations');
+        }
+        const data = (await response.json()) as ActiveOrgResponse;
+        if (!cancelled) {
+          setOrgs(data.organizations);
+          setActiveOrgId(data.activeOrgId);
+        }
+      } catch {
+        if (!cancelled) {
+          setOrgs([]);
+          setActiveOrgId(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const container = dropdownRef.current;
+    const popover = popoverRef.current;
+    if (!container || !popover) {
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    const gutter = 8;
+    const spaceAbove = containerRect.top;
+    const spaceBelow = window.innerHeight - containerRect.bottom;
+
+    if (spaceBelow >= popoverRect.height + gutter || spaceBelow >= spaceAbove) {
+      setPopoverDirection('down');
+      return;
+    }
+
+    setPopoverDirection('up');
+  }, [activeOrgId, open, orgs.length]);
+
+  const activeOrg = useMemo(() => orgs.find((org) => org.id === activeOrgId) ?? null, [activeOrgId, orgs]);
+  const displayName = activeOrg?.name || 'Personal workspace';
+
+  async function switchOrg(orgId: string | null) {
+    setSwitching(true);
+    setOpen(false);
+
+    try {
+      await setActiveOrganization(orgId);
+      setActiveOrgId(orgId);
+      window.location.reload();
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  if (!isSignedIn || (!loading && orgs.length === 0)) {
+    return null;
+  }
+
+  return (
+    <div ref={dropdownRef} data-auth-org-switcher="betterauth" className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:shadow-none dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+      >
+        <span className="truncate">{switching ? 'Switching...' : displayName}</span>
+        <span className="ml-3 text-xs text-slate-500 dark:text-neutral-500">{open ? 'Close' : 'Switch'}</span>
+      </button>
+
+      {open ? (
+        <div
+          ref={popoverRef}
+          className={`absolute inset-x-0 z-[90] mt-2 w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/50 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-2xl dark:shadow-black/60 ${popoverDirection === 'up' ? 'bottom-full mb-2 mt-0' : 'top-full'}`}
+        >
+          {!hidePersonal ? (
+            <button
+              type="button"
+              onClick={() => void switchOrg(null)}
+              className={`flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition ${activeOrgId === null ? 'bg-slate-100 text-slate-900 dark:bg-neutral-800 dark:text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-neutral-800'}`}
+            >
+              <span className="truncate font-medium">Personal workspace</span>
+              {activeOrgId === null ? <span className="mt-0.5 text-xs text-slate-400 dark:text-neutral-400">Active</span> : null}
+            </button>
+          ) : null}
+
+          {orgs.map((org) => (
+            <button
+              key={org.id}
+              type="button"
+              onClick={() => void switchOrg(org.id)}
+              className={`mt-1 flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition ${activeOrgId === org.id ? 'bg-slate-100 text-slate-900 dark:bg-neutral-800 dark:text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-neutral-800'}`}
+            >
+              <span className="truncate font-medium">{org.name}</span>
+              <span className={`mt-0.5 text-xs ${activeOrgId === org.id ? 'text-slate-500 dark:text-neutral-400' : 'text-slate-400 dark:text-neutral-500'}`}>{org.planName || org.role}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function AuthUserProfile(props: Record<string, unknown>) {
+  void props;
+  const { user, isLoaded } = useAuthUser();
+
+  if (!isLoaded || !user) {
+    return null;
+  }
+
+  return (
+    <div className="w-full rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 text-neutral-100 shadow-xl shadow-black/20">
+      <div className="flex items-center gap-4">
+        <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          {user.imageUrl ? (
+            <Image src={user.imageUrl} alt={user.fullName || 'User'} fill sizes="64px" className="object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-violet-200">
+              {(user.fullName || user.primaryEmailAddress?.emailAddress || 'U').charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-semibold">{user.fullName || 'Unnamed user'}</h3>
+          <p className="truncate text-sm text-neutral-400">{user.primaryEmailAddress?.emailAddress}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-3">
+        <Link href="/dashboard/profile" className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500">
+          Profile settings
+        </Link>
+        <Link href="/dashboard/settings" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-neutral-200 transition hover:bg-white/5">
+          General settings
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export const authDarkTheme = undefined;
+
+export function AuthLoading() {
+  return null;
+}
+
+export function AuthLoaded({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}

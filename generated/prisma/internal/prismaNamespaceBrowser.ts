@@ -80,6 +80,7 @@ export const ModelName = {
   RateLimitBucket: 'RateLimitBucket',
   Account: 'Account',
   Session: 'Session',
+  Verification: 'Verification',
   VerificationToken: 'VerificationToken'
 } as const
 
@@ -108,6 +109,7 @@ export const UserScalarFieldEnum = {
   password: 'password',
   tokenVersion: 'tokenVersion',
   emailVerified: 'emailVerified',
+  emailVerifiedBool: 'emailVerifiedBool',
   paymentsCount: 'paymentsCount',
   externalCustomerIds: 'externalCustomerIds',
   tokenBalance: 'tokenBalance',
@@ -174,9 +176,11 @@ export type PlanPriceScalarFieldEnum = (typeof PlanPriceScalarFieldEnum)[keyof t
 
 export const OrganizationScalarFieldEnum = {
   id: 'id',
-  clerkOrganizationId: 'clerkOrganizationId',
+  providerOrganizationId: 'providerOrganizationId',
   name: 'name',
   slug: 'slug',
+  logo: 'logo',
+  metadata: 'metadata',
   ownerUserId: 'ownerUserId',
   planId: 'planId',
   billingEmail: 'billingEmail',
@@ -571,13 +575,23 @@ export const AccountScalarFieldEnum = {
   type: 'type',
   provider: 'provider',
   providerAccountId: 'providerAccountId',
+  accountId: 'accountId',
+  providerId: 'providerId',
   refresh_token: 'refresh_token',
   access_token: 'access_token',
+  refreshToken: 'refreshToken',
+  accessToken: 'accessToken',
   expires_at: 'expires_at',
+  accessTokenExpiresAt: 'accessTokenExpiresAt',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   token_type: 'token_type',
   scope: 'scope',
   id_token: 'id_token',
-  session_state: 'session_state'
+  idToken: 'idToken',
+  session_state: 'session_state',
+  password: 'password',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
@@ -586,16 +600,34 @@ export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeo
 export const SessionScalarFieldEnum = {
   id: 'id',
   sessionToken: 'sessionToken',
+  token: 'token',
   userId: 'userId',
   expires: 'expires',
+  expiresAt: 'expiresAt',
   lastActiveAt: 'lastActiveAt',
   ipAddress: 'ipAddress',
   userAgent: 'userAgent',
   country: 'country',
-  city: 'city'
+  city: 'city',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  activeOrganizationId: 'activeOrganizationId',
+  activeTeamId: 'activeTeamId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const VerificationScalarFieldEnum = {
+  id: 'id',
+  identifier: 'identifier',
+  value: 'value',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
 
 
 export const VerificationTokenScalarFieldEnum = {

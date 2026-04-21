@@ -7,13 +7,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/nextauth.config';
 import { createHash } from 'crypto';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
 import { Logger } from '@/lib/logger';
 
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
 export async function POST(request: NextRequest) {
+  if (isBetterAuthProviderEnabled()) {
+    const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
+    return betterAuthNextJsHandler.POST(request);
+  }
+
   try {
     // Rate limit by IP
     const ip = getClientIP(request);
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Reset link has expired. Please request a new one.' }, { status: 400 });
     }
 
+    const { hashPassword } = await import('@/lib/nextauth.config');
     const hashed = await hashPassword(password);
     const normalizedEmail = email.toLowerCase().trim();
     const updatedUser = await prisma.user.update({

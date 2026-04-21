@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS "Verification_value_key";

@@ -68,6 +68,22 @@ const externalPriceIdUpdateSchema = z
 
 // API route validation schemas
 export const apiSchemas = {
+  authRegister: z.object({
+    name: z.string().min(1).max(120).optional(),
+    firstName: z.string().min(1).max(60).optional(),
+    lastName: z.string().min(1).max(60).optional(),
+    email: commonSchemas.email,
+    password: z.string().min(8).max(200),
+    callbackURL: z.string().max(2000).optional(),
+  }),
+
+  authMagicLink: z.object({
+    email: commonSchemas.email,
+    callbackURL: z.string().max(2000).optional(),
+    errorCallbackURL: z.string().max(2000).optional(),
+    newUserCallbackURL: z.string().max(2000).optional(),
+  }),
+
   // Admin settings
   adminSettingsUpdate: z.object({
     key: commonSchemas.settingKey,

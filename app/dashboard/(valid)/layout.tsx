@@ -6,12 +6,14 @@ import { AnnouncementBanner } from '../../../components/ui/AnnouncementBanner';
 import { GracePeriodNotice } from '../../../components/dashboard/GracePeriodNotice';
 import { PurchaseNotice } from '../../../components/dashboard/PurchaseNotice';
 import { getAnnouncementMessage } from '../../../lib/settings';
-import { getOrganizationSuspensionMessage } from '../../../lib/account-suspension';
-import { getPendingEmailChangeForUser } from '../../../lib/nextauth-email-verification';
+import { getPendingEmailChangeForActiveProvider } from '../../../lib/pending-email-change';
+import { WorkspaceSuspendedNotice } from '../../../components/dashboard/WorkspaceSuspendedNotice';
+import { getSupportEmail } from '../../../lib/settings';
 import { PendingEmailChangeNotice } from '../../../components/dashboard/PendingEmailChangeNotice';
 import { getCurrentUserWithFallback } from '../../../lib/user-helpers';
 import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
 import { Logger } from '../../../lib/logger';
+import { getOrganizationReferenceWhere } from '../../../lib/organization-reference';
 
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
 import { buildDashboardSidebarItems } from '../../../lib/dashboard-nav/groups';
@@ -30,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let supportBadge: string | undefined = undefined;
   let teamBadge: string | undefined = undefined;
   let pendingEmailChange: { newEmail: string; expires: string } | null = null;
-  let suspendedOrganizationNotice: string | null = null;
+  let suspendedOrganizationNotice: { reason: string | null; supportEmail: string } | null = null;
   try {
     const { userId, orgId } = await authService.getSession();
     if (userId) {
@@ -71,31 +73,33 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }
       }
 
-      if (authService.providerName === 'nextauth') {
-        const pending = await getPendingEmailChangeForUser(userId);
-        if (pending) {
-          pendingEmailChange = {
-            newEmail: pending.newEmail,
-            expires: pending.expires.toLocaleString(),
-          };
-        }
+      const pending = await getPendingEmailChangeForActiveProvider(userId);
+      if (pending) {
+        pendingEmailChange = {
+          newEmail: pending.newEmail,
+          expires: pending.expires.toLocaleString(),
+        };
       }
 
       if (orgId) {
         const activeOrganization = await prisma.organization.findFirst({
           where: {
-            OR: [
-              { id: orgId },
-              { clerkOrganizationId: orgId },
-            ],
+            OR: getOrganizationReferenceWhere(orgId),
           },
           select: {
             suspendedAt: true,
+            suspensionReason: true,
           },
         });
 
         if (activeOrganization?.suspendedAt) {
-          suspendedOrganizationNotice = await getOrganizationSuspensionMessage();
+          const supportEmail = await getSupportEmail().catch(
+            () => process.env.SUPPORT_EMAIL ?? 'support@saasybase.com',
+          );
+          suspendedOrganizationNotice = {
+            reason: activeOrganization.suspensionReason ?? null,
+            supportEmail,
+          };
         }
       }
     }
@@ -140,9 +144,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />
         {suspendedOrganizationNotice && (
-          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-            {suspendedOrganizationNotice}
-          </div>
+          <WorkspaceSuspendedNotice
+            reason={suspendedOrganizationNotice.reason}
+            supportEmail={suspendedOrganizationNotice.supportEmail}
+          />
         )}
         {pendingEmailChange && (
           <PendingEmailChangeNotice pendingEmail={pendingEmailChange.newEmail} expiresAt={pendingEmailChange.expires} />

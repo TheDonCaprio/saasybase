@@ -248,7 +248,7 @@ describe('Natural expiry grace', () => {
         name: 'GuyT',
         slug: 'guyt',
         ownerUserId: 'user_1',
-        clerkOrganizationId: null,
+        providerOrganizationId: null,
         suspendedAt: new Date('2026-04-17T12:30:44.347Z'),
         planId: 'plan_1',
         seatLimit: 5,
@@ -257,7 +257,7 @@ describe('Natural expiry grace', () => {
       });
     prismaMock.organization.update.mockResolvedValueOnce({
       id: 'org_1',
-      clerkOrganizationId: null,
+      providerOrganizationId: null,
       suspendedAt: null,
       suspensionReason: null,
     });
@@ -268,7 +268,7 @@ describe('Natural expiry grace', () => {
     expect(prismaMock.organization.update).toHaveBeenCalledWith({
       where: { id: 'org_1' },
       data: {
-        clerkOrganizationId: null,
+        providerOrganizationId: null,
         suspendedAt: null,
         suspensionReason: null,
       },

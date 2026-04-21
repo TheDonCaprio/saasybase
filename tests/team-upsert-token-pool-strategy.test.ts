@@ -53,7 +53,7 @@ describe('upsertOrganization token pool strategy', () => {
 
     expect(prismaMock.organization.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        clerkOrganizationId: 'provider_org_2',
+        providerOrganizationId: 'provider_org_2',
         tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
       }),
     });

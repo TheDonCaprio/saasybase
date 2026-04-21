@@ -10,11 +10,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { betterAuthServer } from '@/lib/better-auth';
 import { authService } from '@/lib/auth-provider';
 import { prisma } from '@/lib/prisma';
 import { ACTIVE_ORG_COOKIE, getActiveOrgCookieOptions } from '@/lib/active-organization';
 import { getActiveTeamSubscription } from '@/lib/organization-access';
 import { Logger } from '@/lib/logger';
+
+function isBetterAuthProviderEnabled() {
+  return (process.env.AUTH_PROVIDER || '').toLowerCase() === 'betterauth';
+}
 
 export async function GET() {
   try {
@@ -61,7 +66,8 @@ export async function GET() {
 
     // Read active org from cookie
     const jar = await cookies();
-    const activeOrgId = jar.get(ACTIVE_ORG_COOKIE)?.value || null;
+    const cookieActiveOrgId = jar.get(ACTIVE_ORG_COOKIE)?.value || null;
+    const activeOrgId = session.orgId || cookieActiveOrgId;
 
     // Validate it — if the user no longer belongs to that org, clear it
     const validActiveOrg = activeOrgId && organizations.some((o) => o.id === activeOrgId)
@@ -89,6 +95,36 @@ export async function POST(request: NextRequest) {
     }
 
     const { orgId } = (await request.json()) as { orgId: string | null };
+
+    if (isBetterAuthProviderEnabled()) {
+      const response = NextResponse.json({ activeOrgId: orgId });
+
+      try {
+        const result = await betterAuthServer.api.setActiveOrganization({
+          headers: request.headers,
+          body: {
+            organizationId: orgId,
+          },
+        });
+
+        const nextActiveOrgId = result?.id ?? orgId;
+
+        if (nextActiveOrgId) {
+          response.cookies.set(
+            ACTIVE_ORG_COOKIE,
+            nextActiveOrgId,
+            getActiveOrgCookieOptions({ maxAge: 60 * 60 * 24 * 365 }),
+          );
+        } else {
+          response.cookies.set(ACTIVE_ORG_COOKIE, '', getActiveOrgCookieOptions({ maxAge: 0 }));
+        }
+
+        return NextResponse.json({ activeOrgId: nextActiveOrgId }, { headers: response.headers });
+      } catch (error) {
+        Logger.error('Set Better Auth active org error', error);
+        return NextResponse.json({ error: 'Failed to set active organization' }, { status: 500 });
+      }
+    }
 
     // Switching to personal workspace
     if (!orgId) {

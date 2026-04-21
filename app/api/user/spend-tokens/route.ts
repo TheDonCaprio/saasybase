@@ -8,6 +8,7 @@ import { getAuthSafe } from '@/lib/auth';
 import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getRequestIp } from '@/lib/request-ip';
 import { findActivePaidPersonalSubscription, hasUnlimitedPaidPersonalAccess } from '@/lib/personal-paid-access';
+import { getMembershipOrganizationReferenceWhere, getOrganizationReferenceWhere } from '@/lib/organization-reference';
 
 type SpendBucket = 'auto' | 'paid' | 'free' | 'shared';
 
@@ -74,10 +75,7 @@ async function resolveSharedContext(params: {
 
   const targetOrgFilter = organizationId
     ? {
-        OR: [
-          { organizationId },
-          { organization: { clerkOrganizationId: organizationId } },
-        ],
+        OR: getMembershipOrganizationReferenceWhere(organizationId),
       }
     : {};
 
@@ -102,7 +100,7 @@ async function resolveSharedContext(params: {
       organization: {
         select: {
           id: true,
-          clerkOrganizationId: true,
+          providerOrganizationId: true,
           ownerUserId: true,
           tokenBalance: true,
           tokenPoolStrategy: true,
@@ -123,10 +121,7 @@ async function resolveSharedContext(params: {
         plan: { supportsOrganizations: true },
         ...(organizationId
           ? {
-              OR: [
-                { id: organizationId },
-                { clerkOrganizationId: organizationId },
-              ],
+              OR: getOrganizationReferenceWhere(organizationId),
             }
           : {}),
       },

@@ -27,6 +27,8 @@ model User {
   tokenVersion           Int      @default(0)
   // Email verification timestamp (required by NextAuth Prisma adapter)
   emailVerified          DateTime?
+  // Better Auth-compatible boolean verification state for coexistence migration.
+  emailVerifiedBool      Boolean  @default(false)
   // Denormalized number of payments made by this user. Backfilled by a script.
   paymentsCount          Int      @default(0)
   // Map of provider -> customer ID (multi-provider support). Stored as JSON string for SQLite compatibility.
@@ -141,9 +143,11 @@ model PlanPrice {
 
 model Organization {
   id                   String   @id @default(cuid())
-  clerkOrganizationId  String?  @unique
+  providerOrganizationId String? @unique
   name                 String
   slug                 String   @unique
+  logo                 String?
+  metadata             String?
   ownerUserId          String
   planId               String?
   billingEmail         String?
@@ -634,35 +638,66 @@ model Account {
   type              String
   provider          String
   providerAccountId String
+  accountId         String?
+  providerId        String?
   refresh_token     String?
   access_token      String?
+  refreshToken      String?
+  accessToken       String?
   expires_at        Int?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
   token_type        String?
   scope             String?
   id_token          String?
+  idToken           String?
   session_state     String?
+  password          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
+  @@index([providerId, accountId])
 }
 
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
+  token        String?
   userId       String
   expires      DateTime
+  expiresAt    DateTime?
   lastActiveAt DateTime?
   ipAddress    String?
   userAgent    String?
   country      String?
   city         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  activeOrganizationId String?
+  activeTeamId String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([token])
   @@index([userId, lastActiveAt], name: "Session_userId_lastActiveAt_idx")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([value])
+  @@index([expiresAt])
 }
 
 model VerificationToken {

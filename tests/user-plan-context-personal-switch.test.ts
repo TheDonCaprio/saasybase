@@ -38,7 +38,7 @@ describe('getOrganizationPlanContext personal switching', () => {
     expect(prismaMock.organization.findFirst).not.toHaveBeenCalled();
   });
 
-  it('resolves organization context when active Clerk org is present', async () => {
+  it('resolves organization context when an active provider org reference is present', async () => {
     accessSummaryMock.mockResolvedValue({
       allowed: true,
       kind: 'OWNER',
@@ -94,6 +94,17 @@ describe('getOrganizationPlanContext personal switching', () => {
     const context = await getOrganizationPlanContext('user_1', 'org_clerk_1');
 
     expect(accessSummaryMock).toHaveBeenCalledWith('user_1', 'org_clerk_1');
+    expect(prismaMock.organization.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          ownerUserId: 'user_1',
+          OR: [
+            { id: 'org_clerk_1' },
+            { providerOrganizationId: 'org_clerk_1' },
+          ],
+        },
+      }),
+    );
     expect(context?.organization?.id).toBe('org_1');
     expect(context?.role).toBe('OWNER');
     expect(context?.effectivePlan.name).toBe('Team Plus');
@@ -167,7 +178,7 @@ describe('getOrganizationPlanContext personal switching', () => {
         organizationId: 'org_1',
         organizationName: 'Leggo',
         ownerUserId: 'owner_1',
-        clerkOrganizationId: 'org_clerk_1',
+        providerOrganizationId: 'org_clerk_1',
         role: 'MEMBER',
         status: 'ACTIVE',
       },

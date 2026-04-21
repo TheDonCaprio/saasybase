@@ -123,7 +123,7 @@ saasybase/
 │   └── seed.ts             # Database seeding script
 ├── scripts/                # Operational scripts (backfills, admin tools)
 ├── tests/                  # 90+ Vitest unit tests + Playwright E2E
-├── docs/                   # Internal documentation
+├── docs/                   # Implementation guides and internal notes
 ├── ops/                    # Production operations (indexes, runbooks)
 └── .env.example            # Full environment variable template
 ```
@@ -169,7 +169,7 @@ cp .env.example .env.local
 npm install
 
 # 3. Run database migrations
-npx prisma migrate dev --name init
+npm run prisma:migrate -- --name init
 
 # 4. Seed the database (prompts for admin email/password)
 npx prisma db seed
@@ -209,9 +209,11 @@ These are the commands most people actually need when working on or operating th
 | `npm test` | Run Vitest unit/integration tests |
 | `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
-| `npm run prisma:migrate` | Create and apply a local Prisma migration |
+| `npm run prisma:migrate` | Create and apply a local Prisma migration using `prisma.config.ts` and `.env.local` |
 | `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
+
+`npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`).
 
 If you are new to the repo, the normal local loop is: `npm install` → `npx prisma db seed` → `npm run dev`.
 
@@ -219,11 +221,11 @@ If you are new to the repo, the normal local loop is: `npm install` → `npx pri
 
 ## Authentication
 
-The app ships with **two fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable.
+The app ships with **three fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable.
 
 ```bash
 # .env.local
-AUTH_PROVIDER="nextauth"  # Options: "clerk", "nextauth"
+AUTH_PROVIDER="nextauth"  # Options: "clerk", "nextauth", "betterauth"
 ```
 
 > **Default behavior:** The `.env.example` template ships with `AUTH_PROVIDER="nextauth"` so you can start locally without any third-party accounts. The code's internal fallback is `clerk` if the variable is unset, but since `.env.example` explicitly sets it, most new setups use NextAuth by default.
@@ -244,6 +246,18 @@ CLERK_WEBHOOK_SECRET=""   # Required for webhook-driven user init and welcome em
 - UI components (`<AuthSignIn>`, `<AuthSignUp>`, `<AuthLoaded>`, `<AuthLoading>`, etc.) are re-exported from `lib/auth-provider/client/components` and switch automatically.
 - Clerk's `ClerkProvider` wraps the app in `components/AppAuthProvider.tsx` with automatic dark mode theming via a `MutationObserver` on the `<html>` class.
 - Organization primitives are powered by Clerk and synced to the local DB via webhooks.
+
+### Better Auth
+
+```bash
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"
+BETTER_AUTH_SECRET=""   # Generate with: npx auth secret
+AUTH_SECRET=""          # Keep aligned with BETTER_AUTH_SECRET
+NEXTAUTH_SECRET=""      # Optional compatibility fallback
+```
+
+Better Auth supports local credentials, magic links, and app-managed organizations while still routing through the same `lib/auth-provider/` abstraction as Clerk and NextAuth. It is the preferred self-hosted provider lane when you want built-in organization primitives without depending on Clerk.
 
 ### NextAuth (Auth.js v5)
 
@@ -572,6 +586,18 @@ When querying, always resolve subscriptions and plans the same way the service l
 ### Adding New Providers
 
 See the public docs page at `/docs/adding-payment-provider` for the overview, and [`docs/adding-payment-providers.md`](docs/adding-payment-providers.md) for the deeper implementation guide.
+
+### Public Export
+
+`npm run public:export` builds a sanitized tree in `dist/public-export` from tracked files plus the exclusions in `public-export.config.json`.
+
+The public export intentionally omits:
+
+- internal planning notes like `docs/better-auth-migration-feasibility.md`
+- one-off/private migration helpers like `scripts/backfill-better-auth-coexistence.ts`
+- operational runbooks, public-history tooling, generated docs-search artifacts, local DB files, and the in-app docs source under `app/docs/`
+
+Public implementation guides that are useful to downstream users, such as [`docs/adding-payment-providers.md`](docs/adding-payment-providers.md), remain included.
 
 ---
 
@@ -1569,7 +1595,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Database | `DATABASE_URL` | SQLite for dev, PostgreSQL for prod |
 | App | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_APP_DOMAIN` | Public-facing URL and branding |
 | Branding | `NEXT_PUBLIC_SITE_LOGO`, `NEXT_PUBLIC_SITE_LOGO_LIGHT/DARK`, `NEXT_PUBLIC_SITE_LOGO_HEIGHT` | Site logo configuration |
-| Auth | `AUTH_PROVIDER`, `CLERK_*`, `AUTH_SECRET`, `NEXTAUTH_SECRET` | Choose Clerk or NextAuth |
+| Auth | `AUTH_PROVIDER`, `CLERK_*`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `AUTH_SECRET`, `NEXTAUTH_SECRET` | Choose Clerk, Better Auth, or NextAuth |
 | Auth OAuth | `GITHUB_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` | NextAuth OAuth providers |
 | Payment | `PAYMENT_PROVIDER`, `STRIPE_*`, `PAYSTACK_*`, `PADDLE_*`, `RAZORPAY_*` | Choose provider |
 | Payment catalog | `PAYMENT_AUTO_CREATE`, provider credentials, DB `PlanPrice` records | Seeded plans no longer require manual `PAYMENT_PRICE_*` or `SUBSCRIPTION_PRICE_*` env vars |

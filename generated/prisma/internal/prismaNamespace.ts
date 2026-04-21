@@ -80,11 +80,11 @@ export type PrismaVersion = {
 }
 
 /**
- * Prisma Client JS version: 7.6.0
+ * Prisma Client JS version: 7.7.0
  * Query Engine version: 75cbdc1eb7150937890ad5465d861175c6624711
  */
 export const prismaVersion: PrismaVersion = {
-  client: "7.6.0",
+  client: "7.7.0",
   engine: "75cbdc1eb7150937890ad5465d861175c6624711"
 }
 
@@ -413,6 +413,7 @@ export const ModelName = {
   RateLimitBucket: 'RateLimitBucket',
   Account: 'Account',
   Session: 'Session',
+  Verification: 'Verification',
   VerificationToken: 'VerificationToken'
 } as const
 
@@ -429,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "plan" | "planPrice" | "organization" | "organizationMembership" | "organizationInvite" | "subscription" | "payment" | "paymentAuthorization" | "featureUsageLog" | "setting" | "coupon" | "couponRedemption" | "couponPlan" | "supportTicket" | "ticketReply" | "emailLog" | "emailTemplate" | "userSetting" | "notification" | "visitLog" | "systemLog" | "sitePage" | "blogCategory" | "blogPostCategory" | "adminActionLog" | "rateLimitBucket" | "account" | "session" | "verificationToken"
+    modelProps: "user" | "plan" | "planPrice" | "organization" | "organizationMembership" | "organizationInvite" | "subscription" | "payment" | "paymentAuthorization" | "featureUsageLog" | "setting" | "coupon" | "couponRedemption" | "couponPlan" | "supportTicket" | "ticketReply" | "emailLog" | "emailTemplate" | "userSetting" | "notification" | "visitLog" | "systemLog" | "sitePage" | "blogCategory" | "blogPostCategory" | "adminActionLog" | "rateLimitBucket" | "account" | "session" | "verification" | "verificationToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2579,6 +2580,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Verification: {
+      payload: Prisma.$VerificationPayload<ExtArgs>
+      fields: Prisma.VerificationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VerificationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VerificationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        findFirst: {
+          args: Prisma.VerificationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VerificationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        findMany: {
+          args: Prisma.VerificationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>[]
+        }
+        create: {
+          args: Prisma.VerificationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        createMany: {
+          args: Prisma.VerificationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VerificationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>[]
+        }
+        delete: {
+          args: Prisma.VerificationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        update: {
+          args: Prisma.VerificationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        deleteMany: {
+          args: Prisma.VerificationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VerificationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VerificationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>[]
+        }
+        upsert: {
+          args: Prisma.VerificationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationPayload>
+        }
+        aggregate: {
+          args: Prisma.VerificationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVerification>
+        }
+        groupBy: {
+          args: Prisma.VerificationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VerificationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationCountAggregateOutputType> | number
+        }
+      }
+    }
     VerificationToken: {
       payload: Prisma.$VerificationTokenPayload<ExtArgs>
       fields: Prisma.VerificationTokenFieldRefs
@@ -2701,6 +2776,7 @@ export const UserScalarFieldEnum = {
   password: 'password',
   tokenVersion: 'tokenVersion',
   emailVerified: 'emailVerified',
+  emailVerifiedBool: 'emailVerifiedBool',
   paymentsCount: 'paymentsCount',
   externalCustomerIds: 'externalCustomerIds',
   tokenBalance: 'tokenBalance',
@@ -2767,9 +2843,11 @@ export type PlanPriceScalarFieldEnum = (typeof PlanPriceScalarFieldEnum)[keyof t
 
 export const OrganizationScalarFieldEnum = {
   id: 'id',
-  clerkOrganizationId: 'clerkOrganizationId',
+  providerOrganizationId: 'providerOrganizationId',
   name: 'name',
   slug: 'slug',
+  logo: 'logo',
+  metadata: 'metadata',
   ownerUserId: 'ownerUserId',
   planId: 'planId',
   billingEmail: 'billingEmail',
@@ -3164,13 +3242,23 @@ export const AccountScalarFieldEnum = {
   type: 'type',
   provider: 'provider',
   providerAccountId: 'providerAccountId',
+  accountId: 'accountId',
+  providerId: 'providerId',
   refresh_token: 'refresh_token',
   access_token: 'access_token',
+  refreshToken: 'refreshToken',
+  accessToken: 'accessToken',
   expires_at: 'expires_at',
+  accessTokenExpiresAt: 'accessTokenExpiresAt',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   token_type: 'token_type',
   scope: 'scope',
   id_token: 'id_token',
-  session_state: 'session_state'
+  idToken: 'idToken',
+  session_state: 'session_state',
+  password: 'password',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
@@ -3179,16 +3267,34 @@ export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeo
 export const SessionScalarFieldEnum = {
   id: 'id',
   sessionToken: 'sessionToken',
+  token: 'token',
   userId: 'userId',
   expires: 'expires',
+  expiresAt: 'expiresAt',
   lastActiveAt: 'lastActiveAt',
   ipAddress: 'ipAddress',
   userAgent: 'userAgent',
   country: 'country',
-  city: 'city'
+  city: 'city',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  activeOrganizationId: 'activeOrganizationId',
+  activeTeamId: 'activeTeamId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const VerificationScalarFieldEnum = {
+  id: 'id',
+  identifier: 'identifier',
+  value: 'value',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
 
 
 export const VerificationTokenScalarFieldEnum = {
@@ -3380,6 +3486,7 @@ export type GlobalOmitConfig = {
   rateLimitBucket?: Prisma.RateLimitBucketOmit
   account?: Prisma.AccountOmit
   session?: Prisma.SessionOmit
+  verification?: Prisma.VerificationOmit
   verificationToken?: Prisma.VerificationTokenOmit
 }
 

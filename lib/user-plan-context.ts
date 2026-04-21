@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { getActiveTeamSubscriptionForOrganization, getOrganizationAccessSummary } from './organization-access';
+import { getOrganizationReferenceWhere } from './organization-reference';
 import type { Prisma } from '@/lib/prisma-client';
 
 export const PLAN_WITH_BILLING_FIELDS = {
@@ -101,10 +102,7 @@ export async function getOrganizationPlanContext(userId: string, activeOrganizat
   const where = access.kind === 'OWNER'
     ? {
         ownerUserId: userId,
-        OR: [
-          { id: activeOrganizationId },
-          { clerkOrganizationId: activeOrganizationId },
-        ],
+        OR: getOrganizationReferenceWhere(activeOrganizationId),
       }
     : { id: access.membership.organizationId };
   const organization = await prisma.organization.findFirst({

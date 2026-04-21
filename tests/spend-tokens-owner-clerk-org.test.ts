@@ -105,7 +105,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
           ownerUserId: 'user_1',
           OR: expect.arrayContaining([
             { id: 'org_clerk_123' },
-            { clerkOrganizationId: 'org_clerk_123' },
+            { providerOrganizationId: 'org_clerk_123' },
           ]),
         }),
       })
@@ -135,7 +135,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       memberTokenUsage: 5,
       organization: {
         id: 'org_db_1',
-        clerkOrganizationId: 'org_clerk_123',
+        providerOrganizationId: 'org_clerk_123',
         ownerUserId: 'owner_1',
         tokenBalance: 100,
         memberTokenCap: 10,
@@ -314,7 +314,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       memberTokenUsage: 0,
       organization: {
         id: 'org_db_1',
-        clerkOrganizationId: 'org_clerk_123',
+        providerOrganizationId: 'org_clerk_123',
         ownerUserId: 'owner_1',
         tokenBalance: 100,
         memberTokenCap: null,
@@ -401,7 +401,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       sharedTokenBalance: 0,
       organization: {
         id: 'org_db_1',
-        clerkOrganizationId: 'org_clerk_123',
+        providerOrganizationId: 'org_clerk_123',
         ownerUserId: 'owner_1',
         tokenBalance: 100,
         tokenPoolStrategy: 'SHARED_FOR_ORG',
@@ -457,7 +457,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       sharedTokenBalance: 0,
       organization: {
         id: 'org_db_1',
-        clerkOrganizationId: 'org_clerk_123',
+        providerOrganizationId: 'org_clerk_123',
         ownerUserId: 'owner_1',
         tokenBalance: 4,
         tokenPoolStrategy: 'SHARED_FOR_ORG',
@@ -509,7 +509,7 @@ describe('POST /api/user/spend-tokens owner + Clerk org id resolution', () => {
       sharedTokenBalance: 25,
       organization: {
         id: 'org_db_1',
-        clerkOrganizationId: 'org_clerk_123',
+        providerOrganizationId: 'org_clerk_123',
         ownerUserId: 'owner_1',
         tokenBalance: 500,
         tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',

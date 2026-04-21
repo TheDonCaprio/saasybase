@@ -4,12 +4,20 @@ import { authService } from '../../../../lib/auth-provider';
 import { prisma } from '../../../../lib/prisma';
 import { deactivateOrganizationsByIds } from '../../../../lib/organization-access';
 import { Logger } from '../../../../lib/logger';
+import { hasMatchingOrganizationReference } from '../../../../lib/organization-reference';
 import { toError } from '../../../../lib/runtime-guards';
 import { getOrganizationExpiryMode, getPaidTokensNaturalExpiryGraceHours } from '../../../../lib/settings';
 
 type ValidateOrgAccessPayload = {
     activeOrgId?: string | null;
 };
+
+function getProviderOrganizationId(
+    organization: { id: string; providerOrganizationId: string | null },
+    requestedActiveOrgId?: string | null,
+) {
+    return organization.providerOrganizationId ?? requestedActiveOrgId ?? organization.id;
+}
 
 export async function POST(request: Request) {
     try {
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
                 organization: {
                     select: {
                         id: true,
-                        clerkOrganizationId: true,
+                        providerOrganizationId: true,
                         ownerUserId: true,
                     }
                 }
@@ -47,15 +55,20 @@ export async function POST(request: Request) {
 
         if (requestedActiveOrgId) {
             const activeMembership = memberships.find(
-                (membership) => membership.organization.id === requestedActiveOrgId
-                    || membership.organization.clerkOrganizationId === requestedActiveOrgId
+                (membership) => hasMatchingOrganizationReference({
+                    id: membership.organization.id,
+                    providerOrganizationId: membership.organization.providerOrganizationId,
+                }, requestedActiveOrgId)
             );
 
             if (!activeMembership) {
                 clearActiveOrg = true;
                 activeOrgReason = 'active_org_membership_missing';
             } else if (authService.supportsFeature('organizations')) {
-                const providerOrganizationId = activeMembership.organization.clerkOrganizationId ?? requestedActiveOrgId;
+                const providerOrganizationId = getProviderOrganizationId({
+                    id: activeMembership.organization.id,
+                    providerOrganizationId: activeMembership.organization.providerOrganizationId,
+                }, requestedActiveOrgId);
                 const providerOrganization = await authService.getOrganization(providerOrganizationId);
 
                 if (!providerOrganization) {

@@ -1,6 +1,11 @@
 import { prisma } from './prisma';
 import { getOrganizationAccessSummary, type TeamSubscriptionStatus } from './organization-access';
+import { getOrganizationReferenceWhere } from './organization-reference';
 import type { Prisma } from '@/lib/prisma-client';
+
+function getProviderOrganizationId(value: { providerOrganizationId?: string | null }) {
+  return value.providerOrganizationId ?? null;
+}
 
 export type TeamDashboardMember = {
   id: string;
@@ -33,7 +38,6 @@ export type TeamDashboardInvite = {
 export type TeamDashboardOrganization = {
   id: string;
   providerOrganizationId: string | null;
-  clerkOrganizationId: string | null;
   name: string;
   slug: string;
   ownerUserId: string;
@@ -179,8 +183,7 @@ function mapOrganization(record: OrganizationWithRelations | null): TeamDashboar
 
   return {
     id: record.id,
-    providerOrganizationId: record.clerkOrganizationId ?? null,
-    clerkOrganizationId: record.clerkOrganizationId ?? null,
+    providerOrganizationId: getProviderOrganizationId({ providerOrganizationId: record.providerOrganizationId }),
     name: record.name,
     slug: record.slug,
     ownerUserId: record.ownerUserId,
@@ -229,10 +232,7 @@ export async function fetchTeamDashboardState(
       ? (activeOrganizationId
         ? {
             ownerUserId: userId,
-            OR: [
-              { id: activeOrganizationId },
-              { clerkOrganizationId: activeOrganizationId },
-            ],
+            OR: getOrganizationReferenceWhere(activeOrganizationId),
           }
         : { ownerUserId: userId })
       : { id: access.membership.organizationId };

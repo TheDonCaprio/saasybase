@@ -13,6 +13,10 @@ function normalizeEmail(value: string | null | undefined) {
   return trimmed.length ? trimmed : null;
 }
 
+function getProviderOrganizationId(value: { organizationId: string; providerOrganizationId?: string | null }) {
+  return value.providerOrganizationId ?? value.organizationId;
+}
+
 export async function POST(request: NextRequest) {
   const { userId } = await authService.getSession();
   if (!userId) {
@@ -67,7 +71,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
     }
 
-    const providerOrganizationId = invite.organization.clerkOrganizationId ?? invite.organizationId;
+    const providerOrganizationId = getProviderOrganizationId({
+      organizationId: invite.organizationId,
+      providerOrganizationId: invite.organization.providerOrganizationId,
+    });
 
     const inviteEmail = normalizeEmail(invite.email);
     if (inviteEmail) {
@@ -116,7 +123,7 @@ export async function POST(request: NextRequest) {
     await syncOrganizationMembership({
       userId,
       organizationId: invite.organizationId,
-      clerkOrganizationId: invite.organization.clerkOrganizationId,
+      providerOrganizationId,
       role: invite.role ?? 'MEMBER',
       status: 'ACTIVE',
     });

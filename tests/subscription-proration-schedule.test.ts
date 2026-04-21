@@ -697,7 +697,7 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 
 		prismaMock.organization.findUnique.mockResolvedValueOnce({
 			id: 'org_team_1',
-			clerkOrganizationId: null,
+			providerOrganizationId: null,
 			planId: 'plan_current',
 			seatLimit: 5,
 			tokenPoolStrategy: 'SHARED_FOR_ORG',

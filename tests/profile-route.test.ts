@@ -45,11 +45,24 @@ const userPlanContextMock = vi.hoisted(() => ({
 vi.mock('../lib/user-plan-context', () => userPlanContextMock);
 const sendNextAuthVerificationEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
 const sendNextAuthEmailChangeVerificationMock = vi.hoisted(() => vi.fn(async () => undefined));
+const authServiceMock = vi.hoisted(() => ({ providerName: 'nextauth' }));
+const betterAuthServerMock = vi.hoisted(() => ({
+  api: {
+    changeEmail: vi.fn(async () => ({ status: true })),
+  },
+}));
+const recordBetterAuthPendingEmailChangeMock = vi.hoisted(() => vi.fn(async () => undefined));
+const clearBetterAuthPendingEmailChangeMock = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('../lib/nextauth-email-verification', () => ({
   sendNextAuthVerificationEmail: sendNextAuthVerificationEmailMock,
   sendNextAuthEmailChangeVerification: sendNextAuthEmailChangeVerificationMock,
 }));
-vi.mock('../lib/auth-provider', () => ({ authService: { providerName: 'nextauth' } }));
+vi.mock('../lib/auth-provider', () => ({ authService: authServiceMock }));
+vi.mock('../lib/better-auth', () => ({ betterAuthServer: betterAuthServerMock }));
+vi.mock('../lib/better-auth-email-change', () => ({
+  recordBetterAuthPendingEmailChange: recordBetterAuthPendingEmailChangeMock,
+  clearBetterAuthPendingEmailChange: clearBetterAuthPendingEmailChangeMock,
+}));
 
 import { GET, PATCH } from '../app/api/user/profile/route';
 import { getAuthSafe } from '../lib/auth';
@@ -57,6 +70,7 @@ import { getAuthSafe } from '../lib/auth';
 describe('GET /api/user/profile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authServiceMock.providerName = 'nextauth';
   });
 
   it('includes paidTokens even when subscription is null', async () => {
@@ -404,5 +418,81 @@ describe('GET /api/user/profile', () => {
     });
     expect(body.emailChangePending).toBe(true);
     expect(body.user.email).toBe('current@example.com');
+  });
+
+  it('keeps the existing email active while Better Auth email change awaits confirmation', async () => {
+    authServiceMock.providerName = 'betterauth';
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'current@example.com',
+      password: 'hashed',
+    });
+    prismaMock.user.findFirst.mockResolvedValueOnce(null);
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'current@example.com',
+    });
+
+    const req = new Request('http://localhost/api/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ email: 'next@example.com' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await PATCH(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(betterAuthServerMock.api.changeEmail).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: {
+        newEmail: 'next@example.com',
+        callbackURL: 'http://localhost/dashboard/profile?emailChange=success',
+      },
+    });
+    expect(body.emailChangePending).toBe(true);
+    expect(body.pendingEmail).toBe('next@example.com');
+    expect(body.verificationRequired).toBe(false);
+    expect(body.user.email).toBe('current@example.com');
+    expect(recordBetterAuthPendingEmailChangeMock).toHaveBeenCalledWith({
+      userId: 'user_1',
+      currentEmail: 'current@example.com',
+      newEmail: 'next@example.com',
+    });
+    expect(sendNextAuthEmailChangeVerificationMock).not.toHaveBeenCalled();
+  });
+
+  it('returns verificationRequired when Better Auth updates an unverified email immediately', async () => {
+    authServiceMock.providerName = 'betterauth';
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'current@example.com',
+      password: 'hashed',
+    });
+    prismaMock.user.findFirst.mockResolvedValueOnce(null);
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'user_1',
+      name: 'Caprio Files',
+      email: 'next@example.com',
+    });
+
+    const req = new Request('http://localhost/api/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ email: 'next@example.com' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await PATCH(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.verificationRequired).toBe(true);
+    expect(body.emailChangePending).toBe(false);
+    expect(body.pendingEmail).toBe(null);
+    expect(body.user.email).toBe('next@example.com');
+    expect(clearBetterAuthPendingEmailChangeMock).toHaveBeenCalledWith('user_1', 'next@example.com');
   });
 });

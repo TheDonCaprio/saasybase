@@ -3,6 +3,10 @@ import { workspaceService } from './workspace-service';
 import { Logger } from './logger';
 import { toError } from './runtime-guards';
 
+function getProviderOrganizationId(value: { providerOrganizationId?: string | null }) {
+  return value.providerOrganizationId ?? null;
+}
+
 export async function syncOrganizationBillingMetadata(params: {
   organizationId: string;
   planId: string;
@@ -16,7 +20,7 @@ export async function syncOrganizationBillingMetadata(params: {
     where: { id: params.organizationId },
     select: {
       id: true,
-      clerkOrganizationId: true,
+      providerOrganizationId: true,
       planId: true,
       seatLimit: true,
       tokenPoolStrategy: true,
@@ -42,12 +46,13 @@ export async function syncOrganizationBillingMetadata(params: {
     });
   }
 
-  if (!organization.clerkOrganizationId) {
+  const providerOrganizationId = getProviderOrganizationId({ providerOrganizationId: organization.providerOrganizationId });
+  if (!providerOrganizationId) {
     return;
   }
 
   try {
-    await workspaceService.updateProviderOrganization(organization.clerkOrganizationId, {
+    await workspaceService.updateProviderOrganization(providerOrganizationId, {
       maxAllowedMemberships: desiredSeatLimit ?? undefined,
       publicMetadata: {
         planId: params.planId,

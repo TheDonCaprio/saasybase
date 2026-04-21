@@ -943,8 +943,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           sync: "'1'? — force server-side sync before returning state",
         },
         notes: [
-          'providerOrganizationId is the canonical backing-provider org identifier when one exists.',
-          'clerkOrganizationId is retained only as a legacy compatibility alias and may be null even when providerOrganizationId is present.'
+          'providerOrganizationId is the canonical backing-provider org identifier when one exists.'
         ],
         rateLimitTier: 'user',
         example: { query: { sync: '1' } },
@@ -969,7 +968,6 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           organization: {
             id: 'org_1',
             providerOrganizationId: null,
-            clerkOrganizationId: null,
             name: 'Acme Workspace',
             slug: 'acme-workspace',
             ownerUserId: 'user_1',
@@ -1074,12 +1072,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Requires a provisioned workspace; otherwise returns 400.',
-          'Request role is normalized on input, while the returned invite snapshot uses persisted uppercase enum values such as MEMBER/ADMIN.',
-          'In response payloads, clerkOrganizationId is a legacy compatibility alias for older Clerk-based consumers; prefer providerOrganizationId.'
+          'Request role is normalized on input, while the returned invite snapshot uses persisted uppercase enum values such as MEMBER/ADMIN.'
         ],
         rateLimitTier: 'user',
         example: { email: 'teammate@example.com', role: 'member' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', providerOrganizationId: 'org_provider_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -1124,12 +1121,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           token: 'string — required (alias: invitationId)',
         },
         notes: [
-          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
-          'clerkOrganizationId is included only as a legacy compatibility alias for older consumers.'
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.'
         ],
         rateLimitTier: 'user',
         example: { token: 'invite_token_1' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', members: [], invites: [{ id: 'invite_1', token: 'invite_token_1', email: 'teammate@example.com', role: 'MEMBER', status: 'PENDING', invitedByUserId: 'user_owner', invitedAt: '2026-04-04T10:00:00.000Z', expiresAt: '2026-04-11T10:00:00.000Z', acceptedAt: null }], stats: { memberCount: 1, inviteCount: 1, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -1141,12 +1137,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           token: 'string — required (alias: invitationId)',
         },
         notes: [
-          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
-          'clerkOrganizationId is preserved only as a legacy compatibility alias for older Clerk-shaped clients.'
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.'
         ],
         rateLimitTier: 'user',
         example: { token: 'invite_token_1' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', members: [], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
       {
         method: 'POST',
@@ -1158,12 +1153,11 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           userId: 'string — required; cannot equal current userId',
         },
         notes: [
-          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.',
-          'clerkOrganizationId is preserved only as a legacy compatibility alias for older Clerk-shaped clients.'
+          'providerOrganizationId is the canonical backing-provider org id in the returned snapshot.'
         ],
         rateLimitTier: 'user',
         example: { userId: 'user_member' },
-        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', clerkOrganizationId: 'legacy_clerk_org_compat_1', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
+        response: { ok: true, access: { allowed: true, kind: 'OWNER' }, organization: { id: 'org_1', name: 'Acme Workspace', slug: 'acme-workspace', ownerUserId: 'user_owner', planId: 'plan_business', planName: 'Business', planTokenName: 'credits', seatLimit: 10, tokenPoolStrategy: 'SHARED_FOR_ORG', memberTokenCap: 250, memberCapStrategy: 'SOFT', memberCapResetIntervalHours: 24, ownerExemptFromCaps: true, createdAt: '2026-04-01T08:00:00.000Z', providerOrganizationId: 'org_provider_1', members: [{ id: 'membership_1', userId: 'user_owner', name: 'Jane Owner', email: 'owner@example.com', role: 'OWNER', status: 'ACTIVE', joinedAt: '2026-04-01T08:00:00.000Z', sharedTokenBalance: 250, memberTokenCapOverride: null, memberTokenUsage: 0, memberTokenUsageWindowStart: null, effectiveMemberCap: null, ownerExemptFromCaps: true }], invites: [], stats: { memberCount: 1, inviteCount: 0, seatsRemaining: 9 } } }
       },
     ]
   },

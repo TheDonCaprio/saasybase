@@ -7,6 +7,10 @@ import { recordAdminAction } from '../../../../../../lib/admin-actions';
 import { toError } from '../../../../../../lib/runtime-guards';
 import { authService } from '@/lib/auth-provider';
 
+function getProviderOrganizationId(value: { providerOrganizationId?: string | null }) {
+    return value.providerOrganizationId ?? null;
+}
+
 export async function DELETE(
     request: NextRequest,
     context: { params: Promise<{ orgId: string }> }
@@ -36,7 +40,7 @@ export async function DELETE(
                 id: true,
                 name: true,
                 slug: true,
-                clerkOrganizationId: true,
+                providerOrganizationId: true,
                 _count: {
                     select: {
                         memberships: true,
@@ -52,17 +56,18 @@ export async function DELETE(
 
         // If the organization has a Clerk backing record, attempt to delete it first.
         const clerkDeletion = { attempted: false, success: false, error: null as string | null };
-        if (organization.clerkOrganizationId) {
+        const providerOrganizationId = getProviderOrganizationId({ providerOrganizationId: organization.providerOrganizationId });
+        if (providerOrganizationId) {
             clerkDeletion.attempted = true;
             try {
-                await authService.deleteOrganization(organization.clerkOrganizationId);
+                await authService.deleteOrganization(providerOrganizationId);
                 clerkDeletion.success = true;
             } catch (err: unknown) {
                 const e = toError(err);
                 // If Clerk reports not found, it's safe to continue; log other errors.
                 Logger.error('Failed to delete Clerk organization for admin deletion', {
                     orgId,
-                    clerkOrganizationId: organization.clerkOrganizationId,
+                    providerOrganizationId: providerOrganizationId,
                     error: e.message,
                 });
                 clerkDeletion.error = e.message ?? String(err);

@@ -3,6 +3,13 @@ import { authService } from '@/lib/auth-provider';
 import { prisma } from '../../../../../lib/prisma';
 import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
 import { Logger } from '../../../../../lib/logger';
+import { getOrganizationReferenceWhere as getOrganizationReferenceMatches } from '../../../../../lib/organization-reference';
+
+function getOrganizationReferenceWhere(userId: string, orgId?: string | null) {
+  return orgId
+    ? { ownerUserId: userId, OR: getOrganizationReferenceMatches(orgId) }
+    : { ownerUserId: userId };
+}
 
 export async function PATCH(request: NextRequest) {
   const { userId, orgId } = await authService.getSession();
@@ -39,9 +46,7 @@ export async function PATCH(request: NextRequest) {
 
   // Only the organization owner can change per-member overrides
   const organization = await prisma.organization.findFirst({
-    where: orgId
-      ? { ownerUserId: userId, OR: [{ id: orgId }, { clerkOrganizationId: orgId }] }
-      : { ownerUserId: userId },
+    where: getOrganizationReferenceWhere(userId, orgId),
     select: { id: true },
   });
 

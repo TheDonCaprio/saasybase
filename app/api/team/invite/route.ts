@@ -8,7 +8,16 @@ import { toError } from '../../../../lib/runtime-guards';
 import { sendEmail, getSiteName, getSupportEmail } from '../../../../lib/email';
 import { getEnv } from '../../../../lib/env';
 import { ensureTeamOrganization } from '../../../../lib/organization-access';
-import { type ClerkMembershipRole } from '../../../../lib/clerk-memberships';
+import { getOrganizationReferenceWhere as getOrganizationReferenceMatches } from '../../../../lib/organization-reference';
+
+type ProviderMembershipRole = 'org:admin' | 'org:member';
+
+function getOrganizationReferenceWhere(userId: string, orgId: string) {
+  return {
+    ownerUserId: userId,
+    OR: getOrganizationReferenceMatches(orgId),
+  };
+}
 
 // Clerk client types not required in this module
 
@@ -44,10 +53,7 @@ export async function POST(request: NextRequest) {
   let organization = null;
   if (orgId) {
     organization = await prisma.organization.findFirst({
-      where: {
-        ownerUserId: userId,
-        OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
-      },
+      where: getOrganizationReferenceWhere(userId, orgId),
     });
     if (!organization) {
       return NextResponse.json({ ok: false, error: 'Active workspace is not owned by you or not provisioned yet.' }, { status: 403 });
@@ -69,26 +75,27 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const resolvedRole: ClerkMembershipRole = role && role.toLowerCase().includes('admin') ? 'org:admin' : 'org:member';
+    const resolvedRole: ProviderMembershipRole = role && role.toLowerCase().includes('admin') ? 'org:admin' : 'org:member';
 
-    // If the recipient already has a Clerk account we DO NOT auto-add them.
+    // If the recipient already has an auth-provider account we DO NOT auto-add them.
     // Instead, send the same site-hosted invitation so they can accept or
     // decline from our UI. This avoids surprising automatic membership
     // assignments and gives members explicit control.
     const existingClerkUserId = await findAuthUserId(email);
     if (existingClerkUserId) {
-      Logger.info('team invite: recipient has Clerk account; sending site-hosted invite instead of auto-adding', { email, clerkUserId: existingClerkUserId });
+      Logger.info('team invite: recipient has auth-provider account; sending site-hosted invite instead of auto-adding', { email, providerUserId: existingClerkUserId });
     }
 
-    // If the recipient already has a Clerk user account we add them immediately.
+    // If the recipient already has an auth-provider user account we still keep
+    // this site-hosted acceptance flow so invites stay product-controlled.
     // Otherwise create a local invite record and send our own email. This avoids
-    // Clerk sending its hosted invitation email which redirects users to the
-    // Clerk site; we want acceptance to happen on-site instead (see custom
+    // provider-hosted invitation email flows that redirect users away from the
+    // app; we want acceptance to happen on-site instead (see custom
     // flows guide).
     const savedInvite = await upsertOrganizationInvite({
       email,
       organizationId: organization.id,
-      clerkOrganizationId: organization.clerkOrganizationId ?? null,
+      providerOrganizationId: organization.providerOrganizationId ?? null,
       role: String(resolvedRole).toLowerCase().includes('admin') ? 'ADMIN' : 'MEMBER',
       status: 'PENDING',
       invitedByUserId: userId,

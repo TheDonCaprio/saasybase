@@ -53,7 +53,7 @@ describe('organization teardown by provider', () => {
       {
         id: 'org_1',
         name: 'Acme Workspace',
-        clerkOrganizationId: 'provider_org_1',
+        providerOrganizationId: 'provider_org_1',
         suspendedAt: null,
         suspensionReason: null,
         ownerUserId: 'user_1',
@@ -113,7 +113,7 @@ describe('organization teardown by provider', () => {
     expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },
       data: {
-        clerkOrganizationId: null,
+        providerOrganizationId: null,
         suspendedAt: expect.any(Date),
         suspensionReason: 'validate-org-access',
       },
@@ -138,7 +138,7 @@ describe('organization teardown by provider', () => {
     expect(prismaMock.organization.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['org_1'] } },
       data: {
-        clerkOrganizationId: null,
+        providerOrganizationId: null,
         suspendedAt: expect.any(Date),
         suspensionReason: 'validate-org-access',
       },
@@ -176,7 +176,7 @@ describe('organization teardown by provider', () => {
       {
         id: 'org_1',
         name: 'Acme Workspace',
-        clerkOrganizationId: null,
+        providerOrganizationId: null,
         suspendedAt: new Date('2026-04-17T08:00:00.000Z'),
         suspensionReason: 'validate-org-access',
         ownerUserId: 'user_1',

@@ -12,6 +12,7 @@ import { syncOrganizationEligibilityForUser } from '../../../../lib/organization
 import { creditOrganizationSharedTokens, resetOrganizationSharedTokens } from '../../../../lib/teams';
 import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
+import { getOrganizationReferenceWhere } from '../../../../lib/organization-reference';
 import type { Prisma } from '@/lib/prisma-client';
 import { canUseLocalhostDevBypass } from '../../../../lib/dev-admin-bypass';
 
@@ -562,12 +563,9 @@ export async function GET(req: NextRequest) {
       ? await prisma.organization.findFirst({
         where: {
           ownerUserId: userId,
-          OR: [
-            { id: activeOrganizationId },
-            { clerkOrganizationId: activeOrganizationId },
-          ],
+          OR: getOrganizationReferenceWhere(activeOrganizationId),
         },
-        select: { id: true, clerkOrganizationId: true },
+        select: { id: true },
       })
       : null;
 

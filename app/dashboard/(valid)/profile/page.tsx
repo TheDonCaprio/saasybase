@@ -127,7 +127,7 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
     : planDisplay.planSource === 'ORGANIZATION' && planDisplay.workspace
       ? `Managed by ${planDisplay.workspace.name}`
       : 'No active subscription yet';
-  const currentAuthUser = authService.providerName === 'nextauth' ? await authService.getCurrentUser() : null;
+  const currentAuthUser = await authService.getCurrentUser();
 
   return (
     <div className="space-y-6">
@@ -139,6 +139,11 @@ export default async function UserProfilePage({ searchParams }: PageProps) {
       {emailChangeState === 'already-used' && (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-900 shadow-sm dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
           That email address is already in use by another account. Please try a different address.
+        </div>
+      )}
+      {emailChangeState === 'canceled' && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+          That email change request was canceled, so the verification link is no longer valid.
         </div>
       )}
       <DashboardPageHeader

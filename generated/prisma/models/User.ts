@@ -52,6 +52,7 @@ export type UserMinAggregateOutputType = {
   password: string | null
   tokenVersion: number | null
   emailVerified: Date | null
+  emailVerifiedBool: boolean | null
   paymentsCount: number | null
   externalCustomerIds: string | null
   tokenBalance: number | null
@@ -76,6 +77,7 @@ export type UserMaxAggregateOutputType = {
   password: string | null
   tokenVersion: number | null
   emailVerified: Date | null
+  emailVerifiedBool: boolean | null
   paymentsCount: number | null
   externalCustomerIds: string | null
   tokenBalance: number | null
@@ -100,6 +102,7 @@ export type UserCountAggregateOutputType = {
   password: number
   tokenVersion: number
   emailVerified: number
+  emailVerifiedBool: number
   paymentsCount: number
   externalCustomerIds: number
   tokenBalance: number
@@ -140,6 +143,7 @@ export type UserMinAggregateInputType = {
   password?: true
   tokenVersion?: true
   emailVerified?: true
+  emailVerifiedBool?: true
   paymentsCount?: true
   externalCustomerIds?: true
   tokenBalance?: true
@@ -164,6 +168,7 @@ export type UserMaxAggregateInputType = {
   password?: true
   tokenVersion?: true
   emailVerified?: true
+  emailVerifiedBool?: true
   paymentsCount?: true
   externalCustomerIds?: true
   tokenBalance?: true
@@ -188,6 +193,7 @@ export type UserCountAggregateInputType = {
   password?: true
   tokenVersion?: true
   emailVerified?: true
+  emailVerifiedBool?: true
   paymentsCount?: true
   externalCustomerIds?: true
   tokenBalance?: true
@@ -299,6 +305,7 @@ export type UserGroupByOutputType = {
   password: string | null
   tokenVersion: number
   emailVerified: Date | null
+  emailVerifiedBool: boolean
   paymentsCount: number
   externalCustomerIds: string | null
   tokenBalance: number
@@ -346,6 +353,7 @@ export type UserWhereInput = {
   password?: Prisma.StringNullableFilter<"User"> | string | null
   tokenVersion?: Prisma.IntFilter<"User"> | number
   emailVerified?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFilter<"User"> | boolean
   paymentsCount?: Prisma.IntFilter<"User"> | number
   externalCustomerIds?: Prisma.StringNullableFilter<"User"> | string | null
   tokenBalance?: Prisma.IntFilter<"User"> | number
@@ -388,6 +396,7 @@ export type UserOrderByWithRelationInput = {
   password?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerifiedBool?: Prisma.SortOrder
   paymentsCount?: Prisma.SortOrder
   externalCustomerIds?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenBalance?: Prisma.SortOrder
@@ -434,6 +443,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   password?: Prisma.StringNullableFilter<"User"> | string | null
   tokenVersion?: Prisma.IntFilter<"User"> | number
   emailVerified?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFilter<"User"> | boolean
   paymentsCount?: Prisma.IntFilter<"User"> | number
   externalCustomerIds?: Prisma.StringNullableFilter<"User"> | string | null
   tokenBalance?: Prisma.IntFilter<"User"> | number
@@ -475,6 +485,7 @@ export type UserOrderByWithAggregationInput = {
   password?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerifiedBool?: Prisma.SortOrder
   paymentsCount?: Prisma.SortOrder
   externalCustomerIds?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenBalance?: Prisma.SortOrder
@@ -507,6 +518,7 @@ export type UserScalarWhereWithAggregatesInput = {
   password?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   tokenVersion?: Prisma.IntWithAggregatesFilter<"User"> | number
   emailVerified?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  emailVerifiedBool?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   paymentsCount?: Prisma.IntWithAggregatesFilter<"User"> | number
   externalCustomerIds?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   tokenBalance?: Prisma.IntWithAggregatesFilter<"User"> | number
@@ -531,6 +543,7 @@ export type UserCreateInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -573,6 +586,7 @@ export type UserUncheckedCreateInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -615,6 +629,7 @@ export type UserUpdateInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -657,6 +672,7 @@ export type UserUncheckedUpdateInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -699,6 +715,7 @@ export type UserCreateManyInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -723,6 +740,7 @@ export type UserUpdateManyMutationInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -747,6 +765,7 @@ export type UserUncheckedUpdateManyInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -771,6 +790,7 @@ export type UserCountOrderByAggregateInput = {
   password?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
+  emailVerifiedBool?: Prisma.SortOrder
   paymentsCount?: Prisma.SortOrder
   externalCustomerIds?: Prisma.SortOrder
   tokenBalance?: Prisma.SortOrder
@@ -802,6 +822,7 @@ export type UserMaxOrderByAggregateInput = {
   password?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
+  emailVerifiedBool?: Prisma.SortOrder
   paymentsCount?: Prisma.SortOrder
   externalCustomerIds?: Prisma.SortOrder
   tokenBalance?: Prisma.SortOrder
@@ -826,6 +847,7 @@ export type UserMinOrderByAggregateInput = {
   password?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
+  emailVerifiedBool?: Prisma.SortOrder
   paymentsCount?: Prisma.SortOrder
   externalCustomerIds?: Prisma.SortOrder
   tokenBalance?: Prisma.SortOrder
@@ -1157,6 +1179,7 @@ export type UserCreateWithoutOwnedOrganizationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1198,6 +1221,7 @@ export type UserUncheckedCreateWithoutOwnedOrganizationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1255,6 +1279,7 @@ export type UserUpdateWithoutOwnedOrganizationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1296,6 +1321,7 @@ export type UserUncheckedUpdateWithoutOwnedOrganizationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1337,6 +1363,7 @@ export type UserCreateWithoutOrganizationMembershipsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1378,6 +1405,7 @@ export type UserUncheckedCreateWithoutOrganizationMembershipsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1435,6 +1463,7 @@ export type UserUpdateWithoutOrganizationMembershipsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1476,6 +1505,7 @@ export type UserUncheckedUpdateWithoutOrganizationMembershipsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1517,6 +1547,7 @@ export type UserCreateWithoutOrganizationInvitesSentInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1558,6 +1589,7 @@ export type UserUncheckedCreateWithoutOrganizationInvitesSentInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1615,6 +1647,7 @@ export type UserUpdateWithoutOrganizationInvitesSentInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1656,6 +1689,7 @@ export type UserUncheckedUpdateWithoutOrganizationInvitesSentInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1697,6 +1731,7 @@ export type UserCreateWithoutSubscriptionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1738,6 +1773,7 @@ export type UserUncheckedCreateWithoutSubscriptionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1795,6 +1831,7 @@ export type UserUpdateWithoutSubscriptionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1836,6 +1873,7 @@ export type UserUncheckedUpdateWithoutSubscriptionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1877,6 +1915,7 @@ export type UserCreateWithoutPaymentsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1918,6 +1957,7 @@ export type UserUncheckedCreateWithoutPaymentsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -1975,6 +2015,7 @@ export type UserUpdateWithoutPaymentsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2016,6 +2057,7 @@ export type UserUncheckedUpdateWithoutPaymentsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2057,6 +2099,7 @@ export type UserCreateWithoutPaymentAuthorizationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2098,6 +2141,7 @@ export type UserUncheckedCreateWithoutPaymentAuthorizationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2155,6 +2199,7 @@ export type UserUpdateWithoutPaymentAuthorizationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2196,6 +2241,7 @@ export type UserUncheckedUpdateWithoutPaymentAuthorizationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2237,6 +2283,7 @@ export type UserCreateWithoutFeatureUsageLogsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2278,6 +2325,7 @@ export type UserUncheckedCreateWithoutFeatureUsageLogsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2335,6 +2383,7 @@ export type UserUpdateWithoutFeatureUsageLogsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2376,6 +2425,7 @@ export type UserUncheckedUpdateWithoutFeatureUsageLogsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2417,6 +2467,7 @@ export type UserCreateWithoutCouponRedemptionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2458,6 +2509,7 @@ export type UserUncheckedCreateWithoutCouponRedemptionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2515,6 +2567,7 @@ export type UserUpdateWithoutCouponRedemptionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2556,6 +2609,7 @@ export type UserUncheckedUpdateWithoutCouponRedemptionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2597,6 +2651,7 @@ export type UserCreateWithoutTicketsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2638,6 +2693,7 @@ export type UserUncheckedCreateWithoutTicketsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2695,6 +2751,7 @@ export type UserUpdateWithoutTicketsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2736,6 +2793,7 @@ export type UserUncheckedUpdateWithoutTicketsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2777,6 +2835,7 @@ export type UserCreateWithoutTicketRepliesInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2818,6 +2877,7 @@ export type UserUncheckedCreateWithoutTicketRepliesInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2875,6 +2935,7 @@ export type UserUpdateWithoutTicketRepliesInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2916,6 +2977,7 @@ export type UserUncheckedUpdateWithoutTicketRepliesInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2957,6 +3019,7 @@ export type UserCreateWithoutEmailsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -2998,6 +3061,7 @@ export type UserUncheckedCreateWithoutEmailsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3055,6 +3119,7 @@ export type UserUpdateWithoutEmailsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3096,6 +3161,7 @@ export type UserUncheckedUpdateWithoutEmailsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3137,6 +3203,7 @@ export type UserCreateWithoutSettingsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3178,6 +3245,7 @@ export type UserUncheckedCreateWithoutSettingsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3235,6 +3303,7 @@ export type UserUpdateWithoutSettingsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3276,6 +3345,7 @@ export type UserUncheckedUpdateWithoutSettingsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3317,6 +3387,7 @@ export type UserCreateWithoutNotificationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3358,6 +3429,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3415,6 +3487,7 @@ export type UserUpdateWithoutNotificationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3456,6 +3529,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3497,6 +3571,7 @@ export type UserCreateWithoutVisitLogsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3538,6 +3613,7 @@ export type UserUncheckedCreateWithoutVisitLogsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3595,6 +3671,7 @@ export type UserUpdateWithoutVisitLogsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3636,6 +3713,7 @@ export type UserUncheckedUpdateWithoutVisitLogsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3677,6 +3755,7 @@ export type UserCreateWithoutPerformedActionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3718,6 +3797,7 @@ export type UserUncheckedCreateWithoutPerformedActionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3764,6 +3844,7 @@ export type UserCreateWithoutTargetedActionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3805,6 +3886,7 @@ export type UserUncheckedCreateWithoutTargetedActionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -3862,6 +3944,7 @@ export type UserUpdateWithoutPerformedActionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3903,6 +3986,7 @@ export type UserUncheckedUpdateWithoutPerformedActionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3955,6 +4039,7 @@ export type UserUpdateWithoutTargetedActionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3996,6 +4081,7 @@ export type UserUncheckedUpdateWithoutTargetedActionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4037,6 +4123,7 @@ export type UserCreateWithoutAccountsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -4078,6 +4165,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -4135,6 +4223,7 @@ export type UserUpdateWithoutAccountsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4176,6 +4265,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4217,6 +4307,7 @@ export type UserCreateWithoutSessionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -4258,6 +4349,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   password?: string | null
   tokenVersion?: number
   emailVerified?: Date | string | null
+  emailVerifiedBool?: boolean
   paymentsCount?: number
   externalCustomerIds?: string | null
   tokenBalance?: number
@@ -4315,6 +4407,7 @@ export type UserUpdateWithoutSessionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4356,6 +4449,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  emailVerifiedBool?: Prisma.BoolFieldUpdateOperationsInput | boolean
   paymentsCount?: Prisma.IntFieldUpdateOperationsInput | number
   externalCustomerIds?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4581,6 +4675,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   password?: boolean
   tokenVersion?: boolean
   emailVerified?: boolean
+  emailVerifiedBool?: boolean
   paymentsCount?: boolean
   externalCustomerIds?: boolean
   tokenBalance?: boolean
@@ -4624,6 +4719,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   tokenVersion?: boolean
   emailVerified?: boolean
+  emailVerifiedBool?: boolean
   paymentsCount?: boolean
   externalCustomerIds?: boolean
   tokenBalance?: boolean
@@ -4648,6 +4744,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   tokenVersion?: boolean
   emailVerified?: boolean
+  emailVerifiedBool?: boolean
   paymentsCount?: boolean
   externalCustomerIds?: boolean
   tokenBalance?: boolean
@@ -4672,6 +4769,7 @@ export type UserSelectScalar = {
   password?: boolean
   tokenVersion?: boolean
   emailVerified?: boolean
+  emailVerifiedBool?: boolean
   paymentsCount?: boolean
   externalCustomerIds?: boolean
   tokenBalance?: boolean
@@ -4684,7 +4782,7 @@ export type UserSelectScalar = {
   externalCustomerId?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "name" | "imageUrl" | "role" | "suspendedAt" | "suspensionReason" | "suspensionIsPermanent" | "password" | "tokenVersion" | "emailVerified" | "paymentsCount" | "externalCustomerIds" | "tokenBalance" | "freeTokenBalance" | "freeTokensLastResetAt" | "tokensLastResetAt" | "createdAt" | "updatedAt" | "paymentProvider" | "externalCustomerId", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "name" | "imageUrl" | "role" | "suspendedAt" | "suspensionReason" | "suspensionIsPermanent" | "password" | "tokenVersion" | "emailVerified" | "emailVerifiedBool" | "paymentsCount" | "externalCustomerIds" | "tokenBalance" | "freeTokenBalance" | "freeTokensLastResetAt" | "tokensLastResetAt" | "createdAt" | "updatedAt" | "paymentProvider" | "externalCustomerId", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   subscriptions?: boolean | Prisma.User$subscriptionsArgs<ExtArgs>
   payments?: boolean | Prisma.User$paymentsArgs<ExtArgs>
@@ -4743,6 +4841,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     password: string | null
     tokenVersion: number
     emailVerified: Date | null
+    emailVerifiedBool: boolean
     paymentsCount: number
     externalCustomerIds: string | null
     tokenBalance: number
@@ -5205,6 +5304,7 @@ export interface UserFieldRefs {
   readonly password: Prisma.FieldRef<"User", 'String'>
   readonly tokenVersion: Prisma.FieldRef<"User", 'Int'>
   readonly emailVerified: Prisma.FieldRef<"User", 'DateTime'>
+  readonly emailVerifiedBool: Prisma.FieldRef<"User", 'Boolean'>
   readonly paymentsCount: Prisma.FieldRef<"User", 'Int'>
   readonly externalCustomerIds: Prisma.FieldRef<"User", 'String'>
   readonly tokenBalance: Prisma.FieldRef<"User", 'Int'>

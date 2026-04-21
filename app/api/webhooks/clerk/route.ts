@@ -11,7 +11,7 @@ import {
   upsertOrganizationInvite,
   expireOrganizationInvite,
   markInviteAccepted,
-  deleteOrganizationByClerkId,
+  deleteOrganizationByProviderId,
 } from '../../../../lib/teams';
 import { ensureUserExists } from '../../../../lib/user-helpers';
 
@@ -87,21 +87,21 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
 
   try {
     if (hasOrgContext) {
-      const clerkOrganizationId = getNestedString(dataRecord, ['id']) || getNestedString(payload, ['data', 'organization_id']) || null;
-      if (!clerkOrganizationId) {
+      const providerOrganizationId = getNestedString(dataRecord, ['id']) || getNestedString(payload, ['data', 'organization_id']) || null;
+      if (!providerOrganizationId) {
         Logger.warn('Clerk webhook: organization event missing id', { eventType });
         return skip('missing-organization-id');
       }
 
       if (normalizedType.endsWith('.deleted')) {
-        const deleted = await deleteOrganizationByClerkId(clerkOrganizationId);
-        Logger.info('Clerk webhook: organization deleted sync', { clerkOrganizationId, deleted });
+        const deleted = await deleteOrganizationByProviderId(providerOrganizationId);
+        Logger.info('Clerk webhook: organization deleted sync', { providerOrganizationId, deleted });
         return respond({ ok: true, deleted });
       }
 
       const seatLimitNumber = getNestedNumber(dataRecord, ['max_allowed_memberships']) ?? getNestedNumber(dataRecord, ['public_metadata', 'seatLimit']);
       const snapshot = {
-        clerkOrganizationId,
+        providerOrganizationId,
         name: getNestedString(dataRecord, ['name']) ?? undefined,
         slug: getNestedString(dataRecord, ['slug']) ?? undefined,
         ownerUserId: getNestedString(dataRecord, ['created_by']) ?? getNestedString(dataRecord, ['createdBy']) ?? undefined,
@@ -113,27 +113,27 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
 
       const saved = await upsertOrganization(snapshot);
       if (!saved) {
-        Logger.error('Clerk webhook: organization upsert failed', { clerkOrganizationId, eventType });
+        Logger.error('Clerk webhook: organization upsert failed', { providerOrganizationId, eventType });
         return respond({ ok: false, error: 'organization-upsert-failed' }, 500);
       }
 
-      Logger.info('Clerk webhook: organization synced', { clerkOrganizationId, eventType });
+      Logger.info('Clerk webhook: organization synced', { providerOrganizationId, eventType });
       return respond({ ok: true, organizationId: saved.id });
     }
 
     if (hasMembershipContext) {
       const userId = getNestedString(dataRecord, ['public_user_data', 'user_id']) || getNestedString(dataRecord, ['user_id']) || getNestedString(payload, ['data', 'user', 'id']) || null;
-      const clerkOrganizationId = getNestedString(dataRecord, ['organization', 'id']) || getNestedString(dataRecord, ['organization_id']) || null;
+      const providerOrganizationId = getNestedString(dataRecord, ['organization', 'id']) || getNestedString(dataRecord, ['organization_id']) || null;
       const organizationSlug = getNestedString(dataRecord, ['organization', 'slug']) || getNestedString(dataRecord, ['public_organization_data', 'slug']) || null;
 
-      if (!userId || !clerkOrganizationId) {
-        Logger.warn('Clerk webhook: membership event missing identifiers', { eventType, userId, clerkOrganizationId });
+      if (!userId || !providerOrganizationId) {
+        Logger.warn('Clerk webhook: membership event missing identifiers', { eventType, userId, providerOrganizationId });
         return skip('membership-missing-identifiers');
       }
 
       if (normalizedType.endsWith('.deleted') || normalizedType.endsWith('.removed')) {
-        await removeOrganizationMembership({ userId, clerkOrganizationId, organizationSlug });
-        Logger.info('Clerk webhook: membership removed', { clerkOrganizationId, userId });
+        await removeOrganizationMembership({ userId, providerOrganizationId, organizationSlug });
+        Logger.info('Clerk webhook: membership removed', { providerOrganizationId, userId });
         return respond({ ok: true, removed: true });
       }
 
@@ -143,46 +143,46 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
 
       const membership = await syncOrganizationMembership({
         userId,
-        clerkOrganizationId,
+        providerOrganizationId,
         organizationSlug,
         role: roleRaw ? roleRaw.toUpperCase() : undefined,
         status: statusRaw ? statusRaw.toUpperCase() : undefined,
       });
 
       if (!membership) {
-        Logger.error('Clerk webhook: membership sync failed', { clerkOrganizationId, userId, eventType });
+        Logger.error('Clerk webhook: membership sync failed', { providerOrganizationId, userId, eventType });
         return respond({ ok: false, error: 'membership-sync-failed' }, 500);
       }
 
-      Logger.info('Clerk webhook: membership synced', { clerkOrganizationId, userId, role: membership.role, status: membership.status });
+      Logger.info('Clerk webhook: membership synced', { providerOrganizationId, userId, role: membership.role, status: membership.status });
       return respond({ ok: true, membershipId: membership.id });
     }
 
     if (hasInviteContext) {
       const token = getNestedString(dataRecord, ['id']) || getNestedString(dataRecord, ['token']) || null;
-      const clerkOrganizationId = getNestedString(dataRecord, ['organization_id']) || getNestedString(dataRecord, ['organization', 'id']) || null;
+      const providerOrganizationId = getNestedString(dataRecord, ['organization_id']) || getNestedString(dataRecord, ['organization', 'id']) || null;
       const organizationSlug = getNestedString(dataRecord, ['public_organization_data', 'slug']) || getNestedString(dataRecord, ['organization', 'slug']) || null;
 
-      if (!token || !clerkOrganizationId) {
-        Logger.warn('Clerk webhook: invitation event missing identifiers', { eventType, token, clerkOrganizationId });
+      if (!token || !providerOrganizationId) {
+        Logger.warn('Clerk webhook: invitation event missing identifiers', { eventType, token, providerOrganizationId });
         return skip('invite-missing-identifiers');
       }
 
       if (normalizedType.endsWith('.accepted')) {
         await markInviteAccepted(token);
-        Logger.info('Clerk webhook: invitation accepted', { token, clerkOrganizationId });
+        Logger.info('Clerk webhook: invitation accepted', { token, providerOrganizationId });
         return respond({ ok: true, accepted: true });
       }
 
       if (normalizedType.endsWith('.revoked') || normalizedType.endsWith('.deleted') || normalizedType.endsWith('.expired')) {
         await expireOrganizationInvite(token);
-        Logger.info('Clerk webhook: invitation expired/revoked', { token, clerkOrganizationId, eventType });
+        Logger.info('Clerk webhook: invitation expired/revoked', { token, providerOrganizationId, eventType });
         return respond({ ok: true, expired: true });
       }
 
       const email = getNestedString(dataRecord, ['email_address']) || getNestedString(dataRecord, ['email']) || null;
       if (!email) {
-        Logger.warn('Clerk webhook: invitation event missing email', { token, clerkOrganizationId });
+        Logger.warn('Clerk webhook: invitation event missing email', { token, providerOrganizationId });
         return skip('invite-missing-email');
       }
 
@@ -195,7 +195,7 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
       const invite = await upsertOrganizationInvite({
         token,
         email,
-        clerkOrganizationId,
+        providerOrganizationId,
         organizationSlug,
         role: roleRaw ? roleRaw.toUpperCase() : undefined,
         status: statusRaw ? statusRaw.toUpperCase() : undefined,
@@ -205,11 +205,11 @@ async function maybeHandleOrganizationEvent(eventType: string | null, payload: R
       });
 
       if (!invite) {
-        Logger.error('Clerk webhook: invite upsert failed', { clerkOrganizationId, token, eventType });
+        Logger.error('Clerk webhook: invite upsert failed', { providerOrganizationId, token, eventType });
         return respond({ ok: false, error: 'invite-upsert-failed' }, 500);
       }
 
-      Logger.info('Clerk webhook: invite synced', { clerkOrganizationId, token, status: invite.status });
+      Logger.info('Clerk webhook: invite synced', { providerOrganizationId, token, status: invite.status });
       return respond({ ok: true, inviteId: invite.id });
     }
   } catch (err) {

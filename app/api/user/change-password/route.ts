@@ -1,7 +1,7 @@
 /**
  * Change Password API Route
  * ============================
- * Allows authenticated users to change their password (NextAuth only).
+ * Allows authenticated users to change their password.
  * Requires the current password for verification.
  */
 
@@ -14,6 +14,45 @@ import { validatePasswordStrength } from '@/lib/password-policy';
 import { Logger } from '@/lib/logger';
 
 const BCRYPT_SALT_ROUNDS = 12;
+
+function normalizeBetterAuthPasswordError(error: unknown): { status: number; message: string } | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const candidate = error as {
+    status?: number;
+    statusCode?: number;
+    body?: { message?: string };
+    message?: string;
+  };
+
+  const status = typeof candidate.status === 'number'
+    ? candidate.status
+    : typeof candidate.statusCode === 'number'
+      ? candidate.statusCode
+      : null;
+
+  const rawMessage = candidate.body?.message || candidate.message || '';
+  const normalizedMessage = rawMessage.toLowerCase();
+
+  if (normalizedMessage.includes('invalid password')) {
+    return { status: 403, message: 'Current password is incorrect' };
+  }
+
+  if (normalizedMessage.includes('credential account') && normalizedMessage.includes('not found')) {
+    return {
+      status: 400,
+      message: 'Your account does not currently have a password. You can set one via "Forgot Password" on the sign-in page.',
+    };
+  }
+
+  if (status && status >= 400 && status < 500) {
+    return { status, message: rawMessage || 'Failed to change password' };
+  }
+
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,6 +92,30 @@ export async function POST(request: NextRequest) {
     const pwCheck = validatePasswordStrength(newPassword);
     if (!pwCheck.valid) {
       return NextResponse.json({ error: pwCheck.message }, { status: 400 });
+    }
+
+    if (authService.providerName === 'betterauth') {
+      try {
+        const { betterAuthServer } = await import('@/lib/better-auth');
+
+        await betterAuthServer.api.changePassword({
+          headers: request.headers,
+          body: {
+            currentPassword,
+            newPassword,
+            revokeOtherSessions: false,
+          },
+        });
+
+        return NextResponse.json({ message: 'Password changed successfully' });
+      } catch (error) {
+        const normalized = normalizeBetterAuthPasswordError(error);
+        if (normalized) {
+          return NextResponse.json({ error: normalized.message }, { status: normalized.status });
+        }
+
+        throw error;
+      }
     }
 
     const user = await prisma.user.findUnique({

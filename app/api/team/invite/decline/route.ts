@@ -5,6 +5,10 @@ import { expireOrganizationInvite } from '../../../../../lib/teams';
 import { Logger } from '../../../../../lib/logger';
 import { toError } from '../../../../../lib/runtime-guards';
 
+function getProviderOrganizationId(value: { id?: string | null; providerOrganizationId?: string | null }) {
+  return value.providerOrganizationId ?? value.id ?? null;
+}
+
 export async function POST(request: NextRequest) {
   // Require authentication so only the invite recipient can decline
   const { userId } = await authService.getSession();
@@ -43,14 +47,17 @@ export async function POST(request: NextRequest) {
       if (invite.organizationId) {
         const org = await prisma.organization.findUnique({
           where: { id: invite.organizationId },
-          select: { clerkOrganizationId: true, ownerUserId: true },
+          select: { id: true, providerOrganizationId: true, ownerUserId: true },
         });
-        // Use the organization's owner user id when available because Clerk
+        // Use the organization's owner user id when available because the auth provider
         // requires `requestingUserId` for invitation revocation.
-        if (org?.clerkOrganizationId && org.ownerUserId && authService.supportsFeature('organization_invites')) {
+        const providerOrganizationId = org
+          ? getProviderOrganizationId({ id: org.id, providerOrganizationId: org.providerOrganizationId })
+          : null;
+        if (providerOrganizationId && org?.ownerUserId && authService.supportsFeature('organization_invites')) {
           try {
             await authService.revokeOrganizationInvitation({
-              organizationId: org.clerkOrganizationId,
+              organizationId: providerOrganizationId,
               invitationId: token,
               requestingUserId: org.ownerUserId,
             });

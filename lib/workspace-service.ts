@@ -10,6 +10,10 @@ class WorkspaceService {
     return this.providerName === 'clerk';
   }
 
+  get usesLocalProviderOrganizations(): boolean {
+    return !this.usesExternalProviderOrganizations;
+  }
+
   async createProviderOrganization(opts: {
     name: string;
     slug?: string;

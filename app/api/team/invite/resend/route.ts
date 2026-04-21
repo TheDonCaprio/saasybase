@@ -6,6 +6,7 @@ import { getEnv } from '../../../../../lib/env';
 import { toError } from '../../../../../lib/runtime-guards';
 import { fetchTeamDashboardState } from '../../../../../lib/team-dashboard';
 import { Logger } from '../../../../../lib/logger';
+import { hasMatchingOrganizationReference } from '../../../../../lib/organization-reference';
 
 export async function POST(request: NextRequest) {
   const { userId, orgId } = await authService.getSession();
@@ -26,11 +27,14 @@ export async function POST(request: NextRequest) {
   const invite = await prisma.organizationInvite.findUnique({ where: { token } });
   if (!invite) return NextResponse.json({ ok: false, error: 'Invitation not found.' }, { status: 404 });
 
-  const organization = await prisma.organization.findUnique({ where: { id: invite.organizationId }, select: { id: true, ownerUserId: true, name: true, slug: true, clerkOrganizationId: true } });
+  const organization = await prisma.organization.findUnique({ where: { id: invite.organizationId }, select: { id: true, ownerUserId: true, name: true, slug: true, providerOrganizationId: true } });
   if (
     !organization ||
     organization.ownerUserId !== userId ||
-    (orgId && organization.id !== orgId && organization.clerkOrganizationId !== orgId)
+    !hasMatchingOrganizationReference({
+      id: organization.id,
+      providerOrganizationId: organization.providerOrganizationId,
+    }, orgId ?? organization.id)
   ) {
     return NextResponse.json({ ok: false, error: 'Not authorized to resend this invite.' }, { status: 403 });
   }

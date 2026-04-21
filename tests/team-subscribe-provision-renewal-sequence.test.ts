@@ -173,7 +173,7 @@ const prismaMock = vi.hoisted(() => {
       findUnique: vi.fn(async ({ where }: MockWhereArgs) => {
         if (!state.organization) return null;
         if (where.id && state.organization.id === where.id) return state.organization;
-        if (where.clerkOrganizationId && state.organization.clerkOrganizationId === where.clerkOrganizationId) return state.organization;
+        if (where.providerOrganizationId && state.organization.providerOrganizationId === where.providerOrganizationId) return state.organization;
         return null;
       }),
       update: vi.fn(async ({ where, data }: MockWhereDataArgs) => {
@@ -235,6 +235,8 @@ const creditOrganizationSharedTokensMock = vi.hoisted(() => vi.fn(async ({ organ
 
 const workspaceServiceMock = vi.hoisted(() => ({
   providerName: 'nextauth',
+  usesExternalProviderOrganizations: false,
+  usesLocalProviderOrganizations: true,
   createProviderOrganization: vi.fn(async () => ({
     id: 'org_prov_1',
     name: 'Provisioned Team',
@@ -271,6 +273,9 @@ describe('team subscribe -> provision -> renew sequence', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
     vi.clearAllMocks();
+    workspaceServiceMock.providerName = 'nextauth';
+    workspaceServiceMock.usesExternalProviderOrganizations = false;
+    workspaceServiceMock.usesLocalProviderOrganizations = true;
     state.reset();
   });
 

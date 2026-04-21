@@ -13,6 +13,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
+const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
+const hasLocalPasswordManagement = authProvider === 'nextauth' || authProvider === 'betterauth';
+const hasAppManagedEmailVerification = authProvider === 'nextauth' || authProvider === 'betterauth';
 
 interface BaseUser {
   id: string;
@@ -375,8 +378,6 @@ function AccountDeletionPanel() {
 // Email Verification Card (provider-agnostic)
 // ---------------------------------------------------------------------------
 
-const isNextAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth';
-
 function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -405,17 +406,24 @@ function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
         <div>
           <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Email verification</p>
           <p className="text-xs text-slate-500 dark:text-neutral-400">
-            {isNextAuth
-              ? 'Your email address is verified and linked to your account.'
-              : 'Your email address is verified and synced with your auth provider.'}
+            {hasAppManagedEmailVerification
+              ? isVerified
+                ? 'Your email address is verified and linked to your account.'
+                : 'Verify your email address to complete account security and delivery flows.'
+              : 'Your email address is managed and synced with your auth provider.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-            <span className="text-base">✓</span>
-            Verified
+          <span className={cx(
+            'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium',
+            isVerified
+              ? 'border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100'
+              : 'border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100'
+          )}>
+            <span className="text-base">{isVerified ? '✓' : '!'}</span>
+            {isVerified ? 'Verified' : 'Unverified'}
           </span>
-          {isNextAuth && !isVerified && (
+          {hasAppManagedEmailVerification && !isVerified && (
             <button
               type="button"
               onClick={handleResend}
@@ -432,7 +440,7 @@ function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Password Change Card (NextAuth only — Clerk manages passwords internally)
+// Password Change Card (local-password providers only — Clerk manages passwords internally)
 // ---------------------------------------------------------------------------
 
 function PasswordChangeCard() {
@@ -441,8 +449,7 @@ function PasswordChangeCard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Only show for NextAuth users
-  if (!isNextAuth) return null;
+  if (!hasLocalPasswordManagement) return null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

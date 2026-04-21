@@ -1,54 +1,59 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBullhorn, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 interface AnnouncementBannerProps {
   message: string;
 }
 
 export function AnnouncementBanner({ message }: AnnouncementBannerProps) {
-  const dismissedKey = useMemo(() => `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`, [message]);
-  const [isDismissed, setIsDismissed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem(`announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`));
-  });
-  const [isVisible, setIsVisible] = useState(() => !isDismissed);
+  const dismissedKey = useMemo(
+    () => `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`,
+    [message],
+  );
 
-  const handleDismiss = () => {
-    localStorage.setItem(dismissedKey, 'true');
-    setIsVisible(false);
-    setIsDismissed(true);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !localStorage.getItem(dismissedKey);
+  });
+
+  const dismiss = () => {
+    localStorage.setItem(dismissedKey, '1');
+    setVisible(false);
   };
 
-  if (!message.trim() || isDismissed) {
-    return null;
-  }
+  if (!message.trim() || !visible) return null;
 
   return (
     <div
-      className={`transition-all duration-500 ease-in-out ${
-        isVisible ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-      }`}
+      role="status"
+      aria-live="polite"
+      className="mb-4 flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-sm text-sky-900 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
     >
-      <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            </div>
-            <div className="text-sm text-blue-100">
-              {message}
-            </div>
-          </div>
-          <button
-            onClick={handleDismiss}
-            className="flex-shrink-0 ml-4 p-1 hover:bg-blue-600/20 rounded transition-colors"
-            aria-label="Dismiss announcement"
-          >
-            <span className="text-blue-300 hover:text-blue-100 text-lg leading-none">×</span>
-          </button>
-        </div>
-      </div>
+      <FontAwesomeIcon
+        icon={faBullhorn}
+        className="h-3.5 w-3.5 shrink-0 text-sky-500 dark:text-sky-400"
+        aria-hidden
+      />
+      <p className="min-w-0 flex-1 leading-snug">{message}</p>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="ml-1 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium text-sky-600 transition hover:bg-sky-100 hover:text-sky-800 dark:text-sky-400 dark:hover:bg-sky-500/20 dark:hover:text-sky-200"
+        aria-label="Don't show this announcement again"
+      >
+        Don&apos;t show again
+      </button>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="shrink-0 rounded-md p-1 text-sky-500 transition hover:bg-sky-100 hover:text-sky-700 dark:text-sky-400 dark:hover:bg-sky-500/20 dark:hover:text-sky-200"
+        aria-label="Dismiss"
+      >
+        <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" aria-hidden />
+      </button>
     </div>
   );
 }

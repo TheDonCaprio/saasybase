@@ -12,7 +12,15 @@ import { Logger } from '@/lib/logger';
 import { randomBytes, createHash } from 'crypto';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
 export async function POST(request: NextRequest) {
+  if (isBetterAuthProviderEnabled()) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   try {
     // Rate limit by IP — stricter limit for password reset
     const ip = getClientIP(request);

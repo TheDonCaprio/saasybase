@@ -10,6 +10,10 @@ import { getUserSuspensionDetails } from '@/lib/account-suspension';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
 function shouldUseSecureCookie(request: NextRequest): boolean {
   return request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
 }
@@ -19,6 +23,10 @@ function getSessionCookieName(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+  if (isBetterAuthProviderEnabled()) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   try {
     const ip = getClientIP(request);
     const rl = await rateLimit(`auth:credentials-signin:${ip}`, RATE_LIMITS.AUTH, {

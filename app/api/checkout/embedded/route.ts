@@ -30,6 +30,7 @@ import {
     tryAcquireDiscountedSubscriptionPriceKey,
 } from '../../../../lib/payment/discountedSubscriptionPriceCache';
 import { resolveCheckoutWorkspaceContext } from '../../../../lib/checkout-workspace-context';
+import { workspaceService } from '../../../../lib/workspace-service';
 
 const couponWithPlansInclude = {
     applicablePlans: {
@@ -680,7 +681,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             metadata.activeOrganizationId = checkoutWorkspaceContext.organizationId;
             metadata.organizationId = checkoutWorkspaceContext.organizationId;
         }
-        const resolvedProviderOrganizationId = authService.providerName === 'clerk'
+        const resolvedProviderOrganizationId = workspaceService.usesExternalProviderOrganizations
             ? (activeClerkOrgId ?? checkoutWorkspaceContext?.providerOrganizationId ?? null)
             : null;
         if (resolvedProviderOrganizationId) {

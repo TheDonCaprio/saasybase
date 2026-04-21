@@ -13,6 +13,7 @@
  */
 
 import { ClerkAuthProvider } from './providers/clerk';
+import { BetterAuthProvider } from './providers/betterauth';
 import { NextAuthProvider } from './providers/nextauth';
 import type { AuthProvider, AuthProviderFeature } from './types';
 
@@ -74,6 +75,27 @@ export const AUTH_PROVIDER_REGISTRY: Record<string, AuthProviderConfig> = {
 
   // ── Future providers go here ──────────────────────────────────────
   // e.g. supabase, firebase, etc.
+
+  betterauth: {
+    getClass: () => BetterAuthProvider,
+    envVarCheck: () => {
+      if (!process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
+        throw new Error(
+          'Better Auth provider requires BETTER_AUTH_SECRET (or AUTH_SECRET / NEXTAUTH_SECRET)'
+        );
+      }
+    },
+    instantiate: () => new BetterAuthProvider(),
+    // Better Auth runs as the local source of truth in this repo, so inbound
+    // webhooks and provider-managed invitation lifecycles are intentionally not
+    // advertised here.
+    knownFeatures: [
+      'organizations',
+      'session_management',
+      'oauth',
+      'magic_link',
+    ],
+  },
 
   nextauth: {
     getClass: () => NextAuthProvider,

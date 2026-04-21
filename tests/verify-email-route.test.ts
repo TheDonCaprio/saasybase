@@ -10,6 +10,10 @@ const parseVerificationIdentifierMock = vi.hoisted(() => vi.fn());
 const sendNextAuthVerificationEmailMock = vi.hoisted(() => vi.fn(async () => undefined));
 const sendWelcomeIfNotSentMock = vi.hoisted(() => vi.fn(async () => undefined));
 const loggerErrorMock = vi.hoisted(() => vi.fn());
+const betterAuthHandlerGetMock = vi.hoisted(() => vi.fn());
+const parseBetterAuthEmailChangeTokenMock = vi.hoisted(() => vi.fn());
+const hasBetterAuthPendingEmailChangeMock = vi.hoisted(() => vi.fn());
+const clearBetterAuthPendingEmailChangeMock = vi.hoisted(() => vi.fn(async () => ({ count: 1 })));
 const prismaMock = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
@@ -34,6 +38,14 @@ vi.mock('../lib/nextauth-email-verification', () => ({
   parseVerificationIdentifier: parseVerificationIdentifierMock,
   sendNextAuthVerificationEmail: sendNextAuthVerificationEmailMock,
 }));
+vi.mock('../lib/better-auth', () => ({
+  betterAuthNextJsHandler: { GET: betterAuthHandlerGetMock },
+}));
+vi.mock('../lib/better-auth-email-change', () => ({
+  parseBetterAuthEmailChangeToken: parseBetterAuthEmailChangeTokenMock,
+  hasBetterAuthPendingEmailChange: hasBetterAuthPendingEmailChangeMock,
+  clearBetterAuthPendingEmailChange: clearBetterAuthPendingEmailChangeMock,
+}));
 vi.mock('../lib/welcome', () => ({ sendWelcomeIfNotSent: sendWelcomeIfNotSentMock }));
 vi.mock('../lib/logger', () => ({ Logger: { error: loggerErrorMock } }));
 
@@ -43,6 +55,8 @@ describe('auth verify-email route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     rateLimitMock.mockResolvedValue({ allowed: true, reset: Date.now() + 60_000 });
+    delete process.env.AUTH_PROVIDER;
+    process.env.BETTER_AUTH_SECRET = 'test-secret';
   });
 
   it('rate limits authenticated verification resend requests', async () => {
@@ -133,5 +147,41 @@ describe('auth verify-email route', () => {
       },
     });
     expect(prismaMock.verificationToken.deleteMany).toHaveBeenCalledWith({ where: { identifier: 'email-change:user_1:new@example.com' } });
+  });
+
+  it('rejects canceled Better Auth email-change verification links', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    parseBetterAuthEmailChangeTokenMock.mockResolvedValueOnce({
+      userId: 'user_1',
+      currentEmail: 'old@example.com',
+      newEmail: 'new@example.com',
+      requestType: 'change-email-verification',
+    });
+    hasBetterAuthPendingEmailChangeMock.mockResolvedValueOnce(false);
+
+    const response = await GET(new NextRequest('http://localhost/api/auth/verify-email?token=raw-token'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/dashboard/profile?emailChange=canceled');
+    expect(betterAuthHandlerGetMock).not.toHaveBeenCalled();
+  });
+
+  it('clears Better Auth pending state after successful email-change verification', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    parseBetterAuthEmailChangeTokenMock.mockResolvedValueOnce({
+      userId: 'user_1',
+      currentEmail: 'old@example.com',
+      newEmail: 'new@example.com',
+      requestType: 'change-email-verification',
+    });
+    hasBetterAuthPendingEmailChangeMock.mockResolvedValueOnce(true);
+    betterAuthHandlerGetMock.mockResolvedValueOnce(
+      Response.redirect('http://localhost/dashboard/profile?emailChange=success', 307)
+    );
+
+    const response = await GET(new NextRequest('http://localhost/api/auth/verify-email?token=raw-token'));
+
+    expect(response.status).toBe(307);
+    expect(clearBetterAuthPendingEmailChangeMock).toHaveBeenCalledWith('user_1', 'new@example.com');
   });
 });

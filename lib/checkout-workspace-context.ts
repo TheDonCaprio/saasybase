@@ -1,4 +1,9 @@
 import { prisma } from './prisma';
+import { getOrganizationReferenceWhere } from './organization-reference';
+
+function getProviderOrganizationId(value: { providerOrganizationId?: string | null }) {
+  return value.providerOrganizationId ?? null;
+}
 
 export type CheckoutWorkspaceContext = {
   organizationId: string;
@@ -19,21 +24,18 @@ export async function resolveCheckoutWorkspaceContext(
   const ownedOrganization = await prisma.organization.findFirst({
     where: {
       ownerUserId: userId,
-      OR: [
-        { id: organizationRef },
-        { clerkOrganizationId: organizationRef },
-      ],
+      OR: getOrganizationReferenceWhere(organizationRef),
     },
     select: {
       id: true,
-      clerkOrganizationId: true,
+      providerOrganizationId: true,
     },
   });
 
   if (ownedOrganization) {
     return {
       organizationId: ownedOrganization.id,
-      providerOrganizationId: ownedOrganization.clerkOrganizationId,
+      providerOrganizationId: getProviderOrganizationId({ providerOrganizationId: ownedOrganization.providerOrganizationId }),
       role: 'OWNER',
     };
   }
@@ -43,17 +45,14 @@ export async function resolveCheckoutWorkspaceContext(
       userId,
       status: 'ACTIVE',
       organization: {
-        OR: [
-          { id: organizationRef },
-          { clerkOrganizationId: organizationRef },
-        ],
+        OR: getOrganizationReferenceWhere(organizationRef),
       },
     },
     select: {
       organization: {
         select: {
           id: true,
-          clerkOrganizationId: true,
+          providerOrganizationId: true,
         },
       },
     },
@@ -65,7 +64,7 @@ export async function resolveCheckoutWorkspaceContext(
 
   return {
     organizationId: membership.organization.id,
-    providerOrganizationId: membership.organization.clerkOrganizationId,
+    providerOrganizationId: getProviderOrganizationId({ providerOrganizationId: membership.organization.providerOrganizationId }),
     role: 'MEMBER',
   };
 }

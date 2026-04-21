@@ -4,6 +4,7 @@ import { prisma } from '../../../../lib/prisma';
 import { fetchTeamDashboardState } from '../../../../lib/team-dashboard';
 import { getOrganizationAccessSummary } from '../../../../lib/organization-access';
 import { Logger } from '../../../../lib/logger';
+import { getOrganizationReferenceWhere as getOrganizationReferenceMatches } from '../../../../lib/organization-reference';
 import { toError } from '../../../../lib/runtime-guards';
 
 const CAP_STRATEGIES = ['SOFT', 'HARD', 'DISABLED'] as const;
@@ -23,6 +24,15 @@ function normalizeStrategy(value: unknown): CapStrategy | null {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toUpperCase();
   return CAP_STRATEGIES.includes(normalized as CapStrategy) ? (normalized as CapStrategy) : null;
+}
+
+function getOrganizationReferenceWhere(userId: string, orgId?: string | null) {
+  return orgId
+    ? {
+        ownerUserId: userId,
+        OR: getOrganizationReferenceMatches(orgId),
+      }
+    : { ownerUserId: userId };
 }
 
 export async function PATCH(request: NextRequest) {
@@ -69,12 +79,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const organization = await prisma.organization.findFirst({
-      where: orgId
-        ? {
-            ownerUserId: userId,
-            OR: [{ id: orgId }, { clerkOrganizationId: orgId }],
-          }
-        : { ownerUserId: userId },
+      where: getOrganizationReferenceWhere(userId, orgId),
     });
     if (!organization) {
       return NextResponse.json({ ok: false, error: 'Workspace not found. Provision a workspace before updating settings.' }, { status: 404 });

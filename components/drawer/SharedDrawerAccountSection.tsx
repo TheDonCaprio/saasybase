@@ -5,6 +5,7 @@ import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faCalendarDays, faChevronDown, faCoins, faCrown } from '@fortawesome/free-solid-svg-icons';
 import { AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
+import { ClientOnly } from '@/components/ui/ClientOnly';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
 import type { SharedUserProfile } from '@/components/UserProfileProvider';
 import type { ReactNode } from 'react';
@@ -215,13 +216,15 @@ export function SharedDrawerAccountSection({
 
       <div className="space-y-1.5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Workspace</p>
-        <AuthOrganizationSwitcher
-          hidePersonal={false}
-          appearance={getOrganizationSwitcherAppearance({
-            variant: 'drawer',
-            canCreateOrganization: profile.canCreateOrganization,
-          })}
-        />
+        <ClientOnly fallback={<div className="h-10 rounded-xl border border-neutral-800" aria-hidden="true" />}>
+          <AuthOrganizationSwitcher
+            hidePersonal={false}
+            appearance={getOrganizationSwitcherAppearance({
+              variant: 'drawer',
+              canCreateOrganization: profile.canCreateOrganization,
+            })}
+          />
+        </ClientOnly>
       </div>
     </div>
   );

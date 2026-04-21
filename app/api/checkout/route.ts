@@ -24,6 +24,7 @@ import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 import { canUseLocalhostDevBypass } from '../../../lib/dev-admin-bypass';
 import { resolveCheckoutWorkspaceContext } from '../../../lib/checkout-workspace-context';
+import { workspaceService } from '../../../lib/workspace-service';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -692,7 +693,7 @@ export async function POST(req: NextRequest) {
         metadata.activeOrganizationId = resolvedLocalOrganizationId;
         metadata.organizationId = resolvedLocalOrganizationId;
       }
-      const resolvedProviderOrganizationId = authService.providerName === 'clerk'
+      const resolvedProviderOrganizationId = workspaceService.usesExternalProviderOrganizations
         ? (activeClerkOrgId ?? checkoutWorkspaceContext?.providerOrganizationId ?? null)
         : null;
       if (resolvedProviderOrganizationId) {

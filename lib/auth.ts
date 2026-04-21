@@ -33,6 +33,25 @@ export async function getCurrentUserSafe(): Promise<{ id: string } | null> {
   return { id: user.id };
 }
 
+async function resolveAuthenticatedUserId(source: 'requireAdmin' | 'requireAdminOrModerator', section?: ModeratorSection): Promise<string | null> {
+  const user = await getCurrentUserSafe();
+  if (user?.id) {
+    return user.id;
+  }
+
+  const auth = await getAuthSafe();
+  if (auth.userId) {
+    if (source === 'requireAdmin') {
+      Logger.warn('requireAdmin falling back to auth() context');
+    } else {
+      Logger.warn('requireAdminOrModerator falling back to auth() context', { section: section ?? 'none' });
+    }
+    return auth.userId;
+  }
+
+  return null;
+}
+
 export async function requireUser() {
   const { userId } = await getAuthSafe();
   if (!userId) {
@@ -60,31 +79,7 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 
 // Core API/server admin guard: throws structured auth errors for callers to map into responses.
 export async function requireAdmin() {
-  // Only allow the DEV_ADMIN_ID bypass in explicitly localhost-only environments.
-  if (isLocalhostDevBypassEnabled()) {
-    try {
-      const devId = process.env.DEV_ADMIN_ID;
-      if (devId) {
-        const dbDev = await prisma.user.findUnique({ where: { id: devId } });
-        if (dbDev && dbDev.role === 'ADMIN') return devId;
-      }
-    } catch {
-      // ignore and fall through to normal auth
-    }
-  }
-
-  let userId: string | null = null;
-
-  const user = await getCurrentUserSafe();
-  if (user?.id) {
-    userId = user.id;
-  } else {
-    const auth = await getAuthSafe();
-    if (auth.userId) {
-      Logger.warn('requireAdmin falling back to auth() context');
-      userId = auth.userId;
-    }
-  }
+  const userId = await resolveAuthenticatedUserId('requireAdmin');
 
   if (!userId) {
     raiseAuthGuardError('UNAUTHENTICATED', {
@@ -92,6 +87,19 @@ export async function requireAdmin() {
       reason: 'missing-current-user'
     });
   }
+
+  if (isLocalhostDevBypassEnabled()) {
+    try {
+      const devId = process.env.DEV_ADMIN_ID;
+      if (devId && userId === devId) {
+        const dbDev = await prisma.user.findUnique({ where: { id: devId } });
+        if (dbDev && dbDev.role === 'ADMIN') return devId;
+      }
+    } catch {
+      // ignore and fall through to normal role validation
+    }
+  }
+
   const role = await resolveUserRole(userId);
   if (role !== 'ADMIN') {
     raiseAuthGuardError('FORBIDDEN', {
@@ -112,9 +120,19 @@ export interface AdminOrModeratorContext {
 
 // Core API/server admin-or-moderator guard with optional moderator section enforcement.
 export async function requireAdminOrModerator(section?: ModeratorSection): Promise<AdminOrModeratorContext> {
+  const userId = await resolveAuthenticatedUserId('requireAdminOrModerator', section);
+
+  if (!userId) {
+    raiseAuthGuardError('UNAUTHENTICATED', {
+      source: 'requireAdminOrModerator',
+      reason: 'missing-current-user',
+      section
+    });
+  }
+
   if (isLocalhostDevBypassEnabled()) {
     const devId = process.env.DEV_ADMIN_ID;
-    if (devId) {
+    if (devId && userId === devId) {
       try {
         const devRecord = await prisma.user.findUnique({ where: { id: devId }, select: { role: true } });
         if (devRecord?.role === 'ADMIN') {
@@ -128,27 +146,6 @@ export async function requireAdminOrModerator(section?: ModeratorSection): Promi
         // Fall through to standard auth path when the lookup fails.
       }
     }
-  }
-
-  let userId: string | null = null;
-
-  const user = await getCurrentUserSafe();
-  if (user?.id) {
-    userId = user.id;
-  } else {
-    const auth = await getAuthSafe();
-    if (auth.userId) {
-      Logger.warn('requireAdminOrModerator falling back to auth() context', { section: section ?? 'none' });
-      userId = auth.userId;
-    }
-  }
-
-  if (!userId) {
-    raiseAuthGuardError('UNAUTHENTICATED', {
-      source: 'requireAdminOrModerator',
-      reason: 'missing-current-user',
-      section
-    });
   }
 
   const role = await resolveUserRole(userId);

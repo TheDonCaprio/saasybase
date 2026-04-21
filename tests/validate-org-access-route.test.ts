@@ -79,7 +79,7 @@ describe('POST /api/user/validate-org-access', () => {
       {
         organization: {
           id: 'org_local_1',
-          clerkOrganizationId: 'org_clerk_missing',
+          providerOrganizationId: 'org_clerk_missing',
           ownerUserId: 'owner_1',
         },
       },
@@ -112,7 +112,7 @@ describe('POST /api/user/validate-org-access', () => {
       {
         organization: {
           id: 'org_local_1',
-          clerkOrganizationId: 'org_provider_1',
+          providerOrganizationId: 'org_provider_1',
           ownerUserId: 'owner_1',
         },
       },

@@ -25,6 +25,18 @@ function fail(msg) {
   process.exit(1);
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function parseUrlOrFail(name, value) {
+  try {
+    return new URL(value);
+  } catch (e) {
+    fail(`${name} is not a valid URL: ${value}`);
+  }
+}
+
 function parseNodeVersion(version) {
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version || '');
   if (!match) {
@@ -70,14 +82,37 @@ try {
   if (!val) {
     fail('NEXT_PUBLIC_APP_URL is not set. Set it in your environment or .env file.');
   }
-  // Validate URL
-  try {
-    new URL(val);
-  } catch (e) {
-    fail(`NEXT_PUBLIC_APP_URL is not a valid URL: ${val}`);
-  }
+  const appUrl = parseUrlOrFail('NEXT_PUBLIC_APP_URL', val);
 
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
+  if (authProvider === 'betterauth') {
+    const betterAuthUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL || '';
+    if (!isNonEmptyString(betterAuthUrl)) {
+      fail('BETTER_AUTH_URL or NEXT_PUBLIC_BETTER_AUTH_URL must be set when AUTH_PROVIDER=betterauth.');
+    }
+
+    const betterAuthParsedUrl = parseUrlOrFail(
+      process.env.BETTER_AUTH_URL ? 'BETTER_AUTH_URL' : 'NEXT_PUBLIC_BETTER_AUTH_URL',
+      betterAuthUrl
+    );
+
+    if (process.env.BETTER_AUTH_URL && process.env.NEXT_PUBLIC_BETTER_AUTH_URL) {
+      const publicBetterAuthUrl = parseUrlOrFail('NEXT_PUBLIC_BETTER_AUTH_URL', process.env.NEXT_PUBLIC_BETTER_AUTH_URL);
+      if (betterAuthParsedUrl.origin !== publicBetterAuthUrl.origin) {
+        fail('BETTER_AUTH_URL and NEXT_PUBLIC_BETTER_AUTH_URL must share the same origin when AUTH_PROVIDER=betterauth.');
+      }
+    }
+
+    const effectiveSecret = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || '';
+    if (!isNonEmptyString(effectiveSecret)) {
+      fail('BETTER_AUTH_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET must be set when AUTH_PROVIDER=betterauth.');
+    }
+
+    if (betterAuthParsedUrl.origin !== appUrl.origin) {
+      fail('BETTER_AUTH_URL must share the same origin as NEXT_PUBLIC_APP_URL for Better Auth callback and redirect safety.');
+    }
+  }
+
   if (authProvider === 'clerk' && process.env.NODE_ENV === 'production') {
     const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
     const secretKey = process.env.CLERK_SECRET_KEY || '';

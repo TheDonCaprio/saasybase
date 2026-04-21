@@ -28,7 +28,7 @@ describe('fetchTeamDashboardState active organization resolution', () => {
 
     prismaMock.organization.findFirst.mockResolvedValue({
       id: 'org_1',
-      clerkOrganizationId: 'provider_org_1',
+      providerOrganizationId: 'provider_org_1',
       name: 'Acme',
       slug: 'acme',
       ownerUserId: 'user_1',
@@ -62,12 +62,13 @@ describe('fetchTeamDashboardState active organization resolution', () => {
           ownerUserId: 'user_1',
           OR: [
             { id: 'org_1' },
-            { clerkOrganizationId: 'org_1' },
+            { providerOrganizationId: 'org_1' },
           ],
         },
       })
     );
     expect(state.organization?.id).toBe('org_1');
+    expect(state.organization?.providerOrganizationId).toBe('provider_org_1');
   });
 
   it('shows the owner as uncapped in dashboard state when owner exemption is enabled', async () => {
@@ -80,7 +81,7 @@ describe('fetchTeamDashboardState active organization resolution', () => {
 
     prismaMock.organization.findFirst.mockResolvedValue({
       id: 'org_1',
-      clerkOrganizationId: 'provider_org_1',
+      providerOrganizationId: 'provider_org_1',
       name: 'Acme',
       slug: 'acme',
       ownerUserId: 'user_1',
@@ -145,7 +146,7 @@ describe('fetchTeamDashboardState active organization resolution', () => {
 
     prismaMock.organization.findFirst.mockResolvedValue({
       id: 'org_1',
-      clerkOrganizationId: 'provider_org_1',
+      providerOrganizationId: 'provider_org_1',
       name: 'Acme',
       slug: 'acme',
       ownerUserId: 'user_1',

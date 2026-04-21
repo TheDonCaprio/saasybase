@@ -25,7 +25,7 @@ vi.mock('../lib/teams', () => ({
   upsertOrganizationInvite: vi.fn(),
   expireOrganizationInvite: vi.fn(),
   markInviteAccepted: vi.fn(),
-  deleteOrganizationByClerkId: vi.fn(),
+  deleteOrganizationByProviderId: vi.fn(),
 }));
 vi.mock('../lib/user-helpers', () => ({ ensureUserExists: vi.fn() }));
 

@@ -6,7 +6,15 @@ import { Logger } from '@/lib/logger';
 import { getUserSuspensionDetails } from '@/lib/account-suspension';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
 export async function POST(request: NextRequest) {
+  if (isBetterAuthProviderEnabled()) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   try {
     const ip = getClientIP(request);
     const rl = await rateLimit(`auth:login-status:${ip}`, RATE_LIMITS.AUTH, {

@@ -7,12 +7,34 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/nextauth.config';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
-import { sendNextAuthVerificationEmail } from '@/lib/nextauth-email-verification';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 import { Logger } from '@/lib/logger';
+import { apiSchemas, validateInput } from '@/lib/validation';
+
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
+function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
+  if (!callbackURL) {
+    return undefined;
+  }
+
+  const requestOrigin = new URL(request.url).origin;
+
+  try {
+    if (callbackURL.startsWith('/')) {
+      return new URL(callbackURL, requestOrigin).toString();
+    }
+
+    const candidate = new URL(callbackURL);
+    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,12 +52,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { name, firstName, lastName, email: rawEmail, password } = body;
+    const body = await request.json().catch(() => null);
+    const validation = validateInput(apiSchemas.authRegister, body);
 
-    if (!rawEmail || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error, issues: validation.issues }, { status: 400 });
     }
+
+    const {
+      name,
+      firstName,
+      lastName,
+      email: rawEmail,
+      password,
+      callbackURL: rawCallbackURL,
+    } = validation.data;
 
     // Normalize email
     const email = typeof rawEmail === 'string' ? rawEmail.toLowerCase().trim() : '';
@@ -58,13 +89,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validatedName.error || 'Invalid name' }, { status: 400 });
     }
 
+    const displayName = validatedName.fullName || email.split('@')[0] || 'User';
+
     // Check if user already exists — use generic message to prevent email enumeration
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return NextResponse.json({ error: 'Unable to create account. Please try a different email or sign in.' }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: 'An account already exists for this email. Sign in or use a different email address.',
+          code: 'EMAIL_ALREADY_USED',
+        },
+        { status: 409 }
+      );
+    }
+
+    if (isBetterAuthProviderEnabled()) {
+      const { betterAuthServer } = await import('@/lib/better-auth');
+
+      await betterAuthServer.api.signUpEmail({
+        headers: request.headers,
+        body: {
+          email,
+          password,
+          name: displayName,
+          ...(normalizeCallbackUrl(request, rawCallbackURL) ? { callbackURL: normalizeCallbackUrl(request, rawCallbackURL) } : {}),
+        },
+      });
+
+      return NextResponse.json({ email, requiresVerification: true }, { status: 201 });
     }
 
     // Create the user (emailVerified: null — require verification)
+    const { hashPassword } = await import('@/lib/nextauth.config');
     const hashed = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
@@ -77,6 +133,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Send verification email (async, non-blocking)
+    const { sendNextAuthVerificationEmail } = await import('@/lib/nextauth-email-verification');
     sendNextAuthVerificationEmail({
       userId: user.id,
       email,

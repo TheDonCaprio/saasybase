@@ -11,12 +11,36 @@ import { prisma } from '@/lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { createHash } from 'crypto';
 import { RATE_LIMITS, getClientIP, rateLimit } from '@/lib/rateLimit';
-import {
-  parseVerificationIdentifier,
-  sendNextAuthVerificationEmail,
-} from '@/lib/nextauth-email-verification';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';
 import { Logger } from '@/lib/logger';
+import {
+  clearBetterAuthPendingEmailChange,
+  hasBetterAuthPendingEmailChange,
+  parseBetterAuthEmailChangeToken,
+} from '@/lib/better-auth-email-change';
+
+function isBetterAuthProviderEnabled() {
+  return process.env.AUTH_PROVIDER === 'betterauth';
+}
+
+function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
+  if (!callbackURL) {
+    return undefined;
+  }
+
+  const requestOrigin = new URL(request.url).origin;
+
+  try {
+    if (callbackURL.startsWith('/')) {
+      return new URL(callbackURL, requestOrigin).toString();
+    }
+
+    const candidate = new URL(callbackURL);
+    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +64,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (isBetterAuthProviderEnabled()) {
+      const { betterAuthServer } = await import('@/lib/better-auth');
+      const authSession = await betterAuthServer.api.getSession({
+        headers: request.headers,
+      });
+
+      if (!authSession?.user?.email) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json().catch(() => null);
+      const callbackURL = normalizeCallbackUrl(
+        request,
+        typeof body?.callbackURL === 'string' ? body.callbackURL : undefined,
+      );
+
+      await betterAuthServer.api.sendVerificationEmail({
+        headers: request.headers,
+        body: {
+          email: authSession.user.email,
+          ...(callbackURL ? { callbackURL } : {}),
+        },
+      });
+
+      return NextResponse.json({ message: 'Verification email sent' });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { id: true, email: true, name: true, emailVerified: true },
@@ -53,6 +104,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email is already verified' });
     }
 
+    const { sendNextAuthVerificationEmail } = await import('@/lib/nextauth-email-verification');
     await sendNextAuthVerificationEmail({
       userId: user.id,
       email: user.email,
@@ -67,6 +119,39 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  if (isBetterAuthProviderEnabled()) {
+    const secret = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+    const token = request.nextUrl.searchParams.get('token');
+
+    if (secret && token) {
+      const parsedToken = await parseBetterAuthEmailChangeToken(token, secret);
+      if (parsedToken) {
+        const hasPending = await hasBetterAuthPendingEmailChange(parsedToken.userId, parsedToken.newEmail);
+        if (!hasPending) {
+          return NextResponse.redirect(new URL('/dashboard/profile?emailChange=canceled', request.url));
+        }
+
+        const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
+        const response = await betterAuthNextJsHandler.GET(request);
+        const location = response.headers.get('location') || '';
+        const verificationCompleted = parsedToken.requestType === 'change-email-verification'
+          && (
+            (response.status >= 200 && response.status < 300)
+            || ((response.status === 302 || response.status === 303 || response.status === 307 || response.status === 308) && !location.includes('error='))
+          );
+
+        if (verificationCompleted) {
+          await clearBetterAuthPendingEmailChange(parsedToken.userId, parsedToken.newEmail);
+        }
+
+        return response;
+      }
+    }
+
+    const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
+    return betterAuthNextJsHandler.GET(request);
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -86,6 +171,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in?error=expired-verification-link', request.url));
     }
 
+    const { parseVerificationIdentifier } = await import('@/lib/nextauth-email-verification');
     const parsedIdentifier = parseVerificationIdentifier(record.identifier);
     if (!parsedIdentifier) {
       await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });

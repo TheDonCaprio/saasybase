@@ -42,9 +42,11 @@ export type OrganizationSumAggregateOutputType = {
 
 export type OrganizationMinAggregateOutputType = {
   id: string | null
-  clerkOrganizationId: string | null
+  providerOrganizationId: string | null
   name: string | null
   slug: string | null
+  logo: string | null
+  metadata: string | null
   ownerUserId: string | null
   planId: string | null
   billingEmail: string | null
@@ -63,9 +65,11 @@ export type OrganizationMinAggregateOutputType = {
 
 export type OrganizationMaxAggregateOutputType = {
   id: string | null
-  clerkOrganizationId: string | null
+  providerOrganizationId: string | null
   name: string | null
   slug: string | null
+  logo: string | null
+  metadata: string | null
   ownerUserId: string | null
   planId: string | null
   billingEmail: string | null
@@ -84,9 +88,11 @@ export type OrganizationMaxAggregateOutputType = {
 
 export type OrganizationCountAggregateOutputType = {
   id: number
-  clerkOrganizationId: number
+  providerOrganizationId: number
   name: number
   slug: number
+  logo: number
+  metadata: number
   ownerUserId: number
   planId: number
   billingEmail: number
@@ -121,9 +127,11 @@ export type OrganizationSumAggregateInputType = {
 
 export type OrganizationMinAggregateInputType = {
   id?: true
-  clerkOrganizationId?: true
+  providerOrganizationId?: true
   name?: true
   slug?: true
+  logo?: true
+  metadata?: true
   ownerUserId?: true
   planId?: true
   billingEmail?: true
@@ -142,9 +150,11 @@ export type OrganizationMinAggregateInputType = {
 
 export type OrganizationMaxAggregateInputType = {
   id?: true
-  clerkOrganizationId?: true
+  providerOrganizationId?: true
   name?: true
   slug?: true
+  logo?: true
+  metadata?: true
   ownerUserId?: true
   planId?: true
   billingEmail?: true
@@ -163,9 +173,11 @@ export type OrganizationMaxAggregateInputType = {
 
 export type OrganizationCountAggregateInputType = {
   id?: true
-  clerkOrganizationId?: true
+  providerOrganizationId?: true
   name?: true
   slug?: true
+  logo?: true
+  metadata?: true
   ownerUserId?: true
   planId?: true
   billingEmail?: true
@@ -271,9 +283,11 @@ export type OrganizationGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 
 export type OrganizationGroupByOutputType = {
   id: string
-  clerkOrganizationId: string | null
+  providerOrganizationId: string | null
   name: string
   slug: string
+  logo: string | null
+  metadata: string | null
   ownerUserId: string
   planId: string | null
   billingEmail: string | null
@@ -315,9 +329,11 @@ export type OrganizationWhereInput = {
   OR?: Prisma.OrganizationWhereInput[]
   NOT?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   id?: Prisma.StringFilter<"Organization"> | string
-  clerkOrganizationId?: Prisma.StringNullableFilter<"Organization"> | string | null
+  providerOrganizationId?: Prisma.StringNullableFilter<"Organization"> | string | null
   name?: Prisma.StringFilter<"Organization"> | string
   slug?: Prisma.StringFilter<"Organization"> | string
+  logo?: Prisma.StringNullableFilter<"Organization"> | string | null
+  metadata?: Prisma.StringNullableFilter<"Organization"> | string | null
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
@@ -342,9 +358,11 @@ export type OrganizationWhereInput = {
 
 export type OrganizationOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  clerkOrganizationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  providerOrganizationId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   slug?: Prisma.SortOrder
+  logo?: Prisma.SortOrderInput | Prisma.SortOrder
+  metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
   billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -369,12 +387,14 @@ export type OrganizationOrderByWithRelationInput = {
 
 export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  clerkOrganizationId?: string
+  providerOrganizationId?: string
   slug?: string
   AND?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   OR?: Prisma.OrganizationWhereInput[]
   NOT?: Prisma.OrganizationWhereInput | Prisma.OrganizationWhereInput[]
   name?: Prisma.StringFilter<"Organization"> | string
+  logo?: Prisma.StringNullableFilter<"Organization"> | string | null
+  metadata?: Prisma.StringNullableFilter<"Organization"> | string | null
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
@@ -395,13 +415,15 @@ export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   invites?: Prisma.OrganizationInviteListRelationFilter
   subscriptions?: Prisma.SubscriptionListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
-}, "id" | "clerkOrganizationId" | "slug">
+}, "id" | "providerOrganizationId" | "slug">
 
 export type OrganizationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  clerkOrganizationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  providerOrganizationId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   slug?: Prisma.SortOrder
+  logo?: Prisma.SortOrderInput | Prisma.SortOrder
+  metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
   billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -428,9 +450,11 @@ export type OrganizationScalarWhereWithAggregatesInput = {
   OR?: Prisma.OrganizationScalarWhereWithAggregatesInput[]
   NOT?: Prisma.OrganizationScalarWhereWithAggregatesInput | Prisma.OrganizationScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Organization"> | string
-  clerkOrganizationId?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
+  providerOrganizationId?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   slug?: Prisma.StringWithAggregatesFilter<"Organization"> | string
+  logo?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
+  metadata?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   ownerUserId?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   planId?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
@@ -449,9 +473,11 @@ export type OrganizationScalarWhereWithAggregatesInput = {
 
 export type OrganizationCreateInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -474,9 +500,11 @@ export type OrganizationCreateInput = {
 
 export type OrganizationUncheckedCreateInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -499,9 +527,11 @@ export type OrganizationUncheckedCreateInput = {
 
 export type OrganizationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -524,9 +554,11 @@ export type OrganizationUpdateInput = {
 
 export type OrganizationUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -549,9 +581,11 @@ export type OrganizationUncheckedUpdateInput = {
 
 export type OrganizationCreateManyInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -570,9 +604,11 @@ export type OrganizationCreateManyInput = {
 
 export type OrganizationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -589,9 +625,11 @@ export type OrganizationUpdateManyMutationInput = {
 
 export type OrganizationUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -620,9 +658,11 @@ export type OrganizationOrderByRelationAggregateInput = {
 
 export type OrganizationCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  clerkOrganizationId?: Prisma.SortOrder
+  providerOrganizationId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   slug?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  metadata?: Prisma.SortOrder
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
@@ -648,9 +688,11 @@ export type OrganizationAvgOrderByAggregateInput = {
 
 export type OrganizationMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  clerkOrganizationId?: Prisma.SortOrder
+  providerOrganizationId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   slug?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  metadata?: Prisma.SortOrder
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
@@ -669,9 +711,11 @@ export type OrganizationMaxOrderByAggregateInput = {
 
 export type OrganizationMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  clerkOrganizationId?: Prisma.SortOrder
+  providerOrganizationId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   slug?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  metadata?: Prisma.SortOrder
   ownerUserId?: Prisma.SortOrder
   planId?: Prisma.SortOrder
   billingEmail?: Prisma.SortOrder
@@ -851,9 +895,11 @@ export type OrganizationUpdateOneWithoutPaymentsNestedInput = {
 
 export type OrganizationCreateWithoutOwnerInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -875,9 +921,11 @@ export type OrganizationCreateWithoutOwnerInput = {
 
 export type OrganizationUncheckedCreateWithoutOwnerInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   planId?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
@@ -927,9 +975,11 @@ export type OrganizationScalarWhereInput = {
   OR?: Prisma.OrganizationScalarWhereInput[]
   NOT?: Prisma.OrganizationScalarWhereInput | Prisma.OrganizationScalarWhereInput[]
   id?: Prisma.StringFilter<"Organization"> | string
-  clerkOrganizationId?: Prisma.StringNullableFilter<"Organization"> | string | null
+  providerOrganizationId?: Prisma.StringNullableFilter<"Organization"> | string | null
   name?: Prisma.StringFilter<"Organization"> | string
   slug?: Prisma.StringFilter<"Organization"> | string
+  logo?: Prisma.StringNullableFilter<"Organization"> | string | null
+  metadata?: Prisma.StringNullableFilter<"Organization"> | string | null
   ownerUserId?: Prisma.StringFilter<"Organization"> | string
   planId?: Prisma.StringNullableFilter<"Organization"> | string | null
   billingEmail?: Prisma.StringNullableFilter<"Organization"> | string | null
@@ -948,9 +998,11 @@ export type OrganizationScalarWhereInput = {
 
 export type OrganizationCreateWithoutPlanInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -972,9 +1024,11 @@ export type OrganizationCreateWithoutPlanInput = {
 
 export type OrganizationUncheckedCreateWithoutPlanInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   billingEmail?: string | null
   suspendedAt?: Date | string | null
@@ -1021,9 +1075,11 @@ export type OrganizationUpdateManyWithWhereWithoutPlanInput = {
 
 export type OrganizationCreateWithoutMembershipsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -1045,9 +1101,11 @@ export type OrganizationCreateWithoutMembershipsInput = {
 
 export type OrganizationUncheckedCreateWithoutMembershipsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -1085,9 +1143,11 @@ export type OrganizationUpdateToOneWithWhereWithoutMembershipsInput = {
 
 export type OrganizationUpdateWithoutMembershipsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1109,9 +1169,11 @@ export type OrganizationUpdateWithoutMembershipsInput = {
 
 export type OrganizationUncheckedUpdateWithoutMembershipsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1133,9 +1195,11 @@ export type OrganizationUncheckedUpdateWithoutMembershipsInput = {
 
 export type OrganizationCreateWithoutInvitesInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -1157,9 +1221,11 @@ export type OrganizationCreateWithoutInvitesInput = {
 
 export type OrganizationUncheckedCreateWithoutInvitesInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -1197,9 +1263,11 @@ export type OrganizationUpdateToOneWithWhereWithoutInvitesInput = {
 
 export type OrganizationUpdateWithoutInvitesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1221,9 +1289,11 @@ export type OrganizationUpdateWithoutInvitesInput = {
 
 export type OrganizationUncheckedUpdateWithoutInvitesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1245,9 +1315,11 @@ export type OrganizationUncheckedUpdateWithoutInvitesInput = {
 
 export type OrganizationCreateWithoutSubscriptionsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -1269,9 +1341,11 @@ export type OrganizationCreateWithoutSubscriptionsInput = {
 
 export type OrganizationUncheckedCreateWithoutSubscriptionsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -1309,9 +1383,11 @@ export type OrganizationUpdateToOneWithWhereWithoutSubscriptionsInput = {
 
 export type OrganizationUpdateWithoutSubscriptionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1333,9 +1409,11 @@ export type OrganizationUpdateWithoutSubscriptionsInput = {
 
 export type OrganizationUncheckedUpdateWithoutSubscriptionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1357,9 +1435,11 @@ export type OrganizationUncheckedUpdateWithoutSubscriptionsInput = {
 
 export type OrganizationCreateWithoutPaymentsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
   suspensionReason?: string | null
@@ -1381,9 +1461,11 @@ export type OrganizationCreateWithoutPaymentsInput = {
 
 export type OrganizationUncheckedCreateWithoutPaymentsInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   planId?: string | null
   billingEmail?: string | null
@@ -1421,9 +1503,11 @@ export type OrganizationUpdateToOneWithWhereWithoutPaymentsInput = {
 
 export type OrganizationUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1445,9 +1529,11 @@ export type OrganizationUpdateWithoutPaymentsInput = {
 
 export type OrganizationUncheckedUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1469,9 +1555,11 @@ export type OrganizationUncheckedUpdateWithoutPaymentsInput = {
 
 export type OrganizationCreateManyOwnerInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   planId?: string | null
   billingEmail?: string | null
   suspendedAt?: Date | string | null
@@ -1489,9 +1577,11 @@ export type OrganizationCreateManyOwnerInput = {
 
 export type OrganizationUpdateWithoutOwnerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1513,9 +1603,11 @@ export type OrganizationUpdateWithoutOwnerInput = {
 
 export type OrganizationUncheckedUpdateWithoutOwnerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1537,9 +1629,11 @@ export type OrganizationUncheckedUpdateWithoutOwnerInput = {
 
 export type OrganizationUncheckedUpdateManyWithoutOwnerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1557,9 +1651,11 @@ export type OrganizationUncheckedUpdateManyWithoutOwnerInput = {
 
 export type OrganizationCreateManyPlanInput = {
   id?: string
-  clerkOrganizationId?: string | null
+  providerOrganizationId?: string | null
   name: string
   slug: string
+  logo?: string | null
+  metadata?: string | null
   ownerUserId: string
   billingEmail?: string | null
   suspendedAt?: Date | string | null
@@ -1577,9 +1673,11 @@ export type OrganizationCreateManyPlanInput = {
 
 export type OrganizationUpdateWithoutPlanInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   suspensionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1601,9 +1699,11 @@ export type OrganizationUpdateWithoutPlanInput = {
 
 export type OrganizationUncheckedUpdateWithoutPlanInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1625,9 +1725,11 @@ export type OrganizationUncheckedUpdateWithoutPlanInput = {
 
 export type OrganizationUncheckedUpdateManyWithoutPlanInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  clerkOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerOrganizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ownerUserId?: Prisma.StringFieldUpdateOperationsInput | string
   billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1703,9 +1805,11 @@ export type OrganizationCountOutputTypeCountPaymentsArgs<ExtArgs extends runtime
 
 export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  clerkOrganizationId?: boolean
+  providerOrganizationId?: boolean
   name?: boolean
   slug?: boolean
+  logo?: boolean
+  metadata?: boolean
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
@@ -1731,9 +1835,11 @@ export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.Internal
 
 export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  clerkOrganizationId?: boolean
+  providerOrganizationId?: boolean
   name?: boolean
   slug?: boolean
+  logo?: boolean
+  metadata?: boolean
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
@@ -1754,9 +1860,11 @@ export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
 
 export type OrganizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  clerkOrganizationId?: boolean
+  providerOrganizationId?: boolean
   name?: boolean
   slug?: boolean
+  logo?: boolean
+  metadata?: boolean
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
@@ -1777,9 +1885,11 @@ export type OrganizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
 
 export type OrganizationSelectScalar = {
   id?: boolean
-  clerkOrganizationId?: boolean
+  providerOrganizationId?: boolean
   name?: boolean
   slug?: boolean
+  logo?: boolean
+  metadata?: boolean
   ownerUserId?: boolean
   planId?: boolean
   billingEmail?: boolean
@@ -1796,7 +1906,7 @@ export type OrganizationSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clerkOrganizationId" | "name" | "slug" | "ownerUserId" | "planId" | "billingEmail" | "suspendedAt" | "suspensionReason" | "seatLimit" | "tokenPoolStrategy" | "memberTokenCap" | "memberCapStrategy" | "memberCapResetIntervalHours" | "ownerExemptFromCaps" | "tokenBalance" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
+export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "providerOrganizationId" | "name" | "slug" | "logo" | "metadata" | "ownerUserId" | "planId" | "billingEmail" | "suspendedAt" | "suspensionReason" | "seatLimit" | "tokenPoolStrategy" | "memberTokenCap" | "memberCapStrategy" | "memberCapResetIntervalHours" | "ownerExemptFromCaps" | "tokenBalance" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
 export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   plan?: boolean | Prisma.Organization$planArgs<ExtArgs>
@@ -1827,9 +1937,11 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    clerkOrganizationId: string | null
+    providerOrganizationId: string | null
     name: string
     slug: string
+    logo: string | null
+    metadata: string | null
     ownerUserId: string
     planId: string | null
     billingEmail: string | null
@@ -2274,9 +2386,11 @@ export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends run
  */
 export interface OrganizationFieldRefs {
   readonly id: Prisma.FieldRef<"Organization", 'String'>
-  readonly clerkOrganizationId: Prisma.FieldRef<"Organization", 'String'>
+  readonly providerOrganizationId: Prisma.FieldRef<"Organization", 'String'>
   readonly name: Prisma.FieldRef<"Organization", 'String'>
   readonly slug: Prisma.FieldRef<"Organization", 'String'>
+  readonly logo: Prisma.FieldRef<"Organization", 'String'>
+  readonly metadata: Prisma.FieldRef<"Organization", 'String'>
   readonly ownerUserId: Prisma.FieldRef<"Organization", 'String'>
   readonly planId: Prisma.FieldRef<"Organization", 'String'>
   readonly billingEmail: Prisma.FieldRef<"Organization", 'String'>

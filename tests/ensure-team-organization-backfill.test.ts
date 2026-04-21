@@ -13,7 +13,7 @@ const prismaMock = vi.hoisted(() => ({
   organization: {
     findFirst: vi.fn(),
     findUnique: vi.fn(),
-    update: vi.fn(async () => undefined),
+    update: vi.fn<() => Promise<Record<string, unknown> | undefined>>(async () => undefined),
   },
   organizationMembership: {
     aggregate: vi.fn(),
@@ -28,13 +28,23 @@ const prismaMock = vi.hoisted(() => ({
 
 const workspaceServiceMock = vi.hoisted(() => ({
   providerName: 'nextauth',
+  usesExternalProviderOrganizations: false,
+  usesLocalProviderOrganizations: true,
+  createProviderOrganization: vi.fn(async () => ({
+    id: 'org_ba_1',
+    name: 'Better Auth Workspace',
+    slug: 'better-auth-workspace',
+  })),
 }));
+
+const upsertOrganizationMock = vi.hoisted(() => vi.fn(async () => null));
+const syncOrganizationMembershipMock = vi.hoisted(() => vi.fn(async () => null));
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/logger', () => ({ Logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 vi.mock('../lib/teams', () => ({
-  upsertOrganization: vi.fn(async () => null),
-  syncOrganizationMembership: vi.fn(async () => null),
+  upsertOrganization: upsertOrganizationMock,
+  syncOrganizationMembership: syncOrganizationMembershipMock,
 }));
 vi.mock('../lib/workspace-service', () => ({ workspaceService: workspaceServiceMock }));
 
@@ -43,6 +53,9 @@ import { ensureTeamOrganization } from '../lib/organization-access';
 describe('ensureTeamOrganization billing backfill', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    workspaceServiceMock.providerName = 'nextauth';
+    workspaceServiceMock.usesExternalProviderOrganizations = false;
+    workspaceServiceMock.usesLocalProviderOrganizations = true;
     prismaMock.$transaction.mockImplementation(async (ops: Array<Promise<unknown>>) => Promise.all(ops));
     prismaMock.user.findUnique.mockResolvedValue({ name: 'Owner', email: 'owner@example.com', tokenBalance: 0 });
     prismaMock.subscription.findFirst
@@ -137,5 +150,37 @@ describe('ensureTeamOrganization billing backfill', () => {
       where: { organizationId: 'org_1', status: 'ACTIVE' },
       data: { sharedTokenBalance: 120 },
     });
+  });
+
+  it('treats Better Auth workspace provisioning as a local provider-backed organization flow', async () => {
+    workspaceServiceMock.providerName = 'betterauth';
+    prismaMock.organization.findFirst.mockResolvedValueOnce(null);
+    prismaMock.organization.update.mockResolvedValueOnce({
+      id: 'org_ba_1',
+      planId: 'plan_team',
+      seatLimit: 5,
+      tokenPoolStrategy: 'SHARED_FOR_ORG',
+      tokenBalance: 0,
+    });
+    prismaMock.organization.findUnique.mockResolvedValueOnce({ id: 'org_ba_1', tokenBalance: 100 });
+
+    await ensureTeamOrganization('user_1');
+
+    expect(prismaMock.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_ba_1' },
+      data: {
+        planId: 'plan_team',
+        seatLimit: 5,
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+        tokenBalance: 0,
+      },
+    });
+    expect(syncOrganizationMembershipMock).toHaveBeenCalledWith({
+      userId: 'user_1',
+      organizationId: 'org_ba_1',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+    });
+    expect(upsertOrganizationMock).not.toHaveBeenCalled();
   });
 });

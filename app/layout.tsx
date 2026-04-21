@@ -256,7 +256,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const shouldInjectGa = Boolean(gaMeasurementId);
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
-  const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const activeAuthProvider = process.env.AUTH_PROVIDER || 'clerk';
+  const clerkEnabled = activeAuthProvider === 'clerk' && !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const themeCookie = cookieStore.get('themeResolved')?.value;
   const initialThemeClass = themeCookie === 'dark' || themeCookie === 'light' ? themeCookie : undefined;
   // Preserve previous default aspect ratio (160x48) as a CSS fallback while using
@@ -302,11 +303,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="min-h-screen flex flex-col text-[rgb(var(--text-primary))] transition-colors duration-150"
           suppressHydrationWarning={true}
         >
-          <AppAuthProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''}>
-            {/* Indicate to client code whether Clerk is enabled so client-only
-              helpers can avoid calling auth APIs for anonymous visitors. */}
-            <meta name="x-clerk-enabled" content={String(clerkEnabled)} />
-            <script async src="/scripts/clerk-flag-init.js" />
+          <AppAuthProvider publishableKey={clerkEnabled ? (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '') : ''}>
+            {/* Indicate to client code whether Clerk is active so client-only
+              helpers can avoid calling Clerk APIs on self-hosted auth lanes. */}
+            {clerkEnabled ? <meta name="x-clerk-enabled" content="true" /> : null}
+            {clerkEnabled ? <script async src="/scripts/clerk-flag-init.js" /> : null}
             <FormatSettingsProvider initialMode={formatSettings.mode} initialTimezone={formatSettings.timezone}>
           <UserProfileProvider>
           {shouldInjectGa ? (

@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getAuthSafe } from '@/lib/auth';
-import { cancelPendingEmailChange } from '@/lib/nextauth-email-verification';
-import { authService } from '@/lib/auth-provider';
+import { cancelPendingEmailChangeForActiveProvider, supportsManagedPendingEmailChange } from '@/lib/pending-email-change';
 import { Logger } from '@/lib/logger';
 
 export async function DELETE() {
   try {
-    if (authService.providerName !== 'nextauth') {
+    if (!supportsManagedPendingEmailChange()) {
       return NextResponse.json({ error: 'Not supported for the active auth provider.' }, { status: 400 });
     }
 
@@ -15,7 +14,7 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await cancelPendingEmailChange(userId);
+    await cancelPendingEmailChangeForActiveProvider(userId);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

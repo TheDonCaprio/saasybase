@@ -239,7 +239,6 @@ The abstraction layer (`lib/auth-provider/`) defines a full `AuthProvider` inter
 
 ```bash
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=""
-CLERK_PUBLISHABLE_KEY=""
 CLERK_SECRET_KEY=""
 CLERK_WEBHOOK_SECRET=""   # Required for webhook-driven user init and welcome emails
 ```
@@ -516,11 +515,16 @@ NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY="pk_live_..."
 PADDLE_API_KEY="pat_live_..."
 PADDLE_WEBHOOK_SECRET="..."             # Notification destination secret; supports comma-separated rotation
 NEXT_PUBLIC_PADDLE_CLIENT_TOKEN="..."   # Paddle.js client token
-PADDLE_DEFAULT_TAX_CATEGORY="standard" # Required for auto-creation of products/prices
 # Sandbox / live selection:
 PADDLE_ENV="sandbox"
 NEXT_PUBLIC_PADDLE_ENV="sandbox"
+
+# Only needed when provider-side catalog sync is enabled
+PAYMENT_AUTO_CREATE="true"
+PADDLE_DEFAULT_TAX_CATEGORY="standard" # Required for auto-creation of products/prices
 ```
+
+The minimal Paddle setup is five values: `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`, `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `PADDLE_ENV`, and `NEXT_PUBLIC_PADDLE_ENV`. Keep `PAYMENT_AUTO_CREATE`, `PADDLE_DEFAULT_TAX_CATEGORY`, `PADDLE_CURRENCY`, `PADDLE_WEBHOOK_TOLERANCE_SECONDS`, and `PADDLE_DEBUG_SUBSCRIPTION_UPDATES` for advanced or provider-sync-specific cases.
 
 **Webhook endpoint:** `/api/webhooks/payments` (preferred) or `/api/webhooks/paddle`
 
@@ -1710,7 +1714,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `GA_*` | Google Analytics 4 |
 | Security | `ENCRYPTION_SECRET`, `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN`, `CRON_SECRET` | Server-side secrets |
 | Demo | `DEMO_READ_ONLY_MODE` | Read-only demo mode |
-| Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
+| Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV` | Sandbox/production toggle |
 | Seeding | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Non-interactive admin creation |
 | Dev helpers | `ALLOW_UNSIGNED_CLERK_WEBHOOKS`, `ALLOW_SYNC_IN_PROD` | Break-glass local/dev helpers only |
 ## Demo Read-Only Mode

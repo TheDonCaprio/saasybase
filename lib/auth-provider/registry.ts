@@ -47,9 +47,9 @@ export const AUTH_PROVIDER_REGISTRY: Record<string, AuthProviderConfig> = {
     envVarCheck: () => {
       // The publishable key is needed for the client-side provider wrapper.
       // The secret key is needed for server-side SDK calls.
-      if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && !process.env.CLERK_PUBLISHABLE_KEY) {
+      if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
         throw new Error(
-          'Clerk auth provider requires NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY'
+          'Clerk auth provider requires NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
         );
       }
       if (!process.env.CLERK_SECRET_KEY) {

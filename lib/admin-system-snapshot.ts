@@ -161,18 +161,14 @@ export async function getAdminEnvironmentSettings(): Promise<AdminEnvironmentSet
     { key: 'INTERNAL_API_BEARER', value: isConfigured(process.env.INTERNAL_API_TOKEN) ? 'Configured' : 'Missing', description: 'Server-to-server bearer token for internal endpoints' },
     {
       key: 'CRON_BEARER',
-      value: [process.env.CRON_PROCESS_EXPIRY_TOKEN, process.env.CRON_SECRET, process.env.CRON_TOKEN, process.env.INTERNAL_API_TOKEN].some(isConfigured)
+      value: [process.env.CRON_PROCESS_EXPIRY_TOKEN, process.env.CRON_SECRET, process.env.CRON_TOKEN].some(isConfigured)
         ? 'Configured'
         : 'Missing',
       description: 'Bearer token coverage for the expiry cron endpoint'
     },
     {
       key: 'HEALTHCHECK_TOKEN',
-      value: isConfigured(process.env.HEALTHCHECK_TOKEN)
-        ? 'Dedicated token'
-        : isConfigured(process.env.INTERNAL_API_TOKEN)
-          ? 'Uses internal token'
-          : 'Missing',
+      value: isConfigured(process.env.HEALTHCHECK_TOKEN) ? 'Configured' : 'Missing',
       description: 'Authentication mode for the health endpoint'
     },
     {

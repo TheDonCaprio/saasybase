@@ -35,14 +35,6 @@ function getBearerToken(req: NextRequest): string | null {
 function isInternalAuthorized(req: NextRequest): boolean {
   const expected = process.env.INTERNAL_API_TOKEN || null;
   const bearer = getBearerToken(req);
-
-  // Production: require a configured secret and a matching Bearer token.
-  if (process.env.NODE_ENV === 'production') {
-    return Boolean(expected && bearer && bearer === expected);
-  }
-
-  // Non-production: allow either the explicit dev header or the bearer token.
-  if (req.headers.get('X-Internal-API') === 'true') return true;
   return Boolean(expected && bearer && bearer === expected);
 }
 

@@ -69,6 +69,45 @@ describe('GET /api/health', () => {
     expect(getPaymentProviderMock).not.toHaveBeenCalled();
   });
 
+  it('does not fall back to INTERNAL_API_TOKEN for detailed production health output', async () => {
+    process.env = {
+      ...process.env,
+      NODE_ENV: 'production',
+      INTERNAL_API_TOKEN: 'internal_only',
+    };
+    delete process.env.HEALTHCHECK_TOKEN;
+
+    const res = await GET(new NextRequest('http://localhost/api/health', {
+      headers: {
+        authorization: 'Bearer internal_only',
+      },
+    }));
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ status: 'ok' });
+    expect(checkDatabaseConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it('returns detailed production health output for a matching HEALTHCHECK_TOKEN', async () => {
+    process.env = {
+      ...process.env,
+      NODE_ENV: 'production',
+      HEALTHCHECK_TOKEN: 'health_token',
+      INTERNAL_API_TOKEN: 'internal_only',
+    };
+
+    const res = await GET(new NextRequest('http://localhost/api/health', {
+      headers: {
+        authorization: 'Bearer health_token',
+      },
+    }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.status).toBe('healthy');
+    expect(checkDatabaseConnectionMock).toHaveBeenCalled();
+  });
+
   it('reports provider-aware auth and payment checks for configured providers', async () => {
     const req = new NextRequest('http://localhost/api/health');
 

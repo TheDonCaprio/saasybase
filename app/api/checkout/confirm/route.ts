@@ -14,7 +14,6 @@ import { paymentService } from '../../../../lib/payment/service';
 import { PaymentProviderFactory } from '../../../../lib/payment/factory';
 import { getOrganizationReferenceWhere } from '../../../../lib/organization-reference';
 import type { Prisma } from '@/lib/prisma-client';
-import { canUseLocalhostDevBypass } from '../../../../lib/dev-admin-bypass';
 
 function jsonError(message: string, status: number, code: string) {
   return NextResponse.json({ error: message, code }, { status });
@@ -98,22 +97,6 @@ export async function GET(req: NextRequest) {
 
   const { userId: clerkUserId, orgId: authOrgId } = await authService.getSession();
   let actorUserId = clerkUserId ?? null;
-
-  if (!actorUserId && canUseLocalhostDevBypass(req.nextUrl.hostname)) {
-    const devAdminId = process.env.DEV_ADMIN_ID;
-    if (devAdminId) {
-      const fallback = await prisma.user.findUnique({ where: { id: devAdminId }, select: { id: true } });
-      if (fallback?.id) {
-        actorUserId = fallback.id;
-      }
-    }
-    if (!actorUserId) {
-      const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } });
-      if (admin?.id) {
-        actorUserId = admin.id;
-      }
-    }
-  }
 
   if (!actorUserId) {
     Logger.warn('Checkout confirm request without authentication', { sessionId, recent });

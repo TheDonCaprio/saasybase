@@ -1,6 +1,5 @@
 import { prisma } from './prisma';
 import { authService } from './auth-provider';
-import { isLocalhostDevBypassEnabled } from './dev-admin-bypass';
 import type { AuthUser } from './auth-provider';
 import { initializeNewUserTokens, resetUserTokensIfNeeded } from './settings';
 import { Logger } from './logger';
@@ -169,10 +168,6 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
   if (!user) {
     try {
       const normalizedEmail = opts?.emailOverride ? normalizeEmail(opts.emailOverride) : pickClerkEmail(clerkUser);
-      // Check if this user should be an admin (matches DEV_ADMIN_ID in development)
-      const shouldBeAdmin = isLocalhostDevBypassEnabled() &&
-        process.env.DEV_ADMIN_ID &&
-        userId === process.env.DEV_ADMIN_ID;
       const defaultSelect = {
         id: true,
         email: true,
@@ -199,7 +194,7 @@ export async function ensureUserExists(opts?: { userId?: string; emailOverride?:
         id: userId,
         name: clerkUser?.fullName || clerkUser?.firstName || '',
         imageUrl: clerkUser?.imageUrl || null,
-        role: shouldBeAdmin ? 'ADMIN' : 'USER',
+        role: 'USER',
       } as const;
 
       const createArgs = (select: Prisma.UserSelect, emailValue: string | null) => ({
@@ -281,11 +276,6 @@ export async function syncUserFromClerk() {
 
   const normalizedEmail = pickClerkEmail(clerkUser);
 
-  // Check if this user should be an admin (matches DEV_ADMIN_ID in development)
-  const shouldBeAdmin = isLocalhostDevBypassEnabled() &&
-    process.env.DEV_ADMIN_ID &&
-    userId === process.env.DEV_ADMIN_ID;
-
   // Update user in database with latest Clerk data
   let user: LocalUser | null = null;
   const defaultSelect = {
@@ -322,7 +312,7 @@ export async function syncUserFromClerk() {
       email: emailValue,
       name: clerkUser.fullName || clerkUser.firstName || null,
       imageUrl: clerkUser.imageUrl || null,
-      role: shouldBeAdmin ? 'ADMIN' : 'USER'
+      role: 'USER'
     },
     select,
   });

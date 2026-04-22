@@ -45,9 +45,6 @@ vi.mock('../lib/auth-provider', () => ({
     getCurrentUser: vi.fn(async () => null),
   },
 }));
-vi.mock('../lib/dev-admin-bypass', () => ({
-  isLocalhostDevBypassEnabled: vi.fn(() => false),
-}));
 
 import { activatePendingSubscriptions } from '../lib/auth';
 

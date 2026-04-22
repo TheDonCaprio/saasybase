@@ -250,7 +250,6 @@
 
 **Rules:**
 - Always validate environment before deployment (`scripts/validate-env.js`)
-- Set `ALLOW_ADMIN_SCRIPT=false` in production
 - Configure webhook secrets with rotation support (comma-separated)
 - Use health check endpoint to verify deployment
 - Set up cron for `/api/cron/process-expiry` in production

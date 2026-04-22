@@ -150,7 +150,7 @@ Logger.error('External service failed', error);
 | `SMTP_` | Email config | `SMTP_HOST` |
 | `AWS_` / `LOGO_` | Storage config | `AWS_ACCESS_KEY_ID` |
 | `GA_` | Analytics config | `GA_PROPERTY_ID` |
-| `DEV_` | Dev-only helpers | `DEV_ADMIN_ID` |
+| `DEV_` | Dev-only helpers | Avoid new runtime privilege shortcuts |
 | `SEED_` | Seeding config | `SEED_ADMIN_EMAIL` |
 | `PAYMENT_` | Payment provider selection and shared catalog config | `PAYMENT_PROVIDER`, `PAYMENT_AUTO_CREATE` |
 

@@ -33,7 +33,7 @@ function extractBearer(req: NextRequest) {
 }
 
 function isAuthorized(req: NextRequest) {
-  const expected = process.env.HEALTHCHECK_TOKEN || process.env.INTERNAL_API_TOKEN || null;
+  const expected = process.env.HEALTHCHECK_TOKEN || null;
   if (!expected) return false;
   const provided = extractBearer(req);
   return provided === expected;

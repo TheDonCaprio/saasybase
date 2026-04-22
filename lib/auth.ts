@@ -14,7 +14,6 @@ import {
 } from './moderator';
 import { raiseAuthGuardError } from './auth-guard-error';
 import { authService } from './auth-provider';
-import { isLocalhostDevBypassEnabled } from './dev-admin-bypass';
 
 export { AuthGuardError, isAuthGuardError, toAuthGuardErrorResponse } from './auth-guard-error';
 
@@ -88,18 +87,6 @@ export async function requireAdmin() {
     });
   }
 
-  if (isLocalhostDevBypassEnabled()) {
-    try {
-      const devId = process.env.DEV_ADMIN_ID;
-      if (devId && userId === devId) {
-        const dbDev = await prisma.user.findUnique({ where: { id: devId } });
-        if (dbDev && dbDev.role === 'ADMIN') return devId;
-      }
-    } catch {
-      // ignore and fall through to normal role validation
-    }
-  }
-
   const role = await resolveUserRole(userId);
   if (role !== 'ADMIN') {
     raiseAuthGuardError('FORBIDDEN', {
@@ -128,24 +115,6 @@ export async function requireAdminOrModerator(section?: ModeratorSection): Promi
       reason: 'missing-current-user',
       section
     });
-  }
-
-  if (isLocalhostDevBypassEnabled()) {
-    const devId = process.env.DEV_ADMIN_ID;
-    if (devId && userId === devId) {
-      try {
-        const devRecord = await prisma.user.findUnique({ where: { id: devId }, select: { role: true } });
-        if (devRecord?.role === 'ADMIN') {
-          return {
-            userId: devId,
-            role: 'ADMIN',
-            permissions: buildAdminLikePermissions()
-          };
-        }
-      } catch {
-        // Fall through to standard auth path when the lookup fails.
-      }
-    }
   }
 
   const role = await resolveUserRole(userId);

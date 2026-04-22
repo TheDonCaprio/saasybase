@@ -40,6 +40,7 @@ import { GET } from '../app/api/cron/process-expiry/route';
 describe('cron process-expiry notifications', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.CRON_PROCESS_EXPIRY_TOKEN = 'cron_test_token';
     prismaMock.subscription.findMany.mockReset();
     prismaMock.subscription.updateMany.mockReset();
     prismaMock.subscription.findFirst.mockReset();
@@ -56,7 +57,7 @@ describe('cron process-expiry notifications', () => {
 
     const req = new NextRequest('http://localhost/api/cron/process-expiry', {
       method: 'GET',
-      headers: { 'X-Internal-API': 'true' },
+      headers: { authorization: 'Bearer cron_test_token' },
     });
 
     const res = await GET(req);
@@ -65,5 +66,34 @@ describe('cron process-expiry notifications', () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(notifyExpiredSubscriptionsMock).toHaveBeenCalledWith(['sub_1']);
+  });
+
+  it('rejects the legacy X-Internal-API header without a bearer token', async () => {
+    const req = new NextRequest('http://localhost/api/cron/process-expiry', {
+      method: 'GET',
+      headers: { 'X-Internal-API': 'true' },
+    });
+
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(body).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('does not accept INTERNAL_API_TOKEN as a cron fallback token', async () => {
+    delete process.env.CRON_PROCESS_EXPIRY_TOKEN;
+    process.env.INTERNAL_API_TOKEN = 'internal_only';
+
+    const req = new NextRequest('http://localhost/api/cron/process-expiry', {
+      method: 'GET',
+      headers: { authorization: 'Bearer internal_only' },
+    });
+
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(body).toEqual({ error: 'Unauthorized' });
   });
 });

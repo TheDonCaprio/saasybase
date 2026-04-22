@@ -6,7 +6,18 @@ const authServiceMock = vi.hoisted(() => ({
 }));
 
 const prismaUserFindUniqueMock = vi.hoisted(() => vi.fn());
-const isLocalhostDevBypassEnabledMock = vi.hoisted(() => vi.fn(() => true));
+const buildAdminLikePermissionsMock = vi.hoisted(() => vi.fn(() => ({
+  users: true,
+  transactions: true,
+  purchases: true,
+  subscriptions: true,
+  support: true,
+  notifications: true,
+  blog: true,
+  analytics: true,
+  traffic: true,
+  organizations: true,
+})));
 
 vi.mock('../lib/auth-provider', () => ({ authService: authServiceMock }));
 vi.mock('../lib/prisma', () => ({
@@ -16,42 +27,27 @@ vi.mock('../lib/prisma', () => ({
     },
   },
 }));
-vi.mock('../lib/dev-admin-bypass', () => ({
-  isLocalhostDevBypassEnabled: isLocalhostDevBypassEnabledMock,
-}));
 vi.mock('../lib/logger', () => ({ Logger: { warn: vi.fn(), debug: vi.fn() } }));
 vi.mock('../lib/notifications', () => ({ notifyExpiredSubscriptions: vi.fn(), sendBillingNotification: vi.fn() }));
 vi.mock('../lib/organization-access', () => ({ syncOrganizationEligibilityForUser: vi.fn() }));
 vi.mock('../lib/teams', () => ({ creditOrganizationSharedTokens: vi.fn(), creditAllocatedPerMemberTokens: vi.fn() }));
 vi.mock('../lib/settings', () => ({ getDefaultTokenLabel: vi.fn() }));
 vi.mock('../lib/moderator', () => ({
-  buildAdminLikePermissions: vi.fn(() => ({
-    users: true,
-    transactions: true,
-    purchases: true,
-    subscriptions: true,
-    support: true,
-    notifications: true,
-    blog: true,
-    analytics: true,
-    traffic: true,
-    organizations: true,
-  })),
+  buildAdminLikePermissions: buildAdminLikePermissionsMock,
   fetchModeratorPermissions: vi.fn(),
   moderatorHasAccess: vi.fn(),
 }));
 vi.mock('../lib/metrics', () => ({ incrementMetric: vi.fn() }));
 
-import { requireAdmin, requireAdminOrModerator, AuthGuardError } from '../lib/auth';
+import { requireAdmin, requireAdminOrModerator } from '../lib/auth';
 
-describe('DEV_ADMIN_ID bypass', () => {
+describe('admin guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.DEV_ADMIN_ID = 'admin_1';
     authServiceMock.getSession.mockResolvedValue({ userId: null });
   });
 
-  it('does not grant admin access to a different signed-in user', async () => {
+  it('does not grant admin access to a signed-in non-admin user', async () => {
     authServiceMock.getCurrentUser.mockResolvedValue({ id: 'user_2' });
     prismaUserFindUniqueMock.mockResolvedValue({ role: 'USER' });
 
@@ -60,7 +56,7 @@ describe('DEV_ADMIN_ID bypass', () => {
     });
   });
 
-  it('allows the configured dev admin when the authenticated user matches DEV_ADMIN_ID', async () => {
+  it('allows a signed-in admin user through the real role check', async () => {
     authServiceMock.getCurrentUser.mockResolvedValue({ id: 'admin_1' });
     prismaUserFindUniqueMock.mockResolvedValue({ role: 'ADMIN' });
 

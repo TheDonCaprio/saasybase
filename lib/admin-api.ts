@@ -262,7 +262,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Returns a minimal { status: "ok" } payload when unauthenticated in production, or a detailed health report when authorized (or in non-production).',
         access: 'public',
         notes: [
-          'In production, a Bearer token is required for full details.',
+          'In production, a Bearer token matching HEALTHCHECK_TOKEN is required for full details.',
           'Returns 503 when any critical check fails.',
         ],
         example: { headers: { Authorization: 'Bearer healthcheck_token' } },
@@ -3086,8 +3086,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           requestId: 'string? — opaque request label for audit logs (not idempotency)',
         },
         notes: [
-          'Auth: production requires Authorization: Bearer INTERNAL_API_TOKEN and returns 404 for unauthorized calls to reduce endpoint discovery.',
-          'Non-prod: also accepts X-Internal-API: true for dev convenience; unauthorized calls return 401 { error: "Unauthorized" }.',
+          'Auth: requires Authorization: Bearer INTERNAL_API_TOKEN in every environment; unauthorized calls return 404 in production and 401 elsewhere.',
           'bucket=auto is context-aware: with organizationId it uses shared only; without organizationId it uses paid first and then free.',
           'On insufficient funds, returns 409 { error: "insufficient_tokens", required, available, bucket }.',
         ],
@@ -3297,7 +3296,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         method: 'POST',
         path: '/api/internal/track-visit',
         summary: 'Record a visit log entry',
-        description: 'Stores a visit log row for analytics/tracking. In production it requires INTERNAL_API_TOKEN; in non-production it requires X-Internal-API: true.',
+        description: 'Stores a visit log row for analytics/tracking. It requires Authorization: Bearer INTERNAL_API_TOKEN in every environment.',
         access: 'internal',
         body: {
           sessionId: 'string — required session identifier',
@@ -3308,9 +3307,8 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
           path: 'string — required visited path',
         },
         notes: [
-          'Production authorization: Authorization: Bearer INTERNAL_API_TOKEN; unauthorized requests return 404.',
-          'Non-production authorization: X-Internal-API: true; unauthorized requests return 401.',
-          'If VisitLog does not exist yet, the route creates the table and retries the insert once.',
+          'Authorization: Authorization: Bearer INTERNAL_API_TOKEN; unauthorized requests return 404 in production and 401 elsewhere.',
+          'If VisitLog is missing, the route logs an operational error and fails; analytics tables must be created through migrations.',
         ],
         rateLimitTier: 'internal',
         example: { sessionId: 'sess_123', ip: '203.0.113.10', userAgent: 'Mozilla/5.0', country: 'US', referrer: 'https://google.com', path: '/pricing' },
@@ -3652,7 +3650,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         },
         notes: [
           'Signature headers may be provided as clerk-signature, x-clerk-signature, svix-signature, or webhook-signature.',
-          'Unsigned requests are rejected by default in all environments unless ALLOW_UNSIGNED_CLERK_WEBHOOKS=true in non-production.',
+          'Unsigned requests are rejected by default in all environments unless ALLOW_UNSIGNED_CLERK_WEBHOOKS=true for explicit localhost debugging only.',
           'Organization, membership, and invite events can return specialized sync results such as organizationId, membershipId, inviteId, accepted, expired, or deleted.',
         ],
         rateLimitTier: 'public',
@@ -3690,8 +3688,7 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         description: 'Expires outdated subscriptions, clears paid tokens after the natural-expiry grace window, and dismantles organizations whose owners no longer have valid team access.',
         access: 'internal',
         notes: [
-          'Authorization: production requires Bearer token matching CRON_PROCESS_EXPIRY_TOKEN, CRON_SECRET, CRON_TOKEN, or INTERNAL_API_TOKEN.',
-          'Non-production also allows X-Internal-API: true.',
+          'Authorization: requires Bearer token matching CRON_PROCESS_EXPIRY_TOKEN, CRON_SECRET, or CRON_TOKEN in every environment.',
           'Returns 404 instead of 401 for unauthorized production requests to reduce endpoint discovery.',
           'Rate limit: 2 requests / minute per client IP.',
         ],
@@ -3914,7 +3911,7 @@ export async function getAdminApiCatalog(): Promise<AdminApiCatalog> {
         'Dashboard requests automatically forward the active auth-provider session cookies.',
         'The /docs/api page is the public API reference; the /admin/api route redirects to it. API routes generally use requireAdmin() or requireAdminOrModerator() to return JSON auth errors.',
         'User-scoped endpoints validate the requester against the resource owner and will return 403 when mismatched.',
-        'Internal endpoints (e.g. /api/internal/*) are intended for server-to-server calls: use Authorization: Bearer <INTERNAL_API_TOKEN>. In non-prod environments, some internal endpoints also accept X-Internal-API: true for local tooling.',
+        'Internal endpoints (e.g. /api/internal/*) are intended for server-to-server calls: use Authorization: Bearer <INTERNAL_API_TOKEN>.',
         'Some internal endpoints intentionally respond with 404 when unauthorized to reduce endpoint discovery.'
       ]
     },

@@ -35,6 +35,7 @@ import { POST } from '../app/api/internal/spend-tokens/route';
 describe('POST /api/internal/spend-tokens auto bucket selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.INTERNAL_API_TOKEN = 'internal_test_token';
 
     txMock.user.findUnique.mockReset();
     txMock.user.updateMany.mockReset();
@@ -82,7 +83,7 @@ describe('POST /api/internal/spend-tokens auto bucket selection', () => {
 
     const req = new NextRequest('http://localhost/api/internal/spend-tokens', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'X-Internal-API': 'true' },
+      headers: { 'content-type': 'application/json', authorization: 'Bearer internal_test_token' },
       body: JSON.stringify({ userId: 'user_1', amount: 10, bucket: 'auto', organizationId: 'org_db_1', feature: 'internal-org-auto' }),
     });
 
@@ -108,7 +109,7 @@ describe('POST /api/internal/spend-tokens auto bucket selection', () => {
 
     const req = new NextRequest('http://localhost/api/internal/spend-tokens', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'X-Internal-API': 'true' },
+      headers: { 'content-type': 'application/json', authorization: 'Bearer internal_test_token' },
       body: JSON.stringify({ userId: 'user_1', amount: 10, bucket: 'auto', feature: 'internal-personal-auto' }),
     });
 
@@ -123,5 +124,19 @@ describe('POST /api/internal/spend-tokens auto bucket selection', () => {
       where: { id: 'user_1', freeTokenBalance: { gte: 10 } },
       data: { freeTokenBalance: { decrement: 10 } },
     });
+  });
+
+  it('rejects the legacy X-Internal-API header without a bearer token', async () => {
+    const req = new NextRequest('http://localhost/api/internal/spend-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-Internal-API': 'true' },
+      body: JSON.stringify({ userId: 'user_1', amount: 10, bucket: 'auto' }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(body).toEqual({ error: 'Unauthorized' });
   });
 });

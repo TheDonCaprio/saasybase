@@ -22,7 +22,6 @@ import { getIdByProvider, getCurrentProviderKey } from '../../../lib/utils/provi
 import { getProviderCurrency, getProviderDefaultCurrency } from '../../../lib/payment/registry';
 import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
-import { canUseLocalhostDevBypass } from '../../../lib/dev-admin-bypass';
 import { resolveCheckoutWorkspaceContext } from '../../../lib/checkout-workspace-context';
 import { workspaceService } from '../../../lib/workspace-service';
 
@@ -118,16 +117,6 @@ export async function POST(req: NextRequest) {
           }
         }
       );
-    }
-
-    if (!userId && canUseLocalhostDevBypass(req.nextUrl.hostname)) {
-      // Localhost-only dev fallback: use DEV_ADMIN_ID or first ADMIN user
-      if (process.env.DEV_ADMIN_ID) {
-        userId = process.env.DEV_ADMIN_ID;
-      } else {
-        const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-        if (admin) userId = admin.id;
-      }
     }
 
     if (!userId) {

@@ -32,7 +32,6 @@ const envSchema = z
 
     // Development
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-    DEV_ADMIN_ID: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if ((env.EMAIL_PROVIDER ?? 'nodemailer') === 'resend' && !env.RESEND_API_KEY) {

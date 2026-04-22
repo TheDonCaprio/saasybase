@@ -400,6 +400,5 @@ The `validate-env.js` script runs automatically before `dev` and `build` to chec
 - [ ] Set `INTERNAL_API_TOKEN`, `HEALTHCHECK_TOKEN`, `CRON_PROCESS_EXPIRY_TOKEN`
 - [ ] Configure SMTP for email delivery
 - [ ] Set up webhook endpoints in provider dashboards
-- [ ] Set `ALLOW_ADMIN_SCRIPT=false`
 - [ ] Set up cron job for `/api/cron/process-expiry`
 - [ ] Verify with `GET /api/health` (with Bearer token)

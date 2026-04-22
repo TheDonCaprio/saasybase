@@ -118,4 +118,40 @@ describe('Clerk webhook route', () => {
     expect(authServiceMock.getUser).toHaveBeenCalledWith('user_123');
     expect(sendWelcomeIfNotSentMock).toHaveBeenCalledWith('user_123', 'verified@example.com', { firstName: 'Don' });
   });
+
+  it('allows unsigned webhooks only for explicit localhost debugging when the toggle is enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+    vi.stubEnv('ALLOW_UNSIGNED_CLERK_WEBHOOKS', 'true');
+
+    const req = new NextRequest('http://localhost/api/webhooks/clerk', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'user.updated', data: { id: 'user_123' } }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
+
+  it('rejects unsigned webhooks in non-local environments even when the toggle is enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://staging.example.com');
+    vi.stubEnv('ALLOW_UNSIGNED_CLERK_WEBHOOKS', 'true');
+
+    const req = new NextRequest('https://staging.example.com/api/webhooks/clerk', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'user.updated', data: { id: 'user_123' } }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('missing-signature');
+  });
 });

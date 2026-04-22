@@ -13,7 +13,6 @@ const createAuthRouteMatcherMock = vi.hoisted(() =>
 const shouldBlockDemoReadOnlyMutationMock = vi.hoisted(() => vi.fn(() => false));
 const isMaintenanceModeEnabledMock = vi.hoisted(() => vi.fn(async () => false));
 const isMaintenanceBypassPathMock = vi.hoisted(() => vi.fn(() => false));
-const canUseLocalhostDevBypassMock = vi.hoisted(() => vi.fn(() => false));
 const shouldTrackVisitMock = vi.hoisted(() => vi.fn(() => false));
 const trackVisitMock = vi.hoisted(() => vi.fn(async () => undefined));
 const getOrCreateVisitSessionIdMock = vi.hoisted(() => vi.fn(() => 'visit_session_1'));
@@ -41,10 +40,6 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('../lib/maintenance-mode', () => ({
   isMaintenanceModeEnabled: isMaintenanceModeEnabledMock,
   isMaintenanceBypassPath: isMaintenanceBypassPathMock,
-}));
-
-vi.mock('../lib/dev-admin-bypass', () => ({
-  canUseLocalhostDevBypass: canUseLocalhostDevBypassMock,
 }));
 
 vi.mock('../lib/visit-tracking', () => ({
@@ -97,6 +92,17 @@ describe('proxy auth resolution', () => {
 
     expect((response as Response).status).toBe(401);
     expect(body).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('returns API 401 for protected admin API routes on localhost when unauthenticated', async () => {
+    vi.resetModules();
+    const proxyModule = await import('../proxy');
+    const proxy = proxyModule.default as unknown as (auth: unknown, req: NextRequest) => Promise<Response | void>;
+
+    const request = new NextRequest('http://localhost/api/admin/users');
+    const response = await proxy(async () => null, request);
+
+    expect((response as Response).status).toBe(401);
   });
 
   it('redirects protected HTML routes to sign-in with a safe return path when unauthenticated', async () => {

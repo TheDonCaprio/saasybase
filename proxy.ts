@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
 import { prisma } from '@/lib/prisma';
 import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
-import { canUseLocalhostDevBypass } from '@/lib/dev-admin-bypass';
 import { addVisitTrackingHeaders, getOrCreateVisitSessionId, shouldTrackVisit, trackVisit } from '@/lib/visit-tracking';
 import { Logger } from '@/lib/logger';
 
@@ -169,13 +168,6 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
 
   if (!isProtectedRoute(req)) {
     return continueWithVisitTracking(req);
-  }
-
-  if (canUseLocalhostDevBypass(req.nextUrl.hostname)) {
-    // Skip protection in dev when DEV_ADMIN_ID is present — the API route
-    // handlers themselves still call `requireAdmin()` which will use the
-    // DEV_ADMIN_ID bypass when appropriate.
-    return;
   }
 
   // Clerk's middleware callback exposes an auth helper that is invoked as

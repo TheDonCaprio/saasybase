@@ -2,6 +2,8 @@
 
 A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
 
+For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/deployment`, and `/docs/google-secret-manager`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
+
 ## What Is SaaSyBase?
 
 SaaSyBase is a **complete SaaS foundation** — not a starter template. It gives you everything a real SaaS product needs out of the box: authentication, subscription billing with four payment providers, a token/credit system, team/organization support, an admin dashboard, email templates, a blog CMS, support tickets, and more.
@@ -322,13 +324,11 @@ Key differences from Clerk:
 
 ## Admin Setup
 
-### Development (automatic)
+### Development
 
-1. Set `DEV_ADMIN_ID` in `.env.local` to your auth provider user ID.
-2. Delete your user from the DB (if already created) via `npm run prisma:studio`.
-3. Sign in again — you are automatically created with `role = ADMIN`.
-
-> ⚠️ This is disabled in production (`NODE_ENV === 'production'`). Never rely on it outside local dev.
+1. Create the initial admin during `npx prisma db seed`, or promote an existing local user in Prisma Studio.
+2. If promoting manually, set the user's `role` to `ADMIN` in the `User` table.
+3. Sign in again and verify `/admin` loads.
 
 ### Database seed
 
@@ -1037,9 +1037,8 @@ Run this periodically (hourly or daily) to:
 - `CRON_PROCESS_EXPIRY_TOKEN`
 - `CRON_SECRET`
 - `CRON_TOKEN`
-- `INTERNAL_API_TOKEN`
 
-In non-production, the route also accepts `X-Internal-API: true` for local tooling.
+In every environment, the route requires a matching bearer token.
 
 **Example cron command (cPanel / shell):**
 ```bash
@@ -1364,6 +1363,18 @@ Complete these steps after local development is finished and before you point re
 ### Required environment variables
 
 ```bash
+# Strong recommendation: for staging and production, keep secret values in Google Secret Manager
+# and inject them into environment variables during deploy/startup instead of storing them in env files.
+# Plain env files still work, but they are a fallback and materially less secure.
+
+# Optional built-in Google Secret Manager integration:
+# GOOGLE_SECRET_MANAGER_ENABLED="true"
+# GOOGLE_SECRET_MANAGER_PROJECT_ID="your-gcp-project-id"
+# GOOGLE_SECRET_MANAGER_ENV="staging"      # e.g. staging or production
+# GOOGLE_SECRET_MANAGER_PREFIX="saasybase" # secret id: <prefix>-<env>-<ENV_VAR_NAME>
+# GOOGLE_SECRET_MANAGER_VERSION="latest"
+# GOOGLE_SECRET_MANAGER_SECRETS="DATABASE_URL,ENCRYPTION_SECRET,INTERNAL_API_TOKEN"
+
 # Core
 DATABASE_URL="postgresql://..."
 NEXT_PUBLIC_APP_URL="https://yourdomain.com"
@@ -1404,6 +1415,60 @@ Notes:
 - Use `EMAIL_PROVIDER="nodemailer"` for SMTP delivery. In local development, the default SMTP values can point at MailHog.
 - Use `EMAIL_PROVIDER="resend"` with `RESEND_API_KEY` set. The `SMTP_*` variables are ignored in that mode.
 
+### Google Secret Manager (recommended, optional)
+
+If you are new to this, use this rule:
+
+- local development: keep using `.env.local`
+- staging and production: move server-side secrets into Google Secret Manager
+
+SaaSyBase already supports this. The app stays env-driven, and the built-in wrappers load `.env` files first, then fetch missing server-side secrets from Google Secret Manager before `build`, `start`, and Prisma commands run.
+
+Simple setup flow:
+
+1. Create secrets like `saasybase-staging-DATABASE_URL` or `saasybase-production-ENCRYPTION_SECRET`.
+2. Set `GOOGLE_SECRET_MANAGER_ENABLED=true` plus the base Google Secret Manager env vars in your deployment platform.
+3. Add Google credentials for that platform.
+4. Run `npm run secrets:smoke` before the first real deploy.
+5. Deploy normally with `npm run build`, `npm run start`, and `npm run prisma:deploy`.
+
+Supported integration env vars:
+
+- `GOOGLE_SECRET_MANAGER_ENABLED=true` turns the integration on
+- `GOOGLE_SECRET_MANAGER_PROJECT_ID` pins the Google Cloud project explicitly
+- `GOOGLE_SECRET_MANAGER_ENV` sets the environment segment used in secret IDs such as `staging` or `production`
+- `GOOGLE_SECRET_MANAGER_PREFIX` changes the secret ID prefix; default is `saasybase`
+- `GOOGLE_SECRET_MANAGER_VERSION` chooses the secret version; default is `latest`
+- `GOOGLE_SECRET_MANAGER_SECRETS` provides an optional comma-separated allowlist of env var names to fetch
+- `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON` or `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64` provides explicit service account credentials for platforms that cannot use Google workload identity or `GOOGLE_APPLICATION_CREDENTIALS`
+
+Default secret ID pattern:
+
+- `<GOOGLE_SECRET_MANAGER_PREFIX>-<GOOGLE_SECRET_MANAGER_ENV>-<ENV_VAR_NAME>`
+
+Existing env values are not overwritten. That keeps env-file and platform-env fallback intact and makes staged migrations possible.
+
+Smoke test the staging configuration without starting the app:
+
+```bash
+GOOGLE_SECRET_MANAGER_ENABLED=true \
+GOOGLE_SECRET_MANAGER_ENV=staging \
+npm run secrets:smoke
+```
+
+This remains optional. If you prefer to keep managing secrets directly in platform env vars or env files, SaaSyBase will still work because the app reads from `process.env`. The tradeoff is security and operational hygiene: env-file secret storage is easier to leak, harder to rotate, and easier to copy into the wrong environment.
+
+If you want the beginner-friendly walkthrough, use the app docs page at `/docs/google-secret-manager`.
+
+Recommended split:
+
+- Google Secret Manager: all server-side secrets such as `DATABASE_URL`, `ENCRYPTION_SECRET`, provider secret keys, webhook secrets, and internal bearer tokens
+- Regular env config: non-secret deploy config such as `AUTH_PROVIDER`, `PAYMENT_PROVIDER`, URLs, branding, and public keys
+- `.env.local`: local-only development values and test helpers
+
+For the staged rollout and rotation sequence, see [docs/secret-inventory-rotation-plan-2026-04-21.md](docs/secret-inventory-rotation-plan-2026-04-21.md).
+For simpler deployment recipes and copy-paste examples, see [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
+
 ### Health check
 
 ```
@@ -1415,8 +1480,7 @@ Returns database connectivity, environment validation, active auth/payment provi
 
 Auth token resolution:
 
-- Uses `HEALTHCHECK_TOKEN` when set.
-- Falls back to `INTERNAL_API_TOKEN` if `HEALTHCHECK_TOKEN` is unset.
+- Requires `HEALTHCHECK_TOKEN` for detailed output in production.
 
 ### Vercel deployment
 
@@ -1433,6 +1497,7 @@ Notes:
 
 - The default `vercel.json` cron schedule is intentionally conservative so it works on Vercel Hobby plans too. If you need faster cleanup and your plan supports it, increase the frequency.
 - If you want manual or external cron callers in addition to Vercel Cron, you can also keep `CRON_PROCESS_EXPIRY_TOKEN` set.
+- If you want Vercel to fetch secrets directly from Google Secret Manager at build/runtime, use the built-in loader with explicit service account JSON env or another pre-sync mechanism. A concrete example is in [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
 
 ### Clerk webhook (production)
 
@@ -1488,6 +1553,7 @@ Recommended setup:
 5. Use PostgreSQL for production data.
 6. Use S3-compatible storage if you need durable uploaded assets across container restarts or reschedules.
 7. Configure a scheduled HTTP job for `/api/cron/process-expiry` with `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` unless you are relying on a platform-native scheduler that can inject a bearer token.
+8. If you are using Google Secret Manager, either provide `GOOGLE_APPLICATION_CREDENTIALS` as a mounted file path or use `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64`. A full example is in [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
 
 ### Linux VPS (Nginx or Apache)
 
@@ -1529,6 +1595,7 @@ Typical production sequence:
 
 ```bash
 npm install
+npm run secrets:smoke
 npx prisma migrate deploy
 npm run build
 npm run start
@@ -1610,7 +1677,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Demo | `DEMO_READ_ONLY_MODE` | Read-only demo mode |
 | Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
 | Seeding | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Non-interactive admin creation |
-| Dev helpers | `DEV_ADMIN_ID`, `DEV_ADMIN_EMAIL`, `ALLOW_ADMIN_SCRIPT` | Local dev only |
+| Dev helpers | `ALLOW_UNSIGNED_CLERK_WEBHOOKS`, `ALLOW_SYNC_IN_PROD` | Break-glass local/dev helpers only |
 | E2E testing | `PLAYWRIGHT_*` | Playwright base URL, credentials, org IDs |
 
 ---
@@ -1644,4 +1711,4 @@ This codebase is production-oriented but you should review your environment conf
 - Rotate all secrets before deploying.
 - Enable signature verification for all webhooks.
 - Use a hosted PostgreSQL instance in production (not SQLite).
-- Set `ALLOW_ADMIN_SCRIPT=false` in production.
+- Treat `ALLOW_UNSIGNED_CLERK_WEBHOOKS` and `ALLOW_SYNC_IN_PROD` as break-glass only. `ALLOW_UNSIGNED_CLERK_WEBHOOKS` is for explicit localhost debugging only and must never be enabled for staging or preview environments.

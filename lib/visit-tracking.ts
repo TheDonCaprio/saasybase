@@ -89,16 +89,13 @@ async function createVisitRecord(data: {
       'Content-Type': 'application/json'
     };
 
-    if (process.env.NODE_ENV === 'production') {
-      const internalApiToken = process.env.INTERNAL_API_TOKEN;
-      if (!internalApiToken) {
-        Logger.warn('Visit tracking skipped because INTERNAL_API_TOKEN is not configured in production');
-        return;
-      }
-      headers.Authorization = `Bearer ${internalApiToken}`;
-    } else {
-      headers['X-Internal-API'] = 'true';
+    const internalApiToken = process.env.INTERNAL_API_TOKEN;
+    if (!internalApiToken) {
+      Logger.warn('Visit tracking skipped because INTERNAL_API_TOKEN is not configured');
+      return;
     }
+
+    headers.Authorization = `Bearer ${internalApiToken}`;
 
     await fetch(`${base}/api/internal/track-visit`, {
       method: 'POST',

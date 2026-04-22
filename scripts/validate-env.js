@@ -1,24 +1,7 @@
 #!/usr/bin/env node
 // Simple environment validator used before dev/build
 const { URL } = require('url');
-// Load dotenv to read .env files (respect common Next.js .env precedence)
-try {
-  // prefer dotenv-safe style: load .env.local, .env.development, then .env
-  const dotenv = require('dotenv');
-  const fs = require('fs');
-  const path = require('path');
-
-  const root = path.resolve(__dirname, '..');
-  const candidates = ['.env.local', '.env.development', '.env'];
-  for (const name of candidates) {
-    const p = path.join(root, name);
-    if (fs.existsSync(p)) {
-      dotenv.config({ path: p });
-    }
-  }
-} catch (e) {
-  // if dotenv isn't installed or reading fails, continue — validation will still run against process.env
-}
+const { loadRuntimeEnv } = require('./load-runtime-env');
 
 function fail(msg) {
   console.error('ENV VALIDATION ERROR:', msg);
@@ -35,6 +18,16 @@ function parseUrlOrFail(name, value) {
   } catch (e) {
     fail(`${name} is not a valid URL: ${value}`);
   }
+}
+
+function isTruthyFlag(value) {
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function isLocalHostname(hostname) {
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes((hostname || '').trim().toLowerCase());
 }
 
 function parseNodeVersion(version) {
@@ -70,7 +63,7 @@ function isSupportedNodeVersion(version) {
   return version.major >= 24;
 }
 
-try {
+async function main() {
   const currentNodeVersion = parseNodeVersion(process.versions.node);
   if (!isSupportedNodeVersion(currentNodeVersion)) {
     fail(
@@ -78,11 +71,20 @@ try {
     );
   }
 
+  const secretLoadResult = await loadRuntimeEnv();
+  if (secretLoadResult.enabled && secretLoadResult.failed.length > 0) {
+    const failures = secretLoadResult.failed
+      .map((entry) => `${entry.envName} <= ${entry.secretId}: ${entry.message}`)
+      .join('\n');
+    fail(`Google Secret Manager loading failed:\n${failures}`);
+  }
+
   const val = process.env.NEXT_PUBLIC_APP_URL;
   if (!val) {
     fail('NEXT_PUBLIC_APP_URL is not set. Set it in your environment or .env file.');
   }
   const appUrl = parseUrlOrFail('NEXT_PUBLIC_APP_URL', val);
+  const localAppRuntime = isLocalHostname(appUrl.hostname);
 
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
   if (authProvider === 'betterauth') {
@@ -126,9 +128,19 @@ try {
     }
   }
 
+  if (isTruthyFlag(process.env.ALLOW_UNSIGNED_CLERK_WEBHOOKS) && !localAppRuntime) {
+    fail('ALLOW_UNSIGNED_CLERK_WEBHOOKS may only be enabled for explicit localhost development. Disable it before using any non-local environment.');
+  }
+
+  if (process.env.NODE_ENV === 'production' && isTruthyFlag(process.env.ALLOW_SYNC_IN_PROD)) {
+    fail('ALLOW_SYNC_IN_PROD must not be set in deployed production app environments. Use it only as a temporary script override when intentionally running a guarded backfill.');
+  }
+
   // Optionally check other important NEXT_PUBLIC_* urls here
   console.log('ENV VALIDATION OK');
   process.exit(0);
-} catch (e) {
-  fail(e.message || String(e));
 }
+
+main().catch((e) => {
+  fail(e.message || String(e));
+});

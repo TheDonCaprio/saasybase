@@ -14,6 +14,7 @@ import {
   deleteOrganizationByProviderId,
 } from '../../../../lib/teams';
 import { ensureUserExists } from '../../../../lib/user-helpers';
+import { allowUnsignedClerkWebhookForLocalDebug } from '../../../../lib/dangerous-toggle-guardrails';
 
 export const runtime = 'nodejs';
 
@@ -271,7 +272,7 @@ export async function POST(req: NextRequest) {
       payload = verifiedEvent.payload;
     }
 
-    const allowUnsignedWebhook = process.env.NODE_ENV !== 'production' && process.env.ALLOW_UNSIGNED_CLERK_WEBHOOKS === 'true';
+    const allowUnsignedWebhook = allowUnsignedClerkWebhookForLocalDebug(req.nextUrl.toString());
 
     // Reject unsigned or unverifiable Clerk webhooks by default in all environments.
     // Local debugging can opt in explicitly with ALLOW_UNSIGNED_CLERK_WEBHOOKS=true.

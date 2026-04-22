@@ -2,6 +2,7 @@
 // This replaces console.log statements throughout the application
 
 import { prisma } from './prisma'
+import { captureSentryException, captureSentryMessage } from './sentry'
 
 const MAX_PERSISTED_LOGS = 1000
 const PERSIST_PRUNE_PROBABILITY = 0.05
@@ -193,7 +194,16 @@ export class SecureLogger {
     const formatted = this.formatMessage('WARN', message, data)
     if (this.isDevelopment) console.warn(formatted)
     if (this.isProduction) {
-      // Hook to external logging in production if needed
+      void captureSentryMessage(message, 'warning', {
+        tags: {
+          source: 'secure-logger',
+          level: 'warn',
+        },
+        extras: {
+          context: context ? this.sanitizeData(context) : undefined,
+          data: this.sanitizeData(data),
+        },
+      })
     }
     void this.persistLog('WARN', message, data, context)
   }
@@ -210,6 +220,17 @@ export class SecureLogger {
     if (this.isProduction) {
       // Minimal production logging
       console.error(`[PRODUCTION ERROR] ${message}`)
+      void captureSentryException(data instanceof Error ? data : new Error(message), {
+        tags: {
+          source: 'secure-logger',
+          level: 'error',
+        },
+        extras: {
+          context: context ? this.sanitizeData(context) : undefined,
+          data: this.sanitizeData(errorPayload),
+          message,
+        },
+      })
     }
     void this.persistLog('ERROR', message, errorPayload, context)
   }

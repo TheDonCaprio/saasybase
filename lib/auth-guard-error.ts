@@ -50,6 +50,7 @@ export class AuthGuardError extends Error {
 
 function logAuthGuardFailure(code: AuthGuardCode, meta: AuthGuardFailureMeta): void {
   const { source, reason, section, userId, extra } = meta;
+  const isDevBypass = extra?.isDevBypass === true || extra?.isDevBypass === 'true' ? 'true' : 'false';
   const logPayload: Record<string, unknown> = {
     code,
     source,
@@ -83,6 +84,7 @@ function logAuthGuardFailure(code: AuthGuardCode, meta: AuthGuardFailureMeta): v
     source,
     section: section ?? 'none',
     reason,
+    isDevBypass,
   });
 }
 

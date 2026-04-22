@@ -2,7 +2,7 @@ import { Logger } from './logger';
 
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
-let warnedKeys = new Set<string>();
+const warnedKeys = new Set<string>();
 
 function normalizeHostname(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, '');

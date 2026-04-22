@@ -16,8 +16,8 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: ({ alt, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img alt={alt ?? ''} {...rest} />
+  default: ({ alt, ...rest }: React.ImgHTMLAttributes<HTMLSpanElement>) => (
+    <span aria-label={alt ?? ''} {...rest} />
   ),
 }));
 

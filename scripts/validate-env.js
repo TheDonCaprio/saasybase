@@ -15,7 +15,7 @@ function isNonEmptyString(value) {
 function parseUrlOrFail(name, value) {
   try {
     return new URL(value);
-  } catch (e) {
+  } catch {
     fail(`${name} is not a valid URL: ${value}`);
   }
 }
@@ -130,6 +130,23 @@ async function main() {
 
   if (isTruthyFlag(process.env.ALLOW_UNSIGNED_CLERK_WEBHOOKS) && !localAppRuntime) {
     fail('ALLOW_UNSIGNED_CLERK_WEBHOOKS may only be enabled for explicit localhost development. Disable it before using any non-local environment.');
+  }
+
+  if (isTruthyFlag(process.env.SENTRY_ENABLED)) {
+    const sentryDsn = process.env.SENTRY_DSN || '';
+    const publicSentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || '';
+
+    if (!isNonEmptyString(sentryDsn) && !isNonEmptyString(publicSentryDsn)) {
+      fail('SENTRY_ENABLED is true but neither SENTRY_DSN nor NEXT_PUBLIC_SENTRY_DSN is set. Configure at least one DSN or disable Sentry.');
+    }
+
+    if (isNonEmptyString(sentryDsn)) {
+      parseUrlOrFail('SENTRY_DSN', sentryDsn);
+    }
+
+    if (isNonEmptyString(publicSentryDsn)) {
+      parseUrlOrFail('NEXT_PUBLIC_SENTRY_DSN', publicSentryDsn);
+    }
   }
 
   if (process.env.NODE_ENV === 'production' && isTruthyFlag(process.env.ALLOW_SYNC_IN_PROD)) {

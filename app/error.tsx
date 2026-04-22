@@ -3,9 +3,11 @@
 import React, { useEffect } from 'react';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
 import { isChunkLoadError } from '../lib/chunk-error';
+import { captureClientRenderError } from '../lib/sentry';
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
+    void captureClientRenderError(error, 'app');
     console.error(error);
   }, [error]);
 

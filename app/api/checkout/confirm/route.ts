@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
   const looksLikeRazorpay = (paymentId && paymentId.startsWith('pay_')) || (sessionId && (sessionId.startsWith('order_') || sessionId.startsWith('sub_') || sessionId.startsWith('plink_')));
 
   const { userId: clerkUserId, orgId: authOrgId } = await authService.getSession();
-  let actorUserId = clerkUserId ?? null;
+  const actorUserId = clerkUserId ?? null;
 
   if (!actorUserId) {
     Logger.warn('Checkout confirm request without authentication', { sessionId, recent });

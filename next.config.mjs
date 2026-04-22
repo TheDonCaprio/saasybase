@@ -261,6 +261,35 @@ const nextConfig = {
   
   // Custom webpack config to suppress known browser extension warnings
   webpack: (config, { dev, isServer }) => {
+    const sentryInstrumentationWarningRules = [
+      (warning, compilation) => {
+        try {
+          if (!warning.module || !compilation?.requestShortener) {
+            return false;
+          }
+
+          const readableIdentifier = warning.module.readableIdentifier(compilation.requestShortener);
+          const isKnownSentryInstrumentationWarning =
+            /@opentelemetry\/instrumentation/.test(readableIdentifier)
+            || /@prisma\/instrumentation/.test(readableIdentifier)
+            || /require-in-the-middle/.test(readableIdentifier);
+
+          return isKnownSentryInstrumentationWarning && /Critical dependency/.test(warning.message || '');
+        } catch {
+          return false;
+        }
+      },
+      { module: /@opentelemetry\/instrumentation/, message: /Critical dependency/ },
+      { module: /@prisma\/instrumentation/, message: /Critical dependency/ },
+      { module: /require-in-the-middle/, message: /Critical dependency/ },
+    ];
+
+    if (config.ignoreWarnings === undefined) {
+      config.ignoreWarnings = sentryInstrumentationWarningRules;
+    } else if (Array.isArray(config.ignoreWarnings)) {
+      config.ignoreWarnings.push(...sentryInstrumentationWarningRules);
+    }
+
     if (dev && !isServer) {
       // Suppress Grammarly and other browser extension warnings in development
       config.resolve.fallback = {

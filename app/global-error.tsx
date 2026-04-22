@@ -1,11 +1,17 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
 import { isChunkLoadError } from '../lib/chunk-error';
+import { captureClientRenderError } from '../lib/sentry';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const isChunkError = isChunkLoadError(error);
+
+  useEffect(() => {
+    void captureClientRenderError(error, 'global');
+    console.error(error);
+  }, [error]);
 
   return (
     <html>

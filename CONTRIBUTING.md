@@ -99,8 +99,6 @@ describe('myFeature', () => {
 npm test                              # All unit tests
 npm test -- --watch                   # Watch mode
 npm test -- tests/my-feature.test.ts  # Single file
-npm run test:e2e                      # E2E tests (Playwright)
-npm run test:e2e:headed               # E2E with browser visible
 ```
 
 ---

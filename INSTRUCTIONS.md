@@ -33,7 +33,6 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 | `npm run dev:full` | Dev server + Stripe CLI webhook listener |
 | `npm run build` | Production build (runs `prisma generate` first) |
 | `npm test` | Run Vitest unit tests |
-| `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run lint` | ESLint |
 | `npm run prisma:studio` | Visual database browser |
@@ -73,7 +72,7 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 ├── types/                # TypeScript type definitions
 ├── utils/                # Client-side utilities
 ├── prisma/               # Database schema & migrations
-├── tests/                # Unit tests (Vitest) & E2E tests (Playwright)
+├── tests/                # Unit and integration tests (Vitest)
 ├── scripts/              # Operational scripts (backfill, admin, sync)
 ├── docs/                 # Architecture documentation
 ├── ops/                  # Production operational tools
@@ -359,7 +358,6 @@ describe('my feature', () => {
 npm test                          # All unit tests
 npm test -- --watch               # Watch mode
 npm test -- tests/my-feature.test.ts  # Single file
-npm run test:e2e                  # E2E tests
 ```
 
 ### What to Test

@@ -32,8 +32,6 @@ const DEFAULT_SECRET_ENV_NAMES = [
   'GA_SERVICE_ACCOUNT_CREDENTIALS_B64',
   'IPINFO_LITE_TOKEN',
   'SEED_ADMIN_PASSWORD',
-  'PLAYWRIGHT_E2E_ADMIN_PASSWORD',
-  'PLAYWRIGHT_E2E_PASSWORD',
 ];
 
 function parseBooleanFlag(value) {
@@ -46,7 +44,13 @@ function loadDotenvFiles() {
   try {
     const dotenv = require('dotenv');
     const root = path.resolve(__dirname, '..');
-    const candidates = ['.env.local', '.env.development', '.env'];
+    const nodeEnv = (process.env.NODE_ENV || 'development').trim().toLowerCase();
+    const candidates = nodeEnv === 'production'
+      ? ['.env.production.local', '.env.production', '.env']
+      : nodeEnv === 'test'
+        ? ['.env.test.local', '.env.test', '.env']
+        : ['.env.local', '.env.development', '.env'];
+
     for (const name of candidates) {
       const filePath = path.join(root, name);
       if (fs.existsSync(filePath)) {

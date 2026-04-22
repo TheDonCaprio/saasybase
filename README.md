@@ -81,7 +81,7 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 | Analytics | Google Analytics 4 (via Data API) + built-in visit tracking |
 | PDF Generation | pdf-lib (invoices, refund receipts) |
 | Validation | Zod |
-| Testing | Vitest (unit) · Playwright (E2E) |
+| Testing | Vitest (unit/integration) + manual regression checks |
 | Monitoring | `/api/health` endpoint |
 
 ---
@@ -124,7 +124,7 @@ saasybase/
 │   ├── schema.prisma       # Database schema (25+ models)
 │   └── seed.ts             # Database seeding script
 ├── scripts/                # Operational scripts (backfills, admin tools)
-├── tests/                  # 90+ Vitest unit tests + Playwright E2E
+├── tests/                  # 90+ Vitest unit/integration tests
 ├── docs/                   # Implementation guides and internal notes
 ├── ops/                    # Production operations (indexes, runbooks)
 └── .env.example            # Full environment variable template
@@ -209,7 +209,6 @@ These are the commands most people actually need when working on or operating th
 | `npm run typecheck` | Validate TypeScript before a deploy or PR |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run Vitest unit/integration tests |
-| `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
 | `npm run prisma:migrate` | Create and apply a local Prisma migration using `prisma.config.ts` and `.env.local` |
 | `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
@@ -1334,17 +1333,6 @@ npm test -- --watch   # Watch mode
 - Coupon redemption and plan resolution
 - Support ticket categories and cursor pagination
 
-### E2E Tests (Playwright)
-
-```bash
-npm run test:e2e          # Run all E2E tests
-npm run test:e2e:headed   # Run with browser visible
-```
-
-Configuration in `playwright.config.ts`.
-
----
-
 ## Admin Dashboard Overview
 
 The admin dashboard (`/admin`) is organized into logical groups:
@@ -1724,10 +1712,6 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 | Paddle sandbox | `PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_ENV`, `PADDLE_API_BASE_URL` | Sandbox/production toggle |
 | Seeding | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Non-interactive admin creation |
 | Dev helpers | `ALLOW_UNSIGNED_CLERK_WEBHOOKS`, `ALLOW_SYNC_IN_PROD` | Break-glass local/dev helpers only |
-| E2E testing | `PLAYWRIGHT_*` | Playwright base URL, credentials, org IDs |
-
----
-
 ## Demo Read-Only Mode
 
 If you want to share a safe, explorable demo (including admin UI) without allowing data changes, enable:

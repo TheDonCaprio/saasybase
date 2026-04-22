@@ -171,26 +171,23 @@
 
 ## Agent: Testing
 
-**Role:** Write and maintain unit tests (Vitest) and E2E tests (Playwright).
+**Role:** Write and maintain unit and integration tests (Vitest), plus focused regression coverage guidance.
 
 **Expertise:**
 - Vitest unit testing patterns
-- Playwright E2E testing
 - Mocking auth, database, and payment providers
 - Testing webhook flows and subscription state transitions
 - Regression test coverage
 
 **Key files to know:**
 - `vitest.config.mts` — Vitest configuration (Node environment, path aliases)
-- `playwright.config.ts` — Playwright configuration
 - `tests/vitest.setup.ts` — Global test setup
 - `tests/mocks/` — Mock modules (server-only, etc.)
 - `tests/*.test.ts` — 90+ test files with patterns to follow
-- `tests/e2e/` — Playwright E2E specs
 - `tests/README.md` — Test documentation
 
 **Rules:**
-- Use Vitest for unit/integration tests, Playwright for E2E
+- Use Vitest for unit/integration tests
 - Mock external dependencies (auth, payment providers, prisma)
 - Test both happy path and error cases
 - Test state transitions (subscription lifecycle, token spending)

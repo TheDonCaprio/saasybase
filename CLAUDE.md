@@ -103,8 +103,6 @@ Mirror the existing pattern in `lib/auth-provider/`:
 
 ```bash
 npm test                    # Vitest unit tests (90+ test files)
-npm run test:e2e            # Playwright E2E tests
-npm run test:e2e:headed     # E2E with visible browser
 npm run typecheck           # TypeScript type checking
 npm run lint                # ESLint
 ```

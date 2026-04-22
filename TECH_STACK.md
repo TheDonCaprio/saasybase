@@ -166,11 +166,10 @@ Optional dependency: `@aws-sdk/client-s3` (in `optionalDependencies`)
 | Technology | Version | Purpose | Config |
 |-----------|---------|---------|--------|
 | **Vitest** | latest | Unit & integration tests | `vitest.config.mts` |
-| **Playwright** | 1.x | E2E browser tests | `playwright.config.ts` |
 
 ### Test Stats
 - **90+ unit test files** covering payments, auth, subscriptions, tokens, webhooks
-- **4 E2E test specs** for dashboard navigation, org switching, org deletion, and demo read-only admin behavior
+- **Manual regression coverage** for UI-heavy flows when browser-level verification is needed
 
 ---
 

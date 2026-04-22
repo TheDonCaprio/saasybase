@@ -38,7 +38,7 @@ Use `AUTH_PROVIDER="clerk"` or `AUTH_PROVIDER="nextauth"`. Use `PAYMENT_PROVIDER
 - `components/` — Reusable UI and domain components.
 - `lib/` — Business logic, provider abstractions, settings, tokens, teams, billing, email, and security helpers.
 - `prisma/` — Schema and seed data.
-- `tests/` — Vitest and Playwright coverage.
+- `tests/` — Vitest unit and integration coverage.
 - `docs/` — Deeper implementation notes for billing, orgs, and token handling.
 
 ## High-Value Rules for Agents

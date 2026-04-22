@@ -26,9 +26,6 @@
     "public:export": "node scripts/public-export.mjs",
     "public:publish": "bash scripts/publish-public-export.sh",
     "test": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:org-switcher": "playwright test tests/e2e/org-switcher-regression.spec.ts",
     "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts",
     "backfill:better-auth-coexistence": "tsx scripts/backfill-better-auth-coexistence.ts"
   },
@@ -95,7 +92,6 @@
     }
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsdom": "^20.0.0",
     "@types/node": "^20.12.12",

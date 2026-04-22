@@ -8,6 +8,8 @@ import { useAuthInstance, useAuthSession, useAuthUser } from './hooks';
 
 type AuthModalMode = 'signin' | 'signup' | 'forgot-password' | 'reset-password' | 'magic-link';
 
+type OAuthProviderId = 'github' | 'google';
+
 type AuthActionResult = {
   data?: {
     redirect?: boolean;
@@ -284,6 +286,161 @@ function Message({
   return <div className={`rounded-xl border px-4 py-3 text-sm ${className}`}>{children}</div>;
 }
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-.9 2.3-1.9 3l3.1 2.4c1.8-1.7 2.8-4.1 2.8-6.9 0-.7-.1-1.5-.2-2.2H12z" />
+      <path fill="#34A853" d="M12 21c2.6 0 4.8-.9 6.4-2.5l-3.1-2.4c-.9.6-2 .9-3.3.9-2.5 0-4.6-1.7-5.4-3.9l-3.2 2.5C5 18.7 8.2 21 12 21z" />
+      <path fill="#4A90E2" d="M6.6 13.1c-.2-.6-.4-1.2-.4-1.9s.1-1.3.4-1.9L3.4 6.8C2.8 8 2.5 9.3 2.5 11.2s.3 3.2.9 4.4l3.2-2.5z" />
+      <path fill="#FBBC05" d="M12 5.4c1.4 0 2.7.5 3.7 1.4l2.8-2.8C16.8 2.4 14.6 1.5 12 1.5 8.2 1.5 5 3.8 3.4 6.8l3.2 2.5C7.4 7.1 9.5 5.4 12 5.4z" />
+    </svg>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M12 .5C5.6.5.5 5.7.5 12.1c0 5.1 3.3 9.4 7.8 11 .6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.4-3.9-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.8 1.4 3.5 1.1.1-.8.4-1.4.8-1.7-2.5-.3-5.2-1.3-5.2-5.8 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11 11 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.3 2.9.1 3.2.8.9 1.2 1.9 1.2 3.2 0 4.5-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.8-5.9 7.8-11C23.5 5.7 18.4.5 12 .5Z" />
+    </svg>
+  );
+}
+
+function useAvailableOAuthProviders() {
+  const [providers, setProviders] = useState<{ github: boolean; google: boolean }>({
+    github: false,
+    google: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    fetch('/api/auth/oauth-providers', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) {
+          return { github: false, google: false };
+        }
+
+        return response.json() as Promise<{ github?: boolean; google?: boolean }>;
+      })
+      .then((resolvedProviders) => {
+        if (!active) {
+          return;
+        }
+
+        setProviders({
+          github: resolvedProviders.github ?? false,
+          google: resolvedProviders.google ?? false,
+        });
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setProviders({ github: false, google: false });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return providers;
+}
+
+function OAuthButton({
+  provider,
+  label,
+  callbackURL,
+  onError,
+  onPendingChange,
+  requestSignUp = false,
+}: {
+  provider: OAuthProviderId;
+  label: string;
+  callbackURL: string;
+  onError: (message: string | null) => void;
+  onPendingChange: (pending: boolean) => void;
+  requestSignUp?: boolean;
+}) {
+  const icon = provider === 'google' ? <GoogleIcon /> : <GitHubIcon />;
+
+  async function handleClick() {
+    onPendingChange(true);
+    onError(null);
+
+    const result = await betterAuthClient.signIn.social({
+      provider,
+      callbackURL,
+      errorCallbackURL: callbackURL,
+      ...(requestSignUp ? { requestSignUp: true } : {}),
+    }) as AuthActionResult;
+
+    onPendingChange(false);
+
+    if (result.error) {
+      onError(getErrorMessage(result.error, `Unable to continue with ${provider}.`));
+      return;
+    }
+
+    maybeRedirect(result, callbackURL);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleClick()}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function OAuthButtons({
+  callbackURL,
+  requestSignUp = false,
+  onError,
+  onPendingChange,
+}: {
+  callbackURL: string;
+  requestSignUp?: boolean;
+  onError: (message: string | null) => void;
+  onPendingChange: (pending: boolean) => void;
+}) {
+  const { github, google } = useAvailableOAuthProviders();
+
+  if (!github && !google) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      {github ? (
+        <OAuthButton
+          provider="github"
+          label="Continue with GitHub"
+          callbackURL={callbackURL}
+          requestSignUp={requestSignUp}
+          onError={onError}
+          onPendingChange={onPendingChange}
+        />
+      ) : null}
+      {google ? (
+        <OAuthButton
+          provider="google"
+          label="Continue with Google"
+          callbackURL={callbackURL}
+          requestSignUp={requestSignUp}
+          onError={onError}
+          onPendingChange={onPendingChange}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function AuthCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-950/80 p-6 shadow-2xl shadow-black/30 backdrop-blur">
@@ -314,6 +471,7 @@ function SignInForm({
   const [error, setError] = useState<string | null>(initialQueryState.error);
   const [success, setSuccess] = useState<string | null>(initialQueryState.success);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(initialQueryState.verificationEmail);
+  const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -321,7 +479,6 @@ function SignInForm({
     setError(null);
     setSuccess(null);
 
-    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl);
     const result = await betterAuthClient.signIn.email({
       email,
       password,
@@ -376,6 +533,17 @@ function SignInForm({
 
       {error ? <Message tone="error">{error}</Message> : null}
       {success ? <Message tone="success">{success}</Message> : null}
+
+      <OAuthButtons
+        callbackURL={redirectUrl}
+        onError={setError}
+        onPendingChange={setPending}
+      />
+
+      <div className="relative text-center text-xs uppercase tracking-[0.2em] text-neutral-500">
+        <span className="bg-neutral-950 px-3">or</span>
+        <div className="absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-white/10" />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Email address">
@@ -542,6 +710,7 @@ function SignUpForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl || '/dashboard/onboarding');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -549,7 +718,6 @@ function SignUpForm({
     setError(null);
     setSuccess(null);
 
-    const redirectUrl = getRedirectTarget(forceRedirectUrl, fallbackRedirectUrl || '/dashboard/onboarding');
     const verificationSuccessUrl = buildVerificationSuccessUrl({
       signInUrl,
       redirectUrl,
@@ -594,6 +762,18 @@ function SignUpForm({
 
       {error ? <Message tone="error">{error}</Message> : null}
       {success ? <Message tone="success">{success}</Message> : null}
+
+      <OAuthButtons
+        callbackURL={redirectUrl}
+        requestSignUp
+        onError={setError}
+        onPendingChange={setPending}
+      />
+
+      <div className="relative text-center text-xs uppercase tracking-[0.2em] text-neutral-500">
+        <span className="bg-neutral-950 px-3">or</span>
+        <div className="absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-white/10" />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Full name">

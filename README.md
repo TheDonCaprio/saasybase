@@ -252,14 +252,60 @@ CLERK_WEBHOOK_SECRET=""   # Required for webhook-driven user init and welcome em
 ### Better Auth
 
 ```bash
+AUTH_PROVIDER="betterauth"
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"
 BETTER_AUTH_SECRET=""   # Generate with: npx auth secret
 AUTH_SECRET=""          # Keep aligned with BETTER_AUTH_SECRET
 NEXTAUTH_SECRET=""      # Optional compatibility fallback
+# Optional OAuth providers:
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
 ```
 
-Better Auth supports local credentials, magic links, and app-managed organizations while still routing through the same `lib/auth-provider/` abstraction as Clerk and NextAuth. It is the preferred self-hosted provider lane when you want built-in organization primitives without depending on Clerk.
+Better Auth supports local credentials, GitHub OAuth, Google OAuth, magic links, and app-managed organizations while still routing through the same `lib/auth-provider/` abstraction as Clerk and NextAuth. It is the preferred self-hosted provider lane when you want built-in organization primitives without depending on Clerk.
+
+#### Better Auth GitHub OAuth setup
+
+1. Go to GitHub Developer Settings → OAuth Apps.
+2. Create a new OAuth App.
+3. Set the Homepage URL to your app base URL.
+4. Set the Authorization callback URL to:
+  - Local: `http://localhost:3000/api/auth/callback/github`
+  - Production: `https://your-domain.com/api/auth/callback/github`
+5. Copy the generated Client ID and Client Secret into:
+
+```bash
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+```
+
+#### Better Auth Google OAuth setup
+
+1. Open Google Cloud Console → APIs & Services.
+2. Configure the OAuth consent screen for your app.
+3. Create credentials → OAuth client ID → Web application.
+4. Add Authorized redirect URIs:
+  - Local: `http://localhost:3000/api/auth/callback/google`
+  - Production: `https://your-domain.com/api/auth/callback/google`
+5. Add Authorized JavaScript origins:
+  - Local: `http://localhost:3000`
+  - Production: `https://your-domain.com`
+6. Copy the generated Client ID and Client Secret into:
+
+```bash
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+```
+
+#### Better Auth OAuth configuration notes
+
+- Keep `AUTH_PROVIDER="betterauth"`.
+- Keep `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, and `NEXT_PUBLIC_APP_URL` aligned with the exact base URL you registered with GitHub and Google.
+- The sign-in and sign-up UI only shows GitHub and Google buttons when the corresponding provider is fully configured.
+- Leaving the GitHub or Google env vars blank disables that provider cleanly without breaking credentials or magic-link auth.
 
 ### NextAuth (Auth.js v5)
 

@@ -85,9 +85,11 @@ const NEXTAUTH_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 
 const CLERK_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none"><path d="M0 0C.83429-.00807175 1.66858-.0161435 2.52815-.0244598C4.29568-.0382524 6.06324-.048996 7.83081-.0568848C9.6001-.0682912 11.3694-.0885581 13.1384-.118408C40.7056-.582136 70.5893 6.78287 92.8906 23.7773C95.332 26.2383 95.332 26.2383 96.1641 28.6328C96.1274 33.1699 95.7784 36.3082 92.6328 39.6992C91.9998 40.3838 91.3668 41.0684 90.7146 41.7737C86.0265 46.6232 81.3129 51.4434 76.543 56.2126C74.6989 58.0589 72.8631 59.913 71.0273 61.7676C69.8455 62.9523 68.6633 64.1366 67.4805 65.3203C66.9376 65.8703 66.3948 66.4203 65.8355 66.987C58.8524 73.9287 58.8524 73.9287 54.2969 74.4883C49.6983 73.9212 45.8921 72.7322 41.6445 70.8633C23.0504 62.7942 1.13292 62.6616-17.7461 70.0518C-37.473 78.4227-52.7443 92.5632-61.668 112.238C-70.6956 135.222-69.2922 157.666-59.668 180.238C-59.338 180.898-59.008 181.558-58.668 182.238C-58.1144 185.698-57.9003 188.158-59.993 191.102C-60.5715 191.732-61.1499 192.361-61.7458 193.01C-62.3834 193.708-63.0209 194.407-63.6777 195.126C-64.3345 195.823-64.9913 196.52-65.668 197.238C-66.2573 197.864-66.8467 198.49-67.4539 199.135C-71.289 203.149-75.2021 207.089-79.1111 211.031C-80.5312 212.468-81.9458 213.91-83.3552 215.358C-85.4071 217.464-87.4749 219.554-89.5469 221.641C-90.4846 222.612-90.4846 222.612-91.4413 223.604C-95.0019 227.147-97.3902 229.193-102.668 229.238C-108.022 227.465-110.379 224.433-113.043 219.676C-113.422 219.018-113.8 218.36-114.19 217.683C-121.755 204.234-127.271 190.292-130.668 175.238C-130.853 174.478-131.037 173.718-131.228 172.934C-133.218 163.712-133.11 154.379-133.105 144.988C-133.106 144.099-133.106 143.21-133.107 142.294C-133.007 104.031-118.906 70.9955-92.668 43.2383C-91.9216 42.4275-91.1752 41.6166-90.4062 40.7812C-67.8289 17.0844-32.9277.310099 0 0Z" fill="#B9B0FF" transform="translate(178.668 15.762)"/><path d="M0 0C18.1406 7.80364 39.921 8.39355 58.3555 1.08984C60.9287.0491918 63.4606-1.04331 66-2.16797C69.6289-3.46582 71.5807-4.0574 75.375-3.375C81.1185.206237 85.9494 4.91328 90.6836 9.70312C91.6619 10.6821 91.6619 10.6821 92.6599 11.6808C94.0227 13.0466 95.383 14.4147 96.741 15.7852C98.8261 17.8887 100.919 19.9839 103.014 22.0781C104.342 23.411 105.669 24.7443 106.996 26.0781C107.622 26.7052 108.248 27.3323 108.893 27.9783C112.747 31.8755 114.549 33.9207 114.938 39.375C115.021 40.2155 115.105 41.0559 115.191 41.9219C113.325 48.1011 105.366 51.4049 99.9836 54.3533C92.3916 58.3515 84.8257 61.8172 76.6875 64.5625C75.8945 64.8325 75.1015 65.1025 74.2844 65.3806C60.6436 69.7286 47.3499 71.1431 33.1218 71.071C30.5745 71.0625 28.0295 71.0914 25.4824 71.123C-1.98346 71.2404-30.47 62.1187-52.625 45.625C-54.4277 42.0196-54.4513 38.5384-53.625 34.625C-51.4229 31.1719-48.596 28.4982-45.6367 25.6875C-44.8226 24.8814-44.0084 24.0752-43.1696 23.2446C-40.571 20.683-37.9421 18.1548-35.3125 15.625C-33.5534 13.8939-31.7962 12.1608-30.041 10.4258C-28.3663 8.78213-26.6899 7.14014-25.0117 5.5C-24.2179 4.72406-23.424 3.94813-22.6061 3.14868C-21.4953 2.08122-21.4953 2.08122-20.3621.992188C-19.3861.0502856-19.3861.0502856-18.3904-.910645C-12.7819-5.56267-5.872-.602811 0 0Z" fill="#6C47FF" transform="translate(159.625 233.375)"/><path d="M0 0C9.80521 9.19114 14.854 21.549 15.3125 34.875C14.8725 47.6646 10.331 59.1792 1.37109 68.3828C-8.44878 77.0449-20.1332 81.2608-33.1602 81.0859C-45.9416 80.1954-57.3379 74.9011-66.1133 65.5586C-74.5002 54.7078-78.2455 42.2537-76.9805 28.6484C-75.2194 16.7658-68.8584 5.05337-59.1875-2.125C-39.8506-13.7764-18.3305-14.7349 0 0Z" fill="#6C47FF" transform="translate(221.188 125.125)"/></svg>`;
 
+const BETTER_AUTH_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 500 500"><path fill="#000" d="M0 0h500v500H0z"/><path fill="#fff" d="M69 121h86.988v259H69zM337.575 121H430v259h-92.425z"/><path fill="#fff" d="M427.282 121v83.456h-174.52V121zM430 296.544V380H252.762v-83.456z"/><path fill="#fff" d="M252.762 204.455v92.089h-96.774v-92.089z"/></svg>`;
+
 const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone: SurfaceTone }> = [
   { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle are already wired behind one payment interface.', tone: 'meter' },
-  { icon: faLock,         title: 'Auth & User Management',   desc: 'Clerk or NextAuth sit behind one app boundary, with sessions, OAuth, and magic links already handled.', tone: 'auth' },
+  { icon: faLock,         title: 'Auth & User Management',   desc: 'Clerk, Better Auth, and NextAuth sit behind one app boundary, with sessions, OAuth, and provider-specific magic links already handled.', tone: 'auth' },
   { icon: faBuilding,     title: 'Teams & Organizations',    desc: 'Built-in multi-tenant support with seats, invites, and role-based access already in place.', tone: 'security' },
   { icon: faTag,          title: 'Coupons & Discounts',      desc: 'Create one-time, forever, or repeating discount codes with provider mapping already done.', tone: 'meter' },
   { icon: faGauge,        title: 'Admin Dashboard',          desc: 'Analytics, user management, revenue overview, and subscription controls are already connected.', tone: 'tests' },
@@ -113,6 +115,7 @@ const PROVIDERS = [
 
 const AUTH_PROVIDERS = [
   { name: 'Clerk', color: '#6366F1', logoSvg: CLERK_LOGO_SVG },
+  { name: 'Better Auth', color: '#111827', logoSvg: BETTER_AUTH_LOGO_SVG },
   { name: 'NextAuth', color: '#0F172A', logoSvg: NEXTAUTH_LOGO_SVG },
 ];
 
@@ -127,6 +130,7 @@ const TECH_STACK_ICONS: Array<
   { label: 'Prisma', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.9 18.18 10.3 2.85c-.18-.33-.63-.34-.82-.03L5.22 9.43a1 1 0 0 0-.08.87l3.4 10.14c.14.43.63.61 1 .37l8.95-5.74c.41-.26.53-.81.27-1.21-.03-.05-.07-.09-.1-.14Z" fill="#2D3748"/><path d="m10.1 20.35 7.9-5.05a.54.54 0 0 0 .21-.7L10.08 3.13c-.14-.26-.52-.17-.55.12L8.2 19.72c-.04.46.42.88.85.63Z" fill="#A0AEC0"/></svg>' },
   { label: 'Node.js', kind: 'fa', icon: faNodeJs },
   { label: 'Clerk', kind: 'svg', svg: CLERK_LOGO_SVG },
+  { label: 'Better Auth', kind: 'svg', svg: BETTER_AUTH_LOGO_SVG },
   { label: 'Auth.js / NextAuth', kind: 'svg', svg: NEXTAUTH_LOGO_SVG },
   { label: 'Vitest', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.93 4H22l-6.24 16h-3.07L18.93 4Z" fill="#FBBF24"/><path d="M8.24 4h3.07l4.46 16h-3.07L8.24 4Z" fill="#A3E635"/><path d="M2 4h3.07l6.24 16H8.24L2 4Z" fill="#84CC16"/></svg>' },
   { label: 'Zod', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3068B7"/><path d="M7.5 8.2h9.1v1.8l-6.2 6h6.2v1.8H7.3V16l6.16-6H7.5V8.2Z" fill="white"/></svg>' },
@@ -134,7 +138,7 @@ const TECH_STACK_ICONS: Array<
 ];
 
 const PROVIDER_NAMES = ['stripe', 'razorpay', 'paystack', 'paddle'];
-const AUTH_PROVIDER_NAMES = ['clerk', 'nextauth'];
+const AUTH_PROVIDER_NAMES = ['clerk', 'betterauth', 'nextauth'];
 
 /* ─── Typewriter for provider env section ─── */
 function TypewriterProvider() {
@@ -2158,7 +2162,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
 
               <h1 className="lp-hero-h1">
-                Two auth stacks.<br />
+                Three auth stacks.<br />
                 Four payment rails.<br />
                 <span
                   style={{
@@ -2176,7 +2180,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </h1>
 
               <p className="lp-hero-sub">
-                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 360+ regression tests, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
+                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk, Better Auth, or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 90+ automated tests plus manual regression coverage, optional Google Secret Manager bootstrap, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
               </p>
 
               <div className="lp-cta-row">
@@ -2197,20 +2201,20 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-hero-proofs">
                 {[
                   {
-                    value: 'NextAuth or Clerk',
-                    copy: 'Provider-agnostic auth architecture with vendor-specific code kept behind adapters.',
+                    value: '3 auth providers',
+                    copy: 'Clerk, Better Auth, and NextAuth sit behind the same auth boundary, so UI flows stay stable while the provider changes.',
                     meta: 'Auth boundary',
                     tone: 'auth',
                   },
                   {
-                    value: 'Over 360 tests',
-                    copy: 'Regression coverage for webhooks, resurrection, proration, expiry, org access, and checkout flows.',
+                    value: '90+ automated tests',
+                    copy: 'Vitest covers webhooks, proration, expiry, org access, and checkout logic, with manual regression checks for UI-heavy flows.',
                     meta: 'Regression coverage',
                     tone: 'tests',
                   },
                   {
                     value: 'Security by default',
-                    copy: 'Headers, encrypted fields, secret rotation, sanitized errors, request IDs, rate limits, and redacted logs.',
+                    copy: 'Headers, encrypted fields, optional Google Secret Manager bootstrap, sanitized errors, request IDs, rate limits, and redacted logs.',
                     meta: 'Production posture',
                     tone: 'security',
                   },
@@ -2254,14 +2258,16 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   </div>
                   <div className="lp-chip-row" style={{ marginBottom: 10 }}>
                     <span className="lp-chip-strong">Clerk</span>
+                    <span className="lp-chip-strong">Better Auth</span>
                     <span className="lp-chip-strong">NextAuth</span>
-                    <span className="lp-chip-soft">OAuth</span>
-                    <span className="lp-chip-soft">Magic links</span>
+                    <span className="lp-chip-soft">GitHub + Google</span>
                   </div>
                   <div className="lp-env-line">
                     <span className="lp-code-key">AUTH_PROVIDER</span>
                     <span>=</span>
                     <span className="lp-code-string">&quot;clerk&quot;</span>
+                    <span className="lp-code-comment">or</span>
+                    <span className="lp-code-string">&quot;betterauth&quot;</span>
                     <span className="lp-code-comment">or</span>
                     <span className="lp-code-string">&quot;nextauth&quot;</span>
                   </div>
@@ -2320,7 +2326,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     <span className="lp-chip-soft">Custom CSS / head / body</span>
                     <span className="lp-chip-soft">Light + dark palettes</span>
                     <span className="lp-chip-soft">Reusable components</span>
-                    <span className="lp-chip-soft">32-section README</span>
+                    <span className="lp-chip-soft">Comprehensive documentation</span>
                   </div>
                   <div className="lp-env-line">
                     <span className="lp-code-key">tokenName</span>
@@ -2361,7 +2367,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               { icon: faShield, label: 'Secure logger with secret redaction' },
               { icon: faBolt, label: 'Edge cases tested before you launch' },
               { icon: faLock, label: 'Provider-agnostic auth and billing adapters' },
-              { icon: faChartLine, label: '360+ regression tests across critical flows' },
+              { icon: faChartLine, label: '90+ automated tests plus manual regression coverage' },
               { icon: faTriangleExclamation, label: 'Rate limits, request IDs, sanitized errors' },
               { icon: faBuilding, label: 'Dual-column compatibility for safe migrations' },
               { icon: faCreditCard, label: 'Proration, retries, refunds, and lifecycle states' },
@@ -2380,8 +2386,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           {[
             { num: 180, label: 'built-in API routes',   suffix: '+' },
             { num: 4,  label: 'payment providers',      suffix: '' },
-            { num: 360, label: 'regression tests',      suffix: '+' },
-            { num: 2,  label: 'auth providers',       suffix: '' },
+            { num: 90, label: 'test files',             suffix: '+' },
+            { num: 3,  label: 'auth providers',         suffix: '' },
           ].map((m, i) => (
             <div key={i} className="lp-metric-item">
               <div className="lp-metric-num">
@@ -2433,7 +2439,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         {/* ── PROVIDERS ─────────────────────────────────────── */}
         <section style={{ textAlign: 'center' }}>
           <div className="lp-section-tag">Switchable infrastructure</div>
-          <h2 className="lp-section-h2">Four payment rails. Two auth providers.</h2>
+          <h2 className="lp-section-h2">Four payment rails. Three auth providers.</h2>
           <p className="lp-section-sub">
             The billing layer and the auth layer are both swappable, so you can change vendors without rewriting your product surface.
           </p>
@@ -2479,9 +2485,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
             <div className="lp-switch-card lp-switch-card-auth">
               <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Authentication</div>
-              <div className="lp-switch-title">Self-hosted NextAuth or just Clerk</div>
+              <div className="lp-switch-title">Clerk, Better Auth, or self-hosted NextAuth</div>
               <div className="lp-switch-sub">
-                Clerk and NextAuth sit behind the same integration boundary, so account flows can stay stable while your auth provider changes.
+                Clerk, Better Auth, and NextAuth sit behind the same integration boundary, so account flows can stay stable while your auth provider changes.
               </div>
               <div className="lp-provider-row" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
                 {AUTH_PROVIDERS.map((provider) => (
@@ -2494,8 +2500,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     {provider.name}
                   </div>
                 ))}
-                <div className="lp-provider-chip">OAuth</div>
-                <div className="lp-provider-chip">Magic links</div>
+
               </div>
 
               <div className="lp-code-block">
@@ -2505,7 +2510,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   <span className="lp-code-comment"> = </span>
                   {mounted ? <TypewriterAuthProvider /> : <span className="lp-code-string">&quot;clerk&quot;</span>}
                 </div>
-                <div><span className="lp-code-comment"># clerk | nextauth</span></div>
+                <div><span className="lp-code-comment"># clerk | betterauth | nextauth</span></div>
               </div>
 
             </div>

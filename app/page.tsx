@@ -9,7 +9,7 @@ const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS
 export async function generateMetadata(): Promise<Metadata> {
   const siteName = (await getSiteName().catch(() => FALLBACK_SITE_NAME)).trim() || FALLBACK_SITE_NAME;
   const title = `${siteName} — The complete Next.js SaaS boilerplate`;
-  const description = 'Three auth providers, four payment processors, subscriptions, teams, admin dashboard, optional Google Secret Manager bootstrap, and 90+ automated tests plus manual regression coverage — all wired up.';
+  const description = 'Three auth providers, four payment processors, subscriptions, teams, admin dashboard, optional Infisical or Doppler bootstrap, and 90+ automated tests plus manual regression coverage - all wired up.';
 
   return {
     title,

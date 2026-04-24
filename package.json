@@ -21,7 +21,8 @@
     "prisma:migrate": "node ./scripts/run-with-secrets.js prisma migrate dev --config prisma.config.ts",
     "prisma:deploy": "node ./scripts/run-with-secrets.js prisma migrate deploy --config prisma.config.ts",
     "prisma:studio": "node ./scripts/run-with-secrets.js prisma studio --config prisma.config.ts",
-    "secrets:smoke": "node ./scripts/gsm-smoke-test.js",
+    "secrets:doctor": "node ./scripts/secrets-doctor.js",
+    "secrets:smoke": "node ./scripts/secrets-smoke-test.js",
     "typecheck": "tsc --noEmit",
     "public:export": "node scripts/public-export.mjs",
     "public:publish": "bash scripts/publish-public-export.sh",
@@ -32,9 +33,9 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@better-auth/prisma-adapter": "^1.6.5",
-    "@clerk/nextjs": "^7.2.3",
+    "@clerk/nextjs": "^7.2.5",
     "@clerk/themes": "^2.4.57",
-    "@clerk/ui": "^1.3.0",
+    "@clerk/ui": "^1.6.5",
     "@fortawesome/fontawesome-svg-core": "^6.5.0",
     "@fortawesome/free-brands-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^6.5.0",
@@ -45,6 +46,7 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@sentry/nextjs": "^10.49.0",
+    "@solana/web3.js": "^1.98.4",
     "@stripe/react-stripe-js": "^5.4.0",
     "@stripe/stripe-js": "^8.5.2",
     "@tiptap/extension-color": "^3.7.2",
@@ -87,10 +89,7 @@
   "overrides": {
     "protobufjs": "7.5.5",
     "@hono/node-server": "1.19.14",
-    "hono": "4.12.14",
-    "@clerk/themes": {
-      "@clerk/shared": "3.47.4"
-    }
+    "hono": "4.12.14"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

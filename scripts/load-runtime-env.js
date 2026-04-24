@@ -2,42 +2,95 @@
 
 const fs = require('fs');
 const path = require('path');
-const { GoogleAuth } = require('google-auth-library');
+const { spawnSync } = require('child_process');
 
-const DEFAULT_SECRET_ENV_NAMES = [
+const CORE_SECRET_ENV_NAMES = [
   'DATABASE_URL',
   'ENCRYPTION_SECRET',
   'INTERNAL_API_TOKEN',
   'HEALTHCHECK_TOKEN',
   'CRON_PROCESS_EXPIRY_TOKEN',
-  'CRON_TOKEN',
-  'AUTH_SECRET',
-  'NEXTAUTH_SECRET',
-  'BETTER_AUTH_SECRET',
-  'CLERK_SECRET_KEY',
-  'CLERK_WEBHOOK_SECRET',
-  'GITHUB_CLIENT_SECRET',
-  'GOOGLE_CLIENT_SECRET',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'PADDLE_API_KEY',
-  'PADDLE_WEBHOOK_SECRET',
-  'PAYSTACK_SECRET_KEY',
-  'RAZORPAY_KEY_SECRET',
-  'RAZORPAY_WEBHOOK_SECRET',
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'SMTP_PASS',
-  'RESEND_API_KEY',
-  'GA_SERVICE_ACCOUNT_CREDENTIALS_B64',
-  'IPINFO_LITE_TOKEN',
-  'SEED_ADMIN_PASSWORD',
 ];
 
-function parseBooleanFlag(value) {
-  if (typeof value !== 'string') return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function addSecretEnvNames(target, envNames) {
+  for (const envName of envNames) {
+    if (!target.includes(envName)) {
+      target.push(envName);
+    }
+  }
+}
+
+function getDefaultSecretEnvNames(env = process.env) {
+  const envNames = [...CORE_SECRET_ENV_NAMES];
+  const authProvider = (env.AUTH_PROVIDER || env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk').trim().toLowerCase();
+  const paymentProvider = (env.PAYMENT_PROVIDER || 'stripe').trim().toLowerCase();
+  const emailProvider = (env.EMAIL_PROVIDER || 'nodemailer').trim().toLowerCase();
+  const fileStorage = (env.FILE_STORAGE || 'fs').trim().toLowerCase();
+
+  if (authProvider === 'clerk') {
+    addSecretEnvNames(envNames, [
+      'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+      'CLERK_SECRET_KEY',
+      'CLERK_WEBHOOK_SECRET',
+    ]);
+  } else if (authProvider === 'betterauth') {
+    addSecretEnvNames(envNames, [
+      'BETTER_AUTH_SECRET',
+      'AUTH_SECRET',
+      'NEXTAUTH_SECRET',
+    ]);
+  } else if (authProvider === 'nextauth') {
+    addSecretEnvNames(envNames, [
+      'AUTH_SECRET',
+      'NEXTAUTH_SECRET',
+    ]);
+  }
+
+  if (paymentProvider === 'stripe') {
+    addSecretEnvNames(envNames, [
+      'STRIPE_SECRET_KEY',
+      'STRIPE_WEBHOOK_SECRET',
+      'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+    ]);
+  } else if (paymentProvider === 'paystack') {
+    addSecretEnvNames(envNames, [
+      'PAYSTACK_SECRET_KEY',
+      'NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY',
+    ]);
+  } else if (paymentProvider === 'paddle') {
+    addSecretEnvNames(envNames, [
+      'PADDLE_API_KEY',
+      'PADDLE_WEBHOOK_SECRET',
+      'NEXT_PUBLIC_PADDLE_CLIENT_TOKEN',
+    ]);
+  } else if (paymentProvider === 'razorpay') {
+    addSecretEnvNames(envNames, [
+      'RAZORPAY_KEY_ID',
+      'RAZORPAY_KEY_SECRET',
+      'RAZORPAY_WEBHOOK_SECRET',
+      'NEXT_PUBLIC_RAZORPAY_KEY_ID',
+    ]);
+  }
+
+  if (emailProvider === 'resend') {
+    addSecretEnvNames(envNames, ['RESEND_API_KEY']);
+  } else if (emailProvider === 'nodemailer' && (isNonEmptyString(env.SMTP_HOST) || isNonEmptyString(env.SMTP_USER))) {
+    addSecretEnvNames(envNames, ['SMTP_PASS']);
+  }
+
+  if (fileStorage === 's3') {
+    addSecretEnvNames(envNames, ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']);
+  }
+
+  if (isNonEmptyString(env.GA_PROPERTY_ID)) {
+    addSecretEnvNames(envNames, ['GA_SERVICE_ACCOUNT_CREDENTIALS_B64']);
+  }
+
+  return envNames;
 }
 
 function loadDotenvFiles() {
@@ -64,7 +117,7 @@ function loadDotenvFiles() {
 
 function parseSecretList(value) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    return [...DEFAULT_SECRET_ENV_NAMES];
+    return getDefaultSecretEnvNames();
   }
 
   return Array.from(
@@ -77,146 +130,355 @@ function parseSecretList(value) {
   );
 }
 
-function toSecretIdSegment(value, fallback) {
-  const source = typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
-  return source.replace(/[^A-Za-z0-9_-]/g, '-');
+function formatSecretLoadFailures(secretLoadResult) {
+  return secretLoadResult.failed
+    .map((entry) => `${entry.provider}: ${entry.message}`)
+    .join('\n');
 }
 
-function parseJsonCredentials(rawValue, envName) {
-  if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
+function normalizeSecretsProvider(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === 'none' || normalized === 'false' || normalized === 'off') {
     return null;
   }
-
-  try {
-    return JSON.parse(rawValue);
-  } catch (error) {
-    throw new Error(`${envName} does not contain valid JSON credentials`);
+  if (normalized === 'infisical' || normalized === 'doppler') {
+    return normalized;
   }
+  throw new Error(`Unsupported SECRETS_PROVIDER "${value}". Use "infisical", "doppler", or leave it blank.`);
 }
 
-function parseBase64JsonCredentials(rawValue, envName) {
-  if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
-    return null;
+function shellEscape(value) {
+  const str = String(value);
+  if (/^[A-Za-z0-9_./:@=-]+$/.test(str)) {
+    return str;
   }
-
-  try {
-    return JSON.parse(Buffer.from(rawValue, 'base64').toString('utf8'));
-  } catch (error) {
-    throw new Error(`${envName} does not contain valid base64-encoded JSON credentials`);
-  }
+  return `'${str.replace(/'/g, `'"'"'`)}'`;
 }
 
-function resolveGoogleAuthOptions() {
-  const directJson = parseJsonCredentials(
-    process.env.GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON,
-    process.env.GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON ? 'GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON' : 'GOOGLE_SERVICE_ACCOUNT_KEY_JSON'
-  );
+function joinShellCommand(parts) {
+  return parts.map(shellEscape).join(' ');
+}
 
-  const base64Json = parseBase64JsonCredentials(
-    process.env.GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64 || process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON_B64,
-    process.env.GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64
-      ? 'GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64'
-      : 'GOOGLE_SERVICE_ACCOUNT_KEY_JSON_B64'
-  );
+function getSecretsProviderCommand(provider, env = process.env) {
+  if (typeof env.SECRETS_PROVIDER_COMMAND === 'string' && env.SECRETS_PROVIDER_COMMAND.trim().length > 0) {
+    return env.SECRETS_PROVIDER_COMMAND.trim();
+  }
+
+  if (provider === 'infisical') {
+    const parts = ['infisical', 'export', '--format', 'json'];
+    if (isNonEmptyString(env.INFISICAL_ENVIRONMENT)) {
+      parts.push('--env', env.INFISICAL_ENVIRONMENT.trim());
+    }
+    if (isNonEmptyString(env.INFISICAL_PROJECT_ID)) {
+      parts.push('--projectId', env.INFISICAL_PROJECT_ID.trim());
+    }
+    return joinShellCommand(parts);
+  }
+
+  if (provider === 'doppler') {
+    const parts = ['doppler', 'secrets', 'download', '--no-file', '--format', 'json'];
+    if (isNonEmptyString(env.DOPPLER_CONFIG)) {
+      parts.push('--config', env.DOPPLER_CONFIG.trim());
+    }
+    if (isNonEmptyString(env.DOPPLER_PROJECT)) {
+      parts.push('--project', env.DOPPLER_PROJECT.trim());
+    }
+    return joinShellCommand(parts);
+  }
+
+  return null;
+}
+
+function getSecretsProviderSetupHint(provider) {
+  if (provider === 'infisical') {
+    return 'Install the Infisical CLI, authenticate it in this shell with infisical login, then rerun the command. See /docs/secrets for the local setup steps.';
+  }
+
+  if (provider === 'doppler') {
+    return 'Install the Doppler CLI, authenticate it in this shell with doppler login, then rerun the command. See /docs/secrets for the local setup steps.';
+  }
+
+  return 'Install and authenticate the selected secrets provider CLI, then rerun the command. See /docs/secrets for setup steps.';
+}
+
+function buildSecretsProviderFailure(provider, message) {
+  const detail = typeof message === 'string' && message.trim().length > 0
+    ? message.trim()
+    : `Failed to load secrets from ${provider}.`;
 
   return {
-    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    ...(directJson ? { credentials: directJson } : {}),
-    ...(!directJson && base64Json ? { credentials: base64Json } : {}),
+    provider,
+    message: `${detail} ${getSecretsProviderSetupHint(provider)}`,
   };
 }
 
-function buildSecretId(envName, options) {
-  const prefix = toSecretIdSegment(options.prefix, 'saasybase');
-  const environment = toSecretIdSegment(options.environment, 'production');
-  return `${prefix}-${environment}-${envName}`;
+function parseQuotedEnvValue(rawValue) {
+  const value = rawValue.trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"'))
+    || (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
 }
 
-async function accessSecretVersion({ auth, projectId, secretId, version }) {
-  const client = await auth.getClient();
-  const accessTokenResponse = await client.getAccessToken();
-  const accessToken = typeof accessTokenResponse === 'string'
-    ? accessTokenResponse
-    : accessTokenResponse?.token;
+function coerceEnvMap(value) {
+  if (Array.isArray(value)) {
+    const envMap = {};
 
-  if (!accessToken) {
-    throw new Error('Unable to obtain Google access token for Secret Manager');
+    for (const entry of value) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const key = typeof entry.key === 'string' ? entry.key.trim() : '';
+      const rawValue = entry.value;
+      if (!key || rawValue == null) {
+        continue;
+      }
+
+      if (typeof rawValue === 'string') {
+        envMap[key] = rawValue;
+        continue;
+      }
+
+      if (typeof rawValue === 'number' || typeof rawValue === 'boolean') {
+        envMap[key] = String(rawValue);
+      }
+    }
+
+    return envMap;
   }
 
-  const resource = `projects/${projectId}/secrets/${secretId}/versions/${version}`;
-  const response = await fetch(`https://secretmanager.googleapis.com/v1/${resource}:access`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+  if (!value || typeof value !== 'object') {
+    throw new Error('Secrets provider output must be a JSON object, an array of { key, value } entries, or KEY=VALUE lines');
+  }
+
+  const envMap = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof key !== 'string' || key.trim().length === 0) continue;
+    if (entry == null) continue;
+    if (typeof entry === 'string') {
+      envMap[key] = entry;
+      continue;
+    }
+    if (typeof entry === 'number' || typeof entry === 'boolean') {
+      envMap[key] = String(entry);
+    }
+  }
+  return envMap;
+}
+
+function parseSecretsProviderOutput(stdout) {
+  const trimmed = typeof stdout === 'string' ? stdout.trim() : '';
+  if (!trimmed) {
+    return {};
+  }
+
+  try {
+    return coerceEnvMap(JSON.parse(trimmed));
+  } catch {
+    const envMap = {};
+    for (const line of trimmed.split(/\r?\n/)) {
+      const candidate = line.trim();
+      if (!candidate || candidate.startsWith('#')) continue;
+      const separatorIndex = candidate.indexOf('=');
+      if (separatorIndex <= 0) continue;
+      const key = candidate.slice(0, separatorIndex).trim();
+      const value = candidate.slice(separatorIndex + 1);
+      if (!key) continue;
+      envMap[key] = parseQuotedEnvValue(value);
+    }
+    return envMap;
+  }
+}
+
+function detectSecretsProviderOutputShape(stdout) {
+  const trimmed = typeof stdout === 'string' ? stdout.trim() : '';
+  if (!trimmed) {
+    return 'empty';
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return 'json-array-key-value';
+    }
+    if (parsed && typeof parsed === 'object') {
+      return 'json-object';
+    }
+  } catch {
+    // Fall through to dotenv-style detection.
+  }
+
+  const hasEnvLines = trimmed
+    .split(/\r?\n/)
+    .some((line) => {
+      const candidate = line.trim();
+      if (!candidate || candidate.startsWith('#')) {
+        return false;
+      }
+      return candidate.indexOf('=') > 0;
+    });
+
+  return hasEnvLines ? 'dotenv-lines' : 'unknown-text';
+}
+
+function runSecretsProviderCommand(env = process.env) {
+  const provider = normalizeSecretsProvider(env.SECRETS_PROVIDER);
+  if (!provider) {
+    return {
+      enabled: false,
+      provider: null,
+      command: null,
+      status: null,
+      stdout: '',
+      stderr: '',
+      outputShape: 'disabled',
+      failed: [],
+    };
+  }
+
+  const command = getSecretsProviderCommand(provider, env);
+  if (!command) {
+    return {
+      enabled: true,
+      provider,
+      command: null,
+      status: null,
+      stdout: '',
+      stderr: '',
+      outputShape: 'missing-command',
+      failed: [buildSecretsProviderFailure(provider, `No command could be resolved for ${provider}. Set SECRETS_PROVIDER_COMMAND if you need a custom export command.`)],
+    };
+  }
+
+  const result = spawnSync(command, {
+    shell: true,
+    env,
+    encoding: 'utf8',
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Secret Manager access failed for ${secretId}: ${response.status} ${body}`.trim());
+  const stdout = typeof result.stdout === 'string' ? result.stdout : '';
+  const stderr = typeof result.stderr === 'string' ? result.stderr : '';
+  const outputShape = detectSecretsProviderOutputShape(stdout);
+
+  if (result.error) {
+    return {
+      enabled: true,
+      provider,
+      command,
+      status: null,
+      stdout,
+      stderr,
+      outputShape,
+      failed: [buildSecretsProviderFailure(provider, result.error.message)],
+    };
   }
 
-  const payload = await response.json();
-  const encoded = payload?.payload?.data;
-  if (typeof encoded !== 'string' || encoded.length === 0) {
-    throw new Error(`Secret Manager returned empty payload for ${secretId}`);
+  if (typeof result.status === 'number' && result.status !== 0) {
+    const message = (stderr || stdout || '').trim() || `${provider} command exited with status ${result.status}`;
+    return {
+      enabled: true,
+      provider,
+      command,
+      status: result.status,
+      stdout,
+      stderr,
+      outputShape,
+      failed: [buildSecretsProviderFailure(provider, message)],
+    };
   }
 
-  return Buffer.from(encoded, 'base64').toString('utf8');
+  return {
+    enabled: true,
+    provider,
+    command,
+    status: typeof result.status === 'number' ? result.status : 0,
+    stdout,
+    stderr,
+    outputShape,
+    failed: [],
+  };
 }
 
-async function loadGoogleSecretManagerEnv() {
-  if (!parseBooleanFlag(process.env.GOOGLE_SECRET_MANAGER_ENABLED)) {
-    return { enabled: false, loaded: [], skipped: [], failed: [] };
+async function loadSecretsProviderEnv() {
+  const provider = normalizeSecretsProvider(process.env.SECRETS_PROVIDER);
+  if (!provider) {
+    return { enabled: false, provider: null, command: null, loaded: [], skipped: [], failed: [] };
   }
 
-  const auth = new GoogleAuth(resolveGoogleAuthOptions());
-  const projectId = process.env.GOOGLE_SECRET_MANAGER_PROJECT_ID?.trim() || await auth.getProjectId();
-
-  if (!projectId) {
-    throw new Error('GOOGLE_SECRET_MANAGER_ENABLED is true but no Google Cloud project ID could be resolved');
+  const commandResult = runSecretsProviderCommand(process.env);
+  const command = commandResult.command;
+  if (commandResult.failed.length > 0) {
+    return {
+      enabled: true,
+      provider,
+      command,
+      loaded: [],
+      skipped: [],
+      failed: commandResult.failed,
+    };
   }
 
-  const prefix = process.env.GOOGLE_SECRET_MANAGER_PREFIX?.trim() || 'saasybase';
-  const environment = process.env.GOOGLE_SECRET_MANAGER_ENV?.trim()
-    || process.env.NODE_ENV?.trim()
-    || 'production';
-  const version = process.env.GOOGLE_SECRET_MANAGER_VERSION?.trim() || 'latest';
-  const secretEnvNames = parseSecretList(process.env.GOOGLE_SECRET_MANAGER_SECRETS);
+  const secretEnvNames = parseSecretList(process.env.SECRETS_PROVIDER_SECRETS);
   const loaded = [];
   const skipped = [];
-  const failed = [];
+  const missing = [];
 
   for (const envName of secretEnvNames) {
     if (typeof process.env[envName] === 'string' && process.env[envName].trim().length > 0) {
       skipped.push(envName);
       continue;
     }
+    missing.push(envName);
+  }
 
-    const secretId = buildSecretId(envName, { prefix, environment });
-    try {
-      const value = await accessSecretVersion({ auth, projectId, secretId, version });
+  if (missing.length === 0) {
+    return { enabled: true, provider, command, loaded, skipped, failed: [] };
+  }
+
+  let envMap;
+  try {
+    envMap = parseSecretsProviderOutput(commandResult.stdout || '');
+  } catch (error) {
+    return {
+      enabled: true,
+      provider,
+      command,
+      loaded,
+      skipped,
+      failed: [buildSecretsProviderFailure(provider, error instanceof Error ? error.message : String(error))],
+    };
+  }
+
+  for (const envName of missing) {
+    const value = envMap[envName];
+    if (typeof value === 'string' && value.trim().length > 0) {
       process.env[envName] = value;
       loaded.push(envName);
-    } catch (error) {
-      failed.push({
-        envName,
-        secretId,
-        message: error instanceof Error ? error.message : String(error),
-      });
     }
   }
 
-  return { enabled: true, loaded, skipped, failed, projectId, prefix, environment, version };
+  return { enabled: true, provider, command, loaded, skipped, failed: [] };
 }
 
 async function loadRuntimeEnv() {
   loadDotenvFiles();
-  return loadGoogleSecretManagerEnv();
+  return loadSecretsProviderEnv();
 }
 
 module.exports = {
-  DEFAULT_SECRET_ENV_NAMES,
-  buildSecretId,
+  CORE_SECRET_ENV_NAMES,
+  detectSecretsProviderOutputShape,
+  formatSecretLoadFailures,
+  getDefaultSecretEnvNames,
+  getSecretsProviderCommand,
+  loadDotenvFiles,
   loadRuntimeEnv,
-  resolveGoogleAuthOptions,
+  parseSecretsProviderOutput,
+  parseSecretList,
+  runSecretsProviderCommand,
 };

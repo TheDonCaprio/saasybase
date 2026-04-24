@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Simple environment validator used before dev/build
 const { URL } = require('url');
-const { loadRuntimeEnv } = require('./load-runtime-env');
+const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
 
 function fail(msg) {
   console.error('ENV VALIDATION ERROR:', msg);
@@ -73,10 +73,7 @@ async function main() {
 
   const secretLoadResult = await loadRuntimeEnv();
   if (secretLoadResult.enabled && secretLoadResult.failed.length > 0) {
-    const failures = secretLoadResult.failed
-      .map((entry) => `${entry.envName} <= ${entry.secretId}: ${entry.message}`)
-      .join('\n');
-    fail(`Google Secret Manager loading failed:\n${failures}`);
+    console.warn(`The configured secrets provider could not resolve one or more requested values. Continuing validation with the merged environment from local env files, platform envs, plus any provider values that were resolved:\n${formatSecretLoadFailures(secretLoadResult)}`);
   }
 
   const val = process.env.NEXT_PUBLIC_APP_URL;
@@ -87,6 +84,16 @@ async function main() {
   const localAppRuntime = isLocalHostname(appUrl.hostname);
 
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
+  if (authProvider === 'clerk') {
+    if (!isNonEmptyString(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '')) {
+      fail('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be set when AUTH_PROVIDER=clerk. Provide it in .env.local, platform envs, or the optional secrets bootstrap.');
+    }
+
+    if (!isNonEmptyString(process.env.CLERK_SECRET_KEY || '')) {
+      fail('CLERK_SECRET_KEY must be set when AUTH_PROVIDER=clerk. Provide it in .env.local, platform envs, or the optional secrets bootstrap.');
+    }
+  }
+
   if (authProvider === 'betterauth') {
     const betterAuthUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL || '';
     if (!isNonEmptyString(betterAuthUrl)) {

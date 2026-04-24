@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { spawn } = require('child_process');
-const { loadRuntimeEnv } = require('./load-runtime-env');
+const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -12,11 +12,7 @@ async function main() {
 
   const secretLoadResult = await loadRuntimeEnv();
   if (secretLoadResult.enabled && secretLoadResult.failed.length > 0) {
-    const failures = secretLoadResult.failed
-      .map((entry) => `${entry.envName} <= ${entry.secretId}: ${entry.message}`)
-      .join('\n');
-    console.error(`Failed to load one or more Google Secret Manager values:\n${failures}`);
-    process.exit(1);
+    console.warn(`Warning: one or more secrets-provider values could not be loaded. Continuing with the merged environment from local env files plus any provider values that were resolved:\n${formatSecretLoadFailures(secretLoadResult)}`);
   }
 
   const child = spawn(args[0], args.slice(1), {

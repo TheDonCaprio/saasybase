@@ -2180,7 +2180,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </h1>
 
               <p className="lp-hero-sub">
-                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk, Better Auth, or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 90+ automated tests plus manual regression coverage, optional Google Secret Manager bootstrap, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
+                SaaSyBase is more than a boilerplate — it is an AI-friendly SaaS foundation with structured docs (CLAUDE.md, AGENTS.md, PATTERNS.md) that let any LLM understand the full codebase. Clerk, Better Auth, or NextAuth behind one interface, Stripe or Paystack or Paddle or Razorpay behind one payment layer, 90+ automated tests plus manual regression coverage, optional Infisical or Doppler bootstrap, security defaults, and a usage meter you can rename to anything. Prompt your way to production.
               </p>
 
               <div className="lp-cta-row">
@@ -2214,7 +2214,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                   },
                   {
                     value: 'Security by default',
-                    copy: 'Headers, encrypted fields, optional Google Secret Manager bootstrap, sanitized errors, request IDs, rate limits, and redacted logs.',
+                    copy: 'Headers, encrypted fields, optional secrets-provider bootstrap, sanitized errors, request IDs, rate limits, and redacted logs.',
                     meta: 'Production posture',
                     tone: 'security',
                   },

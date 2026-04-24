@@ -24,6 +24,7 @@ export function GracePeriodNotice() {
   const { orgId } = useAuthSession();
   const [status, setStatus] = useState<GraceStatus | null>(null);
   const [hiddenScopeKey, setHiddenScopeKey] = useState<string | null>(null);
+  const [dismissedUntilIso, setDismissedUntilIso] = useState<string | null>(null);
   const formatSettings = useFormatSettings();
   const scopeStorageKey = `${DISMISS_UNTIL_KEY_PREFIX}:${orgId ?? 'personal'}`;
 
@@ -50,6 +51,15 @@ export function GracePeriodNotice() {
     };
   }, [isLoaded, isSignedIn, orgId]);
 
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    try {
+      setDismissedUntilIso(localStorage.getItem(scopeStorageKey));
+    } catch {
+      setDismissedUntilIso(null);
+    }
+  }, [isLoaded, isSignedIn, scopeStorageKey]);
+
   const graceEndsAt = useMemo(() => {
     if (!status || !status.inGrace) return null;
     const d = new Date(status.graceEndsAt);
@@ -61,15 +71,6 @@ export function GracePeriodNotice() {
     const d = new Date(status.expiresAt);
     return Number.isNaN(d.getTime()) ? null : d;
   }, [status]);
-
-  const dismissedUntilIso = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem(scopeStorageKey);
-    } catch {
-      return null;
-    }
-  }, [scopeStorageKey]);
 
   const isDismissedForThisGrace = useMemo(() => {
     if (!status || !status.inGrace || !graceEndsAt) return false;

@@ -2,7 +2,7 @@
 
 A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
 
-For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/deployment`, and `/docs/google-secret-manager`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
+For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
 
 ## What Is SaaSyBase?
 
@@ -1402,17 +1402,18 @@ Complete these steps after local development is finished and before you point re
 ### Required environment variables
 
 ```bash
-# Strong recommendation: for staging and production, keep secret values in Google Secret Manager
-# and inject them into environment variables during deploy/startup instead of storing them in env files.
-# Plain env files still work, but they are a fallback and materially less secure.
+# Strong recommendation: for staging and production, prefer platform-native encrypted env vars.
+# If your team wants one centralized secret store across multiple platforms,
+# SaaSyBase can optionally bootstrap missing values from Infisical or Doppler.
 
-# Optional built-in Google Secret Manager integration:
-# GOOGLE_SECRET_MANAGER_ENABLED="true"
-# GOOGLE_SECRET_MANAGER_PROJECT_ID="your-gcp-project-id"
-# GOOGLE_SECRET_MANAGER_ENV="staging"      # e.g. staging or production
-# GOOGLE_SECRET_MANAGER_PREFIX="saasybase" # secret id: <prefix>-<env>-<ENV_VAR_NAME>
-# GOOGLE_SECRET_MANAGER_VERSION="latest"
-# GOOGLE_SECRET_MANAGER_SECRETS="DATABASE_URL,ENCRYPTION_SECRET,INTERNAL_API_TOKEN"
+# Optional built-in secrets-provider bootstrap:
+# SECRETS_PROVIDER="infisical"   # or "doppler"
+# SECRETS_PROVIDER_COMMAND=""    # optional full command override
+# SECRETS_PROVIDER_SECRETS="DATABASE_URL,ENCRYPTION_SECRET,INTERNAL_API_TOKEN"
+# INFISICAL_PROJECT_ID="your-project-id"
+# INFISICAL_ENVIRONMENT="production"
+# DOPPLER_PROJECT="saasybase"
+# DOPPLER_CONFIG="prd"
 
 # Core
 DATABASE_URL="postgresql://..."
@@ -1454,59 +1455,116 @@ Notes:
 - Use `EMAIL_PROVIDER="nodemailer"` for SMTP delivery. In local development, the default SMTP values can point at MailHog.
 - Use `EMAIL_PROVIDER="resend"` with `RESEND_API_KEY` set. The `SMTP_*` variables are ignored in that mode.
 
-### Google Secret Manager (recommended, optional)
+### Secrets providers (optional)
 
 If you are new to this, use this rule:
 
 - local development: keep using `.env.local`
-- staging and production: move server-side secrets into Google Secret Manager
+- staging and production: use your platform's encrypted env vars by default
+- centralized secret store across multiple platforms: opt into Infisical or Doppler bootstrap
 
-SaaSyBase already supports this. The app stays env-driven, and the built-in wrappers load `.env` files first, then fetch missing server-side secrets from Google Secret Manager before `build`, `start`, and Prisma commands run.
+SaaSyBase stays env-driven. The built-in wrappers load `.env` files first, then optionally ask Infisical or Doppler for missing server-side secrets before `build`, `start`, and Prisma commands run.
 
 Simple setup flow:
 
-1. Create secrets like `saasybase-staging-DATABASE_URL` or `saasybase-production-ENCRYPTION_SECRET`.
-2. Set `GOOGLE_SECRET_MANAGER_ENABLED=true` plus the base Google Secret Manager env vars in your deployment platform.
-3. Add Google credentials for that platform.
-4. Run `npm run secrets:smoke` before the first real deploy.
-5. Deploy normally with `npm run build`, `npm run start`, and `npm run prisma:deploy`.
+1. Decide whether you actually need bootstrap. If Vercel, Coolify, Railway, Render, Docker, or your VPS already inject env vars cleanly, you may not need it.
+2. Set `SECRETS_PROVIDER=infisical` or `SECRETS_PROVIDER=doppler` only when you want centralized secret loading.
+3. Keep provider authentication in the provider's own CLI flow or machine identity setup instead of storing cloud-service JSON keys in env.
+4. Optionally set `SECRETS_PROVIDER_COMMAND` when you want the app to run a custom export command instead of the built-in default.
+5. Run `npm run secrets:smoke` before the first real deploy.
+6. Deploy normally with `npm run build`, `npm run start`, and `npm run prisma:deploy`.
 
-Supported integration env vars:
+Built-in default commands:
 
-- `GOOGLE_SECRET_MANAGER_ENABLED=true` turns the integration on
-- `GOOGLE_SECRET_MANAGER_PROJECT_ID` pins the Google Cloud project explicitly
-- `GOOGLE_SECRET_MANAGER_ENV` sets the environment segment used in secret IDs such as `staging` or `production`
-- `GOOGLE_SECRET_MANAGER_PREFIX` changes the secret ID prefix; default is `saasybase`
-- `GOOGLE_SECRET_MANAGER_VERSION` chooses the secret version; default is `latest`
-- `GOOGLE_SECRET_MANAGER_SECRETS` provides an optional comma-separated allowlist of env var names to fetch
-- `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON` or `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64` provides explicit service account credentials for platforms that cannot use Google workload identity or `GOOGLE_APPLICATION_CREDENTIALS`
+- Infisical: `infisical export --format json`
+- Doppler: `doppler secrets download --no-file --format json`
 
-Default secret ID pattern:
+Important behavior:
 
-- `<GOOGLE_SECRET_MANAGER_PREFIX>-<GOOGLE_SECRET_MANAGER_ENV>-<ENV_VAR_NAME>`
+- The app does not open an interactive provider login flow for the user.
+- It expects the selected provider CLI to already be installed and authenticated in the current shell, CI job, or server runtime.
+- For local Infisical usage, the minimum mental model is: install the CLI, run `infisical login`, set `INFISICAL_PROJECT_ID` and `INFISICAL_ENVIRONMENT`, then run `npm run secrets:smoke`.
+- For local Doppler usage, the minimum mental model is: install the CLI, run `doppler login`, set `DOPPLER_PROJECT` and `DOPPLER_CONFIG`, then run `npm run secrets:smoke`.
+
+Optional provider hints:
+
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_ENVIRONMENT`
+- `DOPPLER_PROJECT`
+- `DOPPLER_CONFIG`
+- `SECRETS_PROVIDER_SECRETS` as a comma-separated allowlist when you want to narrow the fetch set
+
+The app only fills missing values. If a value is already present in platform envs or `.env.local`, it wins.
+
+### Secrets bootstrap troubleshooting
+
+Common errors and what they usually mean:
+
+| Error | Usual cause | Fix |
+|---|---|---|
+| `provider command not found` | The Infisical or Doppler CLI is not installed or not on `PATH` | Install the CLI or set `SECRETS_PROVIDER_COMMAND` explicitly |
+| Provider auth error | The CLI exists, but it is not authenticated | Use the provider's machine identity, service token, or login flow |
+| Smoke test says a required value is missing | The export command ran, but the expected env var was not present in the provider output | Verify the env-var names in the provider project/config or set them directly in platform envs |
+| Unexpected bootstrap behavior | Your provider setup needs different flags than the built-in defaults | Set `SECRETS_PROVIDER_COMMAND` to your exact provider export command |
+
+### Clerk script troubleshooting
+
+If Clerk keys are loaded but the browser still shows `Failed to load Clerk JS`, check these in order:
+
+1. Confirm `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` resolves to the expected Clerk instance.
+2. Open the browser devtools Network tab and check whether the Clerk JS URL returns a real response or is blocked.
+3. Check your browser console for a Content Security Policy error. SaaSyBase keeps CSP disabled by default because third-party auth and payment providers often need extra origins. If you enable CSP yourself, you need to maintain the allowlist for Clerk and any CAPTCHA provider it pulls in.
+4. If you changed env vars or CSP recently, fully restart the app and hard-refresh the browser.
+5. On privacy-focused browsers or extensions, temporarily disable blockers for the site to rule out a client-side block.
+
+The Clerk JS URL usually looks like:
+
+```text
+https://<your-clerk-instance>.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js
+```
+
+If that exact URL is blocked by CSP, the app is loading the right key but the browser is not allowed to fetch Clerk's hosted script.
+
+Base64 examples:
+
+```bash
+# macOS / Linux
+base64 -i service-account.json | tr -d '\n'
+
+# alternative that works on many Linux shells
+base64 -w 0 service-account.json
+```
+
+Supported bootstrap env vars:
+
+- `SECRETS_PROVIDER=infisical` or `SECRETS_PROVIDER=doppler` enables the integration
+- `SECRETS_PROVIDER_COMMAND` overrides the provider CLI command completely
+- `SECRETS_PROVIDER_SECRETS` provides an optional comma-separated allowlist of env var names to fetch
+- `INFISICAL_PROJECT_ID` and `INFISICAL_ENVIRONMENT` shape the default Infisical export command
+- `DOPPLER_PROJECT` and `DOPPLER_CONFIG` shape the default Doppler export command
 
 Existing env values are not overwritten. That keeps env-file and platform-env fallback intact and makes staged migrations possible.
 
 Smoke test the staging configuration without starting the app:
 
 ```bash
-GOOGLE_SECRET_MANAGER_ENABLED=true \
-GOOGLE_SECRET_MANAGER_ENV=staging \
+SECRETS_PROVIDER=infisical \
+INFISICAL_ENVIRONMENT=staging \
 npm run secrets:smoke
 ```
 
-This remains optional. If you prefer to keep managing secrets directly in platform env vars or env files, SaaSyBase will still work because the app reads from `process.env`. The tradeoff is security and operational hygiene: env-file secret storage is easier to leak, harder to rotate, and easier to copy into the wrong environment.
+This remains optional. If you prefer to keep managing secrets directly in platform env vars or env files, SaaSyBase will still work because the app reads from `process.env`. The tradeoff is operational consistency: centralized secret stores make rotation and multi-environment hygiene easier, but they should stay opt-in rather than assumed.
 
-If you want the beginner-friendly walkthrough, use the app docs page at `/docs/google-secret-manager`.
+If you want the beginner-friendly walkthrough, use the app docs page at `/docs/secrets`.
 
 Recommended split:
 
-- Google Secret Manager: all server-side secrets such as `DATABASE_URL`, `ENCRYPTION_SECRET`, provider secret keys, webhook secrets, and internal bearer tokens
+- Platform envs or optional Infisical/Doppler bootstrap: all server-side secrets such as `DATABASE_URL`, `ENCRYPTION_SECRET`, provider secret keys, webhook secrets, and internal bearer tokens
 - Regular env config: non-secret deploy config such as `AUTH_PROVIDER`, `PAYMENT_PROVIDER`, URLs, branding, and public keys
 - `.env.local`: local-only development values and test helpers
 
 For the staged rollout and rotation sequence, see [docs/secret-inventory-rotation-plan-2026-04-21.md](docs/secret-inventory-rotation-plan-2026-04-21.md).
-For simpler deployment recipes and copy-paste examples, see [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
+For simpler deployment recipes and copy-paste examples, see [docs/secrets-provider-deploy-examples.md](docs/secrets-provider-deploy-examples.md).
 
 ### Health check
 
@@ -1536,7 +1594,7 @@ Notes:
 
 - The default `vercel.json` cron schedule is intentionally conservative so it works on Vercel Hobby plans too. If you need faster cleanup and your plan supports it, increase the frequency.
 - If you want manual or external cron callers in addition to Vercel Cron, you can also keep `CRON_PROCESS_EXPIRY_TOKEN` set.
-- If you want Vercel to fetch secrets directly from Google Secret Manager at build/runtime, use the built-in loader with explicit service account JSON env or another pre-sync mechanism. A concrete example is in [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
+- If you want Vercel to fetch secrets through the built-in bootstrap at build/runtime, use the Infisical or Doppler patterns in [docs/secrets-provider-deploy-examples.md](docs/secrets-provider-deploy-examples.md).
 
 ### Clerk webhook (production)
 
@@ -1592,7 +1650,7 @@ Recommended setup:
 5. Use PostgreSQL for production data.
 6. Use S3-compatible storage if you need durable uploaded assets across container restarts or reschedules.
 7. Configure a scheduled HTTP job for `/api/cron/process-expiry` with `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` unless you are relying on a platform-native scheduler that can inject a bearer token.
-8. If you are using Google Secret Manager, either provide `GOOGLE_APPLICATION_CREDENTIALS` as a mounted file path or use `GOOGLE_SECRET_MANAGER_SERVICE_ACCOUNT_JSON_B64`. A full example is in [docs/google-secret-manager-deploy-examples.md](docs/google-secret-manager-deploy-examples.md).
+8. If you are using the built-in secrets bootstrap, authenticate the Infisical or Doppler CLI using that provider's recommended machine identity or service token flow. Examples are in [docs/secrets-provider-deploy-examples.md](docs/secrets-provider-deploy-examples.md).
 
 ### Linux VPS (Nginx or Apache)
 

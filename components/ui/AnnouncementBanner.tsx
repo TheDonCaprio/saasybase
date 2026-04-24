@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBullhorn, faXmark } from '@fortawesome/free-solid-svg-icons';
 
@@ -14,10 +14,17 @@ export function AnnouncementBanner({ message }: AnnouncementBannerProps) {
     [message],
   );
 
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return !localStorage.getItem(dismissedKey);
-  });
+  // Keep first render deterministic across server/client; hydrate then check storage.
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    try {
+      const isDismissed = Boolean(localStorage.getItem(dismissedKey));
+      if (isDismissed) setVisible(false);
+    } catch {
+      // ignore storage failures
+    }
+  }, [dismissedKey]);
 
   const dismiss = () => {
     localStorage.setItem(dismissedKey, '1');

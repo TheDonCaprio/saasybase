@@ -1,12 +1,6 @@
 #!/usr/bin/env node
 
-const { buildSecretId, loadRuntimeEnv } = require('./load-runtime-env');
-
-function parseBooleanFlag(value) {
-  if (typeof value !== 'string') return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-}
+const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
 
 function parseList(value) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -41,6 +35,7 @@ function buildDefaultChecks() {
 
   const authProvider = (process.env.AUTH_PROVIDER || process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk').trim().toLowerCase();
   if (authProvider === 'clerk') {
+    pushCheck(checks, 'clerk publishable key', ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']);
     pushCheck(checks, 'clerk secret key', ['CLERK_SECRET_KEY']);
     pushCheck(checks, 'clerk webhook secret', ['CLERK_WEBHOOK_SECRET']);
   } else if (authProvider === 'betterauth') {
@@ -51,14 +46,18 @@ function buildDefaultChecks() {
 
   const paymentProvider = (process.env.PAYMENT_PROVIDER || 'stripe').trim().toLowerCase();
   if (paymentProvider === 'stripe') {
+    pushCheck(checks, 'stripe publishable key', ['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']);
     pushCheck(checks, 'stripe secret key', ['STRIPE_SECRET_KEY']);
     pushCheck(checks, 'stripe webhook secret', ['STRIPE_WEBHOOK_SECRET']);
   } else if (paymentProvider === 'paddle') {
+    pushCheck(checks, 'paddle client token', ['NEXT_PUBLIC_PADDLE_CLIENT_TOKEN']);
     pushCheck(checks, 'paddle api key', ['PADDLE_API_KEY']);
     pushCheck(checks, 'paddle webhook secret', ['PADDLE_WEBHOOK_SECRET']);
   } else if (paymentProvider === 'paystack') {
+    pushCheck(checks, 'paystack public key', ['NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY']);
     pushCheck(checks, 'paystack secret key', ['PAYSTACK_SECRET_KEY']);
   } else if (paymentProvider === 'razorpay') {
+    pushCheck(checks, 'razorpay public key', ['NEXT_PUBLIC_RAZORPAY_KEY_ID']);
     pushCheck(checks, 'razorpay key secret', ['RAZORPAY_KEY_SECRET']);
     pushCheck(checks, 'razorpay webhook secret', ['RAZORPAY_WEBHOOK_SECRET']);
   }
@@ -70,7 +69,7 @@ function buildDefaultChecks() {
     pushCheck(checks, 'smtp password', ['SMTP_PASS']);
   }
 
-  for (const envName of parseList(process.env.GSM_SMOKE_REQUIRED_VARS)) {
+  for (const envName of parseList(process.env.SECRETS_SMOKE_REQUIRED_VARS)) {
     pushCheck(checks, envName, [envName]);
   }
 
@@ -78,7 +77,7 @@ function buildDefaultChecks() {
 }
 
 function printHelp() {
-  console.log(`Google Secret Manager smoke test\n\nUsage:\n  GOOGLE_SECRET_MANAGER_ENABLED=true GOOGLE_SECRET_MANAGER_ENV=staging npm run secrets:smoke\n\nOptional env vars:\n  GSM_SMOKE_REQUIRED_VARS           Comma-separated env vars to require in addition to defaults\n  GOOGLE_SECRET_MANAGER_PREFIX      Secret ID prefix, defaults to saasybase\n  GOOGLE_SECRET_MANAGER_VERSION     Secret version, defaults to latest\n  GOOGLE_SECRET_MANAGER_PROJECT_ID  Explicit GCP project id\n`);
+  console.log(`Secrets bootstrap smoke test\n\nUsage:\n  npm run secrets:smoke\n  SECRETS_PROVIDER=infisical npm run secrets:smoke\n  SECRETS_PROVIDER=doppler npm run secrets:smoke\n\nOptional env vars:\n  SECRETS_SMOKE_REQUIRED_VARS  Comma-separated env vars to require in addition to defaults\n  SECRETS_PROVIDER             infisical or doppler\n  SECRETS_PROVIDER_COMMAND     Override the built-in provider command entirely\n`);
 }
 
 async function main() {
@@ -87,17 +86,9 @@ async function main() {
     process.exit(0);
   }
 
-  if (!parseBooleanFlag(process.env.GOOGLE_SECRET_MANAGER_ENABLED)) {
-    console.error('Smoke test requires GOOGLE_SECRET_MANAGER_ENABLED=true.');
-    process.exit(1);
-  }
-
   const secretLoadResult = await loadRuntimeEnv();
   if (secretLoadResult.failed.length > 0) {
-    const failures = secretLoadResult.failed
-      .map((entry) => `${entry.envName} <= ${entry.secretId}: ${entry.message}`)
-      .join('\n');
-    console.error(`Google Secret Manager smoke test failed during fetch:\n${failures}`);
+    console.error(`Secrets bootstrap smoke test failed during fetch:\n${formatSecretLoadFailures(secretLoadResult)}`);
     process.exit(1);
   }
 
@@ -105,26 +96,21 @@ async function main() {
   const missing = checks.filter((check) => !check.envNames.some((envName) => isSet(envName)));
 
   if (missing.length > 0) {
-    const prefix = process.env.GOOGLE_SECRET_MANAGER_PREFIX?.trim() || 'saasybase';
-    const environment = process.env.GOOGLE_SECRET_MANAGER_ENV?.trim() || process.env.NODE_ENV?.trim() || 'staging';
     const details = missing
-      .map((check) => {
-        const secretIds = check.envNames
-          .map((envName) => buildSecretId(envName, { prefix, environment }))
-          .join(', ');
-        return `${check.label}: expected one of [${check.envNames.join(', ')}] via secrets [${secretIds}]`;
-      })
+      .map((check) => `${check.label}: expected one of [${check.envNames.join(', ')}]`)
       .join('\n');
-    console.error(`Google Secret Manager smoke test failed. Missing resolved values:\n${details}`);
+    console.error(`Secrets bootstrap smoke test failed. Missing resolved values:\n${details}`);
     process.exit(1);
   }
 
   const loadedSummary = secretLoadResult.loaded.length > 0 ? secretLoadResult.loaded.join(', ') : 'none';
   const skippedSummary = secretLoadResult.skipped.length > 0 ? secretLoadResult.skipped.join(', ') : 'none';
-  console.log('GSM smoke test OK');
-  console.log(`Project: ${secretLoadResult.projectId}`);
-  console.log(`Environment: ${secretLoadResult.environment}`);
-  console.log(`Loaded from GSM: ${loadedSummary}`);
+  console.log('Secrets smoke test OK');
+  console.log(`Provider: ${secretLoadResult.provider || 'platform-env-only'}`);
+  if (secretLoadResult.command) {
+    console.log(`Command: ${secretLoadResult.command}`);
+  }
+  console.log(`Loaded from provider: ${loadedSummary}`);
   console.log(`Already present and reused: ${skippedSummary}`);
 }
 

@@ -7,17 +7,58 @@
  * These are used when `AUTH_PROVIDER=clerk`.
  */
 
-export {
-  SignIn as AuthSignIn,
-  SignUp as AuthSignUp,
-  SignInButton as AuthSignInButton,
-  SignUpButton as AuthSignUpButton,
-  SignOutButton as AuthSignOutButton,
-  OrganizationSwitcher as AuthOrganizationSwitcher,
-  UserProfile as AuthUserProfile,
-  ClerkProvider as AuthProvider,
-  ClerkLoaded as AuthLoaded,
-  ClerkLoading as AuthLoading,
+import {
+  SignIn,
+  SignUp,
+  SignInButton,
+  SignUpButton,
+  SignOutButton,
+  OrganizationSwitcher,
+  UserProfile,
+  ClerkProvider,
+  ClerkLoaded,
+  ClerkLoading,
 } from '@clerk/nextjs';
+import { ui } from '@clerk/ui';
+import type { ComponentProps } from 'react';
+
+import type { AuthProviderProps } from '../../types';
+
+export const AuthSignIn = SignIn;
+export const AuthSignUp = SignUp;
+export const AuthSignInButton = SignInButton;
+export const AuthSignUpButton = SignUpButton;
+export const AuthSignOutButton = SignOutButton;
+
+type OrganizationSwitcherProps = ComponentProps<typeof OrganizationSwitcher>;
+
+export function AuthOrganizationSwitcher({
+  organizationProfileUrl,
+  ...props
+}: OrganizationSwitcherProps) {
+  return (
+    <OrganizationSwitcher
+      {...props}
+      organizationProfileUrl={organizationProfileUrl ?? '/dashboard/team'}
+      organizationProfileMode="navigation"
+    />
+  );
+}
+
+export const AuthUserProfile = UserProfile;
+export const AuthLoaded = ClerkLoaded;
+export const AuthLoading = ClerkLoading;
+
+export function AuthProvider({ children, publishableKey, ...props }: AuthProviderProps) {
+  return (
+    <ClerkProvider
+      {...props}
+      publishableKey={publishableKey ?? undefined}
+      ui={ui}
+    >
+      {children}
+    </ClerkProvider>
+  );
+}
 
 export { dark as authDarkTheme } from '@clerk/themes';

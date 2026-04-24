@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const isContentSecurityPolicyEnabled = process.env.ENABLE_CSP === 'true';
 
 function buildContentSecurityPolicy() {
   const directives = [
@@ -33,6 +34,11 @@ function buildContentSecurityPolicy() {
       "'self'",
       "'unsafe-inline'",
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
+      'https://challenges.cloudflare.com',
+      'https://*.clerk.accounts.dev',
+      'https://*.clerk.dev',
+      'https://clerk.com',
+      'https://*.clerk.com',
       'https://pagead2.googlesyndication.com',
       'https://googleads.g.doubleclick.net',
       'https://securepubads.g.doubleclick.net',
@@ -65,6 +71,16 @@ function buildContentSecurityPolicy() {
     [
       'connect-src',
       "'self'",
+      'https://challenges.cloudflare.com',
+      'https://*.clerk.accounts.dev',
+      'https://*.clerk.dev',
+      'https://clerk.com',
+      'https://*.clerk.com',
+      'https://*.s3.amazonaws.com',
+      'https://*.s3.*.amazonaws.com',
+      'https://s3.*.amazonaws.com',
+      'https://s3.amazonaws.com',
+      'https://*.cloudfront.net',
       'https://pagead2.googlesyndication.com',
       'https://googleads.g.doubleclick.net',
       'https://securepubads.g.doubleclick.net',
@@ -89,6 +105,11 @@ function buildContentSecurityPolicy() {
     [
       'frame-src',
       "'self'",
+      'https://challenges.cloudflare.com',
+      'https://*.clerk.accounts.dev',
+      'https://*.clerk.dev',
+      'https://clerk.com',
+      'https://*.clerk.com',
       'https://pagead2.googlesyndication.com',
       'https://googleads.g.doubleclick.net',
       'https://securepubads.g.doubleclick.net',
@@ -166,42 +187,49 @@ const nextConfig = {
   // same React module from node_modules as the rest of the app.
   serverExternalPackages: ['@react-pdf/renderer'],
 
-  // Security headers for production
+  // Security headers for production. CSP is opt-in because the default
+  // boilerplate integrates multiple third-party providers and a strict global
+  // policy creates constant setup friction for new services.
   async headers() {
+    const baseSecurityHeaders = [
+      {
+        key: 'X-Frame-Options',
+        value: 'DENY',
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'origin-when-cross-origin',
+      },
+      {
+        key: 'X-XSS-Protection',
+        value: '1; mode=block',
+      },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=(), payment=()',
+      },
+      {
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains',
+      },
+    ];
+
+    if (isContentSecurityPolicyEnabled) {
+      baseSecurityHeaders.push({
+        key: 'Content-Security-Policy',
+        value: contentSecurityPolicy,
+      });
+    }
+
     return [
       {
         // Apply security headers to all routes
         source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=()',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains',
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: contentSecurityPolicy,
-          },
-        ],
+        headers: baseSecurityHeaders,
       },
       {
         // Additional security for API routes

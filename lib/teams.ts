@@ -488,16 +488,78 @@ export async function resetAllocatedPerMemberTokens(opts: { organizationId: stri
 	}
 }
 
+/**
+ * Check if an organization has any active team plan subscriptions.
+ * Returns the active subscriptions if they exist, null otherwise.
+ */
+export async function getOrganizationActiveTeamPlans(organizationId: string) {
+	try {
+		const organization = await prisma.organization.findUnique({
+			where: { id: organizationId },
+			select: { ownerUserId: true },
+		});
+
+		const activeSubscriptions = await prisma.subscription.findMany({
+			where: {
+				OR: [
+					{ organizationId },
+					...(organization?.ownerUserId ? [{ userId: organization.ownerUserId }] : []),
+				],
+				status: { in: ['ACTIVE', 'PENDING', 'PAST_DUE'] },
+				expiresAt: { gt: new Date() },
+			},
+			include: {
+				plan: {
+					select: {
+						id: true,
+						name: true,
+						scope: true,
+						supportsOrganizations: true,
+					},
+				},
+			},
+		});
+
+		// Filter to active team plans only.
+		const activeTeamPlans = activeSubscriptions.filter(
+			(sub) => sub.plan.scope === 'TEAM' && sub.plan.supportsOrganizations
+		);
+
+		return activeTeamPlans.length > 0 ? activeTeamPlans : null;
+	} catch (err: unknown) {
+		Logger.warn('getOrganizationActiveTeamPlans failed', {
+			organizationId,
+			error: toError(err).message,
+		});
+		return null;
+	}
+}
+
 export async function deleteOrganizationByProviderId(providerOrganizationId: string) {
 	if (!providerOrganizationId) return false;
 	let providerDeletionAttempted = false;
 	try {
-		// Detach any historical references before deletion; otherwise FK constraints can
-		// prevent local deletion (payments/subscriptions may outlive the org).
+		// Check if organization has active team plan subscriptions
 		const existing = await prisma.organization.findUnique({
 			where: { providerOrganizationId: providerOrganizationId },
 			select: { id: true },
 		});
+
+		if (existing?.id) {
+			const activeTeamPlans = await getOrganizationActiveTeamPlans(existing.id);
+			if (activeTeamPlans && activeTeamPlans.length > 0) {
+				Logger.warn('deleteOrganizationByProviderId: rejected - organization has active team plans', {
+					providerOrganizationId,
+					organizationId: existing.id,
+					planCount: activeTeamPlans.length,
+					planNames: activeTeamPlans.map((p) => p.plan.name).join(', '),
+				});
+				return false;
+			}
+		}
+
+		// Detach any historical references before deletion; otherwise FK constraints can
+		// prevent local deletion (payments/subscriptions may outlive the org).
 		if (existing?.id) {
 			try {
 				await prisma.subscription.updateMany({

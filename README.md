@@ -180,6 +180,35 @@ npx prisma db seed
 npm run dev
 ```
 
+### Choose your database
+
+You have three normal paths:
+
+- SQLite, zero setup: keep `DATABASE_URL="file:./dev.db"` for local development. This is the fastest way to get started.
+- Local PostgreSQL, more production parity: run PostgreSQL on your own machine with the official installer or the official Docker image.
+- Hosted PostgreSQL, easiest production path: use any managed provider that gives you a normal PostgreSQL connection string.
+
+Useful official docs and provider guides:
+
+- PostgreSQL downloads: <https://www.postgresql.org/download/>
+- PostgreSQL Docker image: <https://hub.docker.com/_/postgres>
+- Neon docs: <https://neon.com/docs>
+- Supabase database docs: <https://supabase.com/docs/guides/database>
+- Railway PostgreSQL docs: <https://docs.railway.com/guides/postgresql>
+- Render PostgreSQL docs: <https://render.com/docs/postgresql>
+
+Smallest local SQLite path:
+
+```bash
+DATABASE_URL="file:./dev.db"
+```
+
+Typical hosted PostgreSQL shape:
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DBNAME?schema=public"
+```
+
 After running `npm run dev`, open [http://localhost:3000](http://localhost:3000). You'll see the landing page. Sign in at `/sign-in` or go to `/admin` once you've set up an admin user (see [Admin Setup](#admin-setup)).
 
 With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
@@ -212,6 +241,7 @@ These are the commands most people actually need when working on or operating th
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
 | `npm run prisma:migrate` | Create and apply a local Prisma migration using `prisma.config.ts` and `.env.local` |
 | `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
+| `npm run secrets:doctor` | Run the provider command directly and report the detected output shape before boot |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
 
 `npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`).
@@ -1485,6 +1515,14 @@ Important behavior:
 - It expects the selected provider CLI to already be installed and authenticated in the current shell, CI job, or server runtime.
 - For local Infisical usage, the minimum mental model is: install the CLI, run `infisical login`, set `INFISICAL_PROJECT_ID` and `INFISICAL_ENVIRONMENT`, then run `npm run secrets:smoke`.
 - For local Doppler usage, the minimum mental model is: install the CLI, run `doppler login`, set `DOPPLER_PROJECT` and `DOPPLER_CONFIG`, then run `npm run secrets:smoke`.
+- If you want a preflight check before boot, run `npm run secrets:doctor`.
+
+Official docs:
+
+- Infisical CLI overview: <https://infisical.com/docs/cli/overview>
+- Infisical export command: <https://infisical.com/docs/cli/commands/export>
+- Doppler CLI docs: <https://docs.doppler.com/docs/cli>
+- Doppler secrets access docs: <https://docs.doppler.com/docs/accessing-secrets>
 
 Optional provider hints:
 

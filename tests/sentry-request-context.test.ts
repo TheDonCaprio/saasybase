@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { getSentryBaseTags, getSentryInitOptions, isSentryRuntimeEnabled, isSentryRuntimeInitialized, markSentryRuntimeInitialized } from '../lib/sentry'
+import {
+  getSentryBaseTags,
+  getSentryInitOptions,
+  isSentryDevelopmentCaptureEnabled,
+  isSentryRuntimeEnabled,
+  isSentryRuntimeInitialized,
+  markSentryRuntimeInitialized,
+  shouldForwardLoggerEventsToSentry,
+} from '../lib/sentry'
 
 describe('Sentry runtime helpers', () => {
   const env = process.env as Record<string, string | undefined>
@@ -8,6 +16,7 @@ describe('Sentry runtime helpers', () => {
     SENTRY_ENABLED: process.env.SENTRY_ENABLED,
     SENTRY_DSN: process.env.SENTRY_DSN,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    SENTRY_CAPTURE_IN_DEVELOPMENT: process.env.SENTRY_CAPTURE_IN_DEVELOPMENT,
     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
     AUTH_PROVIDER: process.env.AUTH_PROVIDER,
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
@@ -17,6 +26,7 @@ describe('Sentry runtime helpers', () => {
     env.SENTRY_ENABLED = originalValues.SENTRY_ENABLED
     env.SENTRY_DSN = originalValues.SENTRY_DSN
     env.NEXT_PUBLIC_SENTRY_DSN = originalValues.NEXT_PUBLIC_SENTRY_DSN
+    env.SENTRY_CAPTURE_IN_DEVELOPMENT = originalValues.SENTRY_CAPTURE_IN_DEVELOPMENT
     env.SENTRY_ENVIRONMENT = originalValues.SENTRY_ENVIRONMENT
     env.AUTH_PROVIDER = originalValues.AUTH_PROVIDER
     env.PAYMENT_PROVIDER = originalValues.PAYMENT_PROVIDER
@@ -29,6 +39,14 @@ describe('Sentry runtime helpers', () => {
 
     expect(isSentryRuntimeEnabled('server')).toBe(true)
     expect(isSentryRuntimeEnabled('client')).toBe(false)
+  })
+
+  it('allows client-side enablement from the public DSN alone', () => {
+    env.SENTRY_ENABLED = undefined
+    env.SENTRY_DSN = ''
+    env.NEXT_PUBLIC_SENTRY_DSN = 'https://public@example.ingest.sentry.io/2'
+
+    expect(isSentryRuntimeEnabled('client')).toBe(true)
   })
 
   it('builds init options with runtime and provider tags', () => {
@@ -59,5 +77,13 @@ describe('Sentry runtime helpers', () => {
     expect(isSentryRuntimeInitialized('edge')).toBe(false)
     markSentryRuntimeInitialized('edge')
     expect(isSentryRuntimeInitialized('edge')).toBe(true)
+  })
+
+  it('supports opt-in logger fan-out in development', () => {
+    env.NODE_ENV = 'development'
+    env.SENTRY_CAPTURE_IN_DEVELOPMENT = 'true'
+
+    expect(isSentryDevelopmentCaptureEnabled()).toBe(true)
+    expect(shouldForwardLoggerEventsToSentry()).toBe(true)
   })
 })

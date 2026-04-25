@@ -24,7 +24,11 @@ import {
 	type AdminTrafficProviderMeta,
 	type AdminTrafficResponse
 } from './admin-traffic-contract';
-import { fetchTrafficSnapshotFromProvider, type TrafficFilters } from './traffic-analytics-provider';
+import {
+	fetchTrafficSnapshotFromProvider,
+	getActiveTrafficProviderMeta,
+	type TrafficFilters
+} from './traffic-analytics-provider';
 import { toError } from './runtime-guards';
 import { Logger } from './logger';
 
@@ -107,6 +111,132 @@ const toShare = (total: number, part: number): number => {
 };
 
 const uniqueList = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+function buildFallbackRange(filters: AdminTrafficFilters): AdminTrafficResponse['range'] {
+	const now = new Date();
+	const end = new Date(now);
+	end.setHours(23, 59, 59, 999);
+
+	if (filters.period === 'custom' && filters.startDate && filters.endDate) {
+		const start = new Date(`${filters.startDate}T00:00:00`);
+		const customEnd = new Date(`${filters.endDate}T23:59:59.999`);
+		const validStart = Number.isNaN(start.getTime()) ? end : start;
+		const validEnd = Number.isNaN(customEnd.getTime()) ? end : customEnd;
+		const days = Math.max(1, Math.floor((validEnd.getTime() - validStart.getTime()) / 86_400_000) + 1);
+		return {
+			start: validStart.toISOString(),
+			end: validEnd.toISOString(),
+			days,
+		};
+	}
+
+	const daysByPeriod: Record<Exclude<AdminTrafficPeriod, 'custom'>, number> = {
+		'1d': 1,
+		'2d': 2,
+		'7d': 7,
+		'30d': 30,
+		'90d': 90,
+		'6m': 180,
+		'12m': 365,
+		lifetime: 365,
+	};
+	const days = daysByPeriod[filters.period as Exclude<AdminTrafficPeriod, 'custom'>] ?? 30;
+	const start = new Date(end);
+	start.setDate(start.getDate() - (days - 1));
+	start.setHours(0, 0, 0, 0);
+
+	return {
+		start: start.toISOString(),
+		end: end.toISOString(),
+		days,
+	};
+}
+
+function buildEmptyTrafficResponse(
+	filters: AdminTrafficFilters,
+	provider: AdminTrafficProviderMeta,
+	notice?: AdminTrafficResponse['notice']
+): AdminTrafficResponse {
+	const range = buildFallbackRange(filters);
+
+	return {
+		period: filters.period,
+		filters,
+		provider,
+		notice,
+		metricValues: buildMetricValues({
+			visits: 0,
+			uniqueVisitors: 0,
+			pageViews: 0,
+			newUsers: 0,
+			engagedSessions: 0,
+			engagementRate: 0,
+			averageSessionDurationSeconds: 0,
+			bounceRate: 0,
+			viewsPerVisit: 0,
+			estimatedEngagedVisits: 0,
+			estimatedEngagedVisitRate: 0,
+		}),
+		range,
+		totals: {
+			visits: 0,
+			uniqueVisitors: 0,
+			pageViews: 0,
+			newUsers: 0,
+			engagedSessions: 0,
+			engagementRate: 0,
+			averageSessionDurationSeconds: 0,
+		},
+		derived: {
+			dailyVisits: 0,
+			uniqueVisitorShare: 0,
+			newUserShare: 0,
+			engagedSessionShare: 0,
+		},
+		charts: {
+			visits: [],
+			pageViews: [],
+			granularity: 'daily',
+		},
+		breakdowns: {
+			countries: [],
+			pages: [],
+			devices: [],
+			referrers: [],
+			events: [],
+		},
+		filterOptions: {
+			countries: [],
+			pages: [],
+			deviceTypes: uniqueList([...DEVICE_FALLBACK_OPTIONS]),
+		},
+	};
+}
+
+function isProviderConfigurationError(message: string): boolean {
+	return message === 'PostHog configuration missing' || message === 'GA configuration missing';
+}
+
+function buildUnavailableNotice(
+	provider: AdminTrafficProviderMeta,
+	errorMessage: string
+): AdminTrafficResponse['notice'] {
+	if (isProviderConfigurationError(errorMessage)) {
+		return {
+			level: 'warning',
+			code: 'provider-configuration-missing',
+			title: `${provider.label} is not configured`,
+			message: `The traffic dashboard is showing fallback empty data because ${provider.label} is selected but its required credentials are missing.`,
+		};
+	}
+
+	return {
+		level: 'warning',
+		code: 'provider-request-failed',
+		title: `${provider.label} data is temporarily unavailable`,
+		message: `The traffic dashboard is showing fallback empty data because the latest ${provider.label} request failed.`,
+	};
+}
 
 export async function getAdminTrafficSnapshot(
 	filters: Partial<AdminTrafficFilters> = {}
@@ -227,7 +357,28 @@ export async function getAdminTrafficSnapshot(
 			}
 		};
 	} catch (error: unknown) {
-		Logger.error('getAdminTrafficSnapshot failed', { error: toError(error), filters: normalizedFilters });
-		throw error;
+		const resolvedError = toError(error);
+		const provider = await getActiveTrafficProviderMeta().catch(() => ({
+			key: 'google-analytics',
+			label: 'Google Analytics',
+			metrics: [],
+		} as AdminTrafficProviderMeta));
+		const notice = buildUnavailableNotice(provider, resolvedError.message);
+
+		if (isProviderConfigurationError(resolvedError.message)) {
+			Logger.warn('getAdminTrafficSnapshot unavailable due to provider configuration; returning empty snapshot', {
+				error: resolvedError,
+				filters: normalizedFilters,
+				provider: provider.key,
+			});
+		} else {
+			Logger.error('getAdminTrafficSnapshot failed; returning empty snapshot', {
+				error: resolvedError,
+				filters: normalizedFilters,
+				provider: provider.key,
+			});
+		}
+
+		return buildEmptyTrafficResponse(normalizedFilters, provider, notice);
 	}
 }

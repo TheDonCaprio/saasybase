@@ -1300,7 +1300,7 @@ A production-safe logging system that replaces raw `console.log` throughout the 
 
 - **Auto-redaction** of sensitive keys (passwords, tokens, secrets, API keys)
 - **Persistent storage** — WARN and ERROR logs are saved to the `SystemLog` model (viewable at `/admin/logs`)
-- **Optional Sentry fan-out** — when `SENTRY_ENABLED` is set with a DSN, production logger events and React error boundaries also forward to Sentry without replacing the built-in admin log view
+- **Optional Sentry fan-out** — when `SENTRY_ENABLED` is set with a DSN, production logger events and React error boundaries forward to Sentry without replacing the built-in admin log view; local logger fan-out can also be enabled explicitly with `SENTRY_CAPTURE_IN_DEVELOPMENT=true`
 - **Auto-pruning** at 1,000 max entries
 - **Structured logging** with timestamps and sanitized metadata
 

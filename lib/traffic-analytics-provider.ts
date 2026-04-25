@@ -10,7 +10,9 @@ import {
 import {
   fetchPostHogTrafficBreakdown,
   fetchPostHogTrafficSnapshot,
+  POSTHOG_PROVIDER,
 } from './posthog-analytics';
+import type { TrafficAnalyticsProviderKey } from './traffic-analytics-config';
 
 export interface ProviderTrafficSnapshot {
   totalVisits: number;
@@ -39,7 +41,7 @@ export interface ProviderTrafficSnapshot {
 
 export type { TrafficFilters };
 
-const GOOGLE_ANALYTICS_PROVIDER: AdminTrafficProviderMeta = {
+export const GOOGLE_ANALYTICS_PROVIDER: AdminTrafficProviderMeta = {
   key: 'google-analytics',
   label: 'Google Analytics',
   externalDashboardUrl: 'https://analytics.google.com/',
@@ -57,6 +59,15 @@ const GOOGLE_ANALYTICS_PROVIDER: AdminTrafficProviderMeta = {
     { key: 'estimatedEngagedVisitRate', label: 'Estimated engaged visit rate', supported: false, description: 'Google Analytics provides native engagement rate instead.' },
   ],
 };
+
+export function getTrafficProviderMeta(provider: TrafficAnalyticsProviderKey): AdminTrafficProviderMeta {
+  return provider === 'posthog' ? POSTHOG_PROVIDER : GOOGLE_ANALYTICS_PROVIDER;
+}
+
+export async function getActiveTrafficProviderMeta(): Promise<AdminTrafficProviderMeta> {
+  const resolution = await resolveTrafficAnalyticsProvider();
+  return getTrafficProviderMeta(resolution.provider);
+}
 
 export async function fetchTrafficSnapshotFromProvider(filters: TrafficFilters): Promise<ProviderTrafficSnapshot> {
   const resolution = await resolveTrafficAnalyticsProvider();

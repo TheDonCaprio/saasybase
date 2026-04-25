@@ -14,6 +14,7 @@ import { PaidTokenOperationsPanel } from './settings/panels/PaidTokenOperationsP
 import { AdminActionNotificationPanel } from './settings/panels/AdminActionNotificationPanel';
 import { EmailAlertSettingsPanel } from './settings/panels/EmailAlertSettingsPanel';
 import { SupportEmailSettingsPanel } from './settings/panels/SupportEmailSettingsPanel';
+import { SentrySmokeTestPanel } from './settings/panels/SentrySmokeTestPanel';
 import { TrafficAnalyticsSettingsPanel } from './settings/panels/TrafficAnalyticsSettingsPanel';
 import type { TrafficAnalyticsProviderHealth } from '../../lib/traffic-analytics-config';
 
@@ -224,6 +225,12 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
               <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Support emails</h3>
               <div className="mt-3">
                 <SupportEmailSettingsPanel />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Sentry</h3>
+              <div className="mt-3">
+                <SentrySmokeTestPanel />
               </div>
             </div>
             <EditableSettings

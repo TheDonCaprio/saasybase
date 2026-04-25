@@ -50,7 +50,7 @@ export interface PostHogTrafficSnapshot {
   provider: AdminTrafficProviderMeta;
 }
 
-const POSTHOG_PROVIDER: AdminTrafficProviderMeta = {
+export const POSTHOG_PROVIDER: AdminTrafficProviderMeta = {
   key: 'posthog',
   label: 'PostHog',
   externalDashboardUrl: process.env.POSTHOG_APP_HOST?.trim() || 'https://us.posthog.com',

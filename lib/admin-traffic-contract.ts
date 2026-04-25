@@ -90,6 +90,12 @@ export interface AdminTrafficResponse {
 	period: AdminTrafficPeriod;
 	filters: AdminTrafficFilters;
 	provider: AdminTrafficProviderMeta;
+	notice?: {
+		level: 'warning';
+		code: 'provider-configuration-missing' | 'provider-request-failed';
+		title: string;
+		message: string;
+	};
 	metricValues: AdminTrafficMetricValueMap;
 	range: {
 		start: string;

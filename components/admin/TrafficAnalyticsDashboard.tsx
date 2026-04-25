@@ -687,6 +687,12 @@ export default function TrafficAnalyticsDashboard({
             {customRangeError}
           </div>
         ) : null}
+        {data.notice ? (
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+            <p className="font-semibold">{data.notice.title}</p>
+            <p className="mt-1 text-amber-800/90 dark:text-amber-100/90">{data.notice.message}</p>
+          </div>
+        ) : null}
         {loading ? (
           <span className="text-xs font-medium text-indigo-600 dark:text-indigo-300">Refreshing…</span>
         ) : null}

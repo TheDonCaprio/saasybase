@@ -2,7 +2,7 @@
 // This replaces console.log statements throughout the application
 
 import { prisma } from './prisma'
-import { captureSentryException, captureSentryMessage } from './sentry'
+import { captureSentryException, captureSentryMessage, shouldForwardLoggerEventsToSentry } from './sentry'
 
 const MAX_PERSISTED_LOGS = 1000
 const PERSIST_PRUNE_PROBABILITY = 0.05
@@ -193,7 +193,7 @@ export class SecureLogger {
   warn(message: string, data?: unknown, context?: Record<string, unknown>): void {
     const formatted = this.formatMessage('WARN', message, data)
     if (this.isDevelopment) console.warn(formatted)
-    if (this.isProduction) {
+    if (shouldForwardLoggerEventsToSentry()) {
       void captureSentryMessage(message, 'warning', {
         tags: {
           source: 'secure-logger',
@@ -217,9 +217,11 @@ export class SecureLogger {
 
     const formatted = this.formatMessage('ERROR', message, errorPayload)
     if (this.isDevelopment) console.error(formatted)
-    if (this.isProduction) {
+    if (shouldForwardLoggerEventsToSentry()) {
       // Minimal production logging
-      console.error(`[PRODUCTION ERROR] ${message}`)
+      if (this.isProduction) {
+        console.error(`[PRODUCTION ERROR] ${message}`)
+      }
       void captureSentryException(data instanceof Error ? data : new Error(message), {
         tags: {
           source: 'secure-logger',

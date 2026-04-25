@@ -45,6 +45,14 @@ function isTruthyFlag(value: string | undefined): boolean {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
 }
 
+export function isSentryDevelopmentCaptureEnabled(): boolean {
+  return isTruthyFlag(process.env.SENTRY_CAPTURE_IN_DEVELOPMENT)
+}
+
+export function shouldForwardLoggerEventsToSentry(): boolean {
+  return process.env.NODE_ENV === 'production' || isSentryDevelopmentCaptureEnabled()
+}
+
 function getSentryDsn(runtime: SentryRuntime): string {
   if (runtime === 'client') {
     return process.env.NEXT_PUBLIC_SENTRY_DSN?.trim() || ''
@@ -85,6 +93,10 @@ export function isSentryEnabled(): boolean {
 }
 
 export function isSentryRuntimeEnabled(runtime: SentryRuntime): boolean {
+  if (runtime === 'client') {
+    return getSentryDsn(runtime).length > 0
+  }
+
   return isTruthyFlag(process.env.SENTRY_ENABLED) && getSentryDsn(runtime).length > 0
 }
 
@@ -179,36 +191,59 @@ export async function captureSentryMessage(
   message: string,
   level: 'warning' | 'error' | 'info' = 'error',
   context?: CaptureContext,
-): Promise<void> {
+): Promise<string | undefined> {
   if (!(await ensureSentryInitialized())) {
-    return
+    return undefined
   }
 
   const sentry = await loadSentryModule()
   if (!sentry) {
-    return
+    return undefined
   }
 
+  let eventId: string | undefined
   sentry.withScope((scope) => {
     applyScopeContext(scope, context)
-    sentry.captureMessage(message, level)
+    eventId = sentry.captureMessage(message, level)
   })
+
+  return eventId
 }
 
-export async function captureSentryException(error: unknown, context?: CaptureContext): Promise<void> {
+export async function captureSentryException(error: unknown, context?: CaptureContext): Promise<string | undefined> {
   if (!(await ensureSentryInitialized())) {
-    return
+    return undefined
   }
 
   const sentry = await loadSentryModule()
   if (!sentry) {
-    return
+    return undefined
   }
 
+  let eventId: string | undefined
   sentry.withScope((scope) => {
     applyScopeContext(scope, context)
-    sentry.captureException(error)
+    eventId = sentry.captureException(error)
   })
+
+  return eventId
+}
+
+export async function flushSentry(timeoutMs = 2000): Promise<boolean> {
+  if (!(await ensureSentryInitialized())) {
+    return false
+  }
+
+  const sentry = await loadSentryModule()
+  if (!sentry || typeof sentry.flush !== 'function') {
+    return false
+  }
+
+  try {
+    return await sentry.flush(timeoutMs)
+  } catch {
+    return false
+  }
 }
 
 export async function captureClientRenderError(

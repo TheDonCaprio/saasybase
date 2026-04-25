@@ -53,9 +53,44 @@ export interface AdminTrafficBreakdownEvent {
 	count: number;
 }
 
+export type AdminTrafficProviderKey = 'google-analytics' | 'posthog';
+
+export type AdminTrafficMetricKey =
+	| 'visits'
+	| 'uniqueVisitors'
+	| 'pageViews'
+	| 'newUsers'
+	| 'engagedSessions'
+	| 'engagementRate'
+	| 'averageSessionDurationSeconds'
+	| 'bounceRate'
+	| 'viewsPerVisit'
+	| 'estimatedEngagedVisits'
+	| 'estimatedEngagedVisitRate';
+
+export interface AdminTrafficProviderMetricDescriptor {
+	key: AdminTrafficMetricKey;
+	label: string;
+	supported: boolean;
+	derived?: boolean;
+	description?: string;
+	replaces?: AdminTrafficMetricKey;
+}
+
+export interface AdminTrafficProviderMeta {
+	key: AdminTrafficProviderKey;
+	label: string;
+	externalDashboardUrl?: string;
+	metrics: AdminTrafficProviderMetricDescriptor[];
+}
+
+export type AdminTrafficMetricValueMap = Partial<Record<AdminTrafficMetricKey, number>>;
+
 export interface AdminTrafficResponse {
 	period: AdminTrafficPeriod;
 	filters: AdminTrafficFilters;
+	provider: AdminTrafficProviderMeta;
+	metricValues: AdminTrafficMetricValueMap;
 	range: {
 		start: string;
 		end: string;

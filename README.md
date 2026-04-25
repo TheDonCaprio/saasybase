@@ -1183,31 +1183,48 @@ Add all S3 / CloudFront hostnames to `next.config.mjs` → `images.remotePattern
 
 ---
 
-## Analytics (Google Analytics 4)
+## Analytics (Traffic Providers)
 
-The admin traffic dashboard pulls metrics from the GA4 Data API.
+The admin traffic dashboard can pull metrics from Google Analytics 4 or PostHog. Select the provider with `TRAFFIC_ANALYTICS_PROVIDER`.
+
+External provider tracking is loaded on non-admin app routes only. The browser tracker intentionally excludes `/admin` pages.
 
 | Variable | Required | Scope | Example |
 |---|---|---|---|
+| `TRAFFIC_ANALYTICS_PROVIDER` | optional | Server | `google-analytics` or `posthog` |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | ✅ | Client | `G-XXXXXXXXXX` |
-| `GA_PROPERTY_ID` | ✅ | Server | `123456789` |
-| `GA_SERVICE_ACCOUNT_CREDENTIALS_B64` | ✅ | Server | Base64-encoded service account JSON |
+| `GA_PROPERTY_ID` | Google only | Server | `123456789` |
+| `GA_SERVICE_ACCOUNT_CREDENTIALS_B64` | Google only | Server | Base64-encoded service account JSON |
 | `GA_DATA_API_CACHE_SECONDS` | optional | Server | `30` |
+| `POSTHOG_PROJECT_ID` | PostHog only | Server | `12345` |
+| `POSTHOG_PERSONAL_API_KEY` | PostHog only | Server | Personal API key with `query:read` |
+| `POSTHOG_APP_HOST` | optional | Server | `https://us.posthog.com` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog only | Client | PostHog Project token from the dashboard |
+| `NEXT_PUBLIC_POSTHOG_HOST` | optional | Client | `https://us.i.posthog.com` |
 
-**Setup:**
+**Google Analytics setup:**
 1. Create a service account in Google Cloud with `analytics.readonly` scope.
 2. In GA4 → Admin → Property Access Management, add the service account email with at least **Viewer** role.
 3. Base64-encode your service account JSON: `base64 -i key.json`.
 
+**PostHog setup:**
+1. Set `TRAFFIC_ANALYTICS_PROVIDER=posthog`.
+2. Create a personal API key with `query:read` permission and store it in `POSTHOG_PERSONAL_API_KEY`.
+3. Set `POSTHOG_PROJECT_ID` to the project backing your product analytics.
+4. Set `NEXT_PUBLIC_POSTHOG_KEY` to the browser-side PostHog Project token shown in the dashboard.
+5. Set `POSTHOG_APP_HOST` and `NEXT_PUBLIC_POSTHOG_HOST` if you are not using the default US cloud hosts.
+
+PostHog pageview capture in this boilerplate is manual and excludes `/admin` routes. The admin area still uses the backend analytics adapter for `/admin/traffic` reporting.
+
 > **Heads-up:** The GA snippet loads in every environment once `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set. Use a dev GA4 property locally to avoid polluting production data.
 
-Metrics surfaced: total visits, unique visitors, new users, engaged sessions, page views, avg. session duration, engagement rate, top referrers, top pages, countries, device mix, and events.
+Provider metrics surfaced: total visits, unique visitors, page views, avg. session duration, top referrers, top pages, countries, device mix, and events. GA4 also supports native new-user and engagement metrics. PostHog replaces those cards with supported metrics such as bounce rate, views per visit, and estimated engaged visits.
 
 ---
 
 ## Visit Tracking
 
-The app includes lightweight first-party visit tracking via `lib/visit-tracking.ts` and the `VisitLog` model. Middleware (`POST /api/internal/track-visit`) records visits for admin traffic reporting, skipping API routes, static files, admin routes, and bots. This is the built-in self-hosted analytics path alongside GA4.
+The app includes lightweight first-party visit tracking via `lib/visit-tracking.ts` and the `VisitLog` model. Middleware (`POST /api/internal/track-visit`) records visits for admin traffic reporting, skipping API routes, static files, admin routes, and bots. External browser analytics tracking also skips admin routes. This is the built-in self-hosted analytics path alongside Google Analytics or PostHog.
 
 > Historical note: the repository still contains deprecated Umami ops playbooks in `ops/`, but they are no longer part of the supported analytics setup.
 

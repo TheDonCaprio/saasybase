@@ -10,6 +10,8 @@ import {
   ADMIN_TRAFFIC_PERIODS,
   getTrafficPeriodLabel,
   type AdminTrafficFilters,
+  type AdminTrafficMetricKey,
+  type AdminTrafficProviderMetricDescriptor,
   type AdminTrafficPeriod,
   type AdminTrafficPeriodOption,
   type AdminTrafficResponse
@@ -111,6 +113,44 @@ const isFiltersEqual = (a: DashboardFilters, b: DashboardFilters): boolean =>
   a.endDate === b.endDate;
 
 const formatDeviceLabel = (device: string): string => DEVICE_LABEL_MAP[device] ?? (device ? device.charAt(0).toUpperCase() + device.slice(1) : 'Unknown');
+
+function getMetricDescriptor(data: AdminTrafficResponse, key: AdminTrafficMetricKey): AdminTrafficProviderMetricDescriptor | undefined {
+  return data.provider.metrics.find((metric) => metric.key === key);
+}
+
+function resolveMetricDisplay(data: AdminTrafficResponse, key: AdminTrafficMetricKey): {
+  key: AdminTrafficMetricKey;
+  label: string;
+  value: number;
+  derived?: boolean;
+} {
+  const descriptor = getMetricDescriptor(data, key);
+  if (descriptor?.supported) {
+    return {
+      key,
+      label: descriptor.label,
+      value: data.metricValues[key] ?? 0,
+      derived: descriptor.derived,
+    };
+  }
+
+  if (descriptor?.replaces) {
+    const replacementDescriptor = getMetricDescriptor(data, descriptor.replaces);
+    return {
+      key: descriptor.replaces,
+      label: replacementDescriptor?.label ?? descriptor.label,
+      value: data.metricValues[descriptor.replaces] ?? 0,
+      derived: replacementDescriptor?.derived,
+    };
+  }
+
+  return {
+    key,
+    label: descriptor?.label ?? key,
+    value: data.metricValues[key] ?? 0,
+    derived: descriptor?.derived,
+  };
+}
 
 export default function TrafficAnalyticsDashboard({
   initialData,
@@ -437,45 +477,72 @@ export default function TrafficAnalyticsDashboard({
   }, [data.charts.granularity]);
 
   const insightStats = useMemo(
-    () => [
-      {
-        label: 'Unique visitor share',
-        value: formatPercent(data.derived.uniqueVisitorShare)
-      },
-      {
-        label: 'New user share',
-        value: formatPercent(data.derived.newUserShare)
-      },
-      {
-        label: 'Engaged session share',
-        value: formatPercent(data.derived.engagedSessionShare)
-      },
-      {
-        label: 'Avg. session duration',
-        value: formatDuration(data.totals.averageSessionDurationSeconds)
-      }
-      ,
-      {
-        label: 'Page views',
-        value: formatNumber(data.totals.pageViews)
-      },
-      {
-        label: 'Visits',
-        value: formatNumber(data.totals.visits)
-      },
-      {
-        label: 'Unique visitors',
-        value: formatNumber(data.totals.uniqueVisitors)
-      },
-      {
-        label: 'Engaged sessions',
-        value: formatNumber(data.totals.engagedSessions)
-      }
-    ],
+    () => {
+      const replacementForNewUsers = resolveMetricDisplay(data, 'newUsers');
+      const replacementForEngagement = resolveMetricDisplay(data, 'engagementRate');
+      const replacementForEngagedSessions = resolveMetricDisplay(data, 'engagedSessions');
+
+      return [
+        {
+          label: 'Unique visitor share',
+          value: formatPercent(data.derived.uniqueVisitorShare)
+        },
+        replacementForNewUsers.key === 'bounceRate'
+          ? {
+              label: replacementForNewUsers.label,
+              value: formatPercent(replacementForNewUsers.value)
+            }
+          : {
+              label: 'New user share',
+              value: formatPercent(data.derived.newUserShare)
+            },
+        replacementForEngagement.key === 'estimatedEngagedVisitRate'
+          ? {
+              label: replacementForEngagement.label,
+              value: formatPercent(replacementForEngagement.value)
+            }
+          : {
+              label: 'Engaged session share',
+              value: formatPercent(data.derived.engagedSessionShare)
+            },
+        {
+          label: resolveMetricDisplay(data, 'averageSessionDurationSeconds').label,
+          value: formatDuration(data.totals.averageSessionDurationSeconds)
+        },
+        replacementForNewUsers.key === 'viewsPerVisit'
+          ? {
+              label: replacementForNewUsers.label,
+              value: replacementForNewUsers.value.toFixed(2)
+            }
+          : {
+              label: 'Page views',
+              value: formatNumber(data.totals.pageViews)
+            },
+        {
+          label: 'Visits',
+          value: formatNumber(data.totals.visits)
+        },
+        {
+          label: 'Unique visitors',
+          value: formatNumber(data.totals.uniqueVisitors)
+        },
+        replacementForEngagedSessions.key === 'estimatedEngagedVisits'
+          ? {
+              label: replacementForEngagedSessions.label,
+              value: formatNumber(replacementForEngagedSessions.value)
+            }
+          : {
+              label: 'Engaged sessions',
+              value: formatNumber(data.totals.engagedSessions)
+            }
+      ];
+    },
     [
       data.derived.engagedSessionShare,
       data.derived.newUserShare,
       data.derived.uniqueVisitorShare,
+      data.metricValues,
+      data.provider.metrics,
       data.totals.averageSessionDurationSeconds,
       data.totals.pageViews,
       data.totals.visits,
@@ -853,17 +920,19 @@ export default function TrafficAnalyticsDashboard({
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Need raw analytics?</h3>
           <p className="text-sm text-slate-600 dark:text-neutral-300">
-            Jump into the dedicated traffic workspace for deeper segmentation, funnel exploration, and custom dashboards powered by Google Analytics.
+            Jump into the dedicated traffic workspace for deeper segmentation, funnel exploration, and custom dashboards powered by {data.provider.label}.
           </p>
         </div>
-        <a
-          href="https://analytics.google.com/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-        >
-          Open traffic workspace
-        </a>
+        {data.provider.externalDashboardUrl ? (
+          <a
+            href={data.provider.externalDashboardUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+          >
+            Open {data.provider.label} workspace
+          </a>
+        ) : null}
       </div>
 
       {modalState.group ? (

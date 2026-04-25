@@ -90,6 +90,10 @@ function getDefaultSecretEnvNames(env = process.env) {
     addSecretEnvNames(envNames, ['GA_SERVICE_ACCOUNT_CREDENTIALS_B64']);
   }
 
+  if ((env.TRAFFIC_ANALYTICS_PROVIDER || '').trim().toLowerCase() === 'posthog') {
+    addSecretEnvNames(envNames, ['POSTHOG_PERSONAL_API_KEY', 'NEXT_PUBLIC_POSTHOG_KEY']);
+  }
+
   return envNames;
 }
 

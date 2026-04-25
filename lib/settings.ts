@@ -191,6 +191,7 @@ export const SETTING_KEYS = {
   ,ADMIN_ACTION_NOTIFICATION_ACTIONS: 'ADMIN_ACTION_NOTIFICATION_ACTIONS'
   ,ADMIN_ALERT_EMAIL_TYPES: 'ADMIN_ALERT_EMAIL_TYPES'
   ,SUPPORT_EMAIL_NOTIFICATION_TYPES: 'SUPPORT_EMAIL_NOTIFICATION_TYPES'
+  ,TRAFFIC_ANALYTICS_PROVIDER: 'TRAFFIC_ANALYTICS_PROVIDER'
 } as const;
 
 /**
@@ -518,6 +519,7 @@ export const SETTING_DEFAULTS = {
   ,[SETTING_KEYS.ADMIN_ACTION_NOTIFICATION_ACTIONS]: '[]'
   ,[SETTING_KEYS.ADMIN_ALERT_EMAIL_TYPES]: '["refund","new_purchase","renewal","upgrade","downgrade","payment_failed","dispute","other"]'
   ,[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]: '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
+  ,[SETTING_KEYS.TRAFFIC_ANALYTICS_PROVIDER]: 'google-analytics'
 } as const;
 
 const THEME_HEX_RE = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;

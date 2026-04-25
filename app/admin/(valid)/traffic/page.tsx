@@ -7,6 +7,7 @@ import { dashboardMutedPanelClass } from '../../../../components/dashboard/dashb
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRoad } from '@fortawesome/free-solid-svg-icons';
 import { buildDashboardMetadata } from '../../../../lib/dashboardMetadata';
+import { getMetricDescriptor } from '../../../../lib/admin-traffic-ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function generateMetadata() {
   return buildDashboardMetadata({
     page: 'Traffic',
     description:
-      'Monitor visits, page views, and engagement trends to quickly spot anomalies and opportunities using Google Analytics intelligence.',
+      'Monitor visits, page views, and traffic-quality trends to quickly spot anomalies and opportunities using your configured analytics provider.',
     audience: 'admin',
   });
 }
@@ -90,6 +91,10 @@ export default async function TrafficPage() {
     }
   ];
 
+  const replacementForNewUsers = getMetricDescriptor(traffic, 'newUsers');
+  const replacementForEngagedSessions = getMetricDescriptor(traffic, 'engagedSessions');
+  const replacementForEngagementRate = getMetricDescriptor(traffic, 'engagementRate');
+
   let engagementSnapshot: AdminTrafficResponse = traffic;
   try {
     engagementSnapshot = await getAdminTrafficSnapshot({ period: '7d' });
@@ -123,12 +128,26 @@ export default async function TrafficPage() {
       helper: 'Screens and page views captured',
       accent: 'theme'
     },
-    {
-      label: 'New users (30D)',
-      value: formatNumber(traffic.totals.newUsers),
-      helper: `${formatPercent(traffic.derived.newUserShare)} of visits`,
-      accent: 'theme'
-    },
+    replacementForNewUsers.key === 'bounceRate'
+      ? {
+          label: `${replacementForNewUsers.label} (30D)`,
+          value: formatPercent(traffic.metricValues.bounceRate ?? 0),
+          helper: 'Supported directly by the active traffic provider',
+          accent: 'theme'
+        }
+      : replacementForNewUsers.key === 'viewsPerVisit'
+      ? {
+          label: `${replacementForNewUsers.label} (30D)`,
+          value: (traffic.metricValues.viewsPerVisit ?? 0).toFixed(2),
+          helper: 'Average page views per visit',
+          accent: 'theme'
+        }
+      : {
+          label: 'New users (30D)',
+          value: formatNumber(traffic.totals.newUsers),
+          helper: `${formatPercent(traffic.derived.newUserShare)} of visits`,
+          accent: 'theme'
+        },
     {
       label: 'Avg session duration (30D)',
       value: formatDuration(traffic.totals.averageSessionDurationSeconds),
@@ -171,7 +190,9 @@ export default async function TrafficPage() {
           <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Engagement snapshot (7D)</p>
           <p className="text-sm text-slate-500 dark:text-neutral-400">Summary for the last 7 days vs the prior 7-day period</p>
           <p>
-            {formatNumber(engagementSnapshot.totals.engagedSessions)} engaged sessions · {formatPercent(engagementSnapshot.derived.engagedSessionShare)} engaged share
+            {replacementForEngagedSessions.key === 'estimatedEngagedVisits'
+              ? `${formatNumber(engagementSnapshot.metricValues.estimatedEngagedVisits ?? 0)} ${replacementForEngagedSessions.label.toLowerCase()} · ${formatPercent(engagementSnapshot.metricValues.estimatedEngagedVisitRate ?? 0)} ${replacementForEngagementRate.label.toLowerCase()}`
+              : `${formatNumber(engagementSnapshot.totals.engagedSessions)} engaged sessions · ${formatPercent(engagementSnapshot.derived.engagedSessionShare)} engaged share`}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 dark:text-neutral-400">
@@ -214,10 +235,16 @@ export default async function TrafficPage() {
           <div className="space-y-1">
             <div className="uppercase tracking-wide text-slate-500 dark:text-neutral-400 text-[10px]">Engagement rate</div>
             <div className="flex items-baseline gap-2">
-              <div className="font-semibold text-slate-900 dark:text-neutral-100">{formatPercent(engagementSnapshot.totals.engagementRate)}</div>
+              <div className="font-semibold text-slate-900 dark:text-neutral-100">{formatPercent(replacementForEngagementRate.key === 'estimatedEngagedVisitRate' ? (engagementSnapshot.metricValues.estimatedEngagedVisitRate ?? 0) : engagementSnapshot.totals.engagementRate)}</div>
               {prevEngagementSnapshot ? (
                 (() => {
-                  const delta = computeDelta(engagementSnapshot.totals.engagementRate, prevEngagementSnapshot?.totals.engagementRate ?? null);
+                  const currentValue = replacementForEngagementRate.key === 'estimatedEngagedVisitRate'
+                    ? (engagementSnapshot.metricValues.estimatedEngagedVisitRate ?? 0)
+                    : engagementSnapshot.totals.engagementRate;
+                  const previousValue = replacementForEngagementRate.key === 'estimatedEngagedVisitRate'
+                    ? (prevEngagementSnapshot?.metricValues.estimatedEngagedVisitRate ?? null)
+                    : (prevEngagementSnapshot?.totals.engagementRate ?? null);
+                  const delta = computeDelta(currentValue, previousValue);
                   if (delta === null) return null;
                   const positive = delta > 0;
                   return (

@@ -2,6 +2,8 @@ export {
 	ADMIN_TRAFFIC_PERIODS,
 	TRAFFIC_BREAKDOWN_GROUPS,
 	getTrafficPeriodLabel,
+	type AdminTrafficMetricKey,
+	type AdminTrafficMetricValueMap,
 	type AdminTrafficBreakdownCountry,
 	type AdminTrafficBreakdownDevice,
 	type AdminTrafficBreakdownEvent,
@@ -11,11 +13,18 @@ export {
 	type AdminTrafficFilters,
 	type AdminTrafficPeriod,
 	type AdminTrafficPeriodOption,
+	type AdminTrafficProviderMeta,
 	type AdminTrafficResponse
 } from './admin-traffic-contract';
 
-import { type AdminTrafficFilters, type AdminTrafficPeriod, type AdminTrafficResponse } from './admin-traffic-contract';
-import { fetchTrafficSnapshot, type TrafficFilters } from './google-analytics';
+import {
+	type AdminTrafficFilters,
+	type AdminTrafficMetricValueMap,
+	type AdminTrafficPeriod,
+	type AdminTrafficProviderMeta,
+	type AdminTrafficResponse
+} from './admin-traffic-contract';
+import { fetchTrafficSnapshotFromProvider, type TrafficFilters } from './traffic-analytics-provider';
 import { toError } from './runtime-guards';
 import { Logger } from './logger';
 
@@ -23,6 +32,34 @@ const ALLOWED_PERIODS: AdminTrafficPeriod[] = ['1d', '2d', '7d', '30d', '90d', '
 const DEFAULT_PERIOD: AdminTrafficPeriod = '30d';
 
 const DEVICE_FALLBACK_OPTIONS: string[] = ['desktop', 'mobile', 'tablet'];
+
+function buildMetricValues(input: {
+	visits: number;
+	uniqueVisitors: number;
+	pageViews: number;
+	newUsers: number;
+	engagedSessions: number;
+	engagementRate: number;
+	averageSessionDurationSeconds: number;
+	bounceRate?: number;
+	viewsPerVisit?: number;
+	estimatedEngagedVisits?: number;
+	estimatedEngagedVisitRate?: number;
+}): AdminTrafficMetricValueMap {
+	return {
+		visits: input.visits,
+		uniqueVisitors: input.uniqueVisitors,
+		pageViews: input.pageViews,
+		newUsers: input.newUsers,
+		engagedSessions: input.engagedSessions,
+		engagementRate: input.engagementRate,
+		averageSessionDurationSeconds: input.averageSessionDurationSeconds,
+		bounceRate: input.bounceRate,
+		viewsPerVisit: input.viewsPerVisit,
+		estimatedEngagedVisits: input.estimatedEngagedVisits,
+		estimatedEngagedVisitRate: input.estimatedEngagedVisitRate,
+	};
+}
 
 const sanitiseString = (value?: string | null): string | undefined => {
 	if (!value) {
@@ -77,7 +114,7 @@ export async function getAdminTrafficSnapshot(
 	const normalizedFilters = normalizeTrafficFilters(filters);
 
 	try {
-		const snapshot = await fetchTrafficSnapshot(normalizedFilters as TrafficFilters);
+		const snapshot = await fetchTrafficSnapshotFromProvider(normalizedFilters as TrafficFilters);
 
 		const visits = snapshot.totalVisits;
 		const uniqueVisitors = snapshot.uniqueVisitors;
@@ -137,6 +174,20 @@ export async function getAdminTrafficSnapshot(
 		return {
 			period: normalizedFilters.period,
 			filters: normalizedFilters,
+			provider: snapshot.provider as AdminTrafficProviderMeta,
+			metricValues: buildMetricValues({
+				visits,
+				uniqueVisitors,
+				pageViews,
+				newUsers,
+				engagedSessions,
+				engagementRate,
+				averageSessionDurationSeconds: avgSessionDuration,
+				bounceRate: snapshot.bounceRate,
+				viewsPerVisit: snapshot.viewsPerVisit,
+				estimatedEngagedVisits: snapshot.estimatedEngagedVisits,
+				estimatedEngagedVisitRate: snapshot.estimatedEngagedVisitRate
+			}),
 			range: {
 				start: snapshot.rangeStart,
 				end: snapshot.rangeEnd,

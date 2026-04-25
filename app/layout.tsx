@@ -37,6 +37,7 @@ import VisitTracker from '../components/VisitTracker';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
+import { getTrafficAnalyticsClientConfig } from '../lib/traffic-analytics-config';
 
 fontAwesomeConfig.autoAddCss = false;
 
@@ -253,8 +254,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
 
   const themeColorVarsCss = buildThemeColorVarsCss();
-  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  const shouldInjectGa = Boolean(gaMeasurementId);
+  const trafficAnalytics = await getTrafficAnalyticsClientConfig();
+  const gaMeasurementId = trafficAnalytics.googleAnalytics.measurementId;
+  const shouldInjectGa = trafficAnalytics.googleAnalytics.shouldInject;
+  const shouldInjectPostHog = trafficAnalytics.postHog.shouldInject;
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
   const activeAuthProvider = process.env.AUTH_PROVIDER || 'clerk';
   const clerkEnabled = activeAuthProvider === 'clerk' && !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -329,7 +332,20 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true, send_page_view: false
               />
             </>
           ) : null}
-          <VisitTracker measurementId={gaMeasurementId} />
+          {shouldInjectPostHog ? (
+            <Script
+              id="posthog-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once reset debug register register_once unregister opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing captureException setPersonProperties group setGroupProperties resetGroups".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init(${JSON.stringify(trafficAnalytics.postHog.projectApiKey)}, { api_host: ${JSON.stringify(trafficAnalytics.postHog.apiHost)}, defaults: '2026-01-30', capture_pageview: false, autocapture: false, capture_pageleave: false, disable_session_recording: true, person_profiles: 'identified_only' });`,
+              }}
+            />
+          ) : null}
+          <VisitTracker
+            provider={trafficAnalytics.provider}
+            measurementId={gaMeasurementId || undefined}
+            postHogApiKey={trafficAnalytics.postHog.projectApiKey || undefined}
+          />
           {/* Payment provider scripts (loaded dynamically based on active provider) */}
           <PaymentProviderScripts provider={process.env.PAYMENT_PROVIDER} />
           <SiteHeader

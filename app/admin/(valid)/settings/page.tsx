@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSliders } from '@fortawesome/free-solid-svg-icons';
 import { Logger } from '../../../../lib/logger';
 import { getAdminEnvironmentSettings } from '../../../../lib/admin-system-snapshot';
+import { getTrafficAnalyticsProviderHealth } from '../../../../lib/traffic-analytics-config';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -38,6 +39,7 @@ export default async function AdminSettingsPage() {
   // Get database settings
   const settings = await prisma.setting.findMany({ orderBy: { key: 'asc' } }) as Array<{ key: string; value: string }>;
   const moderatorPermissions = await fetchModeratorPermissions();
+  const trafficAnalyticsHealth = await getTrafficAnalyticsProviderHealth();
 
   // Environment settings (read-only)
   // NOTE: SITE_NAME is intentionally not listed here so it can be edited and persisted via the Admin UI.
@@ -75,6 +77,7 @@ export default async function AdminSettingsPage() {
       <AdminSettingsTabs
         databaseSettings={settings}
         moderatorPermissions={moderatorPermissions}
+        trafficAnalyticsHealth={trafficAnalyticsHealth}
       />
     </div>
   );

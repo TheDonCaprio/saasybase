@@ -4,6 +4,7 @@ import * as loadRuntimeEnvModule from '../scripts/load-runtime-env.js';
 const {
   loadRuntimeEnv,
   detectSecretsProviderOutputShape,
+  getDefaultSecretEnvNames,
   parseSecretList,
   parseSecretsProviderOutput,
   runSecretsProviderCommand,
@@ -126,5 +127,15 @@ describe('scripts/load-runtime-env', () => {
     } finally {
       process.env = originalEnv;
     }
+  });
+
+  it('adds PostHog secrets when PostHog is the selected traffic provider', () => {
+    const result = getDefaultSecretEnvNames({
+      NODE_ENV: 'test',
+      TRAFFIC_ANALYTICS_PROVIDER: 'posthog',
+    } as NodeJS.ProcessEnv);
+
+    expect(result).toContain('POSTHOG_PERSONAL_API_KEY');
+    expect(result).toContain('NEXT_PUBLIC_POSTHOG_KEY');
   });
 });

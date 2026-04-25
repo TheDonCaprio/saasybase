@@ -9,11 +9,13 @@ import { PaymentProvidersPanel } from './PaymentProvidersPanel';
 import { MODERATOR_SECTIONS, type ModeratorPermissions, type ModeratorSection } from '../../lib/moderator-shared';
 import { showToast } from '../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport } from '@fortawesome/free-solid-svg-icons';
+import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { PaidTokenOperationsPanel } from './settings/panels/PaidTokenOperationsPanel';
 import { AdminActionNotificationPanel } from './settings/panels/AdminActionNotificationPanel';
 import { EmailAlertSettingsPanel } from './settings/panels/EmailAlertSettingsPanel';
 import { SupportEmailSettingsPanel } from './settings/panels/SupportEmailSettingsPanel';
+import { TrafficAnalyticsSettingsPanel } from './settings/panels/TrafficAnalyticsSettingsPanel';
+import type { TrafficAnalyticsProviderHealth } from '../../lib/traffic-analytics-config';
 
 interface Setting {
   key: string;
@@ -24,6 +26,7 @@ interface Setting {
 interface AdminSettingsTabsProps {
   databaseSettings: Setting[];
   moderatorPermissions: ModeratorPermissions;
+  trafficAnalyticsHealth: TrafficAnalyticsProviderHealth;
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
@@ -72,7 +75,7 @@ const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; descri
   }
 };
 
-export function AdminSettingsTabs({ databaseSettings, moderatorPermissions }: AdminSettingsTabsProps) {
+export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, trafficAnalyticsHealth }: AdminSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('branding');
   const [moderatorAccess, setModeratorAccess] = useState<ModeratorPermissions>(moderatorPermissions);
   const [exporting, setExporting] = useState(false);
@@ -251,6 +254,17 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions }: Ad
         )
       },
       {
+        id: 'analytics',
+        label: 'Analytics',
+        icon: faChartLine,
+        description: 'Choose the traffic provider and verify provider health',
+        content: (
+          <div className="space-y-6">
+            <TrafficAnalyticsSettingsPanel initialHealth={trafficAnalyticsHealth} />
+          </div>
+        )
+      },
+      {
         id: 'formatting',
         label: 'Locale',
         icon: faClock,
@@ -324,6 +338,7 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions }: Ad
     [
       databaseSettings,
       moderatorAccess,
+      trafficAnalyticsHealth,
       savingSections,
       updateModeratorAccess
     ]

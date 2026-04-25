@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../lib/auth';
 import { Logger } from '../../../../lib/logger';
 import { toError } from '../../../../lib/runtime-guards';
-import { fetchTrafficBreakdown } from '../../../../lib/google-analytics';
+import { fetchTrafficBreakdownFromProvider } from '../../../../lib/traffic-analytics-provider';
 import type { BreakdownGroup } from '../../../../lib/google-analytics';
 import {
   ADMIN_TRAFFIC_PERIODS,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       const normalizedPageNumber = Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1;
       const normalizedPageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.min(pageSize, 100) : 25;
 
-      const breakdown = await fetchTrafficBreakdown(groupParamRaw as BreakdownGroup, normalizedFilters, {
+      const breakdown = await fetchTrafficBreakdownFromProvider(groupParamRaw as BreakdownGroup, normalizedFilters, {
         page: normalizedPageNumber,
         pageSize: normalizedPageSize
       });

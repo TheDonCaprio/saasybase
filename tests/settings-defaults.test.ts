@@ -25,6 +25,7 @@ describe('fresh install setting defaults', () => {
     expect(SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]).toBe('monthly');
     expect(SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]).toBe('50');
     expect(SETTING_DEFAULTS[SETTING_KEYS.FORMAT_MODE]).toBe('numeric-dmy-24');
+    expect(SETTING_DEFAULTS[SETTING_KEYS.TRAFFIC_ANALYTICS_PROVIDER]).toBe('google-analytics');
   });
 
   it('matches the expected content, header, and pricing defaults', () => {

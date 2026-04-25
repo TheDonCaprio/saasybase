@@ -1439,7 +1439,7 @@ Complete these steps after local development is finished and before you point re
 # Optional built-in secrets-provider bootstrap:
 # SECRETS_PROVIDER="infisical"   # or "doppler"
 # SECRETS_PROVIDER_COMMAND=""    # optional full command override
-# SECRETS_PROVIDER_SECRETS="DATABASE_URL,ENCRYPTION_SECRET,INTERNAL_API_TOKEN"
+# SECRETS_PROVIDER_SECRETS="DATABASE_URL,ENCRYPTION_SECRET"   # optional narrowing allowlist; omit to allow any missing provider keys
 # INFISICAL_PROJECT_ID="your-project-id"
 # INFISICAL_ENVIRONMENT="production"
 # DOPPLER_PROJECT="saasybase"
@@ -1530,7 +1530,7 @@ Optional provider hints:
 - `INFISICAL_ENVIRONMENT`
 - `DOPPLER_PROJECT`
 - `DOPPLER_CONFIG`
-- `SECRETS_PROVIDER_SECRETS` as a comma-separated allowlist when you want to narrow the fetch set
+- `SECRETS_PROVIDER_SECRETS` as a comma-separated allowlist when you want to narrow bootstrap to a specific subset of provider keys
 
 The app only fills missing values. If a value is already present in platform envs or `.env.local`, it wins.
 
@@ -1577,7 +1577,7 @@ Supported bootstrap env vars:
 
 - `SECRETS_PROVIDER=infisical` or `SECRETS_PROVIDER=doppler` enables the integration
 - `SECRETS_PROVIDER_COMMAND` overrides the provider CLI command completely
-- `SECRETS_PROVIDER_SECRETS` provides an optional comma-separated allowlist of env var names to fetch
+- `SECRETS_PROVIDER_SECRETS` provides an optional comma-separated allowlist of env var names to fetch; when omitted, any missing env var returned by the provider is eligible to load
 - `INFISICAL_PROJECT_ID` and `INFISICAL_ENVIRONMENT` shape the default Infisical export command
 - `DOPPLER_PROJECT` and `DOPPLER_CONFIG` shape the default Doppler export command
 

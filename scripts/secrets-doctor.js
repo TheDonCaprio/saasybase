@@ -2,7 +2,6 @@
 
 const {
   formatSecretLoadFailures,
-  getDefaultSecretEnvNames,
   loadDotenvFiles,
   loadRuntimeEnv,
   parseSecretList,
@@ -23,7 +22,7 @@ What it checks:
   - the exact provider command that would run before boot
   - whether the command executes successfully
   - the detected output shape
-  - whether expected secret keys are present in the provider output
+  - whether allowlisted secret keys are present in the provider output when SECRETS_PROVIDER_SECRETS is set
 `);
 }
 
@@ -68,12 +67,18 @@ async function main() {
 
   const expectedEnvNames = parseSecretList(process.env.SECRETS_PROVIDER_SECRETS);
   const providerKeys = Object.keys(providerEnvMap);
-  const presentExpectedKeys = expectedEnvNames.filter((name) => Object.prototype.hasOwnProperty.call(providerEnvMap, name));
-  const missingExpectedKeys = expectedEnvNames.filter((name) => !Object.prototype.hasOwnProperty.call(providerEnvMap, name));
 
   console.log(`Provider key count: ${providerKeys.length}`);
-  console.log(`Expected keys found: ${summarizeList(presentExpectedKeys)}`);
-  console.log(`Expected keys missing: ${summarizeList(missingExpectedKeys)}`);
+  if (expectedEnvNames) {
+    const presentExpectedKeys = expectedEnvNames.filter((name) => Object.prototype.hasOwnProperty.call(providerEnvMap, name));
+    const missingExpectedKeys = expectedEnvNames.filter((name) => !Object.prototype.hasOwnProperty.call(providerEnvMap, name));
+
+    console.log(`Allowlist active: yes (${summarizeList(expectedEnvNames)})`);
+    console.log(`Allowlisted keys found: ${summarizeList(presentExpectedKeys)}`);
+    console.log(`Allowlisted keys missing: ${summarizeList(missingExpectedKeys)}`);
+  } else {
+    console.log('Allowlist active: no (all provider keys are eligible to backfill missing env vars)');
+  }
 
   const loadResult = await loadRuntimeEnv();
   if (loadResult.failed.length > 0) {
@@ -81,10 +86,10 @@ async function main() {
     process.exit(1);
   }
 
-  const expectedResolvedKeys = getDefaultSecretEnvNames(process.env)
+  const resolvedProviderKeys = providerKeys
     .filter((name) => typeof process.env[name] === 'string' && process.env[name].trim().length > 0);
 
-  console.log(`Resolved after merge: ${summarizeList(expectedResolvedKeys)}`);
+  console.log(`Resolved provider keys after merge: ${summarizeList(resolvedProviderKeys)}`);
   console.log(`Loaded from provider during merge: ${summarizeList(loadResult.loaded)}`);
   console.log(`Already present before merge: ${summarizeList(loadResult.skipped)}`);
   console.log('Status: OK');

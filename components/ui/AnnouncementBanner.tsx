@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBullhorn, faXmark } from '@fortawesome/free-solid-svg-icons';
 
@@ -13,25 +13,26 @@ export function AnnouncementBanner({ message }: AnnouncementBannerProps) {
     () => `announcement-dismissed-${encodeURIComponent(message.slice(0, 50))}`,
     [message],
   );
+  const [dismissedInSession, setDismissedInSession] = useState(false);
 
-  // Keep first render deterministic across server/client; hydrate then check storage.
-  const [visible, setVisible] = useState(true);
+  const isPersistentlyDismissed = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
 
-  useEffect(() => {
     try {
-      const isDismissed = Boolean(localStorage.getItem(dismissedKey));
-      if (isDismissed) setVisible(false);
+      return Boolean(window.localStorage.getItem(dismissedKey));
     } catch {
-      // ignore storage failures
+      return false;
     }
   }, [dismissedKey]);
 
   const dismiss = () => {
     localStorage.setItem(dismissedKey, '1');
-    setVisible(false);
+    setDismissedInSession(true);
   };
 
-  if (!message.trim() || !visible) return null;
+  if (!message.trim() || dismissedInSession || isPersistentlyDismissed) return null;
 
   return (
     <div

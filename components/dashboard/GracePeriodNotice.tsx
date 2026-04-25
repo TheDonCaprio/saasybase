@@ -24,7 +24,6 @@ export function GracePeriodNotice() {
   const { orgId } = useAuthSession();
   const [status, setStatus] = useState<GraceStatus | null>(null);
   const [hiddenScopeKey, setHiddenScopeKey] = useState<string | null>(null);
-  const [dismissedUntilIso, setDismissedUntilIso] = useState<string | null>(null);
   const formatSettings = useFormatSettings();
   const scopeStorageKey = `${DISMISS_UNTIL_KEY_PREFIX}:${orgId ?? 'personal'}`;
 
@@ -51,12 +50,15 @@ export function GracePeriodNotice() {
     };
   }, [isLoaded, isSignedIn, orgId]);
 
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+  const dismissedUntilIso = useMemo(() => {
+    if (!isLoaded || !isSignedIn || typeof window === 'undefined') {
+      return null;
+    }
+
     try {
-      setDismissedUntilIso(localStorage.getItem(scopeStorageKey));
+      return window.localStorage.getItem(scopeStorageKey);
     } catch {
-      setDismissedUntilIso(null);
+      return null;
     }
   }, [isLoaded, isSignedIn, scopeStorageKey]);
 

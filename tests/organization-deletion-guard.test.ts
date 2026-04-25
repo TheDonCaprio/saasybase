@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getOrganizationActiveTeamPlans, deleteOrganizationByProviderId } from '@/lib/teams';
 import { prisma } from '@/lib/prisma';
 
+type OrganizationDeleteResult = Awaited<ReturnType<typeof prisma.organization.delete>>;
+type OrganizationFindUniqueResult = Awaited<ReturnType<typeof prisma.organization.findUnique>>;
+type SubscriptionFindManyResult = Awaited<ReturnType<typeof prisma.subscription.findMany>>;
+
+function asOrganizationFindUniqueResult(value: unknown): OrganizationFindUniqueResult {
+	return value as OrganizationFindUniqueResult;
+}
+
+function asSubscriptionFindManyResult(value: unknown): SubscriptionFindManyResult {
+	return value as SubscriptionFindManyResult;
+}
+
 vi.mock('@/lib/prisma', () => ({
 	prisma: {
 		organization: {
@@ -34,7 +46,7 @@ describe('Organization Deletion Guards', () => {
 
 	describe('getOrganizationActiveTeamPlans', () => {
 		it('should return null if no active subscriptions exist', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
 			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([]);
 
 			const result = await getOrganizationActiveTeamPlans('org-123');
@@ -43,8 +55,8 @@ describe('Organization Deletion Guards', () => {
 		});
 
 		it('should return null if subscriptions exist but no team plans', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
-			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
+			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce(asSubscriptionFindManyResult([
 				{
 					id: 'sub-1',
 					plan: {
@@ -53,8 +65,8 @@ describe('Organization Deletion Guards', () => {
 						scope: 'INDIVIDUAL',
 						supportsOrganizations: false,
 					},
-				} as any,
-			]);
+				},
+			]));
 
 			const result = await getOrganizationActiveTeamPlans('org-123');
 
@@ -62,7 +74,7 @@ describe('Organization Deletion Guards', () => {
 		});
 
 		it('should return active team plans if they exist', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
 			const mockSubscription = {
 				id: 'sub-1',
 				plan: {
@@ -73,7 +85,7 @@ describe('Organization Deletion Guards', () => {
 				},
 			};
 
-			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([mockSubscription] as any);
+			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce(asSubscriptionFindManyResult([mockSubscription]));
 
 			const result = await getOrganizationActiveTeamPlans('org-123');
 
@@ -81,7 +93,7 @@ describe('Organization Deletion Guards', () => {
 		});
 
 		it('should filter out non-team plans', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
 			const teamPlan = {
 				id: 'sub-1',
 				plan: {
@@ -102,7 +114,7 @@ describe('Organization Deletion Guards', () => {
 				},
 			};
 
-			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([teamPlan, individualPlan] as any);
+			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce(asSubscriptionFindManyResult([teamPlan, individualPlan]));
 
 			const result = await getOrganizationActiveTeamPlans('org-123');
 
@@ -110,7 +122,7 @@ describe('Organization Deletion Guards', () => {
 		});
 
 		it('should block deletion when team plan is active for owner even if organizationId link is missing', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-owner' } as any);
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-owner' }));
 			const ownerTeamPlan = {
 				id: 'sub-owner-1',
 				organizationId: null,
@@ -122,7 +134,7 @@ describe('Organization Deletion Guards', () => {
 				},
 			};
 
-			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([ownerTeamPlan] as any);
+			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce(asSubscriptionFindManyResult([ownerTeamPlan]));
 
 			const result = await getOrganizationActiveTeamPlans('org-legacy');
 
@@ -142,13 +154,13 @@ describe('Organization Deletion Guards', () => {
 				},
 			};
 
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({
 				id: 'org-123',
 				providerOrganizationId: 'clerk-org-123',
-			} as any);
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
+			}));
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
 
-			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([mockTeamPlan] as any);
+			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce(asSubscriptionFindManyResult([mockTeamPlan]));
 
 			const result = await deleteOrganizationByProviderId('clerk-org-123');
 
@@ -157,17 +169,17 @@ describe('Organization Deletion Guards', () => {
 		});
 
 		it('should allow deletion if organization has no team plans', async () => {
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({
 				id: 'org-123',
 				providerOrganizationId: 'clerk-org-123',
-			} as any);
-			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce({ ownerUserId: 'user-1' } as any);
+			}));
+			vi.mocked(prisma.organization.findUnique).mockResolvedValueOnce(asOrganizationFindUniqueResult({ ownerUserId: 'user-1' }));
 
 			vi.mocked(prisma.subscription.findMany).mockResolvedValueOnce([]);
 
 			vi.mocked(prisma.subscription.updateMany).mockResolvedValueOnce({ count: 0 });
 			vi.mocked(prisma.payment.updateMany).mockResolvedValueOnce({ count: 0 });
-			vi.mocked(prisma.organization.delete).mockResolvedValueOnce({} as any);
+			vi.mocked(prisma.organization.delete).mockResolvedValueOnce({} as OrganizationDeleteResult);
 
 			const result = await deleteOrganizationByProviderId('clerk-org-123');
 

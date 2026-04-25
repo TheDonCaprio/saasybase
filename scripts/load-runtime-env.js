@@ -117,7 +117,7 @@ function loadDotenvFiles() {
 
 function parseSecretList(value) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    return getDefaultSecretEnvNames();
+    return null;
   }
 
   return Array.from(
@@ -426,19 +426,6 @@ async function loadSecretsProviderEnv() {
   const secretEnvNames = parseSecretList(process.env.SECRETS_PROVIDER_SECRETS);
   const loaded = [];
   const skipped = [];
-  const missing = [];
-
-  for (const envName of secretEnvNames) {
-    if (typeof process.env[envName] === 'string' && process.env[envName].trim().length > 0) {
-      skipped.push(envName);
-      continue;
-    }
-    missing.push(envName);
-  }
-
-  if (missing.length === 0) {
-    return { enabled: true, provider, command, loaded, skipped, failed: [] };
-  }
 
   let envMap;
   try {
@@ -454,7 +441,17 @@ async function loadSecretsProviderEnv() {
     };
   }
 
-  for (const envName of missing) {
+  const candidateEnvNames = secretEnvNames ?? Object.keys(envMap);
+  if (candidateEnvNames.length === 0) {
+    return { enabled: true, provider, command, loaded, skipped, failed: [] };
+  }
+
+  for (const envName of candidateEnvNames) {
+    if (typeof process.env[envName] === 'string' && process.env[envName].trim().length > 0) {
+      skipped.push(envName);
+      continue;
+    }
+
     const value = envMap[envName];
     if (typeof value === 'string' && value.trim().length > 0) {
       process.env[envName] = value;

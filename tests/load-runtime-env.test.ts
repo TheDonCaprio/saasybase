@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import * as loadRuntimeEnvModule from '../scripts/load-runtime-env.js';
 
 const {
+  loadRuntimeEnv,
   detectSecretsProviderOutputShape,
+  parseSecretList,
   parseSecretsProviderOutput,
   runSecretsProviderCommand,
-} = require('../scripts/load-runtime-env.js');
+} = loadRuntimeEnvModule;
 
 describe('scripts/load-runtime-env', () => {
   it('parses Doppler-style JSON object output', () => {
@@ -57,7 +60,7 @@ describe('scripts/load-runtime-env', () => {
   });
 
   it('reports disabled state when no provider is configured', () => {
-    const result = runSecretsProviderCommand({});
+    const result = runSecretsProviderCommand({ NODE_ENV: 'test' } as NodeJS.ProcessEnv);
 
     expect(result).toEqual({
       enabled: false,
@@ -69,5 +72,59 @@ describe('scripts/load-runtime-env', () => {
       outputShape: 'disabled',
       failed: [],
     });
+  });
+
+  it('treats an unset secret list as load-all mode', () => {
+    expect(parseSecretList(undefined)).toBeNull();
+    expect(parseSecretList('')).toBeNull();
+  });
+
+  it('loads all missing provider keys by default', async () => {
+    const originalEnv = process.env;
+
+    process.env = {
+      ...originalEnv,
+      SECRETS_PROVIDER: 'doppler',
+      SECRETS_PROVIDER_COMMAND: "printf '{\"CUSTOM_PROVIDER_SECRET\":\"postgresql://example\",\"EXTRA_FLAG\":\"true\"}'",
+    } as NodeJS.ProcessEnv;
+
+    delete process.env.CUSTOM_PROVIDER_SECRET;
+    delete process.env.EXTRA_FLAG;
+
+    try {
+      const result = await loadRuntimeEnv();
+
+      expect(result.failed).toEqual([]);
+      expect(result.loaded).toEqual(['CUSTOM_PROVIDER_SECRET', 'EXTRA_FLAG']);
+      expect(process.env.CUSTOM_PROVIDER_SECRET).toBe('postgresql://example');
+      expect(process.env.EXTRA_FLAG).toBe('true');
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it('narrows provider loading when SECRETS_PROVIDER_SECRETS is set', async () => {
+    const originalEnv = process.env;
+
+    process.env = {
+      ...originalEnv,
+      SECRETS_PROVIDER: 'doppler',
+      SECRETS_PROVIDER_SECRETS: 'CUSTOM_PROVIDER_SECRET',
+      SECRETS_PROVIDER_COMMAND: "printf '{\"CUSTOM_PROVIDER_SECRET\":\"postgresql://example\",\"EXTRA_FLAG\":\"true\"}'",
+    } as NodeJS.ProcessEnv;
+
+    delete process.env.CUSTOM_PROVIDER_SECRET;
+    delete process.env.EXTRA_FLAG;
+
+    try {
+      const result = await loadRuntimeEnv();
+
+      expect(result.failed).toEqual([]);
+      expect(result.loaded).toEqual(['CUSTOM_PROVIDER_SECRET']);
+      expect(process.env.CUSTOM_PROVIDER_SECRET).toBe('postgresql://example');
+      expect(process.env.EXTRA_FLAG).toBeUndefined();
+    } finally {
+      process.env = originalEnv;
+    }
   });
 });

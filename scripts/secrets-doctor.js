@@ -2,6 +2,9 @@
 
 const {
   formatSecretLoadFailures,
+  formatSecretLoadSummary,
+  getProviderSecretEnvNames,
+  isProviderMetadataEnvName,
   loadDotenvFiles,
   loadRuntimeEnv,
   parseSecretList,
@@ -67,8 +70,12 @@ async function main() {
 
   const expectedEnvNames = parseSecretList(process.env.SECRETS_PROVIDER_SECRETS);
   const providerKeys = Object.keys(providerEnvMap);
+  const providerMetadataKeys = providerKeys.filter((name) => isProviderMetadataEnvName(name, commandResult.provider));
+  const eligibleProviderKeys = getProviderSecretEnvNames(providerEnvMap, commandResult.provider, process.env);
 
   console.log(`Provider key count: ${providerKeys.length}`);
+  console.log(`Provider metadata keys: ${summarizeList(providerMetadataKeys)}`);
+  console.log(`Eligible secret keys: ${summarizeList(eligibleProviderKeys)}`);
   if (expectedEnvNames) {
     const presentExpectedKeys = expectedEnvNames.filter((name) => Object.prototype.hasOwnProperty.call(providerEnvMap, name));
     const missingExpectedKeys = expectedEnvNames.filter((name) => !Object.prototype.hasOwnProperty.call(providerEnvMap, name));
@@ -77,7 +84,7 @@ async function main() {
     console.log(`Allowlisted keys found: ${summarizeList(presentExpectedKeys)}`);
     console.log(`Allowlisted keys missing: ${summarizeList(missingExpectedKeys)}`);
   } else {
-    console.log('Allowlist active: no (all provider keys are eligible to backfill missing env vars)');
+    console.log('Allowlist active: no (using the default secret key set for the current app configuration)');
   }
 
   const loadResult = await loadRuntimeEnv();
@@ -86,12 +93,11 @@ async function main() {
     process.exit(1);
   }
 
-  const resolvedProviderKeys = providerKeys
+  const resolvedProviderKeys = eligibleProviderKeys
     .filter((name) => typeof process.env[name] === 'string' && process.env[name].trim().length > 0);
 
   console.log(`Resolved provider keys after merge: ${summarizeList(resolvedProviderKeys)}`);
-  console.log(`Loaded from provider during merge: ${summarizeList(loadResult.loaded)}`);
-  console.log(`Already present before merge: ${summarizeList(loadResult.skipped)}`);
+  console.log(formatSecretLoadSummary(loadResult, 'Secrets doctor env'));
   console.log('Status: OK');
 }
 

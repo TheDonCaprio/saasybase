@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
+const { formatSecretLoadFailures, formatSecretLoadSummary, loadRuntimeEnv } = require('./load-runtime-env');
 
 function parseList(value) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -110,8 +110,7 @@ async function main() {
   if (secretLoadResult.command) {
     console.log(`Command: ${secretLoadResult.command}`);
   }
-  console.log(`Loaded from provider: ${loadedSummary}`);
-  console.log(`Already present and reused: ${skippedSummary}`);
+  console.log(formatSecretLoadSummary(secretLoadResult, 'Secrets smoke env'));
 }
 
 main().catch((error) => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { spawn } = require('child_process');
-const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
+const { formatSecretLoadFailures, formatSecretLoadSummary, loadRuntimeEnv } = require('./load-runtime-env');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -13,6 +13,8 @@ async function main() {
   const secretLoadResult = await loadRuntimeEnv();
   if (secretLoadResult.enabled && secretLoadResult.failed.length > 0) {
     console.warn(`Warning: one or more secrets-provider values could not be loaded. Continuing with the merged environment from local env files plus any provider values that were resolved:\n${formatSecretLoadFailures(secretLoadResult)}`);
+  } else if (secretLoadResult.enabled) {
+    console.log(formatSecretLoadSummary(secretLoadResult, 'Secrets runtime env'));
   }
 
   const child = spawn(args[0], args.slice(1), {

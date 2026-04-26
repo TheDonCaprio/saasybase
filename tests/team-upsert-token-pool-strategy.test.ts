@@ -40,7 +40,11 @@ describe('upsertOrganization token pool strategy', () => {
   });
 
   it('persists a valid snapshot strategy instead of forcing the shared default', async () => {
-    prismaMock.organization.findUnique.mockResolvedValue(null);
+    prismaMock.organization.findUnique.mockImplementation(async ({ where }: { where: { providerOrganizationId?: string; slug?: string } }) => {
+      if (where.providerOrganizationId) return null;
+      if (where.slug) return null;
+      return null;
+    });
     prismaMock.organization.create.mockResolvedValue({ id: 'org_2', tokenPoolStrategy: 'ALLOCATED_PER_MEMBER' });
 
     await upsertOrganization({
@@ -55,6 +59,30 @@ describe('upsertOrganization token pool strategy', () => {
       data: expect.objectContaining({
         providerOrganizationId: 'provider_org_2',
         tokenPoolStrategy: 'ALLOCATED_PER_MEMBER',
+      }),
+    });
+  });
+
+  it('allocates a unique local slug when the requested slug is already taken', async () => {
+    prismaMock.organization.findUnique.mockImplementation(async ({ where }: { where: { providerOrganizationId?: string; slug?: string } }) => {
+      if (where.providerOrganizationId) return null;
+      if (where.slug === 'new-org') return { id: 'org_existing_slug' };
+      if (where.slug === 'new-org-1') return null;
+      return null;
+    });
+    prismaMock.organization.create.mockResolvedValue({ id: 'org_3', slug: 'new-org-1' });
+
+    await upsertOrganization({
+      providerOrganizationId: 'provider_org_3',
+      name: 'New Org',
+      slug: 'new-org',
+      ownerUserId: 'user_1',
+    });
+
+    expect(prismaMock.organization.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        providerOrganizationId: 'provider_org_3',
+        slug: 'new-org-1',
       }),
     });
   });

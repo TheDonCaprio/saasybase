@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Simple environment validator used before dev/build
 const { URL } = require('url');
-const { formatSecretLoadFailures, loadRuntimeEnv } = require('./load-runtime-env');
+const { formatSecretLoadFailures, formatSecretLoadSummary, loadRuntimeEnv } = require('./load-runtime-env');
 
 function fail(msg) {
   console.error('ENV VALIDATION ERROR:', msg);
@@ -74,6 +74,8 @@ async function main() {
   const secretLoadResult = await loadRuntimeEnv();
   if (secretLoadResult.enabled && secretLoadResult.failed.length > 0) {
     console.warn(`The configured secrets provider could not resolve one or more requested values. Continuing validation with the merged environment from local env files, platform envs, plus any provider values that were resolved:\n${formatSecretLoadFailures(secretLoadResult)}`);
+  } else if (secretLoadResult.enabled) {
+    console.log(formatSecretLoadSummary(secretLoadResult, 'Secrets validation env'));
   }
 
   const val = process.env.NEXT_PUBLIC_APP_URL;

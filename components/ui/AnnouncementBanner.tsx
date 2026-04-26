@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBullhorn, faXmark } from '@fortawesome/free-solid-svg-icons';
 
@@ -14,21 +14,23 @@ export function AnnouncementBanner({ message }: AnnouncementBannerProps) {
     [message],
   );
   const [dismissedInSession, setDismissedInSession] = useState(false);
+  const [isPersistentlyDismissed, setIsPersistentlyDismissed] = useState(false);
 
-  const isPersistentlyDismissed = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
+  useEffect(() => {
     try {
-      return Boolean(window.localStorage.getItem(dismissedKey));
+      setIsPersistentlyDismissed(Boolean(window.localStorage.getItem(dismissedKey)));
     } catch {
-      return false;
+      setIsPersistentlyDismissed(false);
     }
   }, [dismissedKey]);
 
   const dismiss = () => {
-    localStorage.setItem(dismissedKey, '1');
+    try {
+      localStorage.setItem(dismissedKey, '1');
+    } catch {
+      // ignore storage failures and fall back to session-only dismissal
+    }
+    setIsPersistentlyDismissed(true);
     setDismissedInSession(true);
   };
 

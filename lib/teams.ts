@@ -70,6 +70,24 @@ function coerceDate(value?: Date | string | number | null): Date | null {
 	return null;
 }
 
+async function resolveAvailableOrganizationSlug(preferredSlug: string, currentOrganizationId?: string): Promise<string> {
+	const normalizedBase = preferredSlug.trim() || `team-${randomUUID().slice(0, 8)}`;
+
+	for (let attempt = 0; attempt < 50; attempt += 1) {
+		const candidate = attempt === 0 ? normalizedBase : `${normalizedBase}-${attempt}`;
+		const existing = await prisma.organization.findUnique({
+			where: { slug: candidate },
+			select: { id: true },
+		});
+
+		if (!existing || existing.id === currentOrganizationId) {
+			return candidate;
+		}
+	}
+
+	return `${normalizedBase}-${randomUUID().slice(0, 8)}`;
+}
+
 async function getOrganizationId(identifiers: Identifiers): Promise<string | null> {
 	const { organizationId, organizationSlug } = identifiers;
 	const normalizedProviderOrganizationId = getProviderOrganizationId(identifiers);
@@ -144,7 +162,7 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 			const updateData: Record<string, unknown> = {};
 			const normalizedTokenPoolStrategy = normalizeTokenPoolStrategy(snapshot.tokenPoolStrategy);
 			if (snapshot.name) updateData.name = snapshot.name;
-			if (snapshot.slug) updateData.slug = snapshot.slug;
+			if (snapshot.slug) updateData.slug = await resolveAvailableOrganizationSlug(snapshot.slug, existing.id);
 			if (snapshot.ownerUserId) updateData.ownerUserId = snapshot.ownerUserId;
 			if (snapshot.billingEmail !== undefined) updateData.billingEmail = snapshot.billingEmail;
 			if (snapshot.planId !== undefined) updateData.planId = snapshot.planId;
@@ -170,11 +188,13 @@ export async function upsertOrganization(snapshot: OrganizationSnapshot) {
 			return null;
 		}
 
+		const slug = await resolveAvailableOrganizationSlug(snapshot.slug!);
+
 		return await prisma.organization.create({
 			data: {
 				providerOrganizationId: providerOrganizationId,
 				name: snapshot.name!,
-				slug: snapshot.slug!,
+				slug,
 				ownerUserId: snapshot.ownerUserId!,
 				billingEmail: snapshot.billingEmail ?? null,
 				suspendedAt: null,

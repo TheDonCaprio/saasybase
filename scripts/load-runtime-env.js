@@ -12,6 +12,11 @@ const CORE_SECRET_ENV_NAMES = [
   'CRON_PROCESS_EXPIRY_TOKEN',
 ];
 
+const PROVIDER_METADATA_PREFIXES = {
+	doppler: ['DOPPLER_'],
+	infisical: ['INFISICAL_'],
+};
+
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -134,10 +139,55 @@ function parseSecretList(value) {
   );
 }
 
+function isProviderMetadataEnvName(envName, provider) {
+  if (typeof envName !== 'string' || envName.trim().length === 0) {
+    return false;
+  }
+
+  const normalizedProvider = normalizeSecretsProvider(provider);
+  if (!normalizedProvider) {
+    return false;
+  }
+
+  const prefixes = PROVIDER_METADATA_PREFIXES[normalizedProvider] || [];
+  return prefixes.some((prefix) => envName.startsWith(prefix));
+}
+
+function getProviderSecretEnvNames(envMap, provider, env = process.env) {
+  const explicitSecretEnvNames = parseSecretList(env.SECRETS_PROVIDER_SECRETS);
+  const candidateEnvNames = explicitSecretEnvNames ?? getDefaultSecretEnvNames(env);
+
+  return candidateEnvNames.filter((envName) => {
+    if (typeof envName !== 'string' || envName.trim().length === 0) {
+      return false;
+    }
+
+    if (isProviderMetadataEnvName(envName, provider)) {
+      return false;
+    }
+
+    return Object.prototype.hasOwnProperty.call(envMap, envName);
+  });
+}
+
 function formatSecretLoadFailures(secretLoadResult) {
   return secretLoadResult.failed
     .map((entry) => `${entry.provider}: ${entry.message}`)
     .join('\n');
+}
+
+function summarizeSecretEnvNames(envNames) {
+  return Array.isArray(envNames) && envNames.length > 0 ? envNames.join(', ') : 'none';
+}
+
+function formatSecretLoadSummary(secretLoadResult, label = 'Secrets bootstrap') {
+  if (!secretLoadResult || !secretLoadResult.enabled || !secretLoadResult.provider) {
+    return `${label}: provider disabled`;
+  }
+
+  const loadedSummary = summarizeSecretEnvNames(secretLoadResult.loaded);
+  const reusedSummary = summarizeSecretEnvNames(secretLoadResult.skipped);
+  return `${label}: provider=${secretLoadResult.provider}; loaded from provider=${loadedSummary}; reused existing=${reusedSummary}`;
 }
 
 function normalizeSecretsProvider(value) {
@@ -427,7 +477,6 @@ async function loadSecretsProviderEnv() {
     };
   }
 
-  const secretEnvNames = parseSecretList(process.env.SECRETS_PROVIDER_SECRETS);
   const loaded = [];
   const skipped = [];
 
@@ -445,7 +494,7 @@ async function loadSecretsProviderEnv() {
     };
   }
 
-  const candidateEnvNames = secretEnvNames ?? Object.keys(envMap);
+  const candidateEnvNames = getProviderSecretEnvNames(envMap, provider, process.env);
   if (candidateEnvNames.length === 0) {
     return { enabled: true, provider, command, loaded, skipped, failed: [] };
   }
@@ -474,9 +523,12 @@ async function loadRuntimeEnv() {
 module.exports = {
   CORE_SECRET_ENV_NAMES,
   detectSecretsProviderOutputShape,
+  formatSecretLoadSummary,
   formatSecretLoadFailures,
   getDefaultSecretEnvNames,
+  getProviderSecretEnvNames,
   getSecretsProviderCommand,
+  isProviderMetadataEnvName,
   loadDotenvFiles,
   loadRuntimeEnv,
   parseSecretsProviderOutput,

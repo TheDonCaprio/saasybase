@@ -154,23 +154,25 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
           return (
             <section key={category.id} className={dashboardPanelClass('!p-0 overflow-hidden')}>
               {/* Category header — clickable toggle */}
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleCategory(category.id)}
-                className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-50 dark:hover:bg-neutral-800/40"
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCategory(category.id)}
+                className="flex w-full items-start gap-3 px-3 py-4 sm:px-5 cursor-pointer text-left transition-colors hover:bg-slate-50 dark:hover:bg-neutral-800/40 focus:outline-none focus:bg-slate-50/60 dark:focus:bg-neutral-800/60"
               >
                 <FontAwesomeIcon
                   icon={isOpen ? faChevronDown : faChevronRight}
-                  className="h-3 w-3 shrink-0 text-slate-400 dark:text-neutral-500"
+                  className="mt-1.5 h-3 w-3 shrink-0 text-slate-400 dark:text-neutral-500"
                 />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pr-2">
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{category.title}</h3>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">{category.description}</p>
+                  <p className="mt-0.5 text-xs whitespace-normal break-words text-slate-500 dark:text-neutral-400">{category.description}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                <span className="mt-0.5 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
                   {category.endpoints.length}
                 </span>
-              </button>
+              </div>
 
               {/* Endpoint list */}
               {isOpen ? (
@@ -217,30 +219,31 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
   return (
     <div className={clsx(!isLast && 'border-b border-slate-100 dark:border-neutral-800')}>
       {/* Collapsed row */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={hasDetails ? 0 : undefined}
         onClick={() => hasDetails && setOpen(prev => !prev)}
+        onKeyDown={(e) => hasDetails && (e.key === 'Enter' || e.key === ' ') && setOpen(prev => !prev)}
         className={clsx(
-          'flex w-full items-start gap-3 px-5 py-3.5 text-left transition-colors sm:items-center',
-          hasDetails && 'cursor-pointer hover:bg-slate-50/60 dark:hover:bg-neutral-800/30',
-          !hasDetails && 'cursor-default',
+          'flex w-full items-start gap-3 px-3 py-3.5 sm:px-5 text-left transition-colors focus:outline-none',
+          hasDetails ? 'cursor-pointer hover:bg-slate-50/60 dark:hover:bg-neutral-800/30 focus:bg-slate-50/60 dark:focus:bg-neutral-800/60' : 'cursor-default',
         )}
       >
         {/* Method badge */}
-        <span className={clsx('mt-0.5 shrink-0 rounded px-2 py-0.5 text-[11px] font-bold tracking-wider sm:mt-0', methodStyle)}>
+        <span className={clsx('mt-0.5 shrink-0 rounded px-2 py-0.5 text-[11px] font-bold tracking-wider', methodStyle)}>
           {endpoint.method}
         </span>
 
         {/* Path + summary */}
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="min-w-0 flex-1 pr-4">
+          <div className="flex flex-col gap-x-2 gap-y-1 sm:flex-row sm:flex-wrap sm:items-center">
             <code className="break-all text-sm font-semibold text-slate-800 dark:text-neutral-100">{endpoint.path}</code>
             <span className="text-sm text-slate-500 dark:text-neutral-400">{endpoint.summary}</span>
           </div>
         </div>
 
         {/* Access badge + chevron */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="mt-1 flex shrink-0 items-center gap-2">
           <span className={clsx('hidden rounded px-2 py-0.5 text-[10px] font-bold tracking-wider sm:inline-block', accessBadge)}>
             {ACCESS_LABELS[endpoint.access]}
           </span>
@@ -251,10 +254,10 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
             />
           ) : null}
         </div>
-      </button>
+      </div>
 
       {/* Mobile access badge — shown below on small screens */}
-      <div className="flex items-center gap-2 px-5 pb-2 sm:hidden">
+      <div className="flex items-center gap-2 px-3 pb-2 sm:hidden">
         <span className={clsx('rounded px-2 py-0.5 text-[10px] font-bold tracking-wider', accessBadge)}>
           {ACCESS_LABELS[endpoint.access]}
         </span>
@@ -270,7 +273,7 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
 
       {/* Expanded details */}
       {open ? (
-        <div className="border-t border-dashed border-slate-200/70 bg-slate-50/50 px-5 py-4 dark:border-neutral-700/50 dark:bg-neutral-900/40">
+        <div className="border-t border-dashed border-slate-200/70 bg-slate-50/50 px-3 py-4 sm:px-5 dark:border-neutral-700/50 dark:bg-neutral-900/40">
           <div className="space-y-4">
             {/* Copy button (desktop) + description */}
             <div className="flex flex-wrap items-start justify-between gap-3">

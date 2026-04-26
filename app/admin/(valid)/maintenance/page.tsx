@@ -6,6 +6,7 @@ import { faWrench } from '@fortawesome/free-solid-svg-icons';
 import { requireAdminPageAccess } from '@/lib/route-guards';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { MaintenanceTools } from '@/components/admin/MaintenanceTools';
+import { SentrySmokeTestPanel } from '@/components/admin/settings/panels/SentrySmokeTestPanel';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -28,6 +29,10 @@ export default async function AdminMaintenancePage() {
       />
 
       <MaintenanceTools />
+
+      <div className="space-y-3">
+        <SentrySmokeTestPanel />
+      </div>
     </div>
   );
 }

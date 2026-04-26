@@ -20,6 +20,23 @@ function parseUrlOrFail(name, value) {
   }
 }
 
+function validateDatabaseUrl(name, value) {
+  if (!isNonEmptyString(value)) {
+    fail(`${name} is not set. Configure it in .env.local, platform envs, or the optional secrets bootstrap before starting the app.`);
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.startsWith('file:')) {
+    const fileTarget = trimmed.slice('file:'.length).trim();
+    if (!fileTarget) {
+      fail(`${name} uses the SQLite file: scheme but does not include a database path.`);
+    }
+    return;
+  }
+
+  parseUrlOrFail(name, trimmed);
+}
+
 function isTruthyFlag(value) {
   if (typeof value !== 'string') return false;
   const normalized = value.trim().toLowerCase();
@@ -84,6 +101,8 @@ async function main() {
   }
   const appUrl = parseUrlOrFail('NEXT_PUBLIC_APP_URL', val);
   const localAppRuntime = isLocalHostname(appUrl.hostname);
+
+  validateDatabaseUrl('DATABASE_URL', process.env.DATABASE_URL || '');
 
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
   if (authProvider === 'clerk') {

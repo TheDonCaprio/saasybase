@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { showToast } from '../../../ui/Toast';
 import {
   captureSentryException,
@@ -12,9 +12,13 @@ import {
 export function SentrySmokeTestPanel() {
   const [sendingServer, setSendingServer] = useState(false);
   const [sendingClient, setSendingClient] = useState(false);
+  const [devCaptureEnabled, setDevCaptureEnabled] = useState(false);
 
   const clientSentryEnabled = isSentryRuntimeEnabled('client');
-  const devCaptureEnabled = isSentryDevelopmentCaptureEnabled();
+
+  useEffect(() => {
+    setDevCaptureEnabled(isSentryDevelopmentCaptureEnabled());
+  }, []);
 
   const triggerServerTest = async (level: 'warning' | 'error') => {
     if (sendingServer) return;
@@ -104,7 +108,7 @@ export function SentrySmokeTestPanel() {
               type="button"
               onClick={() => void triggerServerTest('error')}
               disabled={sendingServer}
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+              className="inline-flex items-center justify-center rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-500 dark:text-white dark:hover:bg-red-400"
             >
               {sendingServer ? 'Sending…' : 'Send server error'}
             </button>

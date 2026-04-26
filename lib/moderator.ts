@@ -14,16 +14,7 @@ export const MODERATOR_SECTIONS = [
   'organizations'
 ] as const;
 
-const DEFAULT_ENABLED_SECTIONS: readonly ModeratorSection[] = [
-  'users',
-  'transactions',
-  'purchases',
-  'subscriptions',
-  'support',
-  'notifications',
-  'blog',
-  'organizations'
-];
+const DEFAULT_ENABLED_SECTIONS: readonly ModeratorSection[] = ['support'];
 
 export type ModeratorSection = typeof MODERATOR_SECTIONS[number];
 export type ModeratorPermissions = Record<ModeratorSection, boolean>;

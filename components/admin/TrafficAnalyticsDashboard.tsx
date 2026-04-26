@@ -537,18 +537,7 @@ export default function TrafficAnalyticsDashboard({
             }
       ];
     },
-    [
-      data.derived.engagedSessionShare,
-      data.derived.newUserShare,
-      data.derived.uniqueVisitorShare,
-      data.metricValues,
-      data.provider.metrics,
-      data.totals.averageSessionDurationSeconds,
-      data.totals.pageViews,
-      data.totals.visits,
-      data.totals.uniqueVisitors,
-      data.totals.engagedSessions
-    ]
+    [data]
   );
 
   const graphFormatter = useMemo(() => new Intl.NumberFormat('en-US'), []);

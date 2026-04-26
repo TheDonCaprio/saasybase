@@ -113,6 +113,7 @@ describe('scripts/load-runtime-env', () => {
       DOPPLER_CONFIG: 'dev',
       EXTRA_FLAG: 'true',
     }, 'doppler', {
+      NODE_ENV: 'test',
       SECRETS_PROVIDER: 'doppler',
       PAYMENT_PROVIDER: 'stripe',
     } as NodeJS.ProcessEnv);
@@ -128,6 +129,7 @@ describe('scripts/load-runtime-env', () => {
       INFISICAL_ENVIRONMENT: 'dev',
       EXTRA_FLAG: 'true',
     }, 'infisical', {
+      NODE_ENV: 'test',
       SECRETS_PROVIDER: 'infisical',
       AUTH_PROVIDER: 'nextauth',
     } as NodeJS.ProcessEnv);

@@ -37,7 +37,10 @@ export default async function AdminSettingsPage() {
   }
 
   // Get database settings
-  const settings = await prisma.setting.findMany({ orderBy: { key: 'asc' } }) as Array<{ key: string; value: string }>;
+  const settings = await prisma.setting.findMany({
+    orderBy: { key: 'asc' },
+    select: { key: true, value: true },
+  }) as Array<{ key: string; value: string }>;
   const moderatorPermissions = await fetchModeratorPermissions();
   const trafficAnalyticsHealth = await getTrafficAnalyticsProviderHealth();
 
@@ -45,7 +48,56 @@ export default async function AdminSettingsPage() {
   // NOTE: SITE_NAME is intentionally not listed here so it can be edited and persisted via the Admin UI.
   const envSettings = await getAdminEnvironmentSettings();
 
-  const readSetting = (key: string, fallback = '') => settings.find((setting) => setting.key === key)?.value ?? fallback;
+  const readSetting = (key: string, fallback = '') => {
+    const value = settings.find((setting) => setting.key === key)?.value;
+    if (typeof value !== 'string') {
+      return fallback;
+    }
+
+    return value.trim() === '' ? fallback : value;
+  };
+
+  const effectiveEditableSettings = [
+    { key: 'MAINTENANCE_MODE', value: readSetting('MAINTENANCE_MODE', SETTING_DEFAULTS[SETTING_KEYS.MAINTENANCE_MODE]) },
+    { key: 'FREE_PLAN_TOKEN_LIMIT', value: readSetting('FREE_PLAN_TOKEN_LIMIT', SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]) },
+    { key: 'FREE_PLAN_RENEWAL_TYPE', value: readSetting('FREE_PLAN_RENEWAL_TYPE', SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]) },
+    {
+      key: 'FREE_PLAN_TOKEN_NAME',
+      value: (() => {
+        const customName = readSetting('FREE_PLAN_TOKEN_NAME', SETTING_DEFAULTS[SETTING_KEYS.FREE_PLAN_TOKEN_NAME]).trim();
+        if (customName) return customName;
+        return readSetting('DEFAULT_TOKEN_LABEL', SETTING_DEFAULTS[SETTING_KEYS.DEFAULT_TOKEN_LABEL]).trim() || SETTING_DEFAULTS[SETTING_KEYS.DEFAULT_TOKEN_LABEL];
+      })(),
+    },
+    {
+      key: 'DEFAULT_TOKEN_LABEL',
+      value: (() => {
+        const label = readSetting('DEFAULT_TOKEN_LABEL', SETTING_DEFAULTS[SETTING_KEYS.DEFAULT_TOKEN_LABEL]).trim();
+        return label || SETTING_DEFAULTS[SETTING_KEYS.DEFAULT_TOKEN_LABEL];
+      })(),
+    },
+    { key: 'ENABLE_RECURRING_PRORATION', value: readSetting('ENABLE_RECURRING_PRORATION', SETTING_DEFAULTS[SETTING_KEYS.ENABLE_RECURRING_PRORATION]) },
+    { key: 'SUPPORT_EMAIL', value: readSetting('SUPPORT_EMAIL', process.env.SUPPORT_EMAIL || SETTING_DEFAULTS[SETTING_KEYS.SUPPORT_EMAIL]) },
+    { key: 'ANNOUNCEMENT_MESSAGE', value: readSetting('ANNOUNCEMENT_MESSAGE', SETTING_DEFAULTS[SETTING_KEYS.ANNOUNCEMENT_MESSAGE]) },
+    { key: 'SITE_NAME', value: readSetting('SITE_NAME', process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]) },
+    { key: 'SITE_LOGO_HEIGHT', value: readSetting('SITE_LOGO_HEIGHT', String(SETTING_DEFAULTS[SETTING_KEYS.SITE_LOGO_HEIGHT])) },
+    { key: 'SITE_LOGO', value: readSetting('SITE_LOGO', SETTING_DEFAULTS[SETTING_KEYS.SITE_LOGO]) },
+    { key: 'SITE_LOGO_LIGHT', value: readSetting('SITE_LOGO_LIGHT', SETTING_DEFAULTS[SETTING_KEYS.SITE_LOGO_LIGHT]) },
+    { key: 'SITE_LOGO_DARK', value: readSetting('SITE_LOGO_DARK', SETTING_DEFAULTS[SETTING_KEYS.SITE_LOGO_DARK]) },
+    { key: 'SITE_FAVICON', value: readSetting('SITE_FAVICON', SETTING_DEFAULTS[SETTING_KEYS.SITE_FAVICON]) },
+    { key: 'PRICING_MAX_COLUMNS', value: readSetting('PRICING_MAX_COLUMNS', SETTING_DEFAULTS[SETTING_KEYS.PRICING_MAX_COLUMNS]) },
+    { key: 'PRICING_CENTER_UNEVEN', value: readSetting('PRICING_CENTER_UNEVEN', SETTING_DEFAULTS[SETTING_KEYS.PRICING_CENTER_UNEVEN]) },
+  ].map((setting) => {
+    const existing = settings.find((entry) => entry.key === setting.key);
+    if (existing) {
+      return { ...existing, value: setting.value };
+    }
+
+    return {
+      key: setting.key,
+      value: setting.value,
+    };
+  });
 
   const siteName = readSetting('SITE_NAME', process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
   const databaseType = envSettings.find((setting) => setting.key === 'DATABASE_TYPE')?.value ?? 'N/A';
@@ -75,7 +127,7 @@ export default async function AdminSettingsPage() {
       />
 
       <AdminSettingsTabs
-        databaseSettings={settings}
+        databaseSettings={effectiveEditableSettings}
         moderatorPermissions={moderatorPermissions}
         trafficAnalyticsHealth={trafficAnalyticsHealth}
       />

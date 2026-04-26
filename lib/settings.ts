@@ -463,7 +463,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.SITE_LOGO_LIGHT]: '',
   [SETTING_KEYS.SITE_LOGO_DARK]: '',
   [SETTING_KEYS.SITE_LOGO_HEIGHT]: '48',
-  [SETTING_KEYS.SITE_FAVICON]: '/favicon.ico',
+  [SETTING_KEYS.SITE_FAVICON]: '',
   [SETTING_KEYS.SITE_NAME]: 'SaaSyBase',
     [SETTING_KEYS.SUPPORT_EMAIL]: 'support@saasybase.com',
   [SETTING_KEYS.DEFAULT_TOKEN_LABEL]: 'tokens',
@@ -477,7 +477,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.FREE_PLAN_TOKEN_LIMIT]: '50',
   [SETTING_KEYS.FREE_PLAN_RENEWAL_TYPE]: 'monthly', // 'unlimited', 'daily', 'monthly', 'one-time'
   [SETTING_KEYS.FREE_PLAN_TOKEN_NAME]: '', // empty means use default token label
-  [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":true,"transactions":true,"purchases":true,"subscriptions":true,"support":true,"notifications":true,"blog":true,"analytics":false,"traffic":false}',
+  [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":false,"transactions":false,"purchases":false,"subscriptions":false,"support":true,"notifications":false,"blog":false,"analytics":false,"traffic":false,"organizations":false}',
   [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Home","href":"/"},{"label":"Dashboard","href":"/dashboard"},{"label":"Pricing","href":"/pricing"}]',
   [SETTING_KEYS.THEME_FOOTER_LINKS]: '[{"label":"Privacy","href":"/privacy"},{"label":"Terms","href":"/terms"},{"label":"Contact","href":"/contact"}]',
   [SETTING_KEYS.BLOG_LISTING_STYLE]: 'grid',

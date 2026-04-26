@@ -19,6 +19,9 @@ describe('fresh install setting defaults', () => {
     expect(SETTING_DEFAULTS[SETTING_KEYS.SUPPORT_EMAIL_NOTIFICATION_TYPES]).toBe(
       '["new_ticket_to_admin","admin_reply_to_user","user_reply_to_admin"]'
     );
+    expect(SETTING_DEFAULTS[SETTING_KEYS.MODERATOR_PERMISSIONS]).toBe(
+      '{"users":false,"transactions":false,"purchases":false,"subscriptions":false,"support":true,"notifications":false,"blog":false,"analytics":false,"traffic":false,"organizations":false}'
+    );
   });
 
   it('matches the expected free plan and format defaults', () => {

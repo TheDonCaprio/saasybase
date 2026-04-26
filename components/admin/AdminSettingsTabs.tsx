@@ -14,7 +14,6 @@ import { PaidTokenOperationsPanel } from './settings/panels/PaidTokenOperationsP
 import { AdminActionNotificationPanel } from './settings/panels/AdminActionNotificationPanel';
 import { EmailAlertSettingsPanel } from './settings/panels/EmailAlertSettingsPanel';
 import { SupportEmailSettingsPanel } from './settings/panels/SupportEmailSettingsPanel';
-import { SentrySmokeTestPanel } from './settings/panels/SentrySmokeTestPanel';
 import { TrafficAnalyticsSettingsPanel } from './settings/panels/TrafficAnalyticsSettingsPanel';
 import type { TrafficAnalyticsProviderHealth } from '../../lib/traffic-analytics-config';
 
@@ -31,6 +30,28 @@ interface AdminSettingsTabsProps {
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
+
+function TabSectionHeader({
+  icon,
+  title,
+  description,
+}: {
+  icon: typeof faPalette;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
+          <FontAwesomeIcon icon={icon} className="h-4 w-4" />
+        </div>
+        <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">{title}</h3>
+      </div>
+      <p className="text-sm text-slate-600 dark:text-neutral-400">{description}</p>
+    </div>
+  );
+}
 
 // Panels extracted into `components/admin/settings/panels/*`.
 const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; description: string }> = {
@@ -187,6 +208,11 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'Logos, site name, and announcement banner',
         content: (
           <div className="space-y-6">
+            <TabSectionHeader
+              icon={faPalette}
+              title="Branding"
+              description="Manage the core brand assets and messaging shown across the app before any custom theme overrides apply."
+            />
             <EditableSettings
               databaseSettings={databaseSettings}
               editableKeys={['SITE_NAME', 'ANNOUNCEMENT_MESSAGE', 'SUPPORT_EMAIL', 'SITE_LOGO_HEIGHT', 'SITE_LOGO', 'SITE_LOGO_LIGHT', 'SITE_LOGO_DARK', 'SITE_FAVICON']}
@@ -203,6 +229,11 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'Maintenance, free quotas, and support touchpoints',
         content: (
           <div className="space-y-6">
+            <TabSectionHeader
+              icon={faCog}
+              title="Operations"
+              description="Configure operational defaults such as maintenance mode, token policies, admin alerts, and support workflow notifications."
+            />
             <div>
               <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Paid token operations</h3>
               <div className="mt-3">
@@ -225,12 +256,6 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
               <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Support emails</h3>
               <div className="mt-3">
                 <SupportEmailSettingsPanel />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Sentry</h3>
-              <div className="mt-3">
-                <SentrySmokeTestPanel />
               </div>
             </div>
             <EditableSettings
@@ -256,6 +281,11 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'View and configure payment gateway integrations',
         content: (
           <div className="space-y-6">
+            <TabSectionHeader
+              icon={faCreditCard}
+              title="Payment providers"
+              description="Review the active payment gateway integrations and their provider-specific configuration before enabling them in production."
+            />
             <PaymentProvidersPanel />
           </div>
         )
@@ -267,6 +297,11 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'Choose the traffic provider and verify provider health',
         content: (
           <div className="space-y-6">
+            <TabSectionHeader
+              icon={faChartLine}
+              title="Traffic analytics"
+              description="Select the analytics provider used for admin traffic reporting and confirm the current provider can serve metrics successfully."
+            />
             <TrafficAnalyticsSettingsPanel initialHealth={trafficAnalyticsHealth} />
           </div>
         )
@@ -278,7 +313,12 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'Date formatting presets and timezone defaults',
         content: (
           <div className="space-y-6">
-            <div className="mb-4 text-sm text-slate-700 dark:text-neutral-200">
+            <TabSectionHeader
+              icon={faClock}
+              title="Date format mode"
+              description="Choose the default date formatting preset and timezone used anywhere the app relies on the shared formatting helpers."
+            />
+            <div className="text-sm text-slate-700 dark:text-neutral-200">
               <AdminSettingsForm />
             </div>
           </div>
@@ -291,8 +331,13 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         description: 'Configure what moderators can manage inside admin tools',
         content: (
           <div className="space-y-6">
-            <div className="mb-4 text-sm text-slate-700 dark:text-neutral-200">
-              <p className="mt-3 text-xs tracking-wide text-slate-500 dark:text-neutral-500">{Object.values(moderatorAccess).some(Boolean) ? 'At least one section is enabled for moderators.' : 'Moderators currently have no admin access.'}</p>
+            <TabSectionHeader
+              icon={faShieldAlt}
+              title="Moderator permissions"
+              description="Control which admin areas moderators can access after installation. Fresh installs default to Support inbox only until an admin expands access."
+            />
+            <div className="text-sm text-slate-700 dark:text-neutral-200">
+              <p className="text-xs tracking-wide text-slate-500 dark:text-neutral-500">{Object.values(moderatorAccess).some(Boolean) ? 'At least one section is enabled for moderators. Enabled admin pages below are accessible to users assigned to those roles.' : 'Moderators currently have no admin access.'}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {MODERATOR_SECTIONS.map((section) => {

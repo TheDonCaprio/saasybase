@@ -101,57 +101,59 @@ export function PaidTokenOperationsPanel() {
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-medium">Natural-expiry grace period (hours)</div>
-            <div className="text-sm text-slate-600">
-              Wait this long after a subscription naturally expires before clearing paid tokens and dismantling team organizations. Use 0 for
-              immediate cleanup.
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
+          <div className="flex h-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-medium">Natural-expiry grace period (hours)</div>
+              <div className="text-sm text-slate-600">
+                Wait this long after a subscription naturally expires before clearing paid tokens and dismantling team organizations. Use 0 for
+                immediate cleanup.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                className="w-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+                value={graceHoursRaw}
+                disabled={loading}
+                onChange={(e) => setGraceHoursRaw(e.target.value)}
+                onBlur={() => {
+                  void commitGraceHoursIfValid();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                aria-label="Natural expiry grace hours"
+              />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              className="w-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
-              value={graceHoursRaw}
-              disabled={loading}
-              onChange={(e) => setGraceHoursRaw(e.target.value)}
-              onBlur={() => {
-                void commitGraceHoursIfValid();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              aria-label="Natural expiry grace hours"
-            />
-          </div>
         </div>
-      </div>
-      <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-medium">Organization expiry policy</div>
-            <div className="text-sm text-slate-600">After grace ends for a team plan, either suspend workspace access and preserve the local organization or dismantle it completely.</div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200">
+          <div className="flex h-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-medium">Organization expiry policy</div>
+              <div className="text-sm text-slate-600">After grace ends for a team plan, either suspend workspace access and preserve the local organization or dismantle it completely.</div>
+            </div>
+            <select
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+              value={organizationExpiryMode}
+              disabled={loading}
+              onChange={async (e) => {
+                const nextValue = e.target.value === 'DISMANTLE' ? 'DISMANTLE' : 'SUSPEND';
+                setOrganizationExpiryMode(nextValue);
+                await saveRaw('ORGANIZATION_EXPIRY_MODE', nextValue);
+              }}
+              aria-label="Organization expiry policy"
+            >
+              <option value="SUSPEND">Suspend workspace access</option>
+              <option value="DISMANTLE">Dismantle the organization</option>
+            </select>
           </div>
-          <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
-            value={organizationExpiryMode}
-            disabled={loading}
-            onChange={async (e) => {
-              const nextValue = e.target.value === 'DISMANTLE' ? 'DISMANTLE' : 'SUSPEND';
-              setOrganizationExpiryMode(nextValue);
-              await saveRaw('ORGANIZATION_EXPIRY_MODE', nextValue);
-            }}
-            aria-label="Organization expiry policy"
-          >
-            <option value="SUSPEND">Suspend workspace access</option>
-            <option value="DISMANTLE">Dismantle the organization</option>
-          </select>
         </div>
       </div>
       <fieldset className="grid gap-3 sm:grid-cols-2">

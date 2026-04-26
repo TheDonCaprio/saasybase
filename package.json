@@ -7,7 +7,9 @@
   },
   "scripts": {
     "predev": "node ./scripts/validate-env.js && npm run generate:docs-search",
+    "predev:turbo": "node ./scripts/validate-env.js && npm run generate:docs-search",
     "prebuild": "node ./scripts/validate-env.js && npm run generate:docs-search",
+    "prestart": "node ./scripts/validate-env.js",
     "dev": "node ./scripts/run-with-secrets.js next dev --webpack",
     "dev:turbo": "node ./scripts/run-with-secrets.js next dev --turbopack",
     "dev:full": "npx concurrently \"npm run dev -- -p 3000\" \"stripe listen --forward-to localhost:3000/api/stripe/webhook\"",

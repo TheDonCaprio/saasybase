@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <DashboardPageHeader
-        accent="violet"
+        accent="theme"
         eyebrow="Demo app"
         eyebrowIcon={<FontAwesomeIcon icon={faBolt} />}
         title="SaaSyBase Demo App"

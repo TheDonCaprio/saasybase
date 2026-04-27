@@ -993,8 +993,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-border:       rgba(255,255,255,.06);
           --lp-border2:      rgba(255,255,255,.09);
           --lp-card-bg:      rgba(255,255,255,.03);
-          --lp-card-hover:   rgba(99,102,241,.07);
-          --lp-card-bdr-h:   rgba(99,102,241,.4);
+          --lp-card-hover:   rgba(var(--accent-primary-rgb),.05);
+          --lp-card-bdr-h:   rgba(var(--accent-primary-rgb),.22);
           --lp-feature-card-bg: rgba(18,22,30,.78);
           --lp-feature-card-hover: rgba(24,30,40,.88);
           --lp-metric-num:   #e0e7ff;
@@ -1008,28 +1008,28 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-step-border:  rgba(255,255,255,.07);
           --lp-step-title:   #e0e7ff;
           --lp-step-desc:    rgba(255,255,255,.38);
-          --lp-badge-color:  #a5b4fc;
-          --lp-badge-bg:     rgba(99,102,241,.08);
-          --lp-badge-border: rgba(99,102,241,.4);
+          --lp-badge-color:  rgb(var(--accent-primary));
+          --lp-badge-bg:     rgba(var(--accent-primary-rgb),.08);
+          --lp-badge-border: rgba(var(--accent-primary-rgb),.24);
           --lp-code-bg:      #0d0d17;
           --lp-code-border:  rgba(255,255,255,.08);
           --lp-code-text:    rgba(255,255,255,.5);
           --lp-code-comment: rgba(255,255,255,.25);
           --lp-demo-hint:    rgba(255,255,255,.2);
-          --lp-cta-bg:       linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08),rgba(6,182,212,.06));
-          --lp-cta-border:   rgba(99,102,241,.2);
+          --lp-cta-bg:       linear-gradient(135deg,rgba(var(--accent-primary-rgb),.10),rgba(255,255,255,.03),rgba(var(--accent-primary-rgb),.02));
+          --lp-cta-border:   rgba(var(--accent-primary-rgb),.18);
           --lp-cta-desc:     rgba(255,255,255,.4);
           --lp-divider:      rgba(255,255,255,.07);
-          --lp-section-tag:  #6366f1;
+          --lp-section-tag:  rgb(var(--accent-primary));
           --lp-blob-op:      1;
           /* Dashboard demo — theme-aware */
           --lp-dd-outer-bg:           rgb(var(--bg-primary));
           --lp-dd-chrome-bg:          rgb(var(--bg-secondary));
-          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(12,18,34,.92), rgba(9,14,28,.82));
+          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(18,18,18,.94), rgba(14,14,14,.86));
           --lp-dd-sidebar-border:     rgb(var(--border-primary) / 0.5);
           --lp-dd-border:             rgb(var(--border-primary) / 0.4);
           --lp-dd-border2:            rgb(var(--border-primary) / 0.5);
-          --lp-dd-border-main:        rgba(var(--accent-primary-rgb), 0.4);
+          --lp-dd-border-main:        rgba(var(--accent-primary-rgb), 0.24);
           --lp-dd-url-bg:             rgb(var(--bg-tertiary));
           --lp-dd-url-text:           rgb(var(--text-tertiary));
           --lp-dd-brand:              rgb(var(--accent-primary));
@@ -1052,15 +1052,15 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-amount:             #a5f3fc;
           --lp-dd-live-bg:            rgba(var(--accent-primary-rgb), 0.09);
           --lp-dd-live-border:        rgba(var(--accent-primary-rgb), 0.22);
-          --lp-dd-banner-bg:          linear-gradient(315deg, rgba(80,40,160,0.65) 0%, rgba(60,30,120,0.45) 55%, rgba(18,12,50,0.4) 100%);
-          --lp-dd-banner-border:      rgba(139,92,246,0.35);
+          --lp-dd-banner-bg:          linear-gradient(315deg, rgba(34,34,34,0.96) 0%, rgba(22,22,22,0.92) 55%, rgba(14,14,14,0.88) 100%);
+          --lp-dd-banner-border:      rgba(var(--accent-primary-rgb),0.18);
           --lp-dd-banner-bg-users:    linear-gradient(315deg, rgba(16,185,129,0.78) 0%, rgba(6,182,212,0.32) 55%, rgba(6,20,30,0.32) 100%);
           --lp-dd-banner-border-users:rgba(16,185,129,0.28);
           --lp-dd-banner-title:       #ffffff;
           --lp-dd-banner-chip-border: rgba(255,255,255,.18);
           --lp-dd-banner-chip-label:  rgba(255,255,255,.55);
           --lp-dd-banner-chip-num:    #ffffff;
-          --lp-dd-banner-free-num:    #c4b5fd;
+          --lp-dd-banner-free-num:    rgb(var(--accent-primary));
           --lp-dd-banner-chip-sub:    rgba(255,255,255,.4);
           --lp-dd-topbar-bg:          rgb(var(--bg-secondary) / 0.72);
           --lp-dd-topbar-border:      rgb(var(--border-primary) / 0.45);
@@ -1077,8 +1077,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-border:       rgba(0,0,0,.07);
           --lp-border2:      rgba(0,0,0,.1);
           --lp-card-bg:      rgba(0,0,0,.02);
-          --lp-card-hover:   rgba(99,102,241,.05);
-          --lp-card-bdr-h:   rgba(99,102,241,.35);
+          --lp-card-hover:   rgba(var(--accent-primary-rgb),.05);
+          --lp-card-bdr-h:   rgba(var(--accent-primary-rgb),.18);
           --lp-feature-card-bg: rgba(255,255,255,.96);
           --lp-feature-card-hover: rgba(250,250,252,.98);
           --lp-metric-num:   #1e1b4b;
@@ -1092,40 +1092,40 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-step-border:  rgba(0,0,0,.08);
           --lp-step-title:   #111827;
           --lp-step-desc:    rgba(0,0,0,.45);
-          --lp-badge-color:  #4338ca;
-          --lp-badge-bg:     rgba(99,102,241,.07);
-          --lp-badge-border: rgba(99,102,241,.3);
-          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(245,247,255,.98), rgba(238,242,255,.94));
-          --lp-dd-sidebar-border:     rgba(99,102,241,.1);
+          --lp-badge-color:  rgb(var(--accent-primary));
+          --lp-badge-bg:     rgba(var(--accent-primary-rgb),.07);
+          --lp-badge-border: rgba(var(--accent-primary-rgb),.2);
+          --lp-dd-sidebar-bg:         linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,245,242,.94));
+          --lp-dd-sidebar-border:     rgb(var(--border-primary) / 0.5);
           --lp-code-bg:      #f5f4ff;
           --lp-code-border:  rgba(0,0,0,.1);
           --lp-code-text:    rgba(0,0,0,.55);
           --lp-code-comment: rgba(0,0,0,.3);
           --lp-demo-hint:    rgba(0,0,0,.35);
-          --lp-cta-bg:       linear-gradient(135deg,rgba(99,102,241,.07),rgba(139,92,246,.04),rgba(6,182,212,.03));
-          --lp-cta-border:   rgba(99,102,241,.18);
+          --lp-cta-bg:       linear-gradient(135deg,rgba(var(--accent-primary-rgb),.07),rgba(255,255,255,.92),rgba(var(--accent-primary-rgb),.03));
+          --lp-cta-border:   rgba(var(--accent-primary-rgb),.16);
           --lp-cta-desc:     rgba(0,0,0,.45);
           --lp-divider:      rgba(0,0,0,.07);
-          --lp-section-tag:  #4f46e5;
+          --lp-section-tag:  rgb(var(--accent-primary));
           --lp-blob-op:      0.5;
           /* Dashboard demo — light overrides (decorative only) */
           --lp-dd-stat-sub:           #059669;
           --lp-dd-amount:             #0e7490;
-          --lp-dd-banner-bg:          linear-gradient(315deg, rgba(180,170,250,0.45) 0%, rgba(200,190,255,0.3) 55%, rgba(240,238,255,0.35) 100%);
-          --lp-dd-banner-border:      rgba(99,102,241,0.22);
+          --lp-dd-banner-bg:          linear-gradient(315deg, rgba(255,255,255,0.98) 0%, rgba(246,245,242,0.92) 55%, rgba(238,236,231,0.88) 100%);
+          --lp-dd-banner-border:      rgba(var(--accent-primary-rgb),0.16);
           --lp-dd-banner-bg-users:    linear-gradient(315deg, rgba(198,252,233,0.6) 0%, rgba(220,253,240,0.35) 55%, rgba(255,255,255,0.35) 100%);
           --lp-dd-banner-border-users:rgba(16,185,129,0.15);
-          --lp-dd-banner-title:       #1e1b4b;
-          --lp-dd-banner-chip-border: rgba(99,102,241,.2);
+          --lp-dd-banner-title:       rgb(var(--text-primary));
+          --lp-dd-banner-chip-border: rgba(var(--accent-primary-rgb),.16);
           --lp-dd-banner-chip-label:  rgba(0,0,0,.5);
-          --lp-dd-banner-chip-num:    #1e1b4b;
-          --lp-dd-banner-free-num:    #4338ca;
+          --lp-dd-banner-chip-num:    rgb(var(--text-primary));
+          --lp-dd-banner-free-num:    rgb(var(--accent-primary));
           --lp-dd-banner-chip-sub:    rgba(0,0,0,.4);
           --lp-dd-topbar-bg:          rgba(255,255,255,.88);
-          --lp-dd-topbar-border:      rgba(99,102,241,.16);
+          --lp-dd-topbar-border:      rgb(var(--border-primary) / 0.55);
           --lp-dd-topbar-text:        rgba(15,23,42,.8);
           --lp-dd-topbar-link:        rgba(15,23,42,.6);
-          --lp-dd-topbar-link-active: #1e1b4b;
+          --lp-dd-topbar-link-active: rgb(var(--text-primary));
         }
 
         /* Keyframes */
@@ -1140,11 +1140,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
         /* Blobs */
         .lp-blob1 { position:absolute; width:540px; height:540px; border-radius:50%;
-          background:radial-gradient(circle, rgba(99,102,241,.28) 0%, transparent 70%);
+          background:radial-gradient(circle, rgba(var(--accent-primary-rgb),.18) 0%, transparent 70%);
           top:-120px; left:-120px; pointer-events:none; animation:lpGlow 8s ease-in-out infinite;
           opacity:var(--lp-blob-op,1); }
         .lp-blob2 { position:absolute; width:440px; height:440px; border-radius:50%;
-          background:radial-gradient(circle, rgba(139,92,246,.22) 0%, transparent 70%);
+          background:radial-gradient(circle, rgba(var(--accent-primary-rgb),.10) 0%, transparent 70%);
           top:40px; right:-80px; pointer-events:none; animation:lpGlow2 10s ease-in-out infinite;
           opacity:var(--lp-blob-op,1); }
 
@@ -1197,7 +1197,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           width:34px;
           height:2px;
           border-radius:1px;
-          background:linear-gradient(90deg, #6366f1, #06b6d4);
+          background:linear-gradient(90deg, rgb(var(--accent-primary)), rgb(var(--accent-hover-rgb) / 0.45));
         }
         .lp-hero-copy .lp-hero-badge {
           margin-bottom:18px;
@@ -1214,7 +1214,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           overflow:hidden;
           border:1px solid var(--lp-border2);
           border-radius:26px;
-          background:linear-gradient(180deg, rgba(18,178,210,0.28), rgba(255,255,255,.01));
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),0.08), rgba(255,255,255,.01));
           backdrop-filter:blur(18px);
           padding:22px;
           box-shadow:0 30px 70px rgba(2,6,23,.28);
@@ -1229,8 +1229,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           position:absolute;
           inset:0;
           background:
-            linear-gradient(90deg, rgba(99,102,241,.12) 0, rgba(99,102,241,0) 18%),
-            linear-gradient(180deg, rgba(6,182,212,.08) 0, rgba(6,182,212,0) 35%),
+            linear-gradient(90deg, rgba(var(--accent-primary-rgb),.10) 0, rgba(var(--accent-primary-rgb),0) 18%),
+            linear-gradient(180deg, rgba(var(--accent-primary-rgb),.05) 0, rgba(var(--accent-primary-rgb),0) 35%),
             repeating-linear-gradient(90deg, transparent 0 44px, rgba(255,255,255,.09) 44px 45px),
             repeating-linear-gradient(180deg, transparent 0 44px, rgba(255,255,255,.09) 44px 45px);
           pointer-events:none;
@@ -1288,9 +1288,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           box-shadow:0 1px 4px rgba(0,0,0,.04);
         }
         .light .lp-root .lp-chip-strong {
-          color:#4338ca;
-          background:linear-gradient(135deg, rgba(99,102,241,.12), rgba(6,182,212,.08));
-          border-color:rgba(99,102,241,.28);
+          color:rgb(var(--accent-primary));
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.10), rgba(var(--accent-primary-rgb),.04));
+          border-color:rgba(var(--accent-primary-rgb),.18);
         }
         .light .lp-root .lp-chip-soft {
           background:rgba(0,0,0,.035);
@@ -1298,9 +1298,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           color:rgba(0,0,0,.58);
         }
         .light .lp-root .lp-arch-icon {
-          background:linear-gradient(135deg, rgba(99,102,241,.1), rgba(6,182,212,.08));
-          border-color:rgba(99,102,241,.18);
-          color:#6366f1;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.10), rgba(var(--accent-primary-rgb),.04));
+          border-color:rgba(var(--accent-primary-rgb),.14);
+          color:rgb(var(--accent-primary));
         }
         .light .lp-root .lp-signal-pill {
           background:rgba(255,255,255,.7);
@@ -1308,19 +1308,19 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           box-shadow:0 1px 3px rgba(0,0,0,.04);
         }
         .light .lp-root .lp-signal-pill svg {
-          color:#6366f1;
+          color:rgb(var(--accent-primary));
         }
         .light .lp-root .lp-hero-panel {
-          background:linear-gradient(180deg, rgba(20,178,192,.1), rgba(255,255,255));
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.05), rgba(255,255,255,.98));
           border-color:rgba(0,0,0,.1);
           box-shadow:0 20px 50px rgba(0,0,0,.06);
         }
         .light .lp-root .lp-hero-panel::before {
           background:
-            linear-gradient(90deg, rgba(99,102,241,.06) 0, rgba(99,102,241,0) 18%),
-            linear-gradient(180deg, rgba(6,182,212,.04) 0, rgba(6,182,212,0) 35%),
-            repeating-linear-gradient(90deg, transparent 0 44px, rgba(99,102,241,.1) 44px 45px),
-            repeating-linear-gradient(180deg, transparent 0 44px, rgba(99,102,241,.1) 44px 45px);
+            linear-gradient(90deg, rgba(var(--accent-primary-rgb),.05) 0, rgba(var(--accent-primary-rgb),0) 18%),
+            linear-gradient(180deg, rgba(var(--accent-primary-rgb),.03) 0, rgba(var(--accent-primary-rgb),0) 35%),
+            repeating-linear-gradient(90deg, transparent 0 44px, rgba(var(--accent-primary-rgb),.06) 44px 45px),
+            repeating-linear-gradient(180deg, transparent 0 44px, rgba(var(--accent-primary-rgb),.06) 44px 45px);
         }
         .light .lp-root .lp-panel-dot {
           opacity:.6;
@@ -1331,8 +1331,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
         }
         .light .lp-root .lp-hero-panel .lp-chip-soft {
-          background:rgba(99,102,241,.07);
-          border-color:rgba(99,102,241,.12);
+          background:rgba(var(--accent-primary-rgb),.06);
+          border-color:rgba(var(--accent-primary-rgb),.10);
           color:rgba(15,23,42,.68);
         }
         .lp-arch-head {
@@ -1359,9 +1359,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           display:flex;
           align-items:center;
           justify-content:center;
-          background:linear-gradient(135deg, rgba(99,102,241,.22), rgba(6,182,212,.16));
-          border:1px solid rgba(99,102,241,.22);
-          color:#c4b5fd;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.08));
+          border:1px solid rgba(var(--accent-primary-rgb),.18);
+          color:rgb(var(--accent-primary-rgb) / 0.85);
           box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 8px 20px rgba(15,23,42,.16);
           flex-shrink:0;
         }
@@ -1380,9 +1380,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           padding:8px 11px;
         }
         .lp-chip-strong {
-          color:#eef2ff;
-          background:linear-gradient(135deg, rgba(99,102,241,.55), rgba(6,182,212,.35));
-          border:1px solid rgba(129,140,248,.45);
+          color:#eef4ff;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.42), rgba(var(--accent-primary-rgb),.22));
+          border:1px solid rgba(var(--accent-primary-rgb),.32);
         }
         .lp-chip-soft {
           color:var(--lp-chip-text);
@@ -1494,7 +1494,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-proof-card:hover {
           border-color:var(--lp-card-bdr-h);
           transform:translateY(-2px);
-          box-shadow:0 8px 24px rgba(99,102,241,.12);
+          box-shadow:0 10px 28px rgba(15,23,42,.12);
         }
         .lp-proof-card:hover::before {
           opacity:1;
@@ -1551,7 +1551,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           color:var(--lp-chip-text);
         }
         .lp-signal-pill svg {
-          color:#818cf8;
+          color:rgb(var(--accent-primary));
         }
         .lp-cta-row {
           display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
@@ -1559,12 +1559,12 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         .lp-btn-primary {
           padding:13px 28px; border-radius:10px; font-weight:700; font-size:14px;
-          background:linear-gradient(135deg,#6366f1,#8b5cf6);
+          background:linear-gradient(135deg,rgb(var(--accent-primary)),rgb(var(--accent-hover)));
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
-          box-shadow:0 4px 20px rgba(99,102,241,.35);
+          box-shadow:0 10px 28px rgba(var(--accent-primary-rgb),.22);
           transition:transform .15s, box-shadow .15s;
         }
-        .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 8px 28px rgba(99,102,241,.5); color:#fff !important; }
+        .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 14px 34px rgba(var(--accent-primary-rgb),.28); color:#fff !important; }
         .lp-btn-ghost {
           padding:13px 28px; border-radius:10px; font-weight:600; font-size:14px;
           background:var(--lp-chip-bg); color:var(--lp-chip-text);

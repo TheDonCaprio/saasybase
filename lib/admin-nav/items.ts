@@ -51,13 +51,6 @@ export function buildAdminNavItems(counts: AdminNavCounts): AdminNavItem[] {
       section: 'transactions',
     },
     {
-      href: '/admin/purchases',
-      label: 'One-Time Sales',
-      badge: counts.purchasesCount > 0 ? String(counts.purchasesCount) : undefined,
-      icon: faShoppingCart,
-      section: 'purchases',
-    },
-    {
       href: '/admin/subscriptions',
       label: 'Subscriptions',
       badge: counts.subscriptionsCount > 0 ? String(counts.subscriptionsCount) : undefined,
@@ -65,16 +58,17 @@ export function buildAdminNavItems(counts: AdminNavCounts): AdminNavItem[] {
       section: 'subscriptions',
     },
     {
+      href: '/admin/purchases',
+      label: 'One-Time Sales',
+      badge: counts.purchasesCount > 0 ? String(counts.purchasesCount) : undefined,
+      icon: faShoppingCart,
+      section: 'purchases',
+    },
+    {
       href: '/admin/coupons',
       label: 'Coupons',
       badge: counts.couponCount > 0 ? String(counts.couponCount) : undefined,
       icon: faTicketAlt,
-      adminOnly: true,
-    },
-    {
-      href: '/admin/theme',
-      label: 'Theme',
-      icon: faPalette,
       adminOnly: true,
     },
     {
@@ -87,19 +81,6 @@ export function buildAdminNavItems(counts: AdminNavCounts): AdminNavItem[] {
       href: '/admin/blog',
       label: 'Blog',
       icon: faNewspaper,
-      adminOnly: true,
-    },
-    {
-      href: '/admin/plans',
-      label: 'Plans',
-      icon: faListAlt,
-      adminOnly: true,
-    },
-    {
-      href: '/admin/logs',
-      label: 'Logs',
-      badge: counts.logCount > 0 ? String(counts.logCount) : undefined,
-      icon: faTriangleExclamation,
       adminOnly: true,
     },
     {
@@ -142,8 +123,33 @@ export function buildAdminNavItems(counts: AdminNavCounts): AdminNavItem[] {
       section: 'traffic',
     },
     {
+      href: '/admin/plans',
+      label: 'Plans',
+      icon: faListAlt,
+      adminOnly: true,
+    },
+    {
+      href: '/admin/theme',
+      label: 'Theme',
+      icon: faPalette,
+      adminOnly: true,
+    },
+    {
+      href: '/admin/settings',
+      label: 'Settings',
+      icon: faCogs,
+      adminOnly: true,
+    },
+    {
+      href: '/admin/logs',
+      label: 'Logs',
+      badge: counts.logCount > 0 ? String(counts.logCount) : undefined,
+      icon: faTriangleExclamation,
+      adminOnly: true,
+    },
+    {
       href: '/admin/system',
-      label: 'System',
+      label: 'System Info',
       icon: faServer,
       adminOnly: true,
     },
@@ -151,12 +157,6 @@ export function buildAdminNavItems(counts: AdminNavCounts): AdminNavItem[] {
       href: '/admin/maintenance',
       label: 'Maintenance',
       icon: faWrench,
-      adminOnly: true,
-    },
-    {
-      href: '/admin/settings',
-      label: 'Settings',
-      icon: faCogs,
       adminOnly: true,
     },
   ];

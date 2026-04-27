@@ -26,26 +26,34 @@ export function buildAdminNavGroups(items: AdminNavItem[]): AdminNavGroup[] {
       items: items.filter((item) => ['/admin/users', '/admin/organizations', '/admin/moderation'].includes(item.href)),
     },
     {
-      title: 'Finances',
+      title: 'Revenue',
       items: items.filter((item) =>
         ['/admin/transactions', '/admin/purchases', '/admin/subscriptions', '/admin/coupons'].includes(item.href)
       ),
     },
     {
-      title: 'Platform',
+      title: 'Publishing',
       items: items.filter((item) =>
-        ['/admin/theme', '/admin/pages', '/admin/blog', '/admin/plans', '/admin/emails', '/admin/settings'].includes(item.href)
+        ['/admin/pages', '/admin/blog'].includes(item.href)
       ),
     },
     {
-      title: 'Support & Analytics',
+      title: 'Messaging',
       items: items.filter((item) =>
-        ['/admin/support', '/admin/notifications', '/admin/analytics', '/admin/traffic'].includes(item.href)
+        ['/admin/emails', '/admin/notifications', '/admin/support'].includes(item.href)
       ),
     },
     {
-      title: 'Developer',
-      items: items.filter((item) => ['/admin/logs', '/admin/maintenance', '/admin/system'].includes(item.href)),
+      title: 'Growth & Analytics',
+      items: items.filter((item) => ['/admin/analytics', '/admin/traffic'].includes(item.href)),
+    },
+    {
+      title: 'Product Setup',
+      items: items.filter((item) => ['/admin/plans', '/admin/theme'].includes(item.href)),
+    },
+    {
+      title: 'System',
+      items: items.filter((item) => ['/admin/settings', '/admin/logs', '/admin/system', '/admin/maintenance'].includes(item.href)),
     },
   ];
 

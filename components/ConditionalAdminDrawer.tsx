@@ -40,40 +40,50 @@ const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
-    title: 'Finances',
+    title: 'Revenue',
     items: [
       { href: '/admin/transactions', label: 'Transactions', icon: faFileInvoiceDollar },
-      { href: '/admin/purchases', label: 'One-Time Sales', icon: faShoppingCart },
       { href: '/admin/subscriptions', label: 'Subscriptions', icon: faClipboardList },
+      { href: '/admin/purchases', label: 'One-Time Sales', icon: faShoppingCart },
       { href: '/admin/coupons', label: 'Coupons', icon: faTicketAlt },
     ],
   },
   {
-    title: 'Platform',
+    title: 'Publishing',
     items: [
-      { href: '/admin/theme', label: 'Theme', icon: faPalette },
       { href: '/admin/pages', label: 'Pages', icon: faFileLines },
       { href: '/admin/blog', label: 'Blog', icon: faNewspaper },
-      { href: '/admin/plans', label: 'Plans', icon: faListAlt },
-      { href: '/admin/emails', label: 'Email Templates', icon: faEnvelope },
-      { href: '/admin/settings', label: 'Settings', icon: faCogs },
     ],
   },
   {
-    title: 'Support & Analytics',
+    title: 'Messaging',
     items: [
-      { href: '/admin/support', label: 'Support', icon: faLifeRing },
+      { href: '/admin/emails', label: 'Email Templates', icon: faEnvelope },
       { href: '/admin/notifications', label: 'Notifications', icon: faBell },
+      { href: '/admin/support', label: 'Support', icon: faLifeRing },
+    ],
+  },
+  {
+    title: 'Growth & Analytics',
+    items: [
       { href: '/admin/analytics', label: 'Analytics', icon: faChartLine },
       { href: '/admin/traffic', label: 'Traffic', icon: faTrafficLight },
     ],
   },
   {
-    title: 'Developer',
+    title: 'Product Setup',
     items: [
+      { href: '/admin/plans', label: 'Plans', icon: faListAlt },
+      { href: '/admin/theme', label: 'Theme', icon: faPalette },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { href: '/admin/settings', label: 'Settings', icon: faCogs },
       { href: '/admin/logs', label: 'Logs', icon: faTriangleExclamation },
+      { href: '/admin/system', label: 'System Info', icon: faServer },
       { href: '/admin/maintenance', label: 'Maintenance', icon: faWrench },
-      { href: '/admin/system', label: 'System', icon: faServer },
     ],
   },
 ];

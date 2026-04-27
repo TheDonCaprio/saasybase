@@ -10,7 +10,7 @@ import {
   faUsers, faChartLine, faDollarSign, faTicket, faBars,
   faWaveSquare, faGaugeHigh, faLifeRing, faArrowUpRightFromSquare, faBolt, faGear, faTriangleExclamation,
   faPen, faHourglassEnd, faHandHoldingDollar,
-  faPalette, faReceipt, faEye,
+  faPalette, faReceipt, faEye, faTachometerAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { PAYMENT_PROVIDERS } from '../lib/payment/provider-config';
@@ -462,16 +462,25 @@ function DashboardDemo() {
               {/* ADMIN section label */}
               <div style={{ padding: '2px 14px 3px', fontSize: 9, fontWeight: 700, color: 'var(--lp-dd-col-hdr)', letterSpacing: 1, textTransform: 'uppercase' }}>ADMIN</div>
               {/* Overview */}
-              <div style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: demoView === 'overview' ? 'var(--lp-dd-nav-active-text)' : 'var(--lp-dd-nav-text)', fontWeight: demoView === 'overview' ? 600 : 400, background: demoView === 'overview' ? 'rgba(99,102,241,0.12)' : 'transparent', borderLeft: demoView === 'overview' ? '2px solid #6366f1' : '2px solid transparent', cursor: 'default' }}>
+              <div style={{ padding: '6px 14px', fontSize: 12, color: 'var(--lp-dd-nav-text)', fontWeight: 500, cursor: 'default' }}>
                 <span>Overview</span>
-                <span style={{ fontSize: 9, opacity: 0.5 }}>˅</span>
               </div>
-              {/* Users & Access parent */}
+              {[
+                { label: 'Dashboard', view: 'overview' as DemoView | null, badge: null, icon: faTachometerAlt },
+              ].map((item) => {
+                const active = item.view === demoView;
+                return (
+                  <div key={item.label} style={{ padding: '5px 14px 5px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, color: active ? 'var(--lp-dd-nav-active-text)' : 'var(--lp-dd-nav-text)', fontWeight: active ? 600 : 400, background: active ? 'rgba(99,102,241,0.14)' : 'transparent', borderLeft: active ? '2px solid #6366f1' : '2px solid transparent', cursor: 'default' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <FontAwesomeIcon icon={item.icon} style={{ width: 10, color: active ? 'var(--lp-dd-nav-active-text)' : 'var(--lp-dd-nav-text)' }} />
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
               <div style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: 'var(--lp-dd-nav-text)', fontWeight: 500, cursor: 'default' }}>
                 <span>Users &amp; Access</span>
-                <span style={{ fontSize: 9, opacity: 0.5 }}>˄</span>
               </div>
-              {/* Users child (active for users view) */}
               {[
                 { label: 'Users',         view: 'users' as DemoView | null,    badge: FAKE_USERS.length,  icon: faUsers },
                 { label: 'Organizations', view: null,                            badge: null, icon: faBuilding },
@@ -488,12 +497,16 @@ function DashboardDemo() {
                   </div>
                 );
               })}
-              {/* Finances parent */}
+              {/* Revenue */}
               <div style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: 'var(--lp-dd-nav-text)', fontWeight: 500, cursor: 'default', marginTop: 2 }}>
-                <span>Finances</span>
-                <span style={{ fontSize: 9, opacity: 0.5 }}>{demoView === 'finance' ? '˄' : '˅'}</span>
+                <span>Revenue</span>
               </div>
-              {demoView === 'finance' && FINANCE_SUBMENU.map(item => {
+              {[
+                { label: 'Transactions', view: 'finance' as DemoView | null, badge: 122, icon: faFileLines },
+                { label: 'Subscriptions', view: null, badge: 69, icon: faArrowsRotate },
+                { label: 'One-Time Sales', view: null, badge: null, icon: faDollarSign },
+                { label: 'Coupons', view: null, badge: 8, icon: faTicket },
+              ].map(item => {
                 const active = item.view === demoView;
                 return (
                   <div key={item.label} style={{ padding: '5px 14px 5px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, color: active ? 'var(--lp-dd-nav-active-text)' : 'var(--lp-dd-nav-text)', fontWeight: active ? 600 : 400, background: active ? 'rgba(99,102,241,0.14)' : 'transparent', borderLeft: active ? '2px solid #6366f1' : '2px solid transparent', cursor: 'default' }}>
@@ -505,12 +518,23 @@ function DashboardDemo() {
                   </div>
                 );
               })}
-              {/* Collapsed sections */}
-              {['Platform', 'Support & Analytics', 'Developer'].map(lbl => (
-                <div key={lbl} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: 'var(--lp-dd-nav-text)', cursor: 'default' }}>
-                  <span>{lbl}</span>
-                  <span style={{ fontSize: 9, opacity: 0.5 }}>˅</span>
-                </div>
+              {[
+                { title: 'Publishing', items: ['Pages', 'Blog'] },
+                { title: 'Messaging', items: ['Email Templates', 'Notifications', 'Support'] },
+                { title: 'Growth & Analytics', items: ['Analytics', 'Traffic'] },
+                { title: 'Product Setup', items: ['Plans', 'Theme'] },
+                { title: 'System', items: ['Settings', 'Logs', 'System Info', 'Maintenance'] },
+              ].map((group) => (
+                <React.Fragment key={group.title}>
+                  <div style={{ padding: '6px 14px', fontSize: 12, color: 'var(--lp-dd-nav-text)', fontWeight: 500, cursor: 'default', marginTop: 2 }}>
+                    <span>{group.title}</span>
+                  </div>
+                  {group.items.map((item) => (
+                    <div key={item} style={{ padding: '5px 14px 5px 26px', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--lp-dd-nav-text)', fontWeight: 400, cursor: 'default' }}>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </React.Fragment>
               ))}
               {/* Sign Out */}
               <div style={{ marginTop: 'auto', padding: '10px 14px', borderTop: '1px solid var(--lp-dd-sidebar-border)', fontSize: 11, color: 'var(--lp-dd-nav-text)', cursor: 'default' }}>Sign Out</div>
@@ -1216,13 +1240,20 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-radius:26px;
           background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),0.08), rgba(255,255,255,.01));
           backdrop-filter:blur(18px);
-          padding:22px;
+          padding:0;
           box-shadow:0 30px 70px rgba(2,6,23,.28);
           animation:lpFadeUp .8s .25s ease both;
           height:100%;
           display:flex;
           flex-direction:column;
-          justify-content:center;
+        }
+        .lp-panel-header {
+          padding:18px 22px 16px;
+          background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+          border-bottom:1px solid rgba(255,255,255,.08);
+        }
+        .lp-panel-body {
+          padding:18px 22px 22px;
         }
         .lp-hero-panel::before {
           content:'';
@@ -1243,7 +1274,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           display:flex;
           align-items:center;
           gap:8px;
-          margin-bottom:16px;
+          margin-bottom:0px;
         }
         .lp-panel-dot {
           width:9px;
@@ -1265,7 +1296,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           color:var(--lp-text1);
           font-weight:800;
           letter-spacing:-.7px;
-          margin-bottom:8px;
+          margin-bottom:7px;
         }
         .lp-panel-sub {
           font-size:13px;
@@ -1282,19 +1313,20 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-radius:18px;
           background:rgba(12,18,34,.56);
           padding:14px;
+          box-shadow:0 10px 24px rgba(2,6,23,.08);
         }
         .light .lp-root .lp-arch-card {
           background:rgba(255,255,255,.72);
-          box-shadow:0 1px 4px rgba(0,0,0,.04);
+          box-shadow:0 8px 20px rgba(15,23,42,.05);
         }
         .light .lp-root .lp-chip-strong {
           color:rgb(var(--accent-primary));
-          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.10), rgba(var(--accent-primary-rgb),.04));
-          border-color:rgba(var(--accent-primary-rgb),.18);
+          background:rgba(var(--accent-primary-rgb),.08);
+          border-color:rgba(var(--accent-primary-rgb),.04);
         }
         .light .lp-root .lp-chip-soft {
-          background:rgba(0,0,0,.035);
-          border-color:rgba(0,0,0,.1);
+          background:rgba(0,0,0,.025);
+          border-color:rgba(15,23,42,.035);
           color:rgba(0,0,0,.58);
         }
         .light .lp-root .lp-arch-icon {
@@ -1315,6 +1347,10 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-color:rgba(0,0,0,.1);
           box-shadow:0 20px 50px rgba(0,0,0,.06);
         }
+        .light .lp-root .lp-panel-header {
+          background:linear-gradient(180deg, rgba(247,248,252,.96), rgba(255,255,255,.88));
+          border-bottom-color:rgba(15,23,42,.08);
+        }
         .light .lp-root .lp-hero-panel::before {
           background:
             linear-gradient(90deg, rgba(var(--accent-primary-rgb),.05) 0, rgba(var(--accent-primary-rgb),0) 18%),
@@ -1326,13 +1362,13 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           opacity:.6;
         }
         .lp-hero-panel .lp-chip-soft {
-          background:rgba(255,255,255,.07);
-          border-color:rgba(255,255,255,.11);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+          background:rgba(255,255,255,.045);
+          border-color:rgba(255,255,255,.04);
+          box-shadow:none;
         }
         .light .lp-root .lp-hero-panel .lp-chip-soft {
-          background:rgba(var(--accent-primary-rgb),.06);
-          border-color:rgba(var(--accent-primary-rgb),.10);
+          background:rgba(var(--accent-primary-rgb),.05);
+          border-color:rgba(var(--accent-primary-rgb),.035);
           color:rgba(15,23,42,.68);
         }
         .lp-arch-head {
@@ -1380,14 +1416,14 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           padding:8px 11px;
         }
         .lp-chip-strong {
-          color:#eef4ff;
-          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.42), rgba(var(--accent-primary-rgb),.22));
-          border:1px solid rgba(var(--accent-primary-rgb),.32);
+          color:rgba(255,255,255,.88);
+          background:rgba(var(--accent-primary-rgb),.16);
+          border:1px solid rgba(var(--accent-primary-rgb),.07);
         }
         .lp-chip-soft {
           color:var(--lp-chip-text);
           background:var(--lp-chip-bg);
-          border:1px solid var(--lp-chip-border);
+          border:1px solid rgba(255,255,255,.04);
         }
         .lp-env-line {
           display:flex;
@@ -1492,9 +1528,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:linear-gradient(180deg, #f59e0b, #f97316);
         }
         .lp-proof-card:hover {
-          border-color:var(--lp-card-bdr-h);
           transform:translateY(-2px);
-          box-shadow:0 10px 28px rgba(15,23,42,.12);
+          box-shadow:0 16px 32px rgba(15,23,42,.12);
         }
         .lp-proof-card:hover::before {
           opacity:1;
@@ -1568,10 +1603,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-btn-ghost {
           padding:13px 28px; border-radius:10px; font-weight:600; font-size:14px;
           background:var(--lp-chip-bg); color:var(--lp-chip-text);
-          border:1px solid var(--lp-chip-border); cursor:pointer; text-decoration:none;
-          transition:background .15s, border-color .15s;
+          border:1px solid rgba(var(--accent-primary-rgb),.08); cursor:pointer; text-decoration:none;
+          box-shadow:0 8px 20px rgba(15,23,42,.05);
+          transition:background .15s, box-shadow .15s, transform .15s;
         }
-        .lp-btn-ghost:hover { background:var(--lp-card-hover); border-color:var(--lp-card-bdr-h); color:var(--lp-text1); }
+        .lp-btn-ghost:hover { background:rgba(var(--accent-primary-rgb),.06); box-shadow:0 12px 26px rgba(15,23,42,.08); transform:translateY(-1px); color:var(--lp-text1); }
 
         /* Demo */
         .lp-demo-wrap { animation:lpFadeUp .8s .5s ease both; }
@@ -1602,7 +1638,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           display:flex; align-items:flex-start; gap:14px;
           background:var(--lp-feature-card-bg); border:1px solid var(--lp-border2);
           border-radius:14px; padding:18px; text-align:left;
-          transition:border-color .2s, background .2s, transform .2s;
+          transition:background .2s, transform .2s, box-shadow .2s;
           animation:lpFadeUp .7s ease both;
           position:relative;
           overflow:hidden;
@@ -1613,7 +1649,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           top:0; left:0;
           width:3px; height:100%;
           border-radius:3px 0 0 3px;
-          opacity:.7;
+          opacity:.72;
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.95), rgba(var(--accent-primary-rgb),.38));
         }
         .lp-feature-card::after {
           content:'';
@@ -1625,45 +1662,45 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,0) 72%);
           pointer-events:none;
         }
-        .lp-feature-card:hover { border-color:var(--lp-card-bdr-h); background:var(--lp-feature-card-hover); transform:translateY(-2px); }
+        .lp-feature-card:hover { background:var(--lp-feature-card-hover); transform:translateY(-2px); box-shadow:0 18px 34px rgba(15,23,42,.1); }
         .lp-feature-icon {
           width:44px; height:44px; border-radius:10px; margin:0;
-          background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));
-          border:1px solid rgba(99,102,241,.16);
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.06));
+          border:1px solid rgba(var(--accent-primary-rgb),.14);
           display:flex; align-items:center; justify-content:center;
-          color:#818cf8; font-size:16px; flex-shrink:0;
+          color:rgb(var(--accent-primary)); font-size:16px; flex-shrink:0;
         }
         .lp-feature-card-auth::before {
-          background:linear-gradient(180deg, #6366f1, #818cf8);
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.95), rgba(var(--accent-primary-rgb),.38));
         }
         .lp-feature-card-auth .lp-feature-icon {
-          background:linear-gradient(135deg, rgba(99,102,241,.18), rgba(129,140,248,.08));
-          border-color:rgba(99,102,241,.2);
-          color:#a5b4fc;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.06));
+          border-color:rgba(var(--accent-primary-rgb),.14);
+          color:rgb(var(--accent-primary));
         }
         .lp-feature-card-tests::before {
-          background:linear-gradient(180deg, #0ea5e9, #06b6d4);
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.95), rgba(var(--accent-primary-rgb),.38));
         }
         .lp-feature-card-tests .lp-feature-icon {
-          background:linear-gradient(135deg, rgba(14,165,233,.16), rgba(6,182,212,.08));
-          border-color:rgba(14,165,233,.18);
-          color:#67e8f9;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.06));
+          border-color:rgba(var(--accent-primary-rgb),.14);
+          color:rgb(var(--accent-primary));
         }
         .lp-feature-card-security::before {
-          background:linear-gradient(180deg, #10b981, #34d399);
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.95), rgba(var(--accent-primary-rgb),.38));
         }
         .lp-feature-card-security .lp-feature-icon {
-          background:linear-gradient(135deg, rgba(16,185,129,.16), rgba(52,211,153,.08));
-          border-color:rgba(16,185,129,.18);
-          color:#6ee7b7;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.06));
+          border-color:rgba(var(--accent-primary-rgb),.14);
+          color:rgb(var(--accent-primary));
         }
         .lp-feature-card-meter::before {
-          background:linear-gradient(180deg, #f59e0b, #f97316);
+          background:linear-gradient(180deg, rgba(var(--accent-primary-rgb),.95), rgba(var(--accent-primary-rgb),.38));
         }
         .lp-feature-card-meter .lp-feature-icon {
-          background:linear-gradient(135deg, rgba(245,158,11,.16), rgba(249,115,22,.08));
-          border-color:rgba(245,158,11,.2);
-          color:#fbbf24;
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(var(--accent-primary-rgb),.06));
+          border-color:rgba(var(--accent-primary-rgb),.14);
+          color:rgb(var(--accent-primary));
         }
         .lp-feature-title { font-size:13.5px; font-weight:700; color:var(--lp-text1); margin-bottom:6px; }
         .lp-feature-desc  { font-size:12px; color:var(--lp-text4); line-height:1.65; }
@@ -2035,14 +2072,16 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             grid-template-columns:1fr;
           }
           .lp-hero-panel {
-            padding:16px;
             border-radius:22px;
           }
-          .lp-panel-topbar {
-            margin-bottom:12px;
+          .lp-panel-header {
+            padding:14px 16px 14px;
           }
-          .lp-panel-sub {
-            margin-bottom:12px;
+          .lp-panel-body {
+            padding:14px 16px 16px;
+          }
+          .lp-panel-topbar {
+            margin-bottom:10px;
           }
           .lp-arch-grid {
             gap:10px;
@@ -2153,7 +2192,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
       <div className="lp-root" style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px' }}>
 
         {/* ── HERO ─────────────────────────────────────────── */}
-        <section className="lp-hero-shell" style={{ paddingTop: 60, paddingBottom: 0 }}>
+        <section className="lp-hero-shell" style={{ paddingTop: 30, paddingBottom: 30 }}>
           <div className="lp-blob1" />
           <div className="lp-blob2" />
           <div className="lp-hero-grid">
@@ -2198,56 +2237,29 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 )}
               </div>
 
-              <div className="lp-hero-proofs">
-                {[
-                  {
-                    value: '3 auth providers',
-                    copy: 'Clerk, Better Auth, and NextAuth sit behind the same auth boundary, so UI flows stay stable while the provider changes.',
-                    meta: 'Auth boundary',
-                    tone: 'auth',
-                  },
-                  {
-                    value: '90+ automated tests',
-                    copy: 'Vitest covers webhooks, proration, expiry, org access, and checkout logic, with manual regression checks for UI-heavy flows.',
-                    meta: 'Regression coverage',
-                    tone: 'tests',
-                  },
-                  {
-                    value: 'Security by default',
-                    copy: 'Headers, encrypted fields, optional secrets-provider bootstrap, sanitized errors, request IDs, rate limits, and redacted logs.',
-                    meta: 'Production posture',
-                    tone: 'security',
-                  },
-                  {
-                    value: 'LLM-ready docs',
-                    copy: 'CLAUDE.md, AGENTS.md, and PATTERNS.md give any AI coding agent full context \u2014 prompt your way to production.',
-                    meta: 'Vibecoder-friendly',
-                    tone: 'meter',
-                  },
-                ].map((item, index) => (
-                  <div key={item.value} className={`lp-proof-card lp-proof-card-${item.tone}`} style={{ animationDelay: `${180 + index * 70}ms` }}>
-                    <div className="lp-proof-meta"><span className="lp-proof-dot" />{item.meta}</div>
-                    <div className="lp-proof-kpi">{item.value}</div>
-                    <div className="lp-proof-copy">{item.copy}</div>
-                  </div>
-                ))}
-              </div>
+              
             </div>
 
             <div className="lp-hero-panel">
-              <div className="lp-panel-topbar">
-                <span className="lp-panel-dot" style={{ background: '#ff5f56' }} />
-                <span className="lp-panel-dot" style={{ background: '#ffbd2e' }} />
-                <span className="lp-panel-dot" style={{ background: '#27c93f' }} />
-                <span className="lp-panel-label">Next.js 16 Boilerplate</span>
+              <div className="lp-panel-header">
+                <div className="lp-panel-topbar">
+                  <span className="lp-panel-dot" style={{ background: '#ff5f56' }} />
+                  <span className="lp-panel-dot" style={{ background: '#ffbd2e' }} />
+                  <span className="lp-panel-dot" style={{ background: '#27c93f' }} />
+                  <span className="lp-panel-label">Next.js 16 Boilerplate</span>
+                </div>
+
               </div>
 
-              <div className="lp-panel-title">Built for professionals & vibecoders.</div>
-              <div className="lp-panel-sub">
-                LLM-ready docs (CLAUDE.md, AGENTS.md, PATTERNS.md) let your AI agent understand the entire codebase — so you can prompt your way to a finished product.
-              </div>
+              <div className="lp-panel-body">
 
-              <div className="lp-arch-grid">
+                <div className="lp-panel-title">Built for professionals & vibecoders.</div>
+                <div className="lp-panel-sub">
+                  LLM-ready docs (CLAUDE.md, AGENTS.md, PATTERNS.md) let your AI agent understand the entire codebase — so you can prompt your way to a finished product.
+                </div>
+
+
+                <div className="lp-arch-grid">
                 <div className="lp-arch-card">
                   <div className="lp-arch-head">
                     <div className="lp-arch-title">
@@ -2270,6 +2282,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     <span className="lp-code-string">&quot;betterauth&quot;</span>
                     <span className="lp-code-comment">or</span>
                     <span className="lp-code-string">&quot;nextauth&quot;</span>
+                    <span className="lp-code-comment"># Self-hosted options or Clerk</span>
                   </div>
                 </div>
 
@@ -2291,55 +2304,18 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     <span className="lp-code-key">PAYMENT_PROVIDER</span>
                     <span>=</span>
                     <span className="lp-code-string">&quot;stripe&quot;</span>
-                    <span className="lp-code-comment">→ provider-agnostic routes, webhooks, plans</span>
+                    <span className="lp-code-comment"># Provider-agnostic routes, webhooks, plans</span>
                   </div>
                 </div>
 
-                <div className="lp-arch-card">
-                  <div className="lp-arch-head">
-                    <div className="lp-arch-title">
-                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faShield} /></span>
-                      Safeguards
-                    </div>
-                    <span className="lp-chip-soft">Production posture</span>
-                  </div>
-                  <div className="lp-chip-row">
-                    <span className="lp-chip-soft">Webhook signature rotation</span>
-                    <span className="lp-chip-soft">Request IDs</span>
-                    <span className="lp-chip-soft">Audit logs</span>
-                    <span className="lp-chip-soft">Encrypted fields</span>
-                    <span className="lp-chip-soft">Rate limits</span>
-                    <span className="lp-chip-soft">Sanitized errors</span>
-                  </div>
-                </div>
-
-                <div className="lp-arch-card">
-                  <div className="lp-arch-head">
-                    <div className="lp-arch-title">
-                      <span className="lp-arch-icon"><FontAwesomeIcon icon={faGear} /></span>
-                      Product Surface
-                    </div>
-                    <span className="lp-chip-soft">Brand without rewrites</span>
-                  </div>
-                  <div className="lp-chip-row" style={{ marginBottom: 10 }}>
-                    <span className="lp-chip-soft">Theme designer</span>
-                    <span className="lp-chip-soft">Custom CSS / head / body</span>
-                    <span className="lp-chip-soft">Light + dark palettes</span>
-                    <span className="lp-chip-soft">Reusable components</span>
-                    <span className="lp-chip-soft">Comprehensive documentation</span>
-                  </div>
-                  <div className="lp-env-line">
-                    <span className="lp-code-key">tokenName</span>
-                    <span>=</span>
-                    <span className="lp-code-string">&quot;API calls&quot;</span>
-                    <span className="lp-code-comment">or &quot;HD exports&quot;, &quot;credits&quot;, &quot;points&quot;</span>
-                  </div>
-                </div>
+              </div>
               </div>
             </div>
           </div>
 
         </section>
+
+        <hr className="lp-divider" />
 
         {/* ── DASHBOARD DEMO ──────────────────────────────── */}
         <section style={{ marginBottom: 0, marginTop: 58 }}>

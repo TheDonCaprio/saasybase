@@ -282,7 +282,156 @@ export type ThemeColorPalette = { light: ColorTokens; dark: ColorTokens };
 
 export type ThemeColorPreset = { name: string; light: ColorTokens; dark: ColorTokens };
 
+export type BuiltInThemePreset = {
+  name: string;
+  accent: string;
+  colors: PartialColorTokens;
+  isDefault?: boolean;
+};
+
 export const DEFAULT_LIGHT_COLORS: ColorTokens = {
+  bgPrimary: '#f3f4f6',
+  bgSecondary: '#ffffff',
+  panelBg: '#ffffff',
+  heroBg: '#eceef2',
+  bgTertiary: '#e7eaf0',
+  bgQuaternary: '#d5dae3',
+  textPrimary: '#171a20',
+  textSecondary: '#4b5563',
+  textTertiary: '#6b7280',
+  borderPrimary: '#d6dbe4',
+  borderSecondary: '#b1b9c6',
+  accentPrimary: '#1769d1',
+  accentHover: '#0f56ad',
+  headerBg: '#f8fafccc',
+  headerOpacity: 1,
+  headerText: '#171a20',
+  headerBlur: 24,
+  headerBorder: '#ffffffaa',
+  headerBorderOpacity: 1,
+  headerBorderWidth: 1,
+  headerMenuFontSize: 14,
+  headerMenuFontWeight: 500,
+  fontFamily: 'apple',
+  stickyHeaderBg: '#f8fafce0',
+  stickyHeaderOpacity: 1,
+  stickyHeaderBlur: 28,
+  stickyHeaderText: '#171a20',
+  stickyHeaderBorder: '#ffffffc7',
+  stickyHeaderBorderOpacity: 1,
+  stickyHeaderBorderWidth: 1,
+  sidebarBg: '#eceff4f0',
+  sidebarBorder: '#d9dee8',
+  sidebarOpacity: 1,
+  headerShadow: '#0f172a12',
+  headerShadowBlur: 18,
+  headerShadowSpread: -14,
+  surfaceRadius: 12,
+  statCardAccentTop: 0,
+  statCardAccentLeft: 0,
+  panelShadow: '#0f172a12',
+  panelShadowBlur: 22,
+  panelShadowSpread: -14,
+  cardShadow: '#0f172a18',
+  cardShadowBlur: 36,
+  cardShadowSpread: -16,
+  tabsShadow: '#0f172a10',
+  tabsShadowBlur: 20,
+  tabsShadowSpread: -14,
+  sidebarShadow: '#0f172a14',
+  sidebarShadowBlur: 24,
+  sidebarShadowSpread: -18,
+  stickyHeaderShadow: '#0f172a14',
+  stickyHeaderShadowBlur: 22,
+  stickyHeaderShadowSpread: -16,
+  pageGradientFrom: '#f3f4f6',
+  pageGradientVia: '#eef1f5',
+  pageGradientTo: '#f7f8fa',
+  heroGradientFrom: '#fbfcfd',
+  heroGradientVia: '#f3f5f8',
+  heroGradientTo: '#eff2f6',
+  cardGradientFrom: '#ffffff',
+  cardGradientVia: '#f9fafb',
+  cardGradientTo: '#ffffff',
+  tabsGradientFrom: '#eef1f5',
+  tabsGradientVia: '#f5f7fa',
+  tabsGradientTo: '#eef1f5',
+  pageGlow: '#7c8ea814',
+  glowOpacity: 1,
+};
+
+export const DEFAULT_DARK_COLORS: ColorTokens = {
+  bgPrimary: '#0f1115',
+  bgSecondary: '#171a20',
+  panelBg: '#1b1f26',
+  heroBg: '#14181e',
+  bgTertiary: '#242a33',
+  bgQuaternary: '#394252',
+  textPrimary: '#f3f5f7',
+  textSecondary: '#c8d0da',
+  textTertiary: '#929dab',
+  borderPrimary: '#2c3440',
+  borderSecondary: '#465160',
+  accentPrimary: '#6aa8ff',
+  accentHover: '#8dbbff',
+  headerBg: '#11141abf',
+  headerOpacity: 1,
+  headerText: '#f3f5f7',
+  headerBlur: 24,
+  headerBorder: '#ffffff12',
+  headerBorderOpacity: 1,
+  headerBorderWidth: 1,
+  headerMenuFontSize: 14,
+  headerMenuFontWeight: 500,
+  fontFamily: 'apple',
+  stickyHeaderBg: '#11141ae0',
+  stickyHeaderOpacity: 1,
+  stickyHeaderBlur: 28,
+  stickyHeaderText: '#f3f5f7',
+  stickyHeaderBorder: '#ffffff10',
+  stickyHeaderBorderOpacity: 1,
+  stickyHeaderBorderWidth: 1,
+  sidebarBg: '#151922f0',
+  sidebarBorder: '#2d3440',
+  sidebarOpacity: 1,
+  headerShadow: '#00000036',
+  headerShadowBlur: 20,
+  headerShadowSpread: -14,
+  surfaceRadius: 12,
+  statCardAccentTop: 0,
+  statCardAccentLeft: 0,
+  panelShadow: '#00000030',
+  panelShadowBlur: 24,
+  panelShadowSpread: -16,
+  cardShadow: '#00000042',
+  cardShadowBlur: 40,
+  cardShadowSpread: -16,
+  tabsShadow: '#00000030',
+  tabsShadowBlur: 24,
+  tabsShadowSpread: -14,
+  sidebarShadow: '#00000040',
+  sidebarShadowBlur: 28,
+  sidebarShadowSpread: -18,
+  stickyHeaderShadow: '#00000038',
+  stickyHeaderShadowBlur: 24,
+  stickyHeaderShadowSpread: -16,
+  pageGradientFrom: '#0f1115',
+  pageGradientVia: '#12161d',
+  pageGradientTo: '#0f1115',
+  heroGradientFrom: '#14181e',
+  heroGradientVia: '#181d25',
+  heroGradientTo: '#14181e',
+  cardGradientFrom: '#1a1f27',
+  cardGradientVia: '#1e242d',
+  cardGradientTo: '#1a1f27',
+  tabsGradientFrom: '#12161d',
+  tabsGradientVia: '#161b23',
+  tabsGradientTo: '#12161d',
+  pageGlow: '#6aa8ff14',
+  glowOpacity: 1,
+};
+
+export const FLOW_LIGHT_COLORS: ColorTokens = {
   bgPrimary: '#ffffff',
   bgSecondary: '#f9fafb',
   panelBg: '#f9fafb',
@@ -353,7 +502,7 @@ export const DEFAULT_LIGHT_COLORS: ColorTokens = {
   glowOpacity: 1,
 };
 
-export const DEFAULT_DARK_COLORS: ColorTokens = {
+export const FLOW_DARK_COLORS: ColorTokens = {
   bgPrimary: '#0a0a0a',
   bgSecondary: '#171717',
   panelBg: '#171717',
@@ -488,11 +637,17 @@ export const COLOR_GROUPS: Array<{ title: string; keys: ColorHexKey[] }> = [
   { title: 'Tab Strip Gradient', keys: ['tabsGradientFrom', 'tabsGradientVia', 'tabsGradientTo'] },
 ];
 
-export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTokens }> = [
+export const LIGHT_PRESETS: BuiltInThemePreset[] = [
   {
-    name: 'Default',
+    name: 'Minimal',
     accent: DEFAULT_LIGHT_COLORS.accentPrimary,
     colors: DEFAULT_LIGHT_COLORS,
+    isDefault: true,
+  },
+  {
+    name: 'Flow',
+    accent: FLOW_LIGHT_COLORS.accentPrimary,
+    colors: FLOW_LIGHT_COLORS,
   },
   // ── Blueish ───────────────────────────────────────────────────────────
   // Inspiration: IBM Carbon renamed for a neutral, industrial system UI.
@@ -1184,11 +1339,17 @@ export const LIGHT_PRESETS: Array<{ name: string; accent: string; colors: Partia
   },
 ];
 
-export const DARK_PRESETS: Array<{ name: string; accent: string; colors: PartialColorTokens }> = [
+export const DARK_PRESETS: BuiltInThemePreset[] = [
   {
-    name: 'Default',
+    name: 'Minimal',
     accent: DEFAULT_DARK_COLORS.accentPrimary,
     colors: DEFAULT_DARK_COLORS,
+    isDefault: true,
+  },
+  {
+    name: 'Flow',
+    accent: FLOW_DARK_COLORS.accentPrimary,
+    colors: FLOW_DARK_COLORS,
   },
   // ── Blueish Dark ──────────────────────────────────────────────────────
   // Inspiration: IBM Carbon renamed for a neutral, industrial system UI.

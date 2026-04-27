@@ -301,7 +301,7 @@ export function ColorTabContent({
                   type="button"
                   onClick={() => {
                     setColors(preset.colors);
-                    if (preset.source === 'built-in' && preset.name === 'Default') {
+                    if (preset.source === 'built-in' && preset.isDefault) {
                       onSelectDefaultPreset?.();
                     }
                   }}

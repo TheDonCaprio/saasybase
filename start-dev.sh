@@ -1,5 +1,8 @@
 #!/bin/bash
-cd /Users/doncaprio/Documents/GitHub/saasybase
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Start both Next.js dev server and Stripe webhook forwarder
 concurrently \

@@ -1519,7 +1519,7 @@ Simple setup flow:
 3. Keep provider authentication in the provider's own CLI flow or machine identity setup instead of storing cloud-service JSON keys in env.
 4. Optionally set `SECRETS_PROVIDER_COMMAND` when you want the app to run a custom export command instead of the built-in default.
 5. Run `npm run secrets:smoke` before the first real deploy.
-6. Deploy normally with `npm run build`, `npm run start`, and `npm run prisma:deploy`.
+6. Deploy normally in order: `npm run prisma:deploy`, then `npm run build`, then `npm run start`.
 
 Built-in default commands:
 
@@ -1642,7 +1642,7 @@ SaaSyBase does not need much Vercel-specific config, but there are a few product
 2. Set production env vars in the Vercel project settings.
 3. Use PostgreSQL, not SQLite.
 4. Run `npx prisma migrate deploy` against the production database before the first live release and on future schema changes. Vercel does not apply Prisma migrations for you automatically.
-5. If you need admin-managed uploads (logos, blog assets, similar files), use `FILE_STORAGE="s3"` plus S3-compatible credentials. Vercel's local filesystem is not suitable for durable app-managed uploads.
+5. If you need admin-managed uploads (logos, blog assets, similar files), use `FILE_STORAGE="s3"` plus S3-compatible credentials. On Vercel, persistent app-managed uploads should be treated as required S3 storage because the local filesystem is not a durable production store.
 6. Set `CRON_SECRET` in Vercel if you want the built-in Vercel cron job to call `/api/cron/process-expiry`. The shipped `vercel.json` schedules that route once per day at `03:00 UTC`.
 
 Notes:
@@ -1701,10 +1701,10 @@ Recommended setup:
 1. Connect the repository as a Node or Nixpacks-style application.
 2. Set the build command to `npm run build`.
 3. Set the start command to `npm run start`.
-4. Run `npx prisma migrate deploy` as a pre-deploy step or separate deployment job.
+4. Configure `npm run prisma:deploy` as a pre-deploy step or deployment hook so every release applies migrations before the app starts. A one-time manual run is only a fallback, not the steady-state production workflow.
 5. Use PostgreSQL for production data.
 6. Use S3-compatible storage if you need durable uploaded assets across container restarts or reschedules.
-7. Configure a scheduled HTTP job for `/api/cron/process-expiry` with `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` unless you are relying on a platform-native scheduler that can inject a bearer token.
+7. Configure a scheduled HTTP job for `/api/cron/process-expiry` with `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>`. The route also accepts `CRON_SECRET` and `CRON_TOKEN`, but using one canonical name avoids confusion.
 8. If you are using the built-in secrets bootstrap, authenticate the Infisical or Doppler CLI using that provider's recommended machine identity or service token flow. Examples are in [docs/secrets-provider-deploy-examples.md](docs/secrets-provider-deploy-examples.md).
 
 ### Linux VPS (Nginx or Apache)

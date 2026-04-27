@@ -51,6 +51,7 @@ PAYMENT_PROVIDER=stripe
 Before the first real deploy, run:
 
 ```bash
+npm run secrets:doctor
 npm run secrets:smoke
 ```
 
@@ -107,7 +108,7 @@ This is a concrete non-interactive production path based on Infisical Universal 
 2. Store the identity Client ID and Client Secret in your runtime environment.
 3. Exchange those credentials for an access token and export it as `INFISICAL_TOKEN`.
 4. Verify `infisical export --format json` works in the same runtime context.
-5. Run SaaSyBase commands normally.
+5. Run SaaSyBase commands in deploy order.
 
 ```bash
 # machine identity credentials from Infisical Universal Auth
@@ -134,6 +135,7 @@ export INFISICAL_ENVIRONMENT="prod"
 infisical export --format json --projectId "$INFISICAL_PROJECT_ID" --env "$INFISICAL_ENVIRONMENT" | head -c 200
 npm run secrets:doctor
 npm run secrets:smoke
+npm run prisma:deploy
 npm run build
 npm run start
 
@@ -157,7 +159,7 @@ This is the most common non-interactive production setup.
 2. Inject that token into the runtime environment as `DOPPLER_TOKEN`.
 3. Optionally set `DOPPLER_PROJECT` and `DOPPLER_CONFIG` explicitly.
 4. Verify secrets can be exported in the same runtime context.
-5. Run SaaSyBase commands using `doppler run -- ...`.
+5. Run SaaSyBase commands using `doppler run -- ...` in deploy order.
 
 ```bash
 # required machine credential (starts with dp.st.)
@@ -173,6 +175,7 @@ doppler secrets download --no-file --format json | head -c 200
 # run app commands with Doppler env injection
 doppler run -- npm run secrets:doctor
 doppler run -- npm run secrets:smoke
+doppler run -- npm run prisma:deploy
 doppler run -- npm run build
 doppler run -- npm run start
 ```
@@ -205,10 +208,11 @@ If your team already standardized on Infisical or Doppler, use the same envs sho
 
 Recommended commands:
 
+- pre-deploy migration hook: `npm run prisma:deploy`
 - build: `npm run build`
 - start: `npm run start`
-- pre-deploy: `npm run prisma:deploy`
-- validation before cutover: `npm run secrets:smoke`
+- validation before cutover: `npm run secrets:doctor` and `npm run secrets:smoke`
+- scheduled cron caller: `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` (the route also accepts `CRON_SECRET` and `CRON_TOKEN`)
 
 ## Self-Hosted Linux VPS
 

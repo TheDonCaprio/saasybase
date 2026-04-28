@@ -13,6 +13,7 @@ import {
     faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import { showToast } from '../ui/Toast';
+import PaymentProviderBadge from '../ui/PaymentProviderBadge';
 import clsx from 'clsx';
 
 interface EnvVarStatus {
@@ -440,14 +441,16 @@ function ProviderCard({ provider }: { provider: PaymentProviderInfo }) {
                             ? 'bg-emerald-100 dark:bg-emerald-500/20' 
                             : 'bg-slate-100 dark:bg-neutral-800'
                     )}>
-                        <FontAwesomeIcon 
-                            icon={faCreditCard} 
+                        <PaymentProviderBadge
+                            provider={provider.id}
+                            variant="icon"
+                            size="md"
+                            showName={false}
                             className={clsx(
-                                'h-6 w-6',
-                                provider.isActive 
-                                    ? 'text-emerald-600 dark:text-emerald-400' 
+                                provider.isActive
+                                    ? 'text-emerald-600 dark:text-emerald-400'
                                     : 'text-slate-500 dark:text-neutral-400'
-                            )} 
+                            )}
                         />
                     </div>
                     <div>

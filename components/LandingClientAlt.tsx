@@ -2527,7 +2527,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     fontSize: '2.9rem',
                   }}
                 >
-                  One codebase you can actually ship.
+                  One codebase ready to ship today.
                 </span>
               </h1>
 

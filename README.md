@@ -170,8 +170,8 @@ cp .env.example .env.local
 # 2. Install dependencies
 npm install
 
-# 3. Run database migrations
-npm run prisma:migrate -- --name init
+# 3. Apply existing database migrations
+npm run prisma:deploy
 
 # 4. Seed the database (prompts for admin email/password)
 npx prisma db seed
@@ -179,6 +179,8 @@ npx prisma db seed
 # 5. Start dev server
 npm run dev
 ```
+
+If `npm run prisma:deploy` reports an old failed migration on what you expected to be a fresh install, check which `DATABASE_URL` Prisma actually resolved. The repo default is `file:./dev.db`, but `.env.local`, `.env.development`, `.env`, or an enabled secrets provider such as Doppler or Infisical can override that and point Prisma at an older local database file instead.
 
 ### Choose your database
 
@@ -239,14 +241,14 @@ These are the commands most people actually need when working on or operating th
 | `npm run lint` | Run ESLint |
 | `npm test` | Run Vitest unit/integration tests |
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
-| `npm run prisma:migrate` | Create and apply a local Prisma migration using `prisma.config.ts` and `.env.local` |
-| `npm run prisma:deploy` | Apply existing Prisma migrations in production/CI |
+| `npm run prisma:migrate` | Create and apply a new local Prisma migration when you change the schema |
+| `npm run prisma:deploy` | Apply the existing Prisma migration history to a fresh or deployed database |
 | `npm run secrets:doctor` | Run the provider command directly and report the detected output shape before boot |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
 
-`npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`).
+`npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`). If you have a secrets provider enabled, it can still fill missing values, so confirm the resolved `DATABASE_URL` before assuming Prisma is targeting the default local SQLite file.
 
-If you are new to the repo, the normal local loop is: `npm install` → `npx prisma db seed` → `npm run dev`.
+If you are new to the repo, the normal local loop is: `npm install` → `npm run prisma:deploy` → `npx prisma db seed` → `npm run dev`.
 
 ---
 

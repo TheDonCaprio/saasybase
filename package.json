@@ -48,7 +48,6 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@sentry/nextjs": "^10.49.0",
-    "@solana/web3.js": "^1.98.4",
     "@stripe/react-stripe-js": "^5.4.0",
     "@stripe/stripe-js": "^8.5.2",
     "@tiptap/extension-color": "^3.7.2",
@@ -72,14 +71,13 @@
     "google-auth-library": "^10.4.0",
     "next": "^16.2.4",
     "next-auth": "^5.0.0-beta.31",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.7",
     "pdf-lib": "^1.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-easy-crop": "^5.5.3",
-    "resend": "^6.10.0",
+    "resend": "^6.12.2",
     "stripe": "^16.0.0",
-    "svix": "^1.81.0",
     "tailwind-merge": "^2.3.0",
     "zod": "^3.23.8"
   },
@@ -91,7 +89,8 @@
   "overrides": {
     "protobufjs": "7.5.5",
     "@hono/node-server": "1.19.14",
-    "hono": "4.12.14"
+    "hono": "4.12.14",
+    "svix": "1.92.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

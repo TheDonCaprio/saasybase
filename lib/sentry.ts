@@ -6,6 +6,17 @@ type CaptureContext = {
   tags?: Record<string, string>
 }
 
+type SentryApi = {
+  init?: (options: ReturnType<typeof getSentryInitOptions>) => void
+  withScope?: (callback: (scope: {
+    setTag: (key: string, value: string) => void
+    setExtras: (extras: Record<string, unknown>) => void
+  }) => void) => void
+  captureMessage?: (message: string, level?: 'warning' | 'error' | 'info') => string
+  captureException?: (error: unknown) => string
+  flush?: (timeoutMs?: number) => Promise<boolean>
+}
+
 let sentryModulePromise: Promise<SentryModule | null> | null = null
 let initPromise: Promise<boolean> | null = null
 
@@ -142,6 +153,24 @@ async function loadSentryModule(): Promise<SentryModule | null> {
   return sentryModulePromise
 }
 
+function getSentryApi(module: SentryModule): SentryApi {
+  const moduleWithDefault = module as SentryModule & { default?: SentryApi }
+
+  return {
+    init: typeof module.init === 'function' ? module.init : moduleWithDefault.default?.init,
+    withScope: typeof module.withScope === 'function' ? module.withScope : moduleWithDefault.default?.withScope,
+    captureMessage:
+      typeof module.captureMessage === 'function'
+        ? module.captureMessage
+        : moduleWithDefault.default?.captureMessage,
+    captureException:
+      typeof module.captureException === 'function'
+        ? module.captureException
+        : moduleWithDefault.default?.captureException,
+    flush: typeof module.flush === 'function' ? module.flush : moduleWithDefault.default?.flush,
+  }
+}
+
 async function ensureSentryInitialized(): Promise<boolean> {
   const runtime = getCurrentRuntime()
 
@@ -157,7 +186,13 @@ async function ensureSentryInitialized(): Promise<boolean> {
       return false
     }
 
-    sentry.init(getSentryInitOptions(runtime))
+    const api = getSentryApi(sentry)
+
+    if (typeof api.init !== 'function') {
+      return false
+    }
+
+    api.init(getSentryInitOptions(runtime))
     markSentryRuntimeInitialized(runtime)
     return true
   })().finally(() => {
@@ -201,11 +236,20 @@ export async function captureSentryMessage(
     return undefined
   }
 
+  const api = getSentryApi(sentry)
+  if (typeof api.captureMessage !== 'function') {
+    return undefined
+  }
+
   let eventId: string | undefined
-  sentry.withScope((scope) => {
-    applyScopeContext(scope, context)
-    eventId = sentry.captureMessage(message, level)
-  })
+  if (typeof api.withScope === 'function') {
+    api.withScope((scope) => {
+      applyScopeContext(scope, context)
+      eventId = api.captureMessage?.(message, level)
+    })
+  } else {
+    eventId = api.captureMessage(message, level)
+  }
 
   return eventId
 }
@@ -220,11 +264,20 @@ export async function captureSentryException(error: unknown, context?: CaptureCo
     return undefined
   }
 
+  const api = getSentryApi(sentry)
+  if (typeof api.captureException !== 'function') {
+    return undefined
+  }
+
   let eventId: string | undefined
-  sentry.withScope((scope) => {
-    applyScopeContext(scope, context)
-    eventId = sentry.captureException(error)
-  })
+  if (typeof api.withScope === 'function') {
+    api.withScope((scope) => {
+      applyScopeContext(scope, context)
+      eventId = api.captureException?.(error)
+    })
+  } else {
+    eventId = api.captureException(error)
+  }
 
   return eventId
 }
@@ -235,12 +288,17 @@ export async function flushSentry(timeoutMs = 2000): Promise<boolean> {
   }
 
   const sentry = await loadSentryModule()
-  if (!sentry || typeof sentry.flush !== 'function') {
+  if (!sentry) {
+    return false
+  }
+
+  const api = getSentryApi(sentry)
+  if (typeof api.flush !== 'function') {
     return false
   }
 
   try {
-    return await sentry.flush(timeoutMs)
+    return await api.flush(timeoutMs)
   } catch {
     return false
   }

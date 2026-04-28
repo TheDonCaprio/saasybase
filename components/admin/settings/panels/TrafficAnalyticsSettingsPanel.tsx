@@ -67,12 +67,7 @@ export function TrafficAnalyticsSettingsPanel({ initialHealth }: TrafficAnalytic
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Traffic analytics provider</h3>
-        <p className="text-sm text-slate-600 dark:text-neutral-400">
-          This controls both the admin traffic dashboard backend and the pageview script injected in the root layout.
-        </p>
-      </div>
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         {PROVIDER_OPTIONS.map((option) => {

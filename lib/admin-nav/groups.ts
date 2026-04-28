@@ -48,12 +48,12 @@ export function buildAdminNavGroups(items: AdminNavItem[]): AdminNavGroup[] {
       items: items.filter((item) => ['/admin/analytics', '/admin/traffic'].includes(item.href)),
     },
     {
-      title: 'Product Setup',
-      items: items.filter((item) => ['/admin/plans', '/admin/theme'].includes(item.href)),
+      title: 'Setup',
+      items: items.filter((item) => ['/admin/plans', '/admin/theme', '/admin/settings'].includes(item.href)),
     },
     {
       title: 'System',
-      items: items.filter((item) => ['/admin/settings', '/admin/logs', '/admin/system', '/admin/maintenance'].includes(item.href)),
+      items: items.filter((item) => ['/admin/logs', '/admin/system', '/admin/maintenance'].includes(item.href)),
     },
   ];
 

@@ -75,12 +75,12 @@ const adminNavGroups: AdminNavGroup[] = [
     items: [
       { href: '/admin/plans', label: 'Plans', icon: faListAlt },
       { href: '/admin/theme', label: 'Theme', icon: faPalette },
+      { href: '/admin/settings', label: 'Settings', icon: faCogs },
     ],
   },
   {
     title: 'System',
     items: [
-      { href: '/admin/settings', label: 'Settings', icon: faCogs },
       { href: '/admin/logs', label: 'Logs', icon: faTriangleExclamation },
       { href: '/admin/system', label: 'System Info', icon: faServer },
       { href: '/admin/maintenance', label: 'Maintenance', icon: faWrench },

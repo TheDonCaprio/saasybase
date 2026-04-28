@@ -10,14 +10,15 @@ import {
   faUsers, faChartLine, faDollarSign, faTicket, faBars,
   faWaveSquare, faGaugeHigh, faLifeRing, faArrowUpRightFromSquare, faBolt, faGear, faTriangleExclamation,
   faPen, faHourglassEnd, faHandHoldingDollar,
-  faPalette, faReceipt, faEye, faTachometerAlt,
+  faPalette, faReceipt, faEye, faTachometerAlt, faBell, faFileInvoiceDollar,
+  faListAlt, faServer, faShoppingCart, faSitemap, faTrafficLight, faWrench, faCogs,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { PAYMENT_PROVIDERS } from '../lib/payment/provider-config';
 import { PaymentProviderBadge } from './ui/PaymentProviderBadge';
 import { AdminStatCard } from './admin/AdminStatCard';
 import { DashboardPageHeader } from './dashboard/DashboardPageHeader';
-import { dashboardPanelClass, dashboardPillClass } from './dashboard/dashboardSurfaces';
+import { dashboardMutedPanelClass, dashboardPanelClass, dashboardPillClass } from './dashboard/dashboardSurfaces';
 import { shouldDisableLandingDemoTilt } from '@/lib/landing-demo-tilt';
 
 /* ─── Fake data for the animated dashboard demo ─── */
@@ -68,13 +69,6 @@ const FAKE_USERS = [
   { email: 'liam@demo.com',   name: 'Liam Walker',     role: 'USER',  plan: 'Business', status: 'Active', joined: 'Nov 28, 2025', payments: 33, avatarBg: '#10b981' },
 ];
 
-const FINANCE_SUBMENU = [
-  { label: 'Transactions',   view: 'finance' as DemoView | null, badge: 122, icon: faFileLines },
-  { label: 'One-Time Sales', view: null,                          badge: null, icon: faDollarSign },
-  { label: 'Subscriptions',  view: null,                          badge: 69,   icon: faArrowsRotate },
-];
-
-
 type DemoView = 'finance' | 'users' | 'overview';
 const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
 const DEMO_HOLD_MS = [9500, 8500, 6500];
@@ -104,6 +98,10 @@ const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone:
   { icon: faReceipt,      title: 'PDF Invoices & Receipts',  desc: 'Auto-generated PDF invoices and refund receipts with your branding, delivered by email or downloadable from the dashboard.', tone: 'tests' },
   { icon: faEye,          title: 'Traffic Analytics',         desc: 'Built-in visit tracking, page-level analytics, referrer breakdown, and admin traffic dashboards — no third-party scripts needed.', tone: 'auth' },
   { icon: faGaugeHigh,    title: 'Rate Limiting & Security',  desc: 'DB-backed rate limiting, CSP and HSTS headers, encrypted fields, webhook secret rotation, and auto-redacted logging.', tone: 'security' },
+  { icon: faTriangleExclamation, title: 'Sentry Error Tracking', desc: 'Optional Sentry setup for production monitoring, with client, edge, and server capture helpers already wired.', tone: 'security' },
+  { icon: faLock,        title: 'External Secret Providers', desc: 'Keep production secrets in a vault or cloud secret store, with deployment examples and rotation guidance.', tone: 'auth' },
+  { icon: faServer,      title: 'Deployment Readiness',     desc: 'Health checks, cron jobs, and production guardrails are ready for Vercel, Coolify, or VPS deployments.', tone: 'tests' },
+  { icon: faFileLines,   title: 'Secrets Inventory',         desc: 'Track secrets, rotate them safely, and keep configuration organized across environments.', tone: 'meter' },
 ];
 
 const PROVIDERS = [
@@ -483,7 +481,7 @@ function DashboardDemo() {
               </div>
               {[
                 { label: 'Users',         view: 'users' as DemoView | null,    badge: FAKE_USERS.length,  icon: faUsers },
-                { label: 'Organizations', view: null,                            badge: null, icon: faBuilding },
+                { label: 'Organizations', view: null,                            badge: null, icon: faSitemap },
                 { label: 'Moderation',    view: null,                            badge: 99, icon: faUserShield },
               ].map(item => {
                 const active = item.view === demoView;
@@ -502,9 +500,9 @@ function DashboardDemo() {
                 <span>Revenue</span>
               </div>
               {[
-                { label: 'Transactions', view: 'finance' as DemoView | null, badge: 122, icon: faFileLines },
+                { label: 'Transactions', view: 'finance' as DemoView | null, badge: 122, icon: faFileInvoiceDollar },
                 { label: 'Subscriptions', view: null, badge: 69, icon: faArrowsRotate },
-                { label: 'One-Time Sales', view: null, badge: null, icon: faDollarSign },
+                { label: 'One-Time Sales', view: null, badge: null, icon: faShoppingCart },
                 { label: 'Coupons', view: null, badge: 8, icon: faTicket },
               ].map(item => {
                 const active = item.view === demoView;
@@ -519,19 +517,20 @@ function DashboardDemo() {
                 );
               })}
               {[
-                { title: 'Publishing', items: ['Pages', 'Blog'] },
-                { title: 'Messaging', items: ['Email Templates', 'Notifications', 'Support'] },
-                { title: 'Growth & Analytics', items: ['Analytics', 'Traffic'] },
-                { title: 'Product Setup', items: ['Plans', 'Theme'] },
-                { title: 'System', items: ['Settings', 'Logs', 'System Info', 'Maintenance'] },
+                { title: 'Publishing', items: [{ label: 'Pages', icon: faFileLines }, { label: 'Blog', icon: faNewspaper }] },
+                { title: 'Messaging', items: [{ label: 'Email Templates', icon: faEnvelope }, { label: 'Notifications', icon: faBell }, { label: 'Support', icon: faLifeRing }] },
+                { title: 'Growth & Analytics', items: [{ label: 'Analytics', icon: faChartLine }, { label: 'Traffic', icon: faTrafficLight }] },
+                { title: 'Product Setup', items: [{ label: 'Plans', icon: faListAlt }, { label: 'Theme', icon: faPalette }] },
+                { title: 'System', items: [{ label: 'Settings', icon: faCogs }, { label: 'Logs', icon: faTriangleExclamation }, { label: 'System Info', icon: faServer }, { label: 'Maintenance', icon: faWrench }] },
               ].map((group) => (
                 <React.Fragment key={group.title}>
                   <div style={{ padding: '6px 14px', fontSize: 12, color: 'var(--lp-dd-nav-text)', fontWeight: 500, cursor: 'default', marginTop: 2 }}>
                     <span>{group.title}</span>
                   </div>
                   {group.items.map((item) => (
-                    <div key={item} style={{ padding: '5px 14px 5px 26px', display: 'flex', alignItems: 'center', fontSize: 11.5, color: 'var(--lp-dd-nav-text)', fontWeight: 400, cursor: 'default' }}>
-                      <span>{item}</span>
+                    <div key={item.label} style={{ padding: '5px 14px 5px 26px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--lp-dd-nav-text)', fontWeight: 400, cursor: 'default' }}>
+                      <FontAwesomeIcon icon={item.icon} style={{ width: 10, color: 'var(--lp-dd-nav-text)' }} />
+                      <span>{item.label}</span>
                     </div>
                   ))}
                 </React.Fragment>
@@ -564,9 +563,29 @@ function DashboardDemo() {
                   <AdminStatCard label="Refund rate" value="4.8%" helper="Lower than target" icon={faGaugeHigh} accent="theme" size="compact" />
                   <AdminStatCard label="Payments" value="847" helper="Processed this month" icon={faCreditCard} accent="theme" size="compact" />
                 </section>
-                {/* Transactions table */}
-                <div style={{ padding: '0 14px 10px' }}>
-                  <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
+                <div className="space-y-3 px-4 pt-4 pb-4">
+                  <div className={dashboardPanelClass('p-3 sm:p-4')}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
+                      <div className="min-w-[220px] flex-1 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 text-xs text-slate-400 dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:text-neutral-500">
+                        Search by email, payment ID, or plan...
+                      </div>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>All statuses</span>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>Created</span>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>Last 30 days</span>
+                    </div>
+                  </div>
+                  <div className={dashboardMutedPanelClass('flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300')}>
+                    <span>Showing 22 of 847 payments</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+                        Status: All statuses
+                      </span>
+                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+                        Search: Alex
+                      </span>
+                    </div>
+                  </div>
+                  <div className={dashboardPanelClass('p-0 overflow-hidden')}>
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--lp-dd-hdr-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--lp-dd-title-text)' }}>Recent Transactions</span>
                     </div>
@@ -674,9 +693,22 @@ function DashboardDemo() {
                   <AdminStatCard label="Free users" value={freeUsers.length.toLocaleString('en-US')} helper="0 new yesterday" icon={faGauge} accent="theme" size="compact" />
                   <AdminStatCard label="Renewals" value="4" helper="Next 14 days" icon={faTicket} accent="theme" size="compact" />
                 </section>
-                {/* User table */}
-                <div style={{ padding: '8px 14px 10px' }}>
-                  <div style={{ background: 'var(--lp-dd-table-bg)', border: '1px solid var(--lp-dd-border2)', borderRadius: 8, overflow: 'hidden' }}>
+                <div className="space-y-3 px-4 pt-4 pb-4">
+                  <div className={dashboardPanelClass('p-3 sm:p-4')}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
+                      <div className="min-w-[220px] flex-1 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 text-xs text-slate-400 dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:text-neutral-500">
+                        Search by email, name, or user ID...
+                      </div>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>All roles</span>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>All access states</span>
+                      <span className={dashboardPillClass('text-slate-700 dark:text-neutral-200')}>Date registered</span>
+                    </div>
+                  </div>
+                  <div className={dashboardMutedPanelClass('flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-neutral-300')}>
+                    <span>Showing 19 of 19 accounts</span>
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-neutral-400">Auto-refreshing filters</span>
+                  </div>
+                  <div className={dashboardPanelClass('p-0 overflow-hidden')}>
                     {/* Desktop grid table */}
                     <div className="lp-dd-tbl-desktop">
                       <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.9fr 0.8fr 1.3fr 1.2fr 1fr 0.7fr', padding: '5px 12px', gap: 6, borderBottom: '1px solid var(--lp-dd-hdr-border)' }}>
@@ -1368,7 +1400,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         .light .lp-root .lp-hero-panel .lp-chip-soft {
           background:rgba(var(--accent-primary-rgb),.05);
-          border-color:rgba(var(--accent-primary-rgb),.035);
+          border-color: #e2e2e2cc;
           color:rgba(15,23,42,.68);
         }
         .lp-arch-head {
@@ -1904,11 +1936,273 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-code-string  { color:#34d399; }
         .lp-cursor       { display:inline-block; animation:lpBlink 1s step-end infinite; color:#6366f1; }
 
-        /* Step cards (How it works) */
-        .lp-step-card { background:var(--lp-step-bg); border:1px solid var(--lp-step-border); border-radius:14px; padding:28px 22px; text-align:left; }
-        .lp-step-num   { font-size:11px; font-weight:800; color:#6366f1; letter-spacing:2px; margin-bottom:10px; }
-        .lp-step-title { font-size:15px; font-weight:700; color:var(--lp-step-title); margin-bottom:8px; }
-        .lp-step-desc  { font-size:13px; color:var(--lp-step-desc); line-height:1.65; }
+        /* Deployment timeline */
+        .lp-timeline {
+          position:relative;
+          margin-top:42px;
+          display:grid;
+          gap:28px;
+        }
+        .lp-timeline::before {
+          content:none;
+        }
+        .lp-timeline-step {
+          position:relative;
+          display:grid;
+          grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr);
+          align-items:start;
+          gap:22px;
+          padding:8px 0;
+        }
+        .lp-timeline-step::after {
+          content:'';
+          position:absolute;
+          top:-28px;
+          bottom:-1px;
+          left:50%;
+          width:4px;
+          border-radius:999px;
+          background:rgb(var(--accent-primary-rgb));
+          transform:translateX(-50%);
+          pointer-events:none;
+          z-index:1;
+          opacity:.38;
+        }
+        .lp-timeline-step:first-child::after {
+          top:41px;
+        }
+        .lp-timeline-step:last-child::after {
+          bottom:calc(100% - 41px);
+        }
+        .lp-timeline-step::before {
+          content:'';
+          position:absolute;
+          top:34px;
+          left:50%;
+          width:14px;
+          height:14px;
+          border-radius:999px;
+          border:3px solid rgba(255,255,255,.82);
+          background:rgb(var(--accent-primary));
+          box-shadow:0 0 0 6px rgba(var(--accent-primary-rgb),.12), 0 12px 24px rgba(var(--accent-primary-rgb),.22);
+          transform:translate(-50%, 0);
+          z-index:2;
+        }
+        .light .lp-root .lp-timeline-step::before {
+          border-color:rgba(255,255,255,.95);
+          box-shadow:0 0 0 6px rgba(var(--accent-primary-rgb),.08), 0 10px 22px rgba(15,23,42,.08);
+        }
+        .lp-timeline-step:nth-child(even) .lp-timeline-card {
+          grid-column:1;
+          grid-row:1;
+          justify-self:end;
+          text-align:right;
+        }
+        .lp-timeline-step:nth-child(odd) .lp-timeline-card {
+          grid-column:3;
+          grid-row:1;
+          justify-self:start;
+          text-align:left;
+        }
+        .lp-timeline-step:nth-child(even) .lp-timeline-side {
+          grid-column:3;
+          grid-row:1;
+          justify-self:start;
+        }
+        .lp-timeline-step:nth-child(odd) .lp-timeline-side {
+          grid-column:1;
+          grid-row:1;
+          justify-self:end;
+        }
+        .lp-timeline-step:nth-child(even) .lp-timeline-side {
+          align-items:flex-start;
+        }
+        .lp-timeline-step:nth-child(odd) .lp-timeline-side {
+          align-items:flex-end;
+        }
+        .lp-timeline-side {
+          display:flex;
+          flex-direction:column;
+          gap:12px;
+          padding-top:6px;
+          min-width:0;
+          width:min(220px, 100%);
+          align-self:start;
+        }
+        .lp-timeline-rail {
+          position:relative;
+          z-index:1;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          min-width:108px;
+          padding:10px 14px;
+          border-radius:999px;
+          border:1px solid rgba(var(--accent-primary-rgb),.2);
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.22), rgba(var(--accent-primary-rgb),.08));
+          color:var(--lp-text1);
+          font-size:11px;
+          font-weight:800;
+          letter-spacing:1.4px;
+          text-transform:uppercase;
+          box-shadow:0 16px 30px rgba(15,23,42,.14);
+          backdrop-filter:blur(14px);
+        }
+        .lp-timeline-note {
+          max-width:220px;
+          font-size:12px;
+          line-height:1.55;
+          color:var(--lp-text3);
+        }
+        .light .lp-root .lp-timeline-rail {
+          background:linear-gradient(135deg, rgba(var(--accent-primary-rgb),.16), rgba(255,255,255,.92));
+          box-shadow:0 14px 26px rgba(15,23,42,.08);
+        }
+        .lp-timeline-card {
+          position:relative;
+          width:min(100%, 540px);
+          align-self:start;
+          padding:24px 24px 22px;
+          border-radius:22px;
+          border:1px solid var(--lp-step-border);
+          background:
+            radial-gradient(circle at top right, rgba(var(--accent-primary-rgb),.12), rgba(var(--accent-primary-rgb),0) 46%),
+            linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+          box-shadow:0 18px 38px rgba(15,23,42,.14);
+          overflow:hidden;
+        }
+        .lp-timeline-card::before {
+          content:'';
+          position:absolute;
+          inset:0 auto auto 0;
+          width:120px;
+          height:120px;
+          border-radius:999px;
+          background:radial-gradient(circle, rgba(var(--accent-primary-rgb),.18), rgba(var(--accent-primary-rgb),0) 72%);
+          opacity:.7;
+          pointer-events:none;
+          transform:translate(-28%, -38%);
+        }
+        .light .lp-root .lp-timeline-card {
+          background:
+            radial-gradient(circle at top right, rgba(var(--accent-primary-rgb),.1), rgba(var(--accent-primary-rgb),0) 48%),
+            linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92));
+          box-shadow:0 14px 30px rgba(15,23,42,.08);
+        }
+        .lp-timeline-kicker {
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          margin-bottom:12px;
+          font-size:10px;
+          font-weight:800;
+          letter-spacing:1.8px;
+          text-transform:uppercase;
+          color:var(--lp-section-tag);
+        }
+        .lp-timeline-kicker::before {
+          content:'';
+          width:18px;
+          height:1px;
+          background:rgba(var(--accent-primary-rgb),.42);
+        }
+        .lp-timeline-title {
+          font-size:18px;
+          line-height:1.18;
+          font-weight:800;
+          letter-spacing:-.4px;
+          color:var(--lp-step-title);
+          margin-bottom:10px;
+        }
+        .lp-timeline-desc {
+          font-size:13px;
+          line-height:1.72;
+          color:var(--lp-step-desc);
+          max-width:42ch;
+        }
+        .lp-timeline-step:nth-child(even) .lp-timeline-desc {
+          margin-left:auto;
+        }
+        .lp-timeline-step:nth-child(odd) .lp-timeline-desc {
+          margin-right:auto;
+        }
+        .lp-timeline-footer {
+          max-width:760px;
+          margin:34px auto 0;
+          padding:18px 22px;
+          border-radius:18px;
+          border:1px solid var(--lp-step-border);
+          background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+          box-shadow:0 14px 30px rgba(15,23,42,.1);
+        }
+        .light .lp-root .lp-timeline-footer {
+          background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92));
+          box-shadow:0 12px 24px rgba(15,23,42,.06);
+        }
+        .lp-timeline-footer-copy {
+          font-size:14px;
+          line-height:1.75;
+          color:var(--lp-text3);
+          margin:0 auto;
+          max-width:62ch;
+        }
+        @media (max-width: 860px) {
+          .lp-timeline::before {
+            content:none;
+          }
+          .lp-timeline-step {
+            grid-template-columns:44px minmax(0,1fr);
+            gap:14px;
+            align-items:start;
+          }
+          .lp-timeline-step::after {
+            left:22px;
+            transform:translateX(-50%);
+          }
+          .lp-timeline-step:first-child::after {
+            top:25px;
+          }
+          .lp-timeline-step::before {
+            top:18px;
+            left:22px;
+            transform:translate(-50%, 0);
+          }
+          .lp-timeline-side,
+          .lp-timeline-step:nth-child(even) .lp-timeline-side,
+          .lp-timeline-step:nth-child(odd) .lp-timeline-side {
+            grid-column:2;
+            grid-row:auto;
+            justify-self:start;
+            align-items:flex-start;
+            padding-top:0;
+          }
+          .lp-timeline-rail {
+            min-width:0;
+          }
+          .lp-timeline-card,
+          .lp-timeline-step:nth-child(even) .lp-timeline-card,
+          .lp-timeline-step:nth-child(odd) .lp-timeline-card {
+            grid-column:2;
+            grid-row:auto;
+            text-align:left;
+          }
+          .lp-timeline-card {
+            margin-top:8px;
+          }
+          .lp-timeline-desc,
+          .lp-timeline-step:nth-child(even) .lp-timeline-desc,
+          .lp-timeline-step:nth-child(odd) .lp-timeline-desc {
+            max-width:none;
+            margin:0;
+          }
+          .lp-timeline-note {
+            max-width:none;
+          }
+          .lp-timeline-footer {
+            margin-top:26px;
+            padding:16px 18px;
+          }
+        }
 
         /* CTA */
         .lp-cta-section {
@@ -1933,14 +2227,14 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:var(--lp-pill-bg); white-space:nowrap;
         }
         .lp-tech-icons {
-          margin-top:26px;
+          margin-top:66px;
         }
         .lp-tech-icons:hover .lp-tech-marquee-inner {
           animation-play-state:paused;
         }
         .lp-tech-marquee-inner {
           gap:16px;
-          padding:8px 0;
+          padding:16px 0;
         }
         .lp-tech-icon {
           flex:0 0 104px;
@@ -1989,7 +2283,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .light .lp-root .lp-code-block .lp-cursor       { color:#818cf8; }
 
         /* Divider */
-        .lp-divider { border:none; border-top:1px solid var(--lp-divider); margin:72px 0; }
+        .lp-divider { border:none; border-top:1px solid var(--lp-divider); margin:50px 0; }
 
         /* Responsive */
         @media(max-width:640px) {
@@ -2000,6 +2294,25 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           .lp-metric-item { flex:0 0 50%; border-bottom:1px solid var(--lp-divider); }
           .lp-cta-section { padding:40px 20px; }
           .lp-hero-proofs { grid-template-columns:1fr; }
+          .lp-signal-strip {
+            display:grid;
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:8px;
+            margin-top:16px;
+            justify-content:stretch;
+          }
+          .lp-signal-pill {
+            width:100%;
+            min-height:40px;
+            padding:8px 10px;
+            gap:6px;
+            font-size:10px;
+            line-height:1.25;
+            justify-content:flex-start;
+          }
+          .lp-signal-pill svg {
+            flex-shrink:0;
+          }
         }
 
         /* ── Demo: mobile responsive ── */
@@ -2331,20 +2644,20 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-demo-wrap">
                 <DashboardDemo />
               </div>
-              <p className="lp-demo-hint">↑ Animated product preview — finance, users, and operations in one flow</p>
+              <p className="lp-demo-hint">↑ This may not accurately depict the dashboard. Check the demo for an accurate representation.</p>
             </div>
           )}
           <div className="lp-signal-strip" style={{ marginTop: 40 }}>
             {[
-              { icon: faArrowsRotate, label: 'Subscription resurrection covered' },
-              { icon: faFileLines, label: 'Centralized webhook ingress' },
-              { icon: faGaugeHigh, label: 'No-flash dark mode + theme controls' },
-              { icon: faUsers, label: 'Teams, invites, org token pools' },
+              { icon: faArrowsRotate, label: 'Subscription resurrection covered for webhook retries' },
+              { icon: faFileLines, label: 'Centralized webhook ingress for providers' },
+              { icon: faGaugeHigh, label: 'Dark mode & customizable theme controls' },
+              { icon: faUsers, label: 'Teams, invites, organization token pools' },
               { icon: faShield, label: 'Secure logger with secret redaction' },
-              { icon: faBolt, label: 'Edge cases tested before you launch' },
+              { icon: faBolt, label: 'Edge cases rigorously tested before launch' },
               { icon: faLock, label: 'Provider-agnostic auth and billing adapters' },
-              { icon: faChartLine, label: '90+ automated tests plus manual regression coverage' },
-              { icon: faTriangleExclamation, label: 'Rate limits, request IDs, sanitized errors' },
+              { icon: faChartLine, label: '90+ automated tests with regression coverage' },
+              { icon: faTriangleExclamation, label: 'Rate limits & sanitized errors' },
               { icon: faBuilding, label: 'Dual-column compatibility for safe migrations' },
               { icon: faCreditCard, label: 'Proration, retries, refunds, and lifecycle states' },
               { icon: faLifeRing, label: 'Admin actions and support workflows already wired' },
@@ -2500,19 +2813,51 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         <section style={{ textAlign: 'center' }}>
           <div className="lp-section-tag">Zero to production</div>
           <h2 className="lp-section-h2">Deploy in three steps.</h2>
+          <p className="lp-section-sub lp-section-sub-sm" style={{ marginTop: 14 }}>
+            A clean handoff from install to launch, with the docs and operational scaffolding already in place.
+          </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginTop: 36 }}>
+          <div className="lp-timeline">
             {[
-              { step: '01', title: 'Clone & configure', desc: 'Clone the repo, fill in your .env, pick your auth and payment providers, then run the migrations.' },
-              { step: '02', title: 'Prompt in your product', desc: 'Use the starter as the shell, then scaffold your own app surface into it with prompts, copied modules, or direct component swaps.' },
-              { step: '03', title: 'Brand, deploy & collect', desc: 'Polish the theme, connect your provider, deploy to Vercel, and start charging without rebuilding the infrastructure layer.' },
-            ].map(s => (
-              <div key={s.step} className="lp-step-card">
-                <div className="lp-step-num">{s.step}</div>
-                <div className="lp-step-title">{s.title}</div>
-                <div className="lp-step-desc">{s.desc}</div>
+              {
+                step: '01',
+                rail: 'Foundation',
+                title: 'Clone & configure',
+                desc: 'Clone the repo, fill in your .env, pick your auth and payment providers, then run the migrations.',
+                note: 'Environment switches, providers, Prisma setup, and route wiring are already documented.',
+              },
+              {
+                step: '02',
+                rail: 'Product pass',
+                title: 'Prompt in your product',
+                desc: 'Use the starter as the shell, then scaffold your own app surface into it with prompts, copied modules, or direct component swaps.',
+                note: 'The boilerplate stays out of your way, so you can focus on the product layer instead of rebuilding platform basics.',
+              },
+              {
+                step: '03',
+                rail: 'Launch',
+                title: 'Brand, deploy & collect',
+                desc: 'Polish the theme, connect your provider, deploy to Vercel, and start charging without rebuilding the infrastructure layer.',
+                note: 'Payments, auth, admin flows, and launch-critical defaults are ready before you ship.',
+              },
+            ].map((s) => (
+              <div key={s.step} className="lp-timeline-step">
+                <div className="lp-timeline-side">
+                  <div className="lp-timeline-rail">Step {s.step} · {s.rail}</div>
+                  <div className="lp-timeline-note">{s.note}</div>
+                </div>
+                <div className="lp-timeline-card">
+                  <div className="lp-timeline-kicker">Operational milestone</div>
+                  <div className="lp-timeline-title">{s.title}</div>
+                  <div className="lp-timeline-desc">{s.desc}</div>
+                </div>
               </div>
             ))}
+          </div>
+          <div className="lp-timeline-footer">
+            <p className="lp-timeline-footer-copy">
+              It&apos;s intentionally easy to get from first clone to first customer. The starter ships with strong defaults, clear docs, and the launch-critical systems already connected, so you&apos;re not deciphering infrastructure when you should be shipping.
+            </p>
           </div>
         </section>
 

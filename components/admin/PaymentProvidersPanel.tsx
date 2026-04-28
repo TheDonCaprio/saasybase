@@ -275,48 +275,38 @@ export function PaymentProvidersPanel() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">
-                        Payment Providers
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-neutral-400">
-                        Configure which payment gateway processes your transactions
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleSyncProviders}
-                        disabled={syncingCatalog}
-                        title="Sync plans and coupons across all configured payment providers"
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                    >
-                        <FontAwesomeIcon icon={faSync} className={clsx('h-4 w-4', syncingCatalog && 'animate-spin')} />
-                        {syncingCatalog ? 'Syncing…' : 'Sync providers'}
-                    </button>
-                    <button
-                        onClick={fetchProviders}
-                        disabled={loading}
-                        className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-                    >
-                        <FontAwesomeIcon icon={faSync} className={clsx('h-4 w-4', loading && 'animate-spin')} />
-                        Refresh
-                    </button>
-                </div>
-            </div>
-
             {/* Active Provider Notice */}
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-                <div className="flex items-start gap-3">
-                    <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                    <div>
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                            Active Provider: <span className="font-bold">{data.activeProvider.charAt(0).toUpperCase() + data.activeProvider.slice(1)}</span>
-                        </p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                            Set <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">PAYMENT_PROVIDER</code> environment variable to switch providers.
-                        </p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <div>
+                            <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                Active Provider: <span className="font-bold">{data.activeProvider.charAt(0).toUpperCase() + data.activeProvider.slice(1)}</span>
+                            </p>
+                            <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                                Set <code className="rounded bg-blue-100 px-1 dark:bg-blue-800/50">PAYMENT_PROVIDER</code> environment variable to switch providers.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <button
+                            onClick={handleSyncProviders}
+                            disabled={syncingCatalog}
+                            title="Sync plans and coupons across all configured payment providers"
+                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                        >
+                            <FontAwesomeIcon icon={faSync} className={clsx('h-4 w-4', syncingCatalog && 'animate-spin')} />
+                            {syncingCatalog ? 'Syncing…' : 'Sync providers'}
+                        </button>
+                        <button
+                            onClick={fetchProviders}
+                            disabled={loading}
+                            className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                        >
+                            <FontAwesomeIcon icon={faSync} className={clsx('h-4 w-4', loading && 'animate-spin')} />
+                            Refresh
+                        </button>
                     </div>
                 </div>
             </div>

@@ -14,6 +14,7 @@ import {
   getPlanScope,
   getOrganizationPlanContext,
   getMemberSharedTokenBalance,
+  getSubscriptionScopeFilter,
 } from '@/lib/user-plan-context';
 
 interface PageProps {
@@ -47,13 +48,39 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     getOrganizationPlanContext(userId, orgId),
   ]);
 
+  const personalSubscription = !isTeamWorkspace
+    ? await prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+          ...getSubscriptionScopeFilter('PERSONAL'),
+        },
+        select: {
+          plan: {
+            select: {
+              tokenLimit: true,
+            },
+          },
+        },
+      })
+    : null;
+
   const paidBalance = user?.tokenBalance ?? 0;
   const freeBalance = user?.freeTokenBalance ?? 0;
   const sharedBalance = getMemberSharedTokenBalance(orgContext);
+  const hasUnlimitedPersonalTokens = Boolean(personalSubscription?.plan?.tokenLimit == null && personalSubscription?.plan);
+  const hasUnlimitedWorkspaceTokens = Boolean(isTeamWorkspace && orgContext?.effectivePlan?.tokenLimit == null);
   const orgName = orgContext?.organization?.name ?? 'Organization';
   const orgTokenName = orgContext?.effectivePlan?.tokenName?.trim()
     || orgContext?.organization?.plan?.tokenName?.trim()
     || defaultTokenLabel;
+  const personalStatValue = hasUnlimitedPersonalTokens
+    ? `Unlimited paid · ${freeBalance.toLocaleString()} free`
+    : `${paidBalance.toLocaleString()} paid · ${freeBalance.toLocaleString()} free`;
+  const workspaceStatValue = hasUnlimitedWorkspaceTokens
+    ? `Unlimited ${orgTokenName}`
+    : `${(sharedBalance ?? 0).toLocaleString()} ${orgTokenName}`;
 
   return (
     <div className="space-y-6">
@@ -67,7 +94,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             label: 'Personal',
             value: isTeamWorkspace
               ? 'Unavailable'
-              : `${paidBalance.toLocaleString()} paid · ${freeBalance.toLocaleString()} free`,
+              : personalStatValue,
             helper: isTeamWorkspace
               ? 'Switch to personal workspace'
               : 'Available in personal workspace',
@@ -75,7 +102,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           {
             label: orgName,
             value: isTeamWorkspace
-              ? `${(sharedBalance ?? 0).toLocaleString()} ${orgTokenName}`
+              ? workspaceStatValue
               : 'Unavailable',
             helper: isTeamWorkspace
               ? `Available in ${orgName} workspace`

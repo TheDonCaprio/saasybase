@@ -79,7 +79,10 @@ export function ColorTabContent({
   const [themeEditorOpen, setThemeEditorOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const custom = customPresets.map((preset) => {
+  const builtInNames = new Set(builtInPresets.map((p) => p.name.toLowerCase()));
+  const custom = customPresets
+    .filter((preset) => !builtInNames.has(preset.name.toLowerCase()))
+    .map((preset) => {
     const modeColors = colorMode === 'light' ? preset.light : preset.dark;
     return {
       name: preset.name,

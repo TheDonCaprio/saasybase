@@ -49,6 +49,7 @@ function EmbeddedCheckoutContent() {
     const [discountCents, setDiscountCents] = useState<number | null>(null);
     const [couponCode, setCouponCode] = useState<string | null>(null);
     const [currency, setCurrency] = useState<string | null>(null);
+    const [planName, setPlanName] = useState<string | null>(null);
     const [metadata, setMetadata] = useState<Record<string, string> | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [errorRedirectTo, setErrorRedirectTo] = useState<string | null>(null);
@@ -200,6 +201,7 @@ function EmbeddedCheckoutContent() {
                     setDiscountCents(typeof data.discountCents === 'number' ? data.discountCents : null);
                     setCouponCode(typeof data.couponCode === 'string' ? data.couponCode : null);
                     setCurrency(typeof data.currency === 'string' ? data.currency : null);
+                    setPlanName(typeof data.planName === 'string' ? data.planName : null);
                     setMetadata(data.metadata && typeof data.metadata === 'object' ? data.metadata : null);
                 }
             })
@@ -583,9 +585,13 @@ function EmbeddedCheckoutContent() {
         }
     };
 
+    const normalizedPlanName = typeof planName === 'string' && planName.trim().length > 0
+        ? planName.trim()
+        : null;
     const planId = metadata?.planId || metadata?.plan_id;
     const priceId = metadata?.priceId || metadata?.planPriceId || metadata?.price_id;
     const summary = {
+        planName: normalizedPlanName || planId || '—',
         planId: planId || '—',
         priceId: priceId || '—',
         amount: amount ?? 0,
@@ -621,7 +627,7 @@ function EmbeddedCheckoutContent() {
                 {/* Header */}
                 <div className="mb-8 text-center">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 dark:shadow-blue-500/20 mb-4">
-                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="text-actual-white w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
@@ -697,7 +703,7 @@ function EmbeddedCheckoutContent() {
                                             </svg>
                                             Plan
                                         </span>
-                                        <span className="font-medium text-slate-900 dark:text-white">{summary.planId}</span>
+                                        <span className="font-medium text-slate-900 dark:text-white text-right max-w-[220px] break-words">{summary.planName}</span>
                                     </div>
 
                                     <div className="flex items-start justify-between text-sm">

@@ -132,7 +132,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds.toString() } });
     }
 
-    const body: unknown = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch (parseErr) {
+      // Body empty or not valid JSON — most likely a dev-server request-body
+      // stream that expired during route compilation. Return 400 (client error).
+      Logger.warn('PATCH /api/admin/settings received empty or unparseable body', {
+        error: (parseErr as Error).message,
+      });
+      return NextResponse.json({ error: 'invalid or empty request body' }, { status: 400 });
+    }
     const b = asRecord(body);
 
     const updatesRaw = (b as Record<string, unknown>)?.updates;

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ContactForm } from '@/components/contact/ContactForm';
 import { SiteContentRenderer } from '@/components/site-pages/SiteContentRenderer';
 import { buildSitePageMetadata, getPublishedPageBySlug } from '../../lib/sitePages';
-import { getSiteName, getSupportEmail, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
+import { getSupportEmail } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,103 +12,97 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
-  const [page, supportEmail, siteName] = await Promise.all([
+  const [page, supportEmail] = await Promise.all([
     getPublishedPageBySlug('contact'),
     getSupportEmail().catch(() => 'support@example.com'),
-    getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME])
   ]);
   if (!page) {
     notFound();
   }
 
   const effectiveSupportEmail = supportEmail && supportEmail.trim().length > 0 ? supportEmail.trim() : 'support@example.com';
-  const lastUpdated = new Date(page.updatedAt).toLocaleDateString();
+  const partnersEmail = process.env.PARTNERS_EMAIL || 'partners@' + (effectiveSupportEmail.split('@')[1] || 'example.com');
 
   return (
-    <div className="relative isolate">
-      <section className="relative overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-slate-950 py-28 md:py-32 text-white">
-        <div className="absolute inset-0 -z-10 opacity-40" aria-hidden>
-          <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-500 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-80 w-80 translate-y-1/2 rounded-full bg-indigo-500 blur-3xl" />
+    <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
+
+      {/* Page header */}
+      <div className="mb-12 max-w-2xl">
+        <div className="mb-4 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
+          Contact
+        </div>
+        <SiteContentRenderer className="contact-hero-content" content={page.content} />
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+
+        {/* Left: info column */}
+        <div className="space-y-4">
+
+          {/* Reach us cards */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-neutral-500">Reach us</p>
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Existing customers</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Sign in and create a support ticket so we can route your request with full account context.</p>
+                <Link
+                  href="/dashboard/support"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 transition hover:text-slate-950 dark:text-neutral-300 dark:hover:text-neutral-50"
+                >
+                  Open support center
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8m0 0v8m0-8L5 15" />
+                  </svg>
+                </Link>
+              </div>
+
+              <div className="border-t border-slate-200 pt-5 dark:border-neutral-800">
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Email our team</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Prefer your inbox? We reply within one business day.</p>
+                <a
+                  href={`mailto:${effectiveSupportEmail}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 transition hover:text-slate-950 dark:text-neutral-300 dark:hover:text-neutral-50"
+                >
+                  {effectiveSupportEmail}
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8m0 0v8m0-8L5 15" />
+                  </svg>
+                </a>
+              </div>
+
+              <div className="border-t border-slate-200 pt-5 dark:border-neutral-800">
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Partnerships</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Interested in collaborating? We&rsquo;re open to integrations, distribution, and co-marketing.</p>
+                <a
+                  href={`mailto:${partnersEmail}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 transition hover:text-slate-950 dark:text-neutral-300 dark:hover:text-neutral-50"
+                >
+                  {partnersEmail}
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8m0 0v8m0-8L5 15" />
+                  </svg>
+                </a>
+              </div>
+
+              <div className="border-t border-slate-200 pt-5 dark:border-neutral-800">
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Service updates</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Real-time notices post to the dashboard banner and affected workspaces are emailed automatically.</p>
+              </div>
+            </div>
+          </div>
+
+
+
         </div>
 
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6">
-          <div className="space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-violet-200/80">Contact</p>
-            <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
-              Need a hand with {siteName}?
-            </h1>
-            <p className="max-w-3xl text-base text-violet-100/90 sm:text-lg">
-              Our team is here to help with onboarding, billing questions, and partnership ideas. For the fastest support, sign in and open a ticket directly from your dashboard—otherwise drop us a line below.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-6 backdrop-blur-lg">
-              <h2 className="text-base font-semibold text-white">Existing customers</h2>
-              <p className="mt-1 text-sm text-violet-100/90">Sign in and create a support ticket so we can route your request with full account context.</p>
-              <Link
-                href="/dashboard/support"
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-100 transition hover:text-white"
-              >
-                Open support center
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8m0 0v8m0-8L5 15" />
-                </svg>
-              </Link>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-6 backdrop-blur-lg">
-              <h2 className="text-base font-semibold text-white">Email our team</h2>
-              <p className="mt-1 text-sm text-violet-100/90">Prefer your own inbox? Reach us at {effectiveSupportEmail}. We reply within one business day.</p>
-              <a
-                href={`mailto:${effectiveSupportEmail}`}
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-100 transition hover:text-white"
-              >
-                Email {effectiveSupportEmail}
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 5h8m0 0v8m0-8L5 15" />
-                </svg>
-              </a>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-6 backdrop-blur-lg sm:col-span-2 lg:col-span-1">
-              <h2 className="text-base font-semibold text-white">Stay in the loop</h2>
-              <p className="mt-1 text-sm text-violet-100/90">We post realtime service notices in the dashboard banner and email impacted workspaces automatically—no extra setup required.</p>
-              <p className="mt-4 text-xs uppercase tracking-wide text-violet-200/80">We will keep you informed.</p>
-            </div>
-          </div>
+        {/* Right: form only */}
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <ContactForm />
         </div>
-      </section>
-      <section className="relative -mt-20 pb-24">
-        <div className="mx-auto grid max-w-6xl gap-8 px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-6 shadow-2xl shadow-violet-500/6 dark:border-neutral-800 dark:bg-neutral-900/70 dark:shadow-none">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">What happens next?</h2>
-              <ul className="mt-3 space-y-3 text-sm text-slate-600 dark:text-neutral-300">
-                <li>
-                  <span className="font-medium text-slate-800 dark:text-neutral-100">Triage within 24 hours.</span> We route each request based on topic so the right person replies first.
-                </li>
-                <li>
-                  <span className="font-medium text-slate-800 dark:text-neutral-100">Ticket created on your behalf.</span> We log every incoming form message and reply via email unless you prefer dashboard follow-up.
-                </li>
-                <li>
-                  <span className="font-medium text-slate-800 dark:text-neutral-100">Emergency?</span> Mention &ldquo;urgent&rdquo; together with your workspace URL and we prioritise your message immediately.
-                </li>
-              </ul>
-              <p className="mt-4 text-xs uppercase tracking-wide text-slate-400 dark:text-neutral-500">Last updated {lastUpdated}</p>
-            </div>
 
-            <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-6 shadow-2xl shadow-violet-500/5 dark:border-neutral-800 dark:bg-neutral-900/70 dark:shadow-none">
-              <SiteContentRenderer content={page.content} />
-            </div>
-          </div>
-
-          <div className="md:sticky md:top-28">
-            <ContactForm supportEmail={effectiveSupportEmail} />
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

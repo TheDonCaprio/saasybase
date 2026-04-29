@@ -1,5 +1,4 @@
 import './globals.css';
-import './clerk-overrides.css';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import React from 'react';
 import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';

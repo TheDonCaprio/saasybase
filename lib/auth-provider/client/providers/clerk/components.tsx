@@ -19,7 +19,6 @@ import {
   ClerkLoaded,
   ClerkLoading,
 } from '@clerk/nextjs';
-import { ui } from '@clerk/ui';
 import type { ComponentProps } from 'react';
 
 import type { AuthProviderProps } from '../../types';
@@ -54,7 +53,6 @@ export function AuthProvider({ children, publishableKey, ...props }: AuthProvide
     <ClerkProvider
       {...props}
       publishableKey={publishableKey ?? undefined}
-      ui={ui}
     >
       {children}
     </ClerkProvider>

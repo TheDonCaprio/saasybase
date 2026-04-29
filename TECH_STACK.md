@@ -29,7 +29,6 @@ Node 18 is not supported by the current stack. Next.js 16 requires Node 20.9+, a
 ### Clerk Dependencies
 - `@clerk/nextjs` — Server + client auth
 - `@clerk/themes` — Theming integration
-- `@clerk/ui` — UI component primitives
 - `svix` — Webhook signature verification
 
 ### NextAuth Dependencies

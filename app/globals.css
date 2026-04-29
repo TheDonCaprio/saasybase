@@ -118,6 +118,20 @@ select {
 .text-always-white { color: #ffffff !important; }
 .light .text-always-white { color: #ffffff !important; }
 
+/* Keep Font Awesome SVGs usable if the library stylesheet is late or missing. */
+.svg-inline--fa {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+.svg-inline--fa.fa-fw {
+  width: 1.25em;
+}
+
 /* Light mode text overrides */
 .light .text-white { color: rgb(var(--text-primary)) !important; }
 .light .text-neutral-300 { color: rgb(var(--text-secondary)) !important; }
@@ -517,6 +531,23 @@ select {
   font-style: italic;
 }
 
+/* Contact page hero — higher specificity (two classes) overrides the generic .site-page-content h1 rule */
+.contact-hero-content.site-page-content h1 {
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 640px) {
+  .contact-hero-content.site-page-content h1 {
+    font-size: 3rem; /* text-5xl */
+  }
+}
+
+.contact-hero-content.site-page-content p {
+  max-width: 36rem; /* max-w-xl */
+  font-size: 1.125rem; /* text-lg */
+  line-height: 1.75; /* leading-7 */
+}
+
 .sidebar-preview {
   background-color: transparent;
 }
@@ -768,26 +799,26 @@ select {
   fill: #ffffff !important;
 }
 /* Input and form elements */
-input, textarea, select {
+input:not([data-input-otp]), textarea, select {
   background-color: rgb(var(--bg-tertiary)) !important;
   border-color: rgb(var(--border-primary)) !important;
   color: rgb(var(--text-primary)) !important;
 }
 
-input:focus, textarea:focus, select:focus {
+input:not([data-input-otp]):focus, textarea:focus, select:focus {
   border-color: rgb(var(--accent-primary)) !important;
   outline: 2px solid rgb(var(--accent-primary) / 0.2) !important;
   outline-offset: -1px !important;
 }
 
-input:disabled, textarea:disabled, select:disabled {
+input:not([data-input-otp]):disabled, textarea:disabled, select:disabled {
   background-color: rgb(var(--bg-quaternary)) !important;
   color: rgb(var(--text-tertiary)) !important;
   cursor: not-allowed !important;
 }
 
 /* Placeholder text */
-input::placeholder, textarea::placeholder {
+input:not([data-input-otp])::placeholder, textarea::placeholder {
   color: rgb(var(--text-tertiary)) !important;
 }
 
@@ -891,207 +922,6 @@ input[type="checkbox"]:focus {
 
 .light .bg-neutral-900\/60 {
   background-color: rgb(var(--bg-secondary) / 0.4) !important;
-}
-
-/*
-  Target Clerk's absolute OTP overlay input (the invisible/positioned input that Clerk uses
-  to capture the one-time-code). It's visible in some browsers due to its inline styles.
-  Make it fully transparent while keeping it interactive so the OTP flow still works.
-*/
-input[data-input-otp] {
-  opacity: 0 !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
-  caret-color: transparent !important;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* OTP segments: force dark background and white text so digits/caret remain visible
-   even when the page is in light mode. Targets common test-id attributes and
-   clerk-provided helper classes. */
-[data-test-id="otp-input-segment"],
-[data-testid="otp-input-segment"],
-[data-test="otp-input-segment"],
-.cl-otpCodeFieldInput[data-test-id="otp-input-segment"],
-.cl-otpCodeFieldInput[data-testid="otp-input-segment"] {
-  background-color: rgb(37 37 37) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-/* Re-enforce overlay input invisibility (some clients set inline styles after mount) */
-input[data-input-otp][type="text"],
-input[autocomplete="one-time-code"] {
-  opacity: 0 !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  caret-color: transparent !important;
-}
-
-/* More robust OTP rules using Clerk's public classnames. These are less likely
-   to change across builds than transient internal classnames. */
-
-
-/* Style each visible OTP segment (the boxes users see) */
-.cl-otpCodeFieldInput.cl-input,
-.cl-otpCodeFieldInput {
-  background-color: rgb(95, 95, 95) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  border-color: rgba(255,255,255,0.06) !important;
-}
-
-/* Ensure the inputs don't collapse to fit-content in production builds */
-.cl-otpCodeFieldInputs,
-.cl-otpCodeFieldInputContainer {
-  width: 100% !important;
-  max-width: 100% !important;
-  display: flex !important;
-  justify-content: center !important;
-  gap: 0.25rem !important;
-}
-
-/* Keep Clerk's invisible overlay input interactive but visually invisible.
-   Don't set pointer-events:none because the overlay is responsible for capturing
-   the typed/pasted one-time-code. */
-input[data-input-otp],
-input[data-input-otp][type="text"],
-input[autocomplete="one-time-code"] {
-  opacity: 0 !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  caret-color: transparent !important;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Gradient primary buttons for Clerk widgets (login / signup) */
-[data-clerk-root] .cl-formButtonPrimary,
-[data-clerk-root] [data-clerk-elem="formButtonPrimary"],
-.cl-formButtonPrimary,
-[data-clerk-root] .cl-button--primary,
-[data-clerk-root] .cl-button[type="submit"] {
-  background-image: linear-gradient(90deg,#7c3aed 0%, #3b82f6 100%) !important;
-  color: #ffffff !important;
-  border: 0 !important;
-  box-shadow: 0 6px 18px rgba(59,130,246,0.18) !important;
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-}
-
-[data-clerk-root] .cl-formButtonPrimary:hover,
-[data-clerk-root] [data-clerk-elem="formButtonPrimary"]:hover,
-.cl-formButtonPrimary:hover,
-[data-clerk-root] .cl-button--primary:hover {
-  filter: brightness(1.03) !important;
-  box-shadow: 0 10px 26px rgba(59,130,246,0.22) !important;
-}
-
-/* Accessible focus state */
-[data-clerk-root] .cl-formButtonPrimary:focus,
-[data-clerk-root] [data-clerk-elem="formButtonPrimary"]:focus,
-.cl-formButtonPrimary:focus,
-[data-clerk-root] .cl-button--primary:focus {
-  outline: 3px solid rgba(124,58,237,0.12) !important;
-  outline-offset: 2px !important;
-}
-
-/* Clerk card/footer light-mode fixes
-   Some Clerk widgets render a separate footer/card-box which remained dark in light mode.
-   These selectors try to target common Clerk footer/card wrapper classes and the
-   data-clerk-root container. We only force a light background in the `.light` theme
-   so dark mode remains unchanged.
-*/
-.light .clerk-card,
-.light .clerk-card__box,
-.light .clerk-cardBox,
-.light [data-clerk-root] .clerk-card,
-.light [data-clerk-root] .clerk-card__box {
-  background-color: #ffffff !important;
-  color: rgb(var(--text-primary)) !important;
-  border-radius: 10px;
-}
-
-.light .clerk-card__footer,
-.light .clerk-footer,
-.light .clerk-cardFooter,
-.light [data-clerk-root] footer,
-.light [data-clerk-root] .footer {
-  background-color: #ffffff !important;
-  color: rgb(var(--text-secondary)) !important;
-  border-top-color: rgb(var(--border-primary)) !important;
-  border-radius: 10px;
-}
-
-/* Prefer stable Clerk selectors for the sign-in card/footer so production builds
-   aren't affected by transient internal class names. Targets both direct and
-   [data-clerk-root]-scoped variants. */
-.light .cl-rootBox,
-.light .cl-card,
-.light .cl-cardBox,
-.light .cl-footer,
-.light [data-clerk-root] .cl-rootBox,
-.light [data-clerk-root] .cl-card,
-.light [data-clerk-root] .cl-cardBox,
-.light [data-clerk-root] .cl-footer {
-  background-color: #ffffff !important;
-  color: rgb(var(--text-primary)) !important;
-  /* Reset clerk variables that produce dark gradients */
-  --clerk-color-neutral: rgba(255,255,255,0) !important;
-  --clerk-color-muted: transparent !important;
-  border-radius: 10px;
-}
-
-/* Make Clerk profile components take full width in both light and dark modes */
-.cl-internal-fqc41u,
-.cl-internal-pi1e7y {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Prefer stable Clerk public classes for production builds. These are more resilient
-   than transient `cl-internal-*` classnames emitted by Clerk's runtime.
-   Target both plain and `[data-clerk-root]`-scoped variants. */
-.cl-rootBox,
-.cl-cardBox,
-.cl-userProfile-root,
-[data-clerk-root] .cl-rootBox,
-[data-clerk-root] .cl-cardBox,
-[data-clerk-root] .cl-userProfile-root {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Force a light background for Clerk card containers when the app is in the .light theme.
-   Also reset clerk color variables that may introduce dark gradients. */
-.light .cl-rootBox,
-.light .cl-cardBox,
-.light .cl-userProfile-root,
-.light [data-clerk-root] .cl-rootBox,
-.light [data-clerk-root] .cl-cardBox,
-.light [data-clerk-root] .cl-userProfile-root {
-  background-color: #ffffff !important;
-  color: rgb(var(--text-primary)) !important;
-  --clerk-color-neutral: rgba(255,255,255,0) !important;
-  --clerk-color-muted: transparent !important;
-  border-radius: 10px;
-}
-
-/* Allow Clerk auth surfaces to use the intended fixed form width instead of the
-   generic full-width profile rule above. */
-.cl-signIn-root.cl-rootBox,
-.cl-signUp-root.cl-rootBox,
-[data-clerk-root] .cl-signIn-root.cl-rootBox,
-[data-clerk-root] .cl-signUp-root.cl-rootBox,
-.cl-signIn-root .cl-cardBox,
-.cl-signUp-root .cl-cardBox,
-[data-clerk-root] .cl-signIn-root .cl-cardBox,
-[data-clerk-root] .cl-signUp-root .cl-cardBox {
-  width: 28rem !important;
-  max-width: calc(100vw - 2rem) !important;
 }
 
 .light .hover\:bg-neutral-900\/60:hover {

@@ -230,6 +230,16 @@ function summarizeRazorpayRequestPayload(path: string, payload: unknown): Record
 	return summary;
 }
 
+function getRetryDelayMs(headers: Headers | undefined, attempt: number): number {
+	const retryAfterRaw = headers?.get('retry-after');
+	const retryAfterSeconds = retryAfterRaw ? Number(retryAfterRaw) : Number.NaN;
+	if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+		return Math.max(250, Math.min(retryAfterSeconds * 1000, 5000));
+	}
+
+	return Math.min(750 * Math.pow(2, attempt), 5000);
+}
+
 export class RazorpayPaymentProvider implements PaymentProvider {
 	name = 'razorpay';
 	private keyId: string;
@@ -278,6 +288,7 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 		// Retry transient network errors (DNS, connection reset, TLS) up to 2 times
 		// with exponential backoff.
 		const MAX_NETWORK_RETRIES = 2;
+		const MAX_RATE_LIMIT_RETRIES = 2;
 		let lastNetworkError: unknown = null;
 		let res: Response | null = null;
 
@@ -323,19 +334,52 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 			return headers.get('x-razorpay-request-id') || headers.get('X-Razorpay-Request-Id');
 		})();
 
-		let parsed: unknown = null;
-		let body: unknown = null;
-		if (typeof (res as unknown as { text?: () => Promise<string> }).text === 'function') {
-			const responseText = await (res as unknown as { text: () => Promise<string> }).text();
-			parsed = parseJsonOrNull(responseText);
-			body = parsed ?? (responseText ? responseText : null);
-		} else if (typeof (res as unknown as { json?: () => Promise<unknown> }).json === 'function') {
-			try {
-				parsed = await (res as unknown as { json: () => Promise<unknown> }).json();
-			} catch {
-				parsed = null;
+		const readResponseBody = async (response: Response) => {
+			let parsed: unknown = null;
+			let body: unknown = null;
+			if (typeof (response as unknown as { text?: () => Promise<string> }).text === 'function') {
+				const responseText = await (response as unknown as { text: () => Promise<string> }).text();
+				parsed = parseJsonOrNull(responseText);
+				body = parsed ?? (responseText ? responseText : null);
+			} else if (typeof (response as unknown as { json?: () => Promise<unknown> }).json === 'function') {
+				try {
+					parsed = await (response as unknown as { json: () => Promise<unknown> }).json();
+				} catch {
+					parsed = null;
+				}
+				body = parsed;
 			}
-			body = parsed;
+
+			return { parsed, body };
+		};
+
+		let { parsed, body } = await readResponseBody(res);
+
+		for (let attempt = 0; !res.ok && res.status === 429 && attempt < MAX_RATE_LIMIT_RETRIES; attempt++) {
+			const delayMs = getRetryDelayMs((res as unknown as { headers?: Headers }).headers, attempt);
+			const rpError = extractRazorpayError(parsed);
+			Logger.warn('Razorpay API rate limited, retrying request', {
+				path,
+				method,
+				attempt: attempt + 1,
+				delayMs,
+				requestId,
+				status: res.status,
+				errorCode: rpError?.code,
+				errorDescription: rpError?.description,
+			});
+			await new Promise(resolve => setTimeout(resolve, delayMs));
+
+			res = await fetch(url, {
+				...init,
+				headers: {
+					Authorization: this.authHeader(),
+					'Content-Type': 'application/json',
+					...(init.headers || {}),
+				},
+			});
+
+			({ parsed, body } = await readResponseBody(res));
 		}
 
 		if (!res.ok) {

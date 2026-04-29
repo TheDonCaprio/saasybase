@@ -1,6 +1,16 @@
 import { dark as authDarkTheme } from '@clerk/themes';
+import type { ComponentProps } from 'react';
+import type {
+  ClerkProvider,
+  OrganizationSwitcher,
+  SignIn,
+  UserProfile,
+} from '@clerk/nextjs';
 
-type ClerkAppearance = Record<string, unknown>;
+type ClerkAppearance = NonNullable<ComponentProps<typeof ClerkProvider>['appearance']>;
+type SignInAppearance = NonNullable<ComponentProps<typeof SignIn>['appearance']>;
+type OrganizationSwitcherComponentAppearance = NonNullable<ComponentProps<typeof OrganizationSwitcher>['appearance']>;
+type UserProfileComponentAppearance = NonNullable<ComponentProps<typeof UserProfile>['appearance']>;
 
 type OrganizationSwitcherVariant = 'account-menu' | 'sidebar' | 'drawer';
 type AuthFormVariant = 'page' | 'modal';
@@ -12,14 +22,15 @@ type OrganizationSwitcherAppearanceOptions = {
 };
 
 export function getAuthProviderAppearance(isDark: boolean): ClerkAppearance {
-  return {
-    baseTheme: isDark ? authDarkTheme : undefined,
+  const clerkAppearance: ClerkAppearance = {
+    theme: isDark ? authDarkTheme : undefined,
     variables: {
       colorPrimary: '#7c3aed',
+      colorPrimaryForeground: '#ffffff',
       colorBackground: isDark ? '#0a0a0a' : '#ffffff',
-      colorText: isDark ? '#fafafa' : '#0a0a0a',
-      colorInputBackground: isDark ? '#171717' : '#ffffff',
-      colorInputText: isDark ? '#fafafa' : '#0a0a0a',
+      colorForeground: isDark ? '#fafafa' : '#0a0a0a',
+      colorInput: isDark ? '#171717' : '#ffffff',
+      colorInputForeground: isDark ? '#fafafa' : '#0a0a0a',
     },
     elements: {
       modalBackdrop: 'bg-black/60 backdrop-blur-sm',
@@ -39,9 +50,11 @@ export function getAuthProviderAppearance(isDark: boolean): ClerkAppearance {
       footerActionLink: 'text-violet-600 hover:text-violet-700',
     },
   };
+
+  return clerkAppearance;
 }
 
-export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherAppearanceOptions): ClerkAppearance {
+export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherAppearanceOptions): OrganizationSwitcherComponentAppearance {
   const hideCreateOrganization = options.canCreateOrganization === false ? 'hidden' : '';
   const sharedElements: Record<string, string> = {
     organizationSwitcherTriggerIcon: 'text-neutral-400 transition-transform group-data-[open=true]:rotate-180 dark:text-neutral-500',
@@ -130,7 +143,7 @@ export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherA
 export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance {
   const isModal = variant === 'modal';
 
-  return {
+  const clerkAppearance: SignInAppearance = {
     elements: {
       formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-sm normal-case',
       cardBox: isModal
@@ -170,31 +183,30 @@ export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance
       formFieldSuccessText: isModal ? 'text-emerald-500 dark:text-emerald-400' : 'text-emerald-400',
       formFieldErrorText: isModal ? 'text-red-500 dark:text-red-400' : 'text-red-400',
       formFieldWarningText: isModal ? 'text-amber-500 dark:text-amber-400' : 'text-amber-400',
-      otpCodeFieldInputs:
-        'flex relative justify-center gap-1 overflow-hidden rounded-md bg-neutral-900 isolation-isolate px-3 py-1 focus-within:[box-shadow:inset_0_0_0_3px_rgba(59,130,246,0.15)]',
-      otpCodeFieldInput:
-        'relative block h-14 w-12 min-w-[2.5rem] rounded-xl border border-neutral-600 bg-neutral-800 text-center text-2xl font-mono font-semibold tracking-wide leading-[2.1rem] z-[9999] text-neutral-900 dark:text-white ring-0 focus:ring-0 focus:outline-none shadow-md hover:shadow-lg transition-transform duration-150 transform-gpu appearance-none caret-transparent',
     },
     variables: {
       colorPrimary: '#3b82f6',
+      colorPrimaryForeground: '#ffffff',
       colorBackground: '#171717',
-      colorInputBackground: '#262626',
-      colorInputText: '#ffffff',
-      colorText: '#ffffff',
-      colorTextSecondary: '#a3a3a3',
-      colorTextOnPrimaryBackground: '#ffffff',
+      colorInput: '#262626',
+      colorInputForeground: '#ffffff',
+      colorForeground: '#ffffff',
+      colorMutedForeground: '#a3a3a3',
       borderRadius: '0.375rem',
     },
   };
+
+  return clerkAppearance;
 }
 
-export function getUserProfileAppearance(isLight: boolean, variant: ProfileVariant): ClerkAppearance {
+export function getUserProfileAppearance(isLight: boolean, variant: ProfileVariant): UserProfileComponentAppearance {
   const isInline = variant === 'inline';
 
   if (isLight) {
     return {
       elements: {
-        rootBox: isInline ? '' : 'z-50',
+        rootBox: isInline ? 'w-full max-w-none' : 'z-50 w-[min(96vw,72rem)] max-w-[72rem]',
+        cardBox: isInline ? 'w-full max-w-none' : 'w-[min(96vw,72rem)] max-w-[72rem]',
         card: isInline ? 'bg-white border border-slate-200 shadow-sm rounded-2xl' : 'bg-white border border-neutral-200 shadow-xl',
         navbar: isInline ? 'bg-white border-b border-slate-200' : undefined,
         navbarButton: isInline ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-50' : undefined,
@@ -222,12 +234,12 @@ export function getUserProfileAppearance(isLight: boolean, variant: ProfileVaria
       },
       variables: {
         colorPrimary: '#3b82f6',
+        colorPrimaryForeground: '#ffffff',
         colorBackground: '#ffffff',
-        colorInputBackground: '#ffffff',
-        colorInputText: '#111827',
-        colorText: '#111827',
-        colorTextSecondary: '#4b5563',
-        colorTextOnPrimaryBackground: '#ffffff',
+        colorInput: '#ffffff',
+        colorInputForeground: '#111827',
+        colorForeground: '#111827',
+        colorMutedForeground: '#4b5563',
         borderRadius: isInline ? '0.75rem' : '0.375rem',
       },
     };
@@ -235,7 +247,8 @@ export function getUserProfileAppearance(isLight: boolean, variant: ProfileVaria
 
   return {
     elements: {
-      rootBox: isInline ? '' : 'z-50',
+      rootBox: isInline ? 'w-full max-w-none' : 'z-50 w-[min(96vw,72rem)] max-w-[72rem]',
+      cardBox: isInline ? 'w-full max-w-none' : 'w-[min(96vw,72rem)] max-w-[72rem]',
       card: isInline ? 'bg-neutral-900 border border-neutral-700 shadow-sm rounded-2xl' : 'bg-neutral-900 border border-neutral-700 shadow-xl',
       navbar: isInline ? 'bg-neutral-900 border-b border-neutral-700' : undefined,
       navbarButton: isInline ? 'text-neutral-300 hover:text-white hover:bg-neutral-800' : undefined,
@@ -261,12 +274,12 @@ export function getUserProfileAppearance(isLight: boolean, variant: ProfileVaria
     },
     variables: {
       colorPrimary: '#3b82f6',
+      colorPrimaryForeground: '#ffffff',
       colorBackground: '#171717',
-      colorInputBackground: '#262626',
-      colorInputText: '#ffffff',
-      colorText: '#ffffff',
-      colorTextSecondary: '#a3a3a3',
-      colorTextOnPrimaryBackground: '#ffffff',
+      colorInput: '#262626',
+      colorInputForeground: '#ffffff',
+      colorForeground: '#ffffff',
+      colorMutedForeground: '#a3a3a3',
       borderRadius: isInline ? '0.75rem' : '0.375rem',
     },
   };

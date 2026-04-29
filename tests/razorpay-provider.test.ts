@@ -236,6 +236,53 @@ describe('razorpay-provider (minimum working)', () => {
 			.toThrow('RAZORPAY_CYCLE_NOT_STARTED');
 	});
 
+	it('createPrice retries once when Razorpay responds with 429 throttling', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+		let planCreateCount = 0;
+
+		installFetch(async (url, init) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).endsWith('/plans') && method === 'POST') {
+				planCreateCount += 1;
+				if (planCreateCount === 1) {
+					return jsonResponse(
+						{ error: { code: 'BAD_REQUEST_ERROR', description: 'Too many requests' } },
+						{ ok: false, status: 429 }
+					);
+				}
+
+				return jsonResponse({
+					id: 'plan_retry_ok',
+					item: { id: 'item_retry_ok' },
+					period: 'monthly',
+					interval: 1,
+					currency: 'INR',
+					amount: 1900,
+				});
+			}
+
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		});
+
+		const price = await provider.createPrice({
+			unitAmount: 1900,
+			currency: 'INR',
+			productId: '',
+			recurring: {
+				interval: 'month',
+				intervalCount: 1,
+			},
+			metadata: {
+				name: 'Monthly Pro',
+				description: 'Retry throttled plan creation',
+			},
+		});
+
+		expect(price.id).toBe('plan_retry_ok');
+		expect(price.productId).toBe('item_retry_ok');
+		expect(planCreateCount).toBe(2);
+	});
+
 	it('updateSubscriptionPlan caps remaining_count when it exceeds target plan max', async () => {
 		const provider = new RazorpayPaymentProvider(keySecret);
 		let patchCount = 0;

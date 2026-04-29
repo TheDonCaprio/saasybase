@@ -8,7 +8,6 @@ import {
     faExternalLinkAlt, 
     faInfoCircle,
     faLock,
-    faCreditCard,
     faSync,
     faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';

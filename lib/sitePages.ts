@@ -61,14 +61,8 @@ const CORE_PAGES: Array<{
     slug: 'contact',
     title: 'Contact Us',
     description: 'Reach the {{siteName}} team for support, sales, or partnership inquiries.',
-    content: `<h1>Contact {{siteName}}</h1>
-<p>Need help or want to partner with us? We would love to hear from you.</p>
-<h2>Support</h2>
-<p>Email <a href="mailto:{{supportEmail}}">{{supportEmail}}</a> for billing or technical help.</p>
-<h2>Partnerships</h2>
-<p>Interested in collaborating? Contact <a href="mailto:{{partnersEmail}}">{{partnersEmail}}</a>.</p>
-<h2>Community</h2>
-<p>Join the conversation on our community forum to share feedback and ideas.</p>
+    content: `<h1>Need a hand with {{siteName}}?</h1>
+<p>Our team is here to help with onboarding, billing, and partnerships. For the fastest response, open a support ticket directly from your dashboard.</p>
 `
   }
 ];
@@ -222,18 +216,25 @@ export async function ensureCorePages(): Promise<void> {
 
       const sanitizedContent = await sanitizeRichText(contentWithEmails);
       const description = clampDescription((definition.description || '').replace(/SaaSyBase Pro/gi, siteName).replace(/\{\{siteName\}\}/g, siteName), sanitizedContent);
-      await prisma.sitePage.create({
-        data: {
-          collection: DEFAULT_COLLECTION,
-          slug: definition.slug,
-          title: definition.title,
-          description,
-          content: sanitizedContent,
-          system: true,
-          published: true,
-          publishedAt: new Date()
-        } as unknown as Prisma.SitePageCreateInput
-      });
+      try {
+        await prisma.sitePage.create({
+          data: {
+            collection: DEFAULT_COLLECTION,
+            slug: definition.slug,
+            title: definition.title,
+            description,
+            content: sanitizedContent,
+            system: true,
+            published: true,
+            publishedAt: new Date()
+          } as unknown as Prisma.SitePageCreateInput
+        });
+      } catch (createErr: unknown) {
+        // P2002 = unique constraint violation — a concurrent request already
+        // inserted this core page between our findFirst check and this create.
+        // That is fine; the row exists with the right data so we move on.
+        if ((createErr as { code?: string }).code !== 'P2002') throw createErr;
+      }
       continue;
     }
 

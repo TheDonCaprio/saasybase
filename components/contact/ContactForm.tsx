@@ -1,10 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-
-interface ContactFormProps {
-  supportEmail: string;
-}
+import { useCallback, useState } from 'react';
 
 type FormState = {
   name: string;
@@ -36,7 +32,7 @@ function buildInitialState(): FormState {
   };
 }
 
-export function ContactForm({ supportEmail }: ContactFormProps) {
+export function ContactForm() {
   const [form, setForm] = useState<FormState>(() => buildInitialState());
   const [submission, setSubmission] = useState<SubmissionState>('idle');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -47,8 +43,6 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
     setFieldErrors({});
     setGeneralError(null);
   }, []);
-
-  const supportEmailDisplay = useMemo(() => supportEmail || 'support@example.com', [supportEmail]);
 
   const updateField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -99,15 +93,9 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-violet-500/5 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:shadow-none">
-      <div className="mb-4 space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-neutral-50">Send us a message</h2>
-        <p className="text-sm text-slate-600 dark:text-neutral-300">
-          Prefer email? Reach us at{' '}
-          <a href={`mailto:${supportEmailDisplay}`} className="font-medium text-violet-600 underline underline-offset-4 dark:text-violet-300">
-            {supportEmailDisplay}
-          </a>
-        </p>
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">Send us a message</h2>
       </div>
 
       {submission === 'success' ? (
@@ -210,13 +198,13 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
           ) : null}
 
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <p className="text-xs text-slate-500 dark:text-neutral-400">
-              We respond within one business day. For urgent production issues, mention your workspace URL.
+            <p className="text-xs text-slate-400 dark:text-neutral-500">
+              For urgent production issues, include your workspace URL.
             </p>
             <button
               type="submit"
               disabled={submission === 'submitting'}
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-slate-50 transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-neutral-200"
             >
               {submission === 'submitting' ? (
                 <>

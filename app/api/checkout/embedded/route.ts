@@ -748,6 +748,11 @@ async function handleEmbeddedCheckout(req: NextRequest) {
 
         const normalizedMode: 'payment' | 'subscription' = mode === 'subscription' ? 'subscription' : 'payment';
         const typedOpts = { ...opts, mode: normalizedMode } as const;
+        const resolvedCheckoutCurrency = (
+            typeof currency === 'string' && currency.trim().length > 0
+                ? currency
+                : getProviderCurrency(getCurrentProviderKey())
+        ).toUpperCase();
 
         // Get plan name for display
         const planName = resolvedPlanSeed?.name 
@@ -779,7 +784,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                 originalAmount: originalAmountCents,
                 discountCents: couponSummaryDiscountCents,
                 couponCode: appliedCoupon?.code ?? null,
-                currency: currency || 'USD',
+                currency: resolvedCheckoutCurrency,
                 planName,
                 email: user.email,
                 metadata,
@@ -804,7 +809,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                 originalAmount: originalAmountCents,
                 discountCents: couponSummaryDiscountCents,
                 couponCode: appliedCoupon?.code ?? null,
-                currency: currency || 'NGN',
+                currency: resolvedCheckoutCurrency,
                 planName,
                 email: user.email,
                 metadata,
@@ -830,7 +835,7 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             discountCents: couponSummaryDiscountCents,
             couponCode: appliedCoupon?.code ?? null,
             email: user.email,
-            currency: currency || 'NGN',
+            currency: resolvedCheckoutCurrency,
             planName,
             metadata,
             paymentIntentId: (result as { paymentIntentId?: string; subscriptionId?: string }).paymentIntentId

@@ -397,8 +397,8 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
 
             {/* Operations table */}
             <div className={dashboardPanelClass('p-0 overflow-hidden')}>
-              <div className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-neutral-400">
-                <span>Action</span>
+              <div className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-neutral-400">
+                <span>Actions</span>
               </div>
               <div className="divide-y divide-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))]">
                 {OPERATIONS.map((op) => (
@@ -426,7 +426,6 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
             {/* Quick composer */}
             <div className={dashboardMutedPanelClass('p-0 overflow-hidden')}>
               <div className="border-b border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.6))] px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-neutral-400">Quick composer</p>
                 <h3 className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">Custom operation</h3>
               </div>
               <div className="px-4 py-4">

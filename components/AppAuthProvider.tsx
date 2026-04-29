@@ -147,6 +147,9 @@ export default function AppAuthProvider({
             subtitle: `to continue to ${process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase'}`,
           },
         },
+        organizationSwitcher: {
+          action__manageOrganization: '',
+        },
       }}
     >
       {children}

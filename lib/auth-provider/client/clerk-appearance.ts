@@ -79,12 +79,19 @@ export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherA
         userPreviewMainIdentifier: '!text-sm !font-medium !text-neutral-900 dark:!text-neutral-100',
         userPreviewSecondaryIdentifier: '!text-xs !text-neutral-500',
         avatarBox: '!w-6 !h-6 !rounded-md',
-        organizationSwitcherPopoverRootBox: 'sidebar-org-switcher-popover !left-0 !bottom-full !mb-2 !mt-0 !w-[16rem] !min-w-[16rem] !max-w-[16rem]',
+        organizationSwitcherPopoverRootBox:
+          'sidebar-org-switcher-popover !left-0 !bottom-full !mb-2 !mt-0 !w-[var(--radix-popper-anchor-width)] !min-w-[var(--radix-popper-anchor-width)] !max-w-[var(--radix-popper-anchor-width)]',
         organizationSwitcherPopoverCard:
-          '!w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
+          '!w-[var(--radix-popper-anchor-width)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
         organizationSwitcherPopoverActionButton:
           'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
+        organizationSwitcherPopoverActionButton__manageOrganization:
+          'min-h-9 h-9 w-9 min-w-9 max-w-9 rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
         organizationSwitcherPopoverActionButton__createOrganization: 'hidden',
+        organizationSwitcherPopoverActionButtonIconBox__manageOrganization:
+          'm-0 h-9 w-9 min-w-9 max-w-9 rounded-md border-0 bg-transparent text-neutral-500 dark:text-neutral-400',
+        organizationSwitcherPopoverActionButtonIcon__manageOrganization:
+          'h-4 w-4 text-neutral-500 dark:text-neutral-400',
         organizationSwitcherPreviewButton: 'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
         organizationListCreateOrganizationActionButton: 'hidden',
         organizationListPreviewItemActionButton:
@@ -100,7 +107,8 @@ export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherA
         rootBox: 'relative w-full',
         organizationSwitcherTrigger:
           'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[13px] text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
-        organizationSwitcherPopoverRootBox: '!left-0 !right-auto !top-full !mt-2 !z-[70010] !w-[17rem] !min-w-[17rem] !max-w-[17rem]',
+        organizationSwitcherPopoverRootBox:
+          '!left-0 !right-auto !top-full !mt-2 !z-[70010] !w-[var(--radix-popper-anchor-width)] !min-w-[var(--radix-popper-anchor-width)] !max-w-[var(--radix-popper-anchor-width)]',
         organizationSwitcherPopoverCard:
           '!z-[70011] !w-[17rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
         organizationSwitcherPopoverActionButton:
@@ -123,12 +131,15 @@ export function getOrganizationSwitcherAppearance(options: OrganizationSwitcherA
       rootBox: 'w-full',
       organizationSwitcherTrigger:
         'w-full justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800',
-      organizationSwitcherPopoverRootBox: '!w-[16rem] !min-w-[16rem] !max-w-[16rem] pt-1.5',
+      organizationSwitcherPopoverRootBox:
+        '!w-[var(--radix-popper-anchor-width)] !min-w-[var(--radix-popper-anchor-width)] !max-w-[var(--radix-popper-anchor-width)] pt-1.5',
       organizationSwitcherPopoverCard:
         '!w-[16rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30 dark:ring-white/10',
       organizationSwitcherPopoverActionButton:
         'min-h-11 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800',
       organizationSwitcherPopoverActionButton__createOrganization: hideCreateOrganization,
+      organizationSwitcherPopoverActionButton__manageOrganization:
+        'min-h-9 h-9 w-9 min-w-9 max-w-9 rounded-md border border-neutral-200 bg-transparent p-0 text-[0] shadow-none transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800',
       organizationSwitcherPreviewButton: 'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
       organizationListPreviewItem: 'border-b border-neutral-200/80 last:border-b-0 dark:border-neutral-700/80',
       organizationListPreviewButton: 'min-h-12 rounded-none px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/80',
@@ -166,6 +177,10 @@ export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance
       footerActionLink: isModal
         ? 'text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300'
         : 'text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300',
+      footerPages:
+        'border-t border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-secondary))]',
+      footerPagesLink:
+        'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))]',
       dividerText: 'text-neutral-400',
       dividerLine: isModal ? 'border-neutral-200 dark:border-neutral-700' : 'border-neutral-700',
       socialButtonsBlockButton: isModal
@@ -187,11 +202,6 @@ export function getAuthFormAppearance(variant: AuthFormVariant): ClerkAppearance
     variables: {
       colorPrimary: '#3b82f6',
       colorPrimaryForeground: '#ffffff',
-      colorBackground: '#171717',
-      colorInput: '#262626',
-      colorInputForeground: '#ffffff',
-      colorForeground: '#ffffff',
-      colorMutedForeground: '#a3a3a3',
       borderRadius: '0.375rem',
     },
   };

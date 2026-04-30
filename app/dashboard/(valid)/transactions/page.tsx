@@ -186,7 +186,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
       {totalCount === 0 ? (
         <div className={dashboardMutedPanelClass('text-center text-sm text-slate-600 dark:text-neutral-300')}>
           <div className="mb-2 text-base font-semibold text-slate-800 dark:text-neutral-100">No transactions yet</div>
-          <p className="mb-4">Upgrade to {process.env.NEXT_PUBLIC_SITE_NAME || 'YourApp'} to unlock premium exports and you&apos;ll see invoices appear here instantly.</p>
+          <p className="mb-4">Upgrade to a paid plan and you&apos;ll see invoices appear here instantly.</p>
           <Link
             href="/pricing"
             className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"

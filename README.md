@@ -314,16 +314,16 @@ GITHUB_CLIENT_SECRET=""
 
 #### Better Auth Google OAuth setup
 
-1. Open Google Cloud Console → APIs & Services.
-2. Configure the OAuth consent screen for your app.
-3. Create credentials → OAuth client ID → Web application.
-4. Add Authorized redirect URIs:
-  - Local: `http://localhost:3000/api/auth/callback/google`
-  - Production: `https://your-domain.com/api/auth/callback/google`
-5. Add Authorized JavaScript origins:
+1. **Select or Create a Project:** Go to the [Google Cloud Console](https://console.cloud.google.com/). Click the project dropdown in the top navigation bar and select an existing project or click "New Project" to create one dedicated to your application.
+2. **Configure OAuth Consent Screen:** Navigate to **APIs & Services** → **OAuth consent screen** (or **Google Auth Platform**). Choose **External** user type, then fill in your App Name, support email, and developer contact information. Complete the setup wizard.
+3. **Create OAuth Client:** From the Google Auth Platform Overview, click **Create OAuth client** (or navigate to **Clients** on the left menu and click Create). Choose **Web application** as the Application type and give it a name (e.g., "SaaSyBase Login").
+4. **Add Authorized JavaScript origins:** Under that section, click "Add URI".
   - Local: `http://localhost:3000`
   - Production: `https://your-domain.com`
-6. Copy the generated Client ID and Client Secret into:
+5. **Add Authorized redirect URIs:** Under that section, click "Add URI".
+  - Local: `http://localhost:3000/api/auth/callback/google`
+  - Production: `https://your-domain.com/api/auth/callback/google`
+6. Click **Create**. A modal will appear with your Client ID and Client Secret. Copy them into your `.env.local` file:
 
 ```bash
 GOOGLE_CLIENT_ID=""
@@ -367,16 +367,16 @@ GITHUB_CLIENT_SECRET=""
 
 #### Google OAuth setup
 
-1. Open Google Cloud Console → APIs & Services.
-2. Configure the OAuth consent screen for your app.
-3. Create credentials → OAuth client ID → Web application.
-4. Add Authorized redirect URIs:
-  - Local: `http://localhost:3000/api/auth/callback/google`
-  - Production: `https://your-domain.com/api/auth/callback/google`
-5. Add Authorized JavaScript origins:
+1. **Select or Create a Project:** Go to the [Google Cloud Console](https://console.cloud.google.com/). Click the project dropdown in the top navigation bar and select an existing project or click "New Project" to create one dedicated to your application.
+2. **Configure OAuth Consent Screen:** Navigate to **APIs & Services** → **OAuth consent screen** (or **Google Auth Platform**). Choose **External** user type, then fill in your App Name, support email, and developer contact information. Complete the setup wizard.
+3. **Create OAuth Client:** From the Google Auth Platform Overview, click **Create OAuth client** (or navigate to **Clients** on the left menu and click Create). Choose **Web application** as the Application type and give it a name (e.g., "SaaSyBase Login").
+4. **Add Authorized JavaScript origins:** Under that section, click "Add URI".
   - Local: `http://localhost:3000`
   - Production: `https://your-domain.com`
-6. Copy the generated Client ID and Client Secret into:
+5. **Add Authorized redirect URIs:** Under that section, click "Add URI".
+  - Local: `http://localhost:3000/api/auth/callback/google`
+  - Production: `https://your-domain.com/api/auth/callback/google`
+6. Click **Create**. A modal will appear with your Client ID and Client Secret. Copy them into your `.env.local` file:
 
 ```bash
 GOOGLE_CLIENT_ID=""

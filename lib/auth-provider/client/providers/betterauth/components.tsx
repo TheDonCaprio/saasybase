@@ -257,7 +257,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-2 text-sm text-slate-700 dark:text-neutral-200">
+    <label className="block space-y-1.5 text-sm text-slate-700 dark:text-neutral-200">
       <span>{label}</span>
       {children}
     </label>
@@ -284,16 +284,14 @@ function Message({
     ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-100'
     : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100';
 
-  return <div className={`rounded-xl border px-4 py-3 text-sm ${className}`}>{children}</div>;
+  return <div className={`rounded-xl border px-3 py-2.5 text-sm ${className}`}>{children}</div>;
 }
 
-const authCardClass = 'w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl shadow-black/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40';
+const authCardClass = 'w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl shadow-black/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40';
+const authContentClass = 'w-full max-w-sm mx-auto space-y-4';
 const authHeadingClass = 'text-xl font-semibold text-neutral-900 dark:text-neutral-100';
 const authSubtitleClass = 'text-sm text-slate-500 dark:text-neutral-400';
-const authDividerClass = 'relative text-center text-xs uppercase tracking-[0.2em] text-neutral-500';
-const authDividerLabelClass = 'bg-white px-3 dark:bg-neutral-950';
-const authDividerLineClass = 'absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-neutral-200 dark:bg-white/10';
-const authPrimaryButtonClass = 'w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60';
+const authPrimaryButtonClass = 'w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60';
 const authSecondaryButtonClass = 'w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700';
 const authAccentLinkClass = 'text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200';
 const authMutedLinkClass = 'text-slate-600 transition hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white';
@@ -403,7 +401,7 @@ function OAuthButton({
     <button
       type="button"
       onClick={() => void handleClick()}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+      className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
     >
       {icon}
       <span>{label}</span>
@@ -538,25 +536,14 @@ function SignInForm({
   }
 
   const content = (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className={authContentClass}>
+      <div className="space-y-1.5">
         <h2 className={authHeadingClass}>Sign in</h2>
         <p className={authSubtitleClass}>Use your email and password to access your account.</p>
       </div>
 
       {error ? <Message tone="error">{error}</Message> : null}
       {success ? <Message tone="success">{success}</Message> : null}
-
-      <OAuthButtons
-        callbackURL={redirectUrl}
-        onError={setError}
-        onPendingChange={setPending}
-      />
-
-      <div className="relative text-center text-xs uppercase tracking-[0.2em] text-neutral-500">
-        <span className={authDividerLabelClass}>or</span>
-        <div className={authDividerLineClass} />
-      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Email address">
@@ -599,6 +586,12 @@ function SignInForm({
           Email me a magic link
         </button>
       </form>
+
+      <OAuthButtons
+        callbackURL={redirectUrl}
+        onError={setError}
+        onPendingChange={setPending}
+      />
 
       {verificationEmail ? (
         <div className={authPanelClass}>
@@ -668,8 +661,8 @@ function MagicLinkForm({
   }
 
   const content = (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className={authContentClass}>
+      <div className="space-y-1.5">
         <h2 className={authHeadingClass}>Sign in with a magic link</h2>
         <p className={authSubtitleClass}>Enter your email and we will send you a secure one-time sign-in link.</p>
       </div>
@@ -696,7 +689,7 @@ function MagicLinkForm({
       <button
         type="button"
         onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
-        className={`text-sm ${authAccentLinkClass}`}
+        className={`w-full text-center text-sm font-medium ${authAccentLinkClass}`}
       >
         Back to sign in with password
       </button>
@@ -767,26 +760,14 @@ function SignUpForm({
   }
 
   const content = (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className={authContentClass}>
+      <div className="space-y-1.5">
         <h2 className={authHeadingClass}>Create account</h2>
         <p className={authSubtitleClass}>Start with a personal workspace and upgrade later.</p>
       </div>
 
       {error ? <Message tone="error">{error}</Message> : null}
       {success ? <Message tone="success">{success}</Message> : null}
-
-      <OAuthButtons
-        callbackURL={redirectUrl}
-        requestSignUp
-        onError={setError}
-        onPendingChange={setPending}
-      />
-
-      <div className={authDividerClass}>
-        <span className={authDividerLabelClass}>or</span>
-        <div className={authDividerLineClass} />
-      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Full name">
@@ -809,6 +790,13 @@ function SignUpForm({
           {pending ? 'Creating account...' : 'Create account'}
         </button>
       </form>
+
+      <OAuthButtons
+        callbackURL={redirectUrl}
+        requestSignUp
+        onError={setError}
+        onPendingChange={setPending}
+      />
 
       {signInUrl ? (
         <p className={authSubtitleClass}>
@@ -860,8 +848,8 @@ function ForgotPasswordForm({
   }
 
   const content = (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className={authContentClass}>
+      <div className="space-y-1.5">
         <h2 className={authHeadingClass}>Reset password</h2>
         <p className={authSubtitleClass}>Enter your email and we will send you a reset link.</p>
       </div>
@@ -886,7 +874,7 @@ function ForgotPasswordForm({
       <button
         type="button"
         onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
-        className={`text-sm ${authAccentLinkClass}`}
+        className={`w-full text-center text-sm font-medium ${authAccentLinkClass}`}
       >
         Back to sign in
       </button>
@@ -947,8 +935,8 @@ function ResetPasswordForm({
   }
 
   const content = (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className={authContentClass}>
+      <div className="space-y-1.5">
         <h2 className={authHeadingClass}>Choose a new password</h2>
         <p className={authSubtitleClass}>Use a strong password you have not used elsewhere.</p>
       </div>
@@ -977,7 +965,7 @@ function ResetPasswordForm({
       <button
         type="button"
         onClick={() => onSwitch ? onSwitch('signin') : (window.location.href = getBasePath(path, '/sign-in'))}
-        className={`text-sm ${authAccentLinkClass}`}
+        className={`w-full text-center text-sm font-medium ${authAccentLinkClass}`}
       >
         Back to sign in
       </button>
@@ -1051,7 +1039,7 @@ function AuthModalShell({
 
   return createPortal(
     <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]">
-      <div className="relative max-h-[86vh] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl shadow-black/20 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/50">
+      <div className="relative max-h-[86vh] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl shadow-black/20 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/50">
         <button
           type="button"
           onClick={onClose}

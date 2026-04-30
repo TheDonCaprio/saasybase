@@ -104,6 +104,12 @@ type RazorpayPlan = {
 	amount: number;
 };
 
+const RAZORPAY_MAX_SUBSCRIPTION_TOTAL_COUNT = 100;
+
+function getRazorpaySubscriptionTotalCount() {
+	return RAZORPAY_MAX_SUBSCRIPTION_TOTAL_COUNT;
+}
+
 function toSecondsDate(sec: unknown): Date | null {
 	if (typeof sec !== 'number' || !Number.isFinite(sec)) return null;
 	return new Date(sec * 1000);
@@ -551,8 +557,9 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 
 			const payload: Record<string, unknown> = {
 				plan_id: opts.priceId,
-				// Razorpay requires total_count. Use a large number as "until canceled" semantics.
-				total_count: 1200,
+				// Razorpay rejects values above 100 for some period/interval combinations.
+				// Use the provider-safe maximum and rely on renewal flows for longer-lived subscriptions.
+				total_count: getRazorpaySubscriptionTotalCount(),
 				quantity: 1,
 				customer_notify: 1,
 				notes: metadata,
@@ -1587,8 +1594,9 @@ export class RazorpayPaymentProvider implements PaymentProvider {
 
 		const payload: Record<string, unknown> = {
 			plan_id: opts.priceId,
-			// Razorpay requires total_count. Use a large number as "until canceled" semantics.
-			total_count: 1200,
+				// Razorpay rejects values above 100 for some period/interval combinations.
+				// Use the provider-safe maximum and rely on renewal flows for longer-lived subscriptions.
+				total_count: getRazorpaySubscriptionTotalCount(),
 			quantity: 1,
 			customer_notify: 1,
 			notes: metadata,

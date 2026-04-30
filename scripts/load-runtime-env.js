@@ -12,6 +12,46 @@ const CORE_SECRET_ENV_NAMES = [
   'CRON_PROCESS_EXPIRY_TOKEN',
 ];
 
+const AUTH_PROVIDER_SECRET_ENV_NAMES = {
+  clerk: [
+    'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+    'CLERK_SECRET_KEY',
+    'CLERK_WEBHOOK_SECRET',
+  ],
+  betterauth: [
+    'BETTER_AUTH_SECRET',
+    'AUTH_SECRET',
+    'NEXTAUTH_SECRET',
+  ],
+  nextauth: [
+    'AUTH_SECRET',
+    'NEXTAUTH_SECRET',
+  ],
+};
+
+const PAYMENT_PROVIDER_SECRET_ENV_NAMES = {
+  stripe: [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+  ],
+  paystack: [
+    'PAYSTACK_SECRET_KEY',
+    'NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY',
+  ],
+  paddle: [
+    'PADDLE_API_KEY',
+    'PADDLE_WEBHOOK_SECRET',
+    'NEXT_PUBLIC_PADDLE_CLIENT_TOKEN',
+  ],
+  razorpay: [
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
+    'RAZORPAY_WEBHOOK_SECRET',
+    'NEXT_PUBLIC_RAZORPAY_KEY_ID',
+  ],
+};
+
 const PROVIDER_METADATA_PREFIXES = {
 	doppler: ['DOPPLER_'],
 	infisical: ['INFISICAL_'],
@@ -31,54 +71,15 @@ function addSecretEnvNames(target, envNames) {
 
 function getDefaultSecretEnvNames(env = process.env) {
   const envNames = [...CORE_SECRET_ENV_NAMES];
-  const authProvider = (env.AUTH_PROVIDER || env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk').trim().toLowerCase();
-  const paymentProvider = (env.PAYMENT_PROVIDER || 'stripe').trim().toLowerCase();
   const emailProvider = (env.EMAIL_PROVIDER || 'nodemailer').trim().toLowerCase();
   const fileStorage = (env.FILE_STORAGE || 'fs').trim().toLowerCase();
 
-  if (authProvider === 'clerk') {
-    addSecretEnvNames(envNames, [
-      'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-      'CLERK_SECRET_KEY',
-      'CLERK_WEBHOOK_SECRET',
-    ]);
-  } else if (authProvider === 'betterauth') {
-    addSecretEnvNames(envNames, [
-      'BETTER_AUTH_SECRET',
-      'AUTH_SECRET',
-      'NEXTAUTH_SECRET',
-    ]);
-  } else if (authProvider === 'nextauth') {
-    addSecretEnvNames(envNames, [
-      'AUTH_SECRET',
-      'NEXTAUTH_SECRET',
-    ]);
+  for (const authSecretEnvNames of Object.values(AUTH_PROVIDER_SECRET_ENV_NAMES)) {
+    addSecretEnvNames(envNames, authSecretEnvNames);
   }
 
-  if (paymentProvider === 'stripe') {
-    addSecretEnvNames(envNames, [
-      'STRIPE_SECRET_KEY',
-      'STRIPE_WEBHOOK_SECRET',
-      'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    ]);
-  } else if (paymentProvider === 'paystack') {
-    addSecretEnvNames(envNames, [
-      'PAYSTACK_SECRET_KEY',
-      'NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY',
-    ]);
-  } else if (paymentProvider === 'paddle') {
-    addSecretEnvNames(envNames, [
-      'PADDLE_API_KEY',
-      'PADDLE_WEBHOOK_SECRET',
-      'NEXT_PUBLIC_PADDLE_CLIENT_TOKEN',
-    ]);
-  } else if (paymentProvider === 'razorpay') {
-    addSecretEnvNames(envNames, [
-      'RAZORPAY_KEY_ID',
-      'RAZORPAY_KEY_SECRET',
-      'RAZORPAY_WEBHOOK_SECRET',
-      'NEXT_PUBLIC_RAZORPAY_KEY_ID',
-    ]);
+  for (const paymentSecretEnvNames of Object.values(PAYMENT_PROVIDER_SECRET_ENV_NAMES)) {
+    addSecretEnvNames(envNames, paymentSecretEnvNames);
   }
 
   if (emailProvider === 'resend') {

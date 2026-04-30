@@ -1625,21 +1625,23 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           margin-top:32px; animation:lpFadeUp .7s .3s ease both;
         }
         .lp-btn-primary {
-          padding:13px 28px; border-radius:10px; font-weight:700; font-size:14px;
-          background:linear-gradient(135deg,rgb(var(--accent-primary)),rgb(var(--accent-hover)));
+          display:inline-flex; align-items:center; justify-content:center; min-height:46px;
+          padding:13px 28px; border-radius:12px; font-weight:700; font-size:15px; line-height:1;
+          white-space:nowrap; background:linear-gradient(135deg, #2d6fcd 0%, #1f59b4 100%);
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
-          box-shadow:0 10px 28px rgba(var(--accent-primary-rgb),.22);
-          transition:transform .15s, box-shadow .15s;
+          box-shadow:0 10px 24px rgba(37, 99, 235, .18);
+          transition:transform .15s, box-shadow .15s, filter .15s;
         }
-        .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 14px 34px rgba(var(--accent-primary-rgb),.28); color:#fff !important; }
+        .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 14px 30px rgba(37, 99, 235, .24); filter:saturate(1.03); color:#fff !important; }
         .lp-btn-ghost {
-          padding:13px 28px; border-radius:10px; font-weight:600; font-size:14px;
-          background:var(--lp-chip-bg); color:var(--lp-chip-text);
-          border:1px solid rgba(var(--accent-primary-rgb),.08); cursor:pointer; text-decoration:none;
-          box-shadow:0 8px 20px rgba(15,23,42,.05);
-          transition:background .15s, box-shadow .15s, transform .15s;
+          display:inline-flex; align-items:center; justify-content:center; min-height:46px;
+          padding:13px 28px; border-radius:12px; font-weight:600; font-size:15px; line-height:1;
+          white-space:nowrap; background:linear-gradient(135deg, #25b6c6 0%, #19a9bd 100%);
+          color:#fff !important; border:none; cursor:pointer; text-decoration:none;
+          box-shadow:0 10px 24px rgba(20, 184, 166, .16);
+          transition:box-shadow .15s, transform .15s, filter .15s;
         }
-        .lp-btn-ghost:hover { background:rgba(var(--accent-primary-rgb),.06); box-shadow:0 12px 26px rgba(15,23,42,.08); transform:translateY(-1px); color:var(--lp-text1); }
+        .lp-btn-ghost:hover { box-shadow:0 14px 30px rgba(20, 184, 166, .22); transform:translateY(-1px); filter:saturate(1.03); color:#fff !important; }
 
         /* Demo */
         .lp-demo-wrap { animation:lpFadeUp .8s .5s ease both; }
@@ -2539,13 +2541,16 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 {isSignedIn ? (
                   <>
                     <Link href="/dashboard" className="lp-btn-primary">Go to Dashboard →</Link>
-                    <Link href="/pricing" className="lp-btn-ghost">View Pricing</Link>
+                    <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
+                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Free Repo</a>
                   </>
                 ) : (
                   <>
-                    <Link href="/sign-up" className="lp-btn-primary">Start Building Free →</Link>
-                    <Link href="/sign-in" className="lp-btn-ghost">Sign In</Link>
-                    <Link href="/pricing" className="lp-btn-ghost">Pricing</Link>
+                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Free Repo →</a>
+                    <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
+                    <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
                   </>
                 )}
               </div>
@@ -2566,7 +2571,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
               <div className="lp-panel-body">
 
-                <div className="lp-panel-title">Built for professionals & vibecoders.</div>
+                <div className="lp-panel-title">Built for professionals & AI-assisted founders.</div>
                 <div className="lp-panel-sub">
                   LLM-ready docs (CLAUDE.md, AGENTS.md, PATTERNS.md) let your AI agent understand the entire codebase — so you can prompt your way to a finished product.
                 </div>
@@ -2871,11 +2876,17 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           </p>
           <div className="lp-cta-row" style={{ marginTop: 0 }}>
             {isSignedIn ? (
-              <Link href="/dashboard" className="lp-btn-primary">Open my Dashboard →</Link>
+              <>
+                <Link href="/dashboard" className="lp-btn-primary">Open my Dashboard →</Link>
+                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Free Repo</a>
+              </>
             ) : (
               <>
-                <Link href="/sign-up" className="lp-btn-primary">Get Started Free →</Link>
-                <Link href="/pricing" className="lp-btn-ghost">See Pricing</Link>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">View Free Repo →</a>
+                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
               </>
             )}
           </div>

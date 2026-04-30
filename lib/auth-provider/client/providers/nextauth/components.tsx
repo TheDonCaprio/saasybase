@@ -408,6 +408,17 @@ function SignInForm({
   const [resendLoading, setResendLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  async function runCredentialPreflight(email: string, password: string) {
+    const response = await fetch('/api/auth/login-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json().catch(() => null);
+    return { response, data };
+  }
+
   useEffect(() => {
     onMagicLinkSentChange?.(null);
 
@@ -517,13 +528,7 @@ function SignInForm({
           const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
           try {
-            const preflight = await fetch('/api/auth/login-status', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password }),
-            });
-
-            const preflightData = await preflight.json().catch(() => null);
+            const { response: preflight, data: preflightData } = await runCredentialPreflight(email, password);
 
             if (!preflight.ok) {
               if (preflightData?.code === 'EMAIL_NOT_VERIFIED') {

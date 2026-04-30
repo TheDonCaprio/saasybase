@@ -321,69 +321,66 @@ function EmbeddedCheckoutContent() {
         };
 
         return (
-            <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-8 px-4 flex items-center justify-center mx-auto max-w-[1440px]">
-                <div className="w-full max-w-2xl">
-                    <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-slate-200/20 dark:shadow-slate-950/40 overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30 px-8 py-6 border-b border-slate-200/60 dark:border-slate-800/60">
-                            <div className="flex items-center gap-4">
-                                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/30 dark:shadow-teal-500/20 flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-100 dark:to-white bg-clip-text text-transparent">
-                                        Confirm Your Subscription
-                                    </h1>
-                                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                                        Review your plan details before proceeding to secure payment
-                                    </p>
-                                </div>
+            <div className="py-12 px-4 flex items-center justify-center">
+                <div className="w-full max-w-4xl">
+                    <div className="rounded-[2rem] border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200/40 dark:shadow-slate-900/40 overflow-hidden">
+                        
+                        {/* Header - Card Style */}
+                        <div className="px-8 pt-10 pb-6 text-center">
+                            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/30 dark:shadow-teal-500/20 flex items-center justify-center mb-6">
+                                <svg className="w-10 h-10 text-white stroke-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
                             </div>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
+                                Confirm Your Subscription
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto">
+                                Review your plan details before proceeding to the secure checkout portal.
+                            </p>
                         </div>
 
                         {/* Plan Details */}
-                        <div className="p-8">
-                            <div className="grid md:grid-cols-2 gap-8">
+                        <div className="px-8 pb-10">
+                            <div className="grid md:grid-cols-5 gap-6">
                                 {/* Left Column - Plan Info */}
-                                <div className="space-y-6">
+                                <div className="md:col-span-3 space-y-6">
                                     {/* Plan Name & Price */}
-                                    <div className="text-center md:text-left">
+                                    <div className="rounded-2xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-800/20 p-2">
                                         {redirectData.planName && (
-                                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
                                                 {redirectData.planName}
                                             </h2>
                                         )}
                                         {redirectData.amount && redirectData.currency && (
-                                            <div className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-500 dark:to-emerald-500 bg-clip-text text-transparent">
+                                            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                                                 {formatCurrencyValue(redirectData.amount, redirectData.currency)}
                                             </div>
                                         )}
                                         {redirectData.shortDescription && (
-                                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                                                 {redirectData.shortDescription}
                                             </p>
                                         )}
                                     </div>
 
                                     {/* Plan Features */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide">
-										What&apos;s Included
+                                    <div className="px-2 space-y-4">
+                                        <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                                            What&apos;s Included
                                         </h3>
                                         
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             {/* Duration */}
                                             {redirectData.durationHours && (
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                                                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                                                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                         </svg>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
                                                             {formatDuration(redirectData.durationHours)} of access
                                                         </p>
                                                         <p className="text-xs text-slate-500 dark:text-slate-400">Full Pro features</p>
@@ -393,30 +390,30 @@ function EmbeddedCheckoutContent() {
 
                                             {/* Tokens */}
                                             {getTokenDisplay() && (
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                                                        <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                                                        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                         </svg>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
                                                             {getTokenDisplay()}
                                                         </p>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400">Added to your account</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">Added to your account immediately</p>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {/* Premium Features */}
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                                                    <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                                     </svg>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
                                                         All Pro features
                                                     </p>
                                                     <p className="text-xs text-slate-500 dark:text-slate-400">Advanced tools & capabilities</p>
@@ -427,51 +424,32 @@ function EmbeddedCheckoutContent() {
                                 </div>
 
                                 {/* Right Column - Payment Details */}
-                                <div className="space-y-6">
-                                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 p-6">
-                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 uppercase tracking-wide">
-                                            Payment Details
+                                <div className="md:col-span-2 space-y-6">
+                                    <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-5 mt-6 md:mt-0">
+                                        <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-4 uppercase tracking-wider">
+                                            Checkout Info
                                         </h3>
                                         
                                         <div className="space-y-4">
                                             {redirectData.email && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-slate-600 dark:text-slate-400">Email</span>
-                                                    <span className="text-sm font-medium text-slate-900 dark:text-white truncate max-w-[200px] ml-2">
+                                                <div className="space-y-1">
+                                                    <span className="block text-xs text-slate-500 dark:text-slate-400">Email</span>
+                                                    <span className="block text-sm font-medium text-slate-900 dark:text-white truncate" title={redirectData.email}>
                                                         {redirectData.email}
                                                     </span>
                                                 </div>
                                             )}
                                             
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-slate-600 dark:text-slate-400">Currency</span>
-                                                <span className="text-sm font-medium text-slate-900 dark:text-white uppercase">
+                                            <div className="space-y-1">
+                                                <span className="block text-xs text-slate-500 dark:text-slate-400">Currency</span>
+                                                <span className="block text-sm font-medium text-slate-900 dark:text-white uppercase">
                                                     {redirectData.currency || 'NGN'}
                                                 </span>
                                             </div>
                                             
-                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                                                <span className="text-sm text-slate-600 dark:text-slate-400">Payment via</span>
+                                            <div className="pt-3 border-t border-slate-200 dark:border-slate-700/50 space-y-2">
+                                                <span className="block text-xs text-slate-500 dark:text-slate-400">Secure Payment Via</span>
                                                 <PaymentProviderBadge provider={redirectData.provider} size="sm" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Security Notice */}
-                                    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800/50 p-4">
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
-                                                <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-1">
-                                                    Secure Payment
-                                                </p>
-                                                <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-										You&apos;ll be redirected to {redirectData.provider === 'paystack' ? 'Paystack' : redirectData.provider}{"'"}s secure, encrypted checkout page to complete your payment.
-                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -479,11 +457,11 @@ function EmbeddedCheckoutContent() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-10 pt-6 border-t border-slate-100 dark:border-slate-800">
                                 <button
                                     type="button"
                                     onClick={() => window.history.back()}
-                                    className="flex-1 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 flex items-center justify-center gap-2"
+                                    className="flex-1 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -496,10 +474,11 @@ function EmbeddedCheckoutContent() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={() => beginExternalWaitingFlow()}
-                                        className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
+                                        className="flex-1 px-6 py-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30"
+                                        style={{ color: '#fff' }}
                                     >
                                         Open Secure Payment (New Tab)
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                         </svg>
                                     </a>
@@ -507,14 +486,22 @@ function EmbeddedCheckoutContent() {
                                     <button
                                         type="button"
                                         onClick={() => openExternalCheckout()}
-                                        className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"
+                                        className="flex-1 px-6 py-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30"
+                                        style={{ color: '#fff' }}
                                     >
                                         Continue to Secure Payment
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        <svg className="w-5 h-5 text-white stroke-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                         </svg>
                                     </button>
                                 )}
+                            </div>
+                            
+                            <div className="mt-6 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 gap-1.5">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <span>Encrypted & secure checkout process</span>
                             </div>
                         </div>
                     </div>

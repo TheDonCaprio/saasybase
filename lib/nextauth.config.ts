@@ -97,7 +97,7 @@ function createPrismaAdapter(): Adapter {
     emailVerified: Date | null;
   }) => ({
     id: user.id,
-    email: user.email,
+    email: user.email ?? '',
     name: user.name,
     image: user.imageUrl,
     emailVerified: user.emailVerified,
@@ -108,7 +108,7 @@ function createPrismaAdapter(): Adapter {
     async createUser(data) {
       const user = await prisma.user.create({
         data: {
-          email: data.email,
+          email: data.email ?? '',
           name: data.name,
           imageUrl: data.image ?? null,
           emailVerified: data.emailVerified ?? null,
@@ -132,7 +132,7 @@ function createPrismaAdapter(): Adapter {
       const user = await prisma.user.update({
         where: { id: data.id },
         data: {
-          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.email !== undefined ? { email: data.email ?? '' } : {}),
           ...(data.name !== undefined ? { name: data.name } : {}),
           ...(data.image !== undefined ? { imageUrl: data.image } : {}),
           ...(data.emailVerified !== undefined ? { emailVerified: data.emailVerified } : {}),

@@ -109,16 +109,17 @@ describe('scripts/load-runtime-env', () => {
     const result = getProviderSecretEnvNames({
       DATABASE_URL: 'postgresql://example',
       STRIPE_SECRET_KEY: 'sk_test_123',
+      PADDLE_API_KEY: 'pdl_123',
       DOPPLER_PROJECT: 'example-project',
       DOPPLER_CONFIG: 'dev',
       EXTRA_FLAG: 'true',
     }, 'doppler', {
       NODE_ENV: 'test',
       SECRETS_PROVIDER: 'doppler',
-      PAYMENT_PROVIDER: 'stripe',
+      PAYMENT_PROVIDER: 'paddle',
     } as NodeJS.ProcessEnv);
 
-    expect(result).toEqual(['DATABASE_URL', 'STRIPE_SECRET_KEY']);
+    expect(result).toEqual(['DATABASE_URL', 'STRIPE_SECRET_KEY', 'PADDLE_API_KEY']);
   });
 
   it('filters Infisical metadata keys from eligible secret keys', () => {
@@ -182,5 +183,16 @@ describe('scripts/load-runtime-env', () => {
 
     expect(result).toContain('POSTHOG_PERSONAL_API_KEY');
     expect(result).toContain('NEXT_PUBLIC_POSTHOG_KEY');
+  });
+
+  it('includes supported payment provider secrets even when another provider is active', () => {
+    const result = getDefaultSecretEnvNames({
+      NODE_ENV: 'test',
+      PAYMENT_PROVIDER: 'paddle',
+    } as NodeJS.ProcessEnv);
+
+    expect(result).toContain('STRIPE_SECRET_KEY');
+    expect(result).toContain('PADDLE_API_KEY');
+    expect(result).toContain('RAZORPAY_KEY_SECRET');
   });
 });

@@ -249,6 +249,17 @@ function getErrorMessage(error: AuthActionResult['error'], fallback: string) {
   return error?.message || fallback;
 }
 
+async function runCredentialPreflight(email: string, password: string) {
+  const response = await fetch('/api/auth/login-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json().catch(() => null);
+  return { response, data };
+}
+
 function Field({
   label,
   children,
@@ -489,6 +500,24 @@ function SignInForm({
     setPending(true);
     setError(null);
     setSuccess(null);
+
+    try {
+      const { response: preflight, data: preflightData } = await runCredentialPreflight(email, password);
+
+      if (!preflight.ok) {
+        if (preflightData?.code === 'EMAIL_NOT_VERIFIED') {
+          setVerificationEmail(email);
+        }
+
+        setPending(false);
+        setError(preflightData?.error || 'Unable to sign in.');
+        return;
+      }
+    } catch {
+      setPending(false);
+      setError('Something went wrong. Please try again.');
+      return;
+    }
 
     const result = await betterAuthClient.signIn.email({
       email,
@@ -986,12 +1015,6 @@ function AuthModalShell({
   onClose: () => void;
   onSwitch: (mode: AuthModalMode) => void;
 }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   useEffect(() => {
     if (!open) {
       return;
@@ -1020,7 +1043,7 @@ function AuthModalShell({
     };
   }, [open]);
 
-  if (!open || !mounted) {
+  if (!open || typeof document === 'undefined') {
     return null;
   }
 

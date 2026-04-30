@@ -74,6 +74,9 @@ describe('razorpay-provider (minimum working)', () => {
 		installFetch(async (url, init) => {
 			const method = (init?.method || 'GET').toUpperCase();
 			if (String(url).endsWith('/subscriptions') && method === 'POST') {
+				const body = parseJsonBody(init);
+				expect(body.total_count).toBe(100);
+				expect(body.quantity).toBe(1);
 				return jsonResponse({ id: 'sub_123', short_url: 'https://rzp.io/i/sub', status: 'created', plan_id: 'plan_abc' }, { status: 200 });
 			}
 			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
@@ -90,6 +93,32 @@ describe('razorpay-provider (minimum working)', () => {
 
 		expect(session.id).toBe('sub_123');
 		expect(session.url).toBe('https://rzp.io/i/sub');
+	});
+
+	it('createSubscriptionIntent sends a Razorpay-safe total_count', async () => {
+		const provider = new RazorpayPaymentProvider(keySecret);
+
+		installFetch(async (url, init) => {
+			const method = (init?.method || 'GET').toUpperCase();
+			if (String(url).endsWith('/subscriptions') && method === 'POST') {
+				const body = parseJsonBody(init);
+				expect(body.total_count).toBe(100);
+				expect(body.quantity).toBe(1);
+				return jsonResponse({ id: 'sub_intent_123', short_url: 'https://rzp.io/i/intent', status: 'created', plan_id: 'plan_abc' }, { status: 200 });
+			}
+			throw new Error('Unexpected fetch: ' + method + ' ' + String(url));
+		});
+
+		const intent = await provider.createSubscriptionIntent({
+			userId: 'user_1',
+			mode: 'subscription',
+			priceId: 'plan_abc',
+			successUrl: 'https://example.com/success',
+			cancelUrl: 'https://example.com/cancel',
+			customerEmail: 'test@example.com',
+		});
+
+		expect(intent.subscriptionId).toBe('sub_intent_123');
 	});
 
 	it('cancelSubscription maps immediately=false to cancel_at_cycle_end', async () => {

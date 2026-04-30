@@ -113,7 +113,7 @@ function getCapturedEmailProvider(): CapturedEmailProvider {
   return provider as CapturedEmailProvider;
 }
 
-async function loadConfigModule() {
+async function loadConfigModule(): Promise<CapturedNextAuthConfig | undefined> {
   vi.resetModules();
   globalThis.__capturedNextAuthConfig = undefined;
   await import('../lib/nextauth.config');

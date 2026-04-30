@@ -44,13 +44,13 @@ export function ConfirmModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-xl">
-        <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
+            className="text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-white"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,15 +60,15 @@ export function ConfirmModal({
         </div>
 
         <div className="space-y-3 px-5 py-4">
-          <p className="text-sm text-neutral-300">{description}</p>
+          <p className="text-sm text-slate-600 dark:text-neutral-300">{description}</p>
           {children}
         </div>
 
-        <div className="flex gap-2.5 border-t border-neutral-800 px-5 py-4">
+        <div className="flex gap-2.5 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 rounded-lg border border-neutral-700 px-3.5 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             {cancelLabel}
           </button>

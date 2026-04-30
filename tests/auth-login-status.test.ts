@@ -99,6 +99,30 @@ describe('auth login-status route', () => {
     expect(body.error).toBe('Invalid email or password. Please try again.');
   });
 
+  it('returns a provider-specific message for OAuth-only accounts', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_3b',
+      email: 'oauth@example.com',
+      name: 'OAuth User',
+      password: null,
+      emailVerified: new Date(),
+      accounts: [{ provider: 'google' }],
+    });
+
+    const req = new NextRequest('http://localhost/api/auth/login-status', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'oauth@example.com', password: 'secret' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe('OAUTH_ACCOUNT_ONLY');
+    expect(body.error).toContain('Google');
+  });
+
   it('returns a suspension message for suspended users with valid credentials', async () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user_4',

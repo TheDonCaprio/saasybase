@@ -294,12 +294,14 @@ export function PaginatedPurchaseManagement({
   const [editTarget, setEditTarget] = useState<PurchaseRow | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [clearPaidTokensOnExpire, setClearPaidTokensOnExpire] = useState(false);
 
   const handleExpirePlan = (purchase: PurchaseRow) => {
     if (!purchase.subscription || purchase.subscription.status !== 'ACTIVE') {
       showToast('No active plan to expire', 'info');
       return;
     }
+    setClearPaidTokensOnExpire(false);
     setPurchaseToExpire(purchase);
   };
 
@@ -313,7 +315,9 @@ export function PaginatedPurchaseManagement({
       setExpireLoading(prev => ({ ...prev, [purchase.id]: true }));
 
       const response = await fetch(`/api/admin/purchases/${purchase.id}/expire`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearPaidTokens: clearPaidTokensOnExpire })
       });
 
       if (!response.ok) {
@@ -325,6 +329,7 @@ export function PaginatedPurchaseManagement({
       showToast('Plan expired', 'success');
       refreshPurchases();
       setPurchaseToExpire(null);
+      setClearPaidTokensOnExpire(false);
     } catch (err) {
       void err;
       showToast('Unable to expire plan', 'error');
@@ -849,13 +854,34 @@ export function PaginatedPurchaseManagement({
 
       <ConfirmModal
         isOpen={!!purchaseToExpire}
-        onClose={() => setPurchaseToExpire(null)}
+        onClose={() => {
+          setPurchaseToExpire(null);
+          setClearPaidTokensOnExpire(false);
+        }}
         onConfirm={executeExpirePlan}
         title="Expire Plan"
         description="Are you sure you want to immediately expire this plan? The user will lose access immediately. This action cannot be undone."
         confirmLabel="Expire Plan"
         loading={!!(purchaseToExpire && expireLoading[purchaseToExpire.id])}
-      />
+      >
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/60">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={clearPaidTokensOnExpire}
+              onChange={(e) => setClearPaidTokensOnExpire(e.target.checked)}
+              disabled={!!(purchaseToExpire && expireLoading[purchaseToExpire.id])}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-slate-900 dark:text-white">Also clear paid tokens</div>
+              <div className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">
+                Zero the user&apos;s paid token balance when expiring this plan.
+              </div>
+            </div>
+          </label>
+        </div>
+      </ConfirmModal>
 
       <SubscriptionEditModal
         isOpen={!!editTarget}

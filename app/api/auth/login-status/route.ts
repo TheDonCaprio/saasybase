@@ -6,15 +6,25 @@ import { Logger } from '@/lib/logger';
 import { getUserSuspensionDetails } from '@/lib/account-suspension';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 
-function isBetterAuthProviderEnabled() {
-  return process.env.AUTH_PROVIDER === 'betterauth';
+function buildOAuthOnlyMessage(providers: string[]) {
+  const names = Array.from(new Set(providers))
+    .map((provider) => provider.trim().toLowerCase())
+    .filter(Boolean)
+    .map((provider) => provider === 'github' ? 'GitHub' : provider === 'google' ? 'Google' : provider);
+
+  if (names.length === 0) {
+    return 'This account uses social sign-in. Use the matching sign-in button instead of email and password.';
+  }
+
+  if (names.length === 1) {
+    return `This account uses ${names[0]} sign-in. Use the ${names[0]} button instead of email and password.`;
+  }
+
+  const last = names[names.length - 1];
+  return `This account uses ${names.slice(0, -1).join(', ')} or ${last} sign-in. Use one of those buttons instead of email and password.`;
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetterAuthProviderEnabled()) {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
-  }
-
   try {
     const ip = getClientIP(request);
     const rl = await rateLimit(`auth:login-status:${ip}`, RATE_LIMITS.AUTH, {
@@ -49,10 +59,35 @@ export async function POST(request: NextRequest) {
         suspendedAt: true,
         suspensionReason: true,
         suspensionIsPermanent: true,
+        accounts: {
+          where: {
+            provider: {
+              in: ['github', 'google'],
+            },
+          },
+          select: {
+            provider: true,
+          },
+        },
       },
     });
 
     if (!user?.password) {
+      const oauthProviders = (user?.accounts ?? []).map((account) => account.provider);
+
+      if (oauthProviders.length > 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            canSignIn: false,
+            code: 'OAUTH_ACCOUNT_ONLY',
+            error: buildOAuthOnlyMessage(oauthProviders),
+            providers: oauthProviders,
+          },
+          { status: 409 }
+        );
+      }
+
       return NextResponse.json({ error: INVALID_CREDENTIALS_MESSAGE }, { status: 401 });
     }
 

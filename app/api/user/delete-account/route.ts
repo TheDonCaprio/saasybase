@@ -32,16 +32,37 @@ export async function DELETE(_request: NextRequest) {
       // Narrow the transactional client to a record and guard each table API before calling methods
       const txRec = asRecord(txParam) ?? {};
 
-      const tryDeleteMany = async (tableName: string) => {
+      const tryDeleteMany = async (tableName: string, where: Record<string, unknown> = { userId }) => {
         const table = txRec[tableName];
         if (table && typeof table === 'object') {
           const maybeFn = (table as Record<string, unknown>)['deleteMany'];
           if (typeof maybeFn === 'function') {
             const fn = maybeFn as (...args: unknown[]) => Promise<unknown>;
-            await fn({ where: { userId } });
+            await fn({ where });
           }
         }
       };
+
+      const tryUpdateMany = async (
+        tableName: string,
+        where: Record<string, unknown>,
+        data: Record<string, unknown>
+      ) => {
+        const table = txRec[tableName];
+        if (table && typeof table === 'object') {
+          const maybeFn = (table as Record<string, unknown>)['updateMany'];
+          if (typeof maybeFn === 'function') {
+            const fn = maybeFn as (...args: unknown[]) => Promise<unknown>;
+            await fn({ where, data });
+          }
+        }
+      };
+
+      await tryUpdateMany('ticketReply', { userId }, { userId: null });
+      await tryUpdateMany('emailLog', { userId }, { userId: null });
+      await tryUpdateMany('visitLog', { userId }, { userId: null });
+      await tryUpdateMany('organizationInvite', { invitedByUserId: userId }, { invitedByUserId: null });
+      await tryUpdateMany('adminActionLog', { targetUserId: userId }, { targetUserId: null });
 
       await tryDeleteMany('userSetting');
       await tryDeleteMany('ticketReply');
@@ -54,6 +75,7 @@ export async function DELETE(_request: NextRequest) {
       await tryDeleteMany('couponRedemption');
       await tryDeleteMany('account');
       await tryDeleteMany('session');
+      await tryDeleteMany('adminActionLog', { actorId: userId });
 
       // Finally, delete the user record if available
       const userTable = txRec['user'];

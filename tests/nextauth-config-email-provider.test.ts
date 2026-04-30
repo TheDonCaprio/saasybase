@@ -10,6 +10,10 @@ type CapturedProvider = {
 
 type CapturedNextAuthConfig = {
   providers?: CapturedProvider[];
+  adapter?: {
+    createUser?: (user: { email?: string | null; name?: string | null; image?: string | null; emailVerified?: Date | null }) => Promise<unknown>;
+    updateUser?: (user: { id?: string; email?: string | null; name?: string | null; image?: string | null; emailVerified?: Date | null }) => Promise<unknown>;
+  };
 };
 
 type CapturedEmailProvider = CapturedProvider & {
@@ -41,6 +45,7 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
   },
   user: {
+    create: vi.fn(),
     findUnique: vi.fn(),
     update: vi.fn(),
   },
@@ -203,5 +208,78 @@ describe('nextauth email provider config', () => {
       name: 'Pending User',
     });
     expect(sendNextAuthMagicLinkEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('maps adapter image fields onto imageUrl for OAuth user writes', async () => {
+    const config = await loadConfigModule();
+    const adapter = config?.adapter;
+
+    prismaMock.user.create.mockResolvedValue({
+      id: 'user_3',
+      email: 'oauth@example.com',
+      name: 'OAuth User',
+      imageUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+      emailVerified: null,
+    });
+    prismaMock.user.update.mockResolvedValue({
+      id: 'user_3',
+      email: 'oauth@example.com',
+      name: 'OAuth User',
+      imageUrl: 'https://avatars.githubusercontent.com/u/2?v=4',
+      emailVerified: null,
+    });
+
+    const created = await adapter?.createUser?.({
+      email: 'oauth@example.com',
+      name: 'OAuth User',
+      image: 'https://avatars.githubusercontent.com/u/1?v=4',
+      emailVerified: null,
+    });
+
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'oauth@example.com',
+        name: 'OAuth User',
+        imageUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+        emailVerified: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        imageUrl: true,
+        emailVerified: true,
+      },
+    });
+    expect(created).toMatchObject({
+      id: 'user_3',
+      email: 'oauth@example.com',
+      name: 'OAuth User',
+      image: 'https://avatars.githubusercontent.com/u/1?v=4',
+      emailVerified: null,
+    });
+
+    const updated = await adapter?.updateUser?.({
+      id: 'user_3',
+      image: 'https://avatars.githubusercontent.com/u/2?v=4',
+    });
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_3' },
+      data: {
+        imageUrl: 'https://avatars.githubusercontent.com/u/2?v=4',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        imageUrl: true,
+        emailVerified: true,
+      },
+    });
+    expect(updated).toMatchObject({
+      id: 'user_3',
+      image: 'https://avatars.githubusercontent.com/u/2?v=4',
+    });
   });
 });

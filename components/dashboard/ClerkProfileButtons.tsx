@@ -367,13 +367,14 @@ function NextAuthProfileEditor({
 export default function ClerkProfileButtons({ defaultName, defaultEmail }: ClerkProfileButtonsProps) {
   const editLabelRef = useRef<HTMLSpanElement | null>(null);
   const editIconRef = useRef<SVGSVGElement | null>(null);
-  const isNextAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'nextauth';
+  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+  const usesLocalProfileEditor = authProvider === 'nextauth' || authProvider === 'betterauth';
 
   useEffect(() => {
     // No JS color overrides — rely on .text-actual-white utility to force white text and SVG color
   }, []);
 
-  if (isNextAuth) {
+  if (usesLocalProfileEditor) {
     return <NextAuthProfileEditor defaultName={defaultName} defaultEmail={defaultEmail} />;
   }
 

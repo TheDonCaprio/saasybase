@@ -216,17 +216,6 @@ export const betterAuthConfig = {
     },
     changeEmail: {
       enabled: true,
-      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
-        await sendTemplatedAuthEmail({
-          to: newEmail,
-          userId: user.id,
-          templateKey: 'email_change_confirmation',
-          subject: 'Confirm your new email address',
-          actionUrl: url,
-          name: user.name,
-          currentEmail: user.email,
-        });
-      },
     },
   },
   account: {

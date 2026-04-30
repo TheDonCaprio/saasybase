@@ -268,7 +268,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-violet-400/70 dark:focus:bg-white/10"
+      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-violet-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
     />
   );
 }
@@ -287,14 +287,14 @@ function Message({
   return <div className={`rounded-xl border px-4 py-3 text-sm ${className}`}>{children}</div>;
 }
 
-const authCardClass = 'w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/60 backdrop-blur dark:border-white/10 dark:bg-neutral-950/80 dark:shadow-black/30';
-const authHeadingClass = 'text-2xl font-semibold text-slate-900 dark:text-white';
+const authCardClass = 'w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl shadow-black/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40';
+const authHeadingClass = 'text-xl font-semibold text-neutral-900 dark:text-neutral-100';
 const authSubtitleClass = 'text-sm text-slate-500 dark:text-neutral-400';
-const authDividerClass = 'relative text-center text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-neutral-500';
+const authDividerClass = 'relative text-center text-xs uppercase tracking-[0.2em] text-neutral-500';
 const authDividerLabelClass = 'bg-white px-3 dark:bg-neutral-950';
-const authDividerLineClass = 'absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-slate-200 dark:bg-white/10';
-const authPrimaryButtonClass = 'w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60';
-const authSecondaryButtonClass = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10';
+const authDividerLineClass = 'absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-neutral-200 dark:bg-white/10';
+const authPrimaryButtonClass = 'w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60';
+const authSecondaryButtonClass = 'w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700';
 const authAccentLinkClass = 'text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200';
 const authMutedLinkClass = 'text-slate-600 transition hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white';
 const authPanelClass = 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300';
@@ -1050,8 +1050,8 @@ function AuthModalShell({
   }
 
   return createPortal(
-    <div data-auth-modal-root="true" className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/15 dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/50">
+    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]">
+      <div className="relative max-h-[86vh] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl shadow-black/20 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/50">
         <button
           type="button"
           onClick={onClose}

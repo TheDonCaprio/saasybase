@@ -89,8 +89,65 @@ async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
 function createPrismaAdapter(): Adapter {
   const adapter = PrismaAdapter(prisma);
 
+  const toAdapterUser = (user: {
+    id: string;
+    email: string | null;
+    name: string | null;
+    imageUrl: string | null;
+    emailVerified: Date | null;
+  }) => ({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    image: user.imageUrl,
+    emailVerified: user.emailVerified,
+  });
+
   return {
     ...adapter,
+    async createUser(data) {
+      const user = await prisma.user.create({
+        data: {
+          email: data.email,
+          name: data.name,
+          imageUrl: data.image ?? null,
+          emailVerified: data.emailVerified ?? null,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          imageUrl: true,
+          emailVerified: true,
+        },
+      });
+
+      return toAdapterUser(user);
+    },
+    async updateUser(data) {
+      if (!data.id) {
+        throw new Error('NextAuth adapter updateUser requires an id.');
+      }
+
+      const user = await prisma.user.update({
+        where: { id: data.id },
+        data: {
+          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.name !== undefined ? { name: data.name } : {}),
+          ...(data.image !== undefined ? { imageUrl: data.image } : {}),
+          ...(data.emailVerified !== undefined ? { emailVerified: data.emailVerified } : {}),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          imageUrl: true,
+          emailVerified: true,
+        },
+      });
+
+      return toAdapterUser(user);
+    },
     async deleteSession(sessionToken) {
       await prisma.session.deleteMany({ where: { sessionToken } });
       return null;

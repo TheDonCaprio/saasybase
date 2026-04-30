@@ -284,6 +284,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'img.clerk.com',
       },
+      // GitHub OAuth avatar images
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      // Google OAuth avatar images
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
     ],
   },
   

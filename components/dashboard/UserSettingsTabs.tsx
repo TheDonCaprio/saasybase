@@ -14,7 +14,6 @@ import { faUser, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
 const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
-const hasLocalPasswordManagement = authProvider === 'nextauth' || authProvider === 'betterauth';
 const hasAppManagedEmailVerification = authProvider === 'nextauth' || authProvider === 'betterauth';
 
 interface BaseUser {
@@ -159,8 +158,6 @@ export function UserSettingsTabs({
             <SecurityDataSessionsPanel />
 
             <EmailVerificationCard isVerified={currentUserEmailVerified} />
-
-            <PasswordChangeCard />
 
             <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -439,153 +436,3 @@ function EmailVerificationCard({ isVerified }: { isVerified?: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Password Change Card (local-password providers only — Clerk manages passwords internally)
-// ---------------------------------------------------------------------------
-
-function PasswordChangeCard() {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  if (!hasLocalPasswordManagement) return null;
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    const form = e.currentTarget;
-    const currentPassword = (form.elements.namedItem('currentPassword') as HTMLInputElement).value;
-    const newPassword = (form.elements.namedItem('newPassword') as HTMLInputElement).value;
-    const confirmPassword = (form.elements.namedItem('confirmPassword') as HTMLInputElement).value;
-
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/user/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        setSuccess('Password changed successfully.');
-        showToast('Password changed successfully.', 'success');
-        form.reset();
-        setTimeout(() => {
-          setOpen(false);
-          setSuccess('');
-        }, 2000);
-      } else {
-        setError(data.error || 'Failed to change password.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Password</p>
-          <p className="text-xs text-slate-500 dark:text-neutral-400">Change the password you use to sign in.</p>
-        </div>
-        {!open && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600"
-          >
-            Change password
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-              {success}
-            </div>
-          )}
-          <div>
-            <label htmlFor="currentPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
-              Current password
-            </label>
-            <input
-              id="currentPassword"
-              name="currentPassword"
-              type="password"
-              required
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-          </div>
-          <div>
-            <label htmlFor="newPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
-              New password
-            </label>
-            <input
-              id="newPassword"
-              name="newPassword"
-              type="password"
-              required
-              minLength={8}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-            <p className="mt-0.5 text-[11px] text-slate-400">Minimum 8 characters</p>
-          </div>
-          <div>
-            <label htmlFor="confirmPassword" className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1">
-              Confirm new password
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            />
-          </div>
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              type="submit"
-              disabled={loading}
-              className={cx(
-                'inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition',
-                loading ? 'cursor-not-allowed opacity-60' : 'hover:bg-violet-700'
-              )}
-            >
-              {loading ? 'Saving…' : 'Save password'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setOpen(false); setError(''); setSuccess(''); }}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
-  );
-}

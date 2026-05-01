@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { showToast } from '../../../ui/Toast';
 import { buildRobotsTxtContent, normalizeRobotsTxtContent, resolveSeoUrl, serializeSitemapCustomUrls, type SeoSettings } from '../../../../lib/seo-shared';
 
@@ -54,6 +55,7 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
   const [saving, setSaving] = useState(false);
   const [savingRobots, setSavingRobots] = useState(false);
   const [isRobotsEditorOpen, setIsRobotsEditorOpen] = useState(false);
+  const [isRobotsModalVisible, setIsRobotsModalVisible] = useState(false);
 
   const resolvedPreviewUrl = resolveSeoUrl(homeCanonicalUrl, { siteUrl: initialSettings.siteUrl, sameOriginOnly: true }) || initialSettings.siteUrl;
   const previewTitle = homeMetaTitle.trim() || 'Homepage title preview';
@@ -184,6 +186,29 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
       setSavingRobots(false);
     }
   };
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape' && isRobotsEditorOpen && !savingRobots) {
+        setIsRobotsEditorOpen(false);
+      }
+    }
+
+    if (!isRobotsEditorOpen) return;
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isRobotsEditorOpen, savingRobots]);
+
+  useEffect(() => {
+    if (!isRobotsEditorOpen) {
+      setIsRobotsModalVisible(false);
+      return;
+    }
+
+    setIsRobotsModalVisible(false);
+    const frame = requestAnimationFrame(() => setIsRobotsModalVisible(true));
+    return () => cancelAnimationFrame(frame);
+  }, [isRobotsEditorOpen]);
 
   return (
     <div className="space-y-6">
@@ -336,20 +361,16 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
               <textarea value={excludedSitemapEntries} onChange={(event) => setExcludedSitemapEntries(clampField(event.target.value, SEO_FIELD_LIMITS.sitemapCustomUrls))} maxLength={SEO_FIELD_LIMITS.sitemapCustomUrls} rows={6} placeholder={'/blog\n/privacy'} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100" />
             </label>
             <p className="text-xs text-slate-500 dark:text-neutral-400">Exclude exact public URLs from the generated sitemap. Use same-site absolute URLs or root-relative paths. {getLengthLabel(excludedSitemapEntries, SEO_FIELD_LIMITS.sitemapCustomUrls)}</p>
-            <label className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50/80 p-3 text-sm dark:border-rose-900/70 dark:bg-rose-950/30">
-              <input type="checkbox" checked={noIndexSite} onChange={(event) => setNoIndexSite(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
-              <span>
-                <span className="block font-medium text-rose-900 dark:text-rose-100">No-index the whole site</span>
-                <span className="mt-1 block text-xs text-rose-800/90 dark:text-rose-100/85">Warning: this asks search engines to remove the entire site from Google and other search results. Use only for private launches, staging, or temporary takedowns.</span>
-              </span>
-            </label>
           </div>
         </section>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <p className="text-xs text-slate-500 dark:text-neutral-400 sm:mr-auto">Changes apply to metadata, robots, and sitemap output after the next route revalidation.</p>
-        <button type="button" onClick={() => setIsRobotsEditorOpen(true)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:hover:bg-neutral-900">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1 sm:mr-auto">
+          <p className="text-xs text-slate-500 dark:text-neutral-400">Changes apply to metadata, robots, and sitemap output after the next route revalidation.</p>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">Need crawler-specific rules or a full-site block? Use the robots.txt editor.</p>
+        </div>
+        <button type="button" onClick={() => setIsRobotsEditorOpen(true)} className="inline-flex items-center justify-center self-start rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:self-auto dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:hover:bg-neutral-900">
           Edit robots.txt
         </button>
         <button type="button" onClick={saveSettings} disabled={saving} className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">
@@ -357,9 +378,11 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
         </button>
       </div>
 
-      {isRobotsEditorOpen ? (
-        <div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30">
+      {isRobotsEditorOpen && typeof document !== 'undefined'
+        ? createPortal(
+        <div className={`fixed inset-0 z-[70000] flex min-h-screen items-center justify-center p-4 transition-opacity duration-150 ${isRobotsModalVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!savingRobots) setIsRobotsEditorOpen(false); }} />
+          <div className={`relative z-10 w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30 ${isRobotsModalVisible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'}`}>
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit robots.txt</h2>
@@ -378,34 +401,36 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
               </button>
             </div>
 
-            <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
-              <section className="space-y-3">
-                <label className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50/80 p-3 text-sm dark:border-rose-900/70 dark:bg-rose-950/30">
-                  <input type="checkbox" checked={noIndexSite} onChange={(event) => setNoIndexSite(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
-                  <span>
-                    <span className="block font-medium text-rose-900 dark:text-rose-100">No-index the whole site</span>
-                    <span className="mt-1 block text-xs text-rose-800/90 dark:text-rose-100/85">When enabled, robots.txt switches to a full-site disallow message and your metadata will ask crawlers not to index the site.</span>
-                  </span>
-                </label>
+            <div className="space-y-5 px-5 py-4">
+              <label className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-sm dark:border-rose-900/70 dark:bg-rose-950/30">
+                <input type="checkbox" checked={noIndexSite} onChange={(event) => setNoIndexSite(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
+                <span>
+                  <span className="block font-medium text-rose-900 dark:text-rose-100">No-index the whole site</span>
+                  <span className="mt-1 block text-xs text-rose-800/90 dark:text-rose-100/85">When enabled, robots.txt switches to a full-site disallow message and your metadata will ask crawlers not to index the site.</span>
+                </span>
+              </label>
 
-                <label className="block space-y-2 text-sm">
-                  <span className="font-medium text-slate-700 dark:text-neutral-200">Custom robots.txt directives</span>
-                  <textarea
-                    value={robotsTxtCustom}
-                    onChange={(event) => setRobotsTxtCustom(clampField(event.target.value, SEO_FIELD_LIMITS.robotsTxt))}
-                    maxLength={SEO_FIELD_LIMITS.robotsTxt}
-                    rows={14}
-                    placeholder={'User-agent: GPTBot\nDisallow: /private/'}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
-                  />
-                  <span className="block text-xs text-slate-500 dark:text-neutral-400">Add extra directives exactly as they should appear in robots.txt. {getLengthLabel(robotsTxtCustom, SEO_FIELD_LIMITS.robotsTxt)}</span>
-                </label>
-              </section>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <section className="space-y-3">
+                  <label className="block space-y-2 text-sm">
+                    <span className="font-medium text-slate-700 dark:text-neutral-200">Custom robots.txt directives</span>
+                    <textarea
+                      value={robotsTxtCustom}
+                      onChange={(event) => setRobotsTxtCustom(clampField(event.target.value, SEO_FIELD_LIMITS.robotsTxt))}
+                      maxLength={SEO_FIELD_LIMITS.robotsTxt}
+                      rows={14}
+                      placeholder={'User-agent: GPTBot\nDisallow: /private/'}
+                      className="h-[22rem] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+                    />
+                    <span className="block text-xs text-slate-500 dark:text-neutral-400">Add extra directives exactly as they should appear in robots.txt. {getLengthLabel(robotsTxtCustom, SEO_FIELD_LIMITS.robotsTxt)}</span>
+                  </label>
+                </section>
 
-              <section className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Preview</p>
-                <pre className="min-h-[22rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-800 dark:border-neutral-700 dark:bg-neutral-950/70 dark:text-neutral-200">{robotsPreview}</pre>
-              </section>
+                <section className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Preview</p>
+                  <pre className="h-[22rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-800 dark:border-neutral-700 dark:bg-neutral-950/70 dark:text-neutral-200">{robotsPreview}</pre>
+                </section>
+              </div>
             </div>
 
             <div className="flex gap-2.5 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
@@ -427,7 +452,8 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );

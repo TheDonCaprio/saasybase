@@ -53,6 +53,14 @@ export function getEmailChangeIdentifier(userId: string, newEmail: string) {
   return `${EMAIL_CHANGE_PREFIX}${userId}:${newEmail.toLowerCase().trim()}`;
 }
 
+export function resolveNextAuthRuntimeBaseUrl(runtimeOrigin?: string) {
+  return runtimeOrigin
+    || process.env.NEXT_PUBLIC_APP_URL
+    || process.env.NEXTAUTH_URL
+    || process.env.AUTH_URL
+    || 'http://localhost:3000';
+}
+
 export async function getPendingEmailChangeForUser(userId: string): Promise<PendingEmailChange | null> {
   const record = await prisma.verificationToken.findFirst({
     where: {
@@ -127,6 +135,7 @@ export async function sendNextAuthVerificationEmail(params: {
   userId: string;
   email: string;
   name?: string | null;
+  baseUrl?: string;
 }) {
   const normalizedEmail = params.email.toLowerCase().trim();
   const rawToken = randomBytes(32).toString('hex');
@@ -143,7 +152,7 @@ export async function sendNextAuthVerificationEmail(params: {
     },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = resolveNextAuthRuntimeBaseUrl(params.baseUrl);
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 
@@ -167,6 +176,7 @@ export async function sendNextAuthEmailChangeVerification(params: {
   currentEmail: string;
   newEmail: string;
   name?: string | null;
+  baseUrl?: string;
 }) {
   const normalizedNewEmail = params.newEmail.toLowerCase().trim();
   const identifier = getEmailChangeIdentifier(params.userId, normalizedNewEmail);
@@ -190,7 +200,7 @@ export async function sendNextAuthEmailChangeVerification(params: {
     },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = resolveNextAuthRuntimeBaseUrl(params.baseUrl);
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedNewEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 

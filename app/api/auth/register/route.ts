@@ -12,6 +12,7 @@ import { validatePasswordStrength } from '@/lib/password-policy';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 import { Logger } from '@/lib/logger';
 import { apiSchemas, validateInput } from '@/lib/validation';
+import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
 
 function isBetterAuthProviderEnabled() {
   return process.env.AUTH_PROVIDER === 'betterauth';
@@ -34,6 +35,10 @@ function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
   } catch {
     return undefined;
   }
+}
+
+function getRequestOrigin(request: NextRequest) {
+  return new URL(request.url).origin;
 }
 
 export async function POST(request: NextRequest) {
@@ -138,6 +143,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email,
       name: validatedName.fullName,
+      baseUrl: resolveNextAuthRuntimeBaseUrl(getRequestOrigin(request)),
     }).catch(() => {});
 
     return NextResponse.json({ id: user.id, email: user.email, requiresVerification: true }, { status: 201 });

@@ -2,7 +2,7 @@
 
 A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
 
-For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
+For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/seo-and-discoverability`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
 
 ## What Is SaaSyBase?
 
@@ -39,31 +39,32 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 11. [Coupon System](#coupon-system)
 12. [Blog & CMS](#blog--cms)
 13. [Site Pages](#site-pages)
-14. [Theming & Branding](#theming--branding)
-15. [Email Templates](#email-templates)
-16. [Notifications](#notifications)
-17. [Support Tickets](#support-tickets)
-18. [Contact Page](#contact-page)
-19. [Invoice & Refund Receipts](#invoice--refund-receipts)
-20. [Webhooks](#webhooks)
-21. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
-22. [File & Logo Storage (S3)](#file--logo-storage-s3)
-23. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
-24. [Visit Tracking](#visit-tracking)
-25. [Maintenance Mode](#maintenance-mode)
-26. [Session Activity](#session-activity)
-27. [Moderator Roles](#moderator-roles)
-28. [Rate Limiting](#rate-limiting)
-29. [Logging & Audit Trail](#logging--audit-trail)
-30. [Security](#security)
-31. [Dark Mode](#dark-mode)
-32. [Testing](#testing)
-33. [Admin Dashboard Overview](#admin-dashboard-overview)
-34. [User Dashboard Overview](#user-dashboard-overview)
-35. [Production Setup](#production-setup)
-36. [Self-hosted Deployments](#self-hosted-deployments)
-37. [Environment Variable Reference](#environment-variable-reference)
-38. [Demo Read-Only Mode](#demo-read-only-mode)
+14. [SEO & Discoverability](#seo--discoverability)
+15. [Theming & Branding](#theming--branding)
+16. [Email Templates](#email-templates)
+17. [Notifications](#notifications)
+18. [Support Tickets](#support-tickets)
+19. [Contact Page](#contact-page)
+20. [Invoice & Refund Receipts](#invoice--refund-receipts)
+21. [Webhooks](#webhooks)
+22. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
+23. [File & Logo Storage (S3)](#file--logo-storage-s3)
+24. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
+25. [Visit Tracking](#visit-tracking)
+26. [Maintenance Mode](#maintenance-mode)
+27. [Session Activity](#session-activity)
+28. [Moderator Roles](#moderator-roles)
+29. [Rate Limiting](#rate-limiting)
+30. [Logging & Audit Trail](#logging--audit-trail)
+31. [Security](#security)
+32. [Dark Mode](#dark-mode)
+33. [Testing](#testing)
+34. [Admin Dashboard Overview](#admin-dashboard-overview)
+35. [User Dashboard Overview](#user-dashboard-overview)
+36. [Production Setup](#production-setup)
+37. [Self-hosted Deployments](#self-hosted-deployments)
+38. [Environment Variable Reference](#environment-variable-reference)
+39. [Demo Read-Only Mode](#demo-read-only-mode)
 
 ---
 
@@ -887,6 +888,74 @@ Editable public pages (Terms, Privacy, Refund Policy, etc.) are managed in the a
 - **Core pages** (Terms, Privacy, Refund Policy) are seeded automatically if they don't exist.
 
 Template variables (e.g. `{{siteName}}`) are interpolated at render time from admin settings.
+
+---
+
+## SEO & Discoverability
+
+SaaSyBase ships with an admin-managed SEO system centered on `/admin/settings` → `SEO`.
+
+### What the admin SEO tab controls
+
+- **Homepage metadata:** title, description, canonical URL, homepage social title, homepage social description, homepage social image
+- **Sitewide title composition:** a suffix or a full template containing `%s`
+- **Global social fallbacks:** default Open Graph / Twitter title, description, and image for routes that do not define their own social copy
+- **Blog discoverability:** `/blog` title and description, blog index no-index, and blog category no-index defaults
+- **Sitemap management:** custom same-site URLs plus exact sitemap exclusions
+- **Verification:** Google and Bing verification tokens
+- **Robots.txt:** a dedicated editor for appended custom directives plus a sitewide no-index switch
+
+### What those settings affect
+
+- **Homepage (`/`)** uses the homepage SEO fields and falls back to the global social defaults when homepage-specific OG values are blank.
+- **Public export homepage** uses the same homepage SEO settings as the main root page.
+- **Blog listing (`/blog`)** uses the blog listing title and description, can be independently no-indexed, and falls back to the global social defaults.
+- **Blog category pages** can be globally no-indexed from the SEO tab.
+- **Published site pages and blog posts** continue to use their own per-entry SEO fields first, with global OG fallbacks filling in missing social values.
+- **Docs pages** keep their docs-specific metadata copy, while still inheriting sitewide title templating, verification tags, and sitewide no-index behavior through the root layout.
+
+### Sitemap and robots.txt
+
+`/sitemap.xml` is generated dynamically and includes:
+
+- the homepage
+- the blog listing
+- all published site pages
+- all published blog posts
+- any custom URLs you add in the SEO tab
+
+Exact URLs can also be excluded before the final sitemap is returned.
+
+`/robots.txt` is also generated dynamically. The core file is not handwritten; it is built from the same SEO settings, then optionally extended with custom directives saved from the robots.txt modal.
+
+When **sitewide no-index** is enabled:
+
+- the root layout emits `robots: { index: false, follow: false }`
+- `/robots.txt` switches to `Disallow: /`
+- the generated file includes an explicit warning comment so operators can tell at a glance that full-site blocking is active
+
+### Site URL and canonical behavior
+
+Canonical URLs, the sitemap host, and robots.txt host lines depend on the configured site URL. That value is resolved from environment configuration in this order:
+
+1. `NEXT_PUBLIC_APP_URL`
+2. `NEXTAUTH_URL`
+3. `VERCEL_PROJECT_PRODUCTION_URL`
+4. `VERCEL_URL`
+5. fallback to `http://localhost:3000`
+
+If your production host is not set correctly, the generated canonical URLs, sitemap, and robots.txt output will reflect the wrong origin.
+
+### Content-level SEO still exists
+
+Blog posts and editable site pages keep their own SEO fields:
+
+- `metaTitle`, `metaDescription`, `canonicalUrl`, `noIndex`
+- `ogTitle`, `ogDescription`, `ogImage`
+
+Use the admin SEO tab for global defaults and cross-site discoverability controls. Use the CMS entry fields when a specific post or page needs custom search or social metadata.
+
+For a fuller operator guide, see `/docs/seo-and-discoverability`.
 
 ---
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { Logger } from '@/lib/logger';
+import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
 
 const GENERIC_SUCCESS_MESSAGE = 'If that account exists and is awaiting verification, a verification email has been sent.';
 
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         email: user.email,
         name: user.name,
+        baseUrl: resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin),
       });
     }
 

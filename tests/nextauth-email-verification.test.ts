@@ -22,6 +22,15 @@ describe('nextauth email verification helpers', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
   });
 
+  it('prefers the runtime origin over localhost env values', async () => {
+    const { resolveNextAuthRuntimeBaseUrl } = await import('../lib/nextauth-email-verification');
+
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.NEXTAUTH_URL = 'http://localhost:3000';
+
+    expect(resolveNextAuthRuntimeBaseUrl('https://192.168.1.22:3000')).toBe('https://192.168.1.22:3000');
+  });
+
   it('throws when verification delivery fails', async () => {
     sendEmailMock.mockResolvedValue({ success: false, error: 'domain not verified' });
 

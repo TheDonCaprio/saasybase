@@ -18,6 +18,7 @@ import {
   hasBetterAuthPendingEmailChange,
   parseBetterAuthEmailChangeToken,
 } from '@/lib/better-auth-email-change';
+import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
 
 function isBetterAuthProviderEnabled() {
   return process.env.AUTH_PROVIDER === 'betterauth';
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name,
+      baseUrl: resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin),
     });
 
     return NextResponse.json({ message: 'Verification email sent' });

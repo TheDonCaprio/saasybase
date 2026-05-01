@@ -260,6 +260,7 @@ function buildProviders(): NextAuthConfig['providers'] {
             userId: existingUser.id,
             email,
             name: existingUser.name,
+            baseUrl: new URL(url).origin,
           });
         }
         return;

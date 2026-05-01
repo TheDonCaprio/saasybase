@@ -37,6 +37,7 @@ const SEO_SETTING_MAX_LENGTHS: Record<string, number> = {
   SEO_BING_SITE_VERIFICATION: 255,
   SEO_SITEMAP_CUSTOM_URLS: 5000,
   SEO_SITEMAP_EXCLUDED_URLS: 5000,
+  SEO_ROBOTS_TXT_CUSTOM: 10000,
 };
 
 function validateSettingLength(key: string, value: string): string | null {

@@ -374,6 +374,27 @@ describe('seo runtime', () => {
     });
   });
 
+  it('renders robots.txt with a noindex warning and custom directives', async () => {
+    getSeoSettingsMock.mockResolvedValue({
+      siteUrl: 'https://example.com',
+      sitemapUrl: 'https://example.com/sitemap.xml',
+      noIndexSite: true,
+      robotsTxtCustom: 'User-agent: GPTBot\nDisallow: /private/',
+    });
+
+    const { GET } = await import('../app/robots.txt/route');
+    const response = await GET();
+    const text = await response.text();
+
+    expect(response.headers.get('Content-Type')).toContain('text/plain');
+    expect(text).toContain('# Sitewide no-index is enabled. Crawlers are asked not to index this site.');
+    expect(text).toContain('User-agent: *');
+    expect(text).toContain('Disallow: /');
+    expect(text).toContain('Sitemap: https://example.com/sitemap.xml');
+    expect(text).toContain('# Custom robots.txt directives');
+    expect(text).toContain('User-agent: GPTBot\nDisallow: /private/');
+  });
+
   it('builds docs metadata without duplicating the site name in the page title', async () => {
     const { buildDocsMetadata } = await import('../lib/docs-metadata');
     const metadata = await buildDocsMetadata({

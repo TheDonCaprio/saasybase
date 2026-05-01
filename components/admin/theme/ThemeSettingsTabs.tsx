@@ -31,6 +31,7 @@ import { ContentTabContent } from './panels/ContentTabContent';
 import { ColorTabContent } from './panels/ColorTabContent';
 import { LayoutTabContent } from './panels/LayoutTabContent';
 import { CodeTabContent } from './panels/CodeTabContent';
+import { ConfirmModal } from '../../ui/ConfirmModal';
 import { validateThemeCustomCss, validateThemeCustomMarkup } from '../../../lib/theme-custom-code';
 
 interface PricingSettings {
@@ -529,6 +530,7 @@ export function ThemeSettingsTabs({
   // UI state
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [themeExporting, setThemeExporting] = useState(false);
   const [themeImporting, setThemeImporting] = useState(false);
   const themeImportInputRef = useRef<HTMLInputElement>(null);
@@ -1164,7 +1166,7 @@ export function ThemeSettingsTabs({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleReset}
+            onClick={() => setIsResetConfirmOpen(true)}
             disabled={resetting || saving}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
           >
@@ -1204,12 +1206,27 @@ export function ThemeSettingsTabs({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-500/40"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold !text-white shadow-sm transition-colors hover:bg-blue-700 hover:!text-white disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           <FontAwesomeIcon icon={faFloppyDisk} className="h-4 w-4" />
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={isResetConfirmOpen}
+        title="Restore theme defaults?"
+        description="This will reset navigation, footer, colors, layout, and theme code snippets back to their default values."
+        confirmLabel={resetting ? 'Restoring…' : 'Restore defaults'}
+        loading={resetting}
+        onClose={() => {
+          if (!resetting) setIsResetConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          await handleReset();
+          setIsResetConfirmOpen(false);
+        }}
+      />
     </div>
   );
 }

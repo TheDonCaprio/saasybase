@@ -110,6 +110,61 @@ export default async function AdminSettingsPage() {
   const paymentProvider = envSettings.find((setting) => setting.key === 'PAYMENT_PROVIDER')?.value ?? 'unknown';
   const fileStorage = envSettings.find((setting) => setting.key === 'FILE_STORAGE')?.value ?? 'unknown';
   const searchVisibility = seoSettings.noIndexSite ? 'Hidden from search' : 'Search index enabled';
+  const restoreDefaultsKeys = [
+    'format.mode',
+    'format.timezone',
+    'MAINTENANCE_MODE',
+    'FREE_PLAN_TOKEN_LIMIT',
+    'FREE_PLAN_RENEWAL_TYPE',
+    'FREE_PLAN_TOKEN_NAME',
+    'DEFAULT_TOKEN_LABEL',
+    'ENABLE_RECURRING_PRORATION',
+    'SUPPORT_EMAIL',
+    'ANNOUNCEMENT_MESSAGE',
+    'SITE_NAME',
+    'SITE_LOGO_HEIGHT',
+    'SITE_LOGO',
+    'SITE_LOGO_LIGHT',
+    'SITE_LOGO_DARK',
+    'SITE_FAVICON',
+    'PRICING_MAX_COLUMNS',
+    'PRICING_CENTER_UNEVEN',
+    'MODERATOR_PERMISSIONS',
+    'TRAFFIC_ANALYTICS_PROVIDER',
+    'ADMIN_ACTION_NOTIFICATION_ACTIONS',
+    'ADMIN_ALERT_EMAIL_TYPES',
+    'SUPPORT_EMAIL_NOTIFICATION_TYPES',
+    'TOKENS_RESET_ON_EXPIRY_ONE_TIME',
+    'TOKENS_RESET_ON_EXPIRY_RECURRING',
+    'TOKENS_RESET_ON_RENEWAL_ONE_TIME',
+    'TOKENS_RESET_ON_RENEWAL_RECURRING',
+    'TOKENS_NATURAL_EXPIRY_GRACE_HOURS',
+    'SEO_HOME_META_TITLE',
+    'SEO_HOME_META_DESCRIPTION',
+    'SEO_NOINDEX_SITE',
+    'SEO_TITLE_SUFFIX',
+    'SEO_TITLE_TEMPLATE',
+    'SEO_HOME_OG_TITLE',
+    'SEO_HOME_OG_DESCRIPTION',
+    'SEO_HOME_OG_IMAGE',
+    'SEO_DEFAULT_OG_TITLE',
+    'SEO_DEFAULT_OG_DESCRIPTION',
+    'SEO_DEFAULT_OG_IMAGE',
+    'SEO_HOME_CANONICAL_URL',
+    'SEO_BLOG_META_TITLE',
+    'SEO_BLOG_META_DESCRIPTION',
+    'SEO_NOINDEX_BLOG_INDEX',
+    'SEO_NOINDEX_BLOG_CATEGORY_PAGES',
+    'SEO_SITEMAP_CUSTOM_URLS',
+    'SEO_SITEMAP_EXCLUDED_URLS',
+    'SEO_GOOGLE_SITE_VERIFICATION',
+    'SEO_BING_SITE_VERIFICATION',
+    'SEO_ROBOTS_TXT_CUSTOM',
+  ];
+  const restoreDefaultsUpdates = restoreDefaultsKeys.map((key) => ({
+    key,
+    value: SETTING_DEFAULTS[key as keyof typeof SETTING_DEFAULTS] ?? '',
+  }));
 
   return (
     <div className="space-y-6">
@@ -139,6 +194,7 @@ export default async function AdminSettingsPage() {
         moderatorPermissions={moderatorPermissions}
         trafficAnalyticsHealth={trafficAnalyticsHealth}
         seoSettings={seoSettings}
+        restoreDefaultsUpdates={restoreDefaultsUpdates}
       />
     </div>
   );

@@ -9,13 +9,14 @@ import { PaymentProvidersPanel } from './PaymentProvidersPanel';
 import { MODERATOR_SECTIONS, type ModeratorPermissions, type ModeratorSection } from '../../lib/moderator-shared';
 import { showToast } from '../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport, faChartLine, faSitemap } from '@fortawesome/free-solid-svg-icons';
+import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport, faChartLine, faSitemap, faArrowRotateLeft } from '@fortawesome/free-solid-svg-icons';
 import { PaidTokenOperationsPanel } from './settings/panels/PaidTokenOperationsPanel';
 import { AdminActionNotificationPanel } from './settings/panels/AdminActionNotificationPanel';
 import { EmailAlertSettingsPanel } from './settings/panels/EmailAlertSettingsPanel';
 import { SupportEmailSettingsPanel } from './settings/panels/SupportEmailSettingsPanel';
 import { TrafficAnalyticsSettingsPanel } from './settings/panels/TrafficAnalyticsSettingsPanel';
 import { SeoSettingsPanel } from './settings/panels/SeoSettingsPanel';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import type { TrafficAnalyticsProviderHealth } from '../../lib/traffic-analytics-config';
 import type { SeoSettings } from '../../lib/seo-shared';
 
@@ -30,6 +31,7 @@ interface AdminSettingsTabsProps {
   moderatorPermissions: ModeratorPermissions;
   trafficAnalyticsHealth: TrafficAnalyticsProviderHealth;
   seoSettings: SeoSettings;
+  restoreDefaultsUpdates: Array<{ key: string; value: string }>;
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
@@ -100,11 +102,13 @@ const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; descri
   }
 };
 
-export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, trafficAnalyticsHealth, seoSettings }: AdminSettingsTabsProps) {
+export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, trafficAnalyticsHealth, seoSettings, restoreDefaultsUpdates }: AdminSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('branding');
   const [moderatorAccess, setModeratorAccess] = useState<ModeratorPermissions>(moderatorPermissions);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [restoringDefaults, setRestoringDefaults] = useState(false);
+  const [isRestoreDefaultsModalOpen, setIsRestoreDefaultsModalOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [savingSections, setSavingSections] = useState<Record<ModeratorSection, boolean>>(() => {
     return MODERATOR_SECTIONS.reduce<Record<ModeratorSection, boolean>>((acc, section) => {
@@ -201,6 +205,28 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
       if (importInputRef.current) importInputRef.current.value = '';
     }
   }, [importing]);
+
+  const handleRestoreDefaults = useCallback(async () => {
+    if (restoringDefaults) return;
+    setRestoringDefaults(true);
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: restoreDefaultsUpdates }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Failed to restore defaults');
+      }
+      showToast('Settings restored to defaults', 'success');
+      window.location.reload();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to restore defaults', 'error');
+    } finally {
+      setRestoringDefaults(false);
+    }
+  }, [restoreDefaultsUpdates, restoringDefaults]);
 
   const tabs = useMemo(
     () => [
@@ -502,36 +528,62 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
       </div>
 
       {/* Export / Import actions */}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImportSettings(file);
-          }}
-        />
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          onClick={() => importInputRef.current?.click()}
-          disabled={importing}
+          onClick={() => setIsRestoreDefaultsModalOpen(true)}
+          disabled={restoringDefaults || importing || exporting}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
-          <FontAwesomeIcon icon={faFileImport} className="h-4 w-4" />
-          {importing ? 'Importing…' : 'Import settings'}
+          <FontAwesomeIcon icon={faArrowRotateLeft} className="h-4 w-4" />
+          {restoringDefaults ? 'Restoring…' : 'Restore defaults'}
         </button>
-        <button
-          type="button"
-          onClick={handleExportSettings}
-          disabled={exporting}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-        >
-          <FontAwesomeIcon icon={faFileExport} className="h-4 w-4" />
-          {exporting ? 'Exporting…' : 'Export settings'}
-        </button>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportSettings(file);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <FontAwesomeIcon icon={faFileImport} className="h-4 w-4" />
+            {importing ? 'Importing…' : 'Import settings'}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSettings}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <FontAwesomeIcon icon={faFileExport} className="h-4 w-4" />
+            {exporting ? 'Exporting…' : 'Export settings'}
+          </button>
+        </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isRestoreDefaultsModalOpen}
+        title="Restore settings defaults?"
+        description="This will restore the admin settings page values back to their original defaults, including SEO, notifications, analytics, moderator access, and operations settings."
+        confirmLabel={restoringDefaults ? 'Restoring…' : 'Restore defaults'}
+        loading={restoringDefaults}
+        onClose={() => {
+          if (!restoringDefaults) setIsRestoreDefaultsModalOpen(false);
+        }}
+        onConfirm={async () => {
+          await handleRestoreDefaults();
+          setIsRestoreDefaultsModalOpen(false);
+        }}
+      />
     </div>
   );
 }

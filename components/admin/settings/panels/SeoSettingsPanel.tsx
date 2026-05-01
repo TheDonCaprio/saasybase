@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { showToast } from '../../../ui/Toast';
-import { resolveSeoUrl, serializeSitemapCustomUrls, type SeoSettings } from '../../../../lib/seo-shared';
+import { buildRobotsTxtContent, normalizeRobotsTxtContent, resolveSeoUrl, serializeSitemapCustomUrls, type SeoSettings } from '../../../../lib/seo-shared';
 
 const SEO_FIELD_LIMITS = {
   metaTitle: 60,
@@ -14,6 +14,7 @@ const SEO_FIELD_LIMITS = {
   url: 2048,
   verificationToken: 255,
   sitemapCustomUrls: 5000,
+  robotsTxt: 10000,
 } as const;
 
 function clampField(value: string, maxLength: number): string {
@@ -49,7 +50,10 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
   const [excludedSitemapEntries, setExcludedSitemapEntries] = useState(initialSettings.excludedSitemapEntries.join('\n'));
   const [googleSiteVerification, setGoogleSiteVerification] = useState(initialSettings.googleSiteVerification);
   const [bingSiteVerification, setBingSiteVerification] = useState(initialSettings.bingSiteVerification);
+  const [robotsTxtCustom, setRobotsTxtCustom] = useState(initialSettings.robotsTxtCustom);
   const [saving, setSaving] = useState(false);
+  const [savingRobots, setSavingRobots] = useState(false);
+  const [isRobotsEditorOpen, setIsRobotsEditorOpen] = useState(false);
 
   const resolvedPreviewUrl = resolveSeoUrl(homeCanonicalUrl, { siteUrl: initialSettings.siteUrl, sameOriginOnly: true }) || initialSettings.siteUrl;
   const previewTitle = homeMetaTitle.trim() || 'Homepage title preview';
@@ -57,6 +61,12 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
   const previewTitleTemplate = titleTemplate.trim().includes('%s')
     ? titleTemplate.trim().replace('%s', previewTitle)
     : (titleSuffix.trim() ? `${previewTitle} | ${titleSuffix.trim()}` : `${previewTitle} | ${initialSettings.siteUrl.replace(/^https?:\/\//, '')}`);
+  const robotsPreview = buildRobotsTxtContent({
+    siteUrl: initialSettings.siteUrl,
+    sitemapUrl: initialSettings.sitemapUrl,
+    noIndexSite,
+    customContent: robotsTxtCustom,
+  });
 
   const validateOptionalUrl = (value: string, label: string, sameOriginOnly = false): boolean => {
     if (!value.trim()) return true;
@@ -127,6 +137,7 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
             { key: 'SEO_SITEMAP_EXCLUDED_URLS', value: serializeSitemapCustomUrls(excludedEntries) },
             { key: 'SEO_GOOGLE_SITE_VERIFICATION', value: googleSiteVerification.trim() },
             { key: 'SEO_BING_SITE_VERIFICATION', value: bingSiteVerification.trim() },
+            { key: 'SEO_ROBOTS_TXT_CUSTOM', value: normalizeRobotsTxtContent(robotsTxtCustom) },
           ],
         }),
       });
@@ -141,6 +152,36 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
       showToast(error instanceof Error ? error.message : 'Failed to save SEO settings', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveRobotsSettings = async () => {
+    if (savingRobots) return;
+
+    setSavingRobots(true);
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [
+            { key: 'SEO_NOINDEX_SITE', value: noIndexSite ? 'true' : 'false' },
+            { key: 'SEO_ROBOTS_TXT_CUSTOM', value: normalizeRobotsTxtContent(robotsTxtCustom) },
+          ],
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Failed to save robots.txt settings');
+      }
+
+      showToast('robots.txt settings updated', 'success');
+      setIsRobotsEditorOpen(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to save robots.txt settings', 'error');
+    } finally {
+      setSavingRobots(false);
     }
   };
 
@@ -306,12 +347,88 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
         </section>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <p className="text-xs text-slate-500 dark:text-neutral-400 sm:mr-auto">Changes apply to metadata, robots, and sitemap output after the next route revalidation.</p>
+        <button type="button" onClick={() => setIsRobotsEditorOpen(true)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:hover:bg-neutral-900">
+          Edit robots.txt
+        </button>
         <button type="button" onClick={saveSettings} disabled={saving} className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">
           {saving ? 'Saving…' : 'Save SEO settings'}
         </button>
-        <p className="text-xs text-slate-500 dark:text-neutral-400">Changes apply to metadata, robots, and sitemap output after the next route revalidation.</p>
       </div>
+
+      {isRobotsEditorOpen ? (
+        <div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
+          <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit robots.txt</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Core robots.txt lines are generated automatically from SEO settings. Add any custom directives below and they will be appended to the file.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRobotsEditorOpen(false)}
+                disabled={savingRobots}
+                className="text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-white"
+                aria-label="Close robots.txt editor"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
+              <section className="space-y-3">
+                <label className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50/80 p-3 text-sm dark:border-rose-900/70 dark:bg-rose-950/30">
+                  <input type="checkbox" checked={noIndexSite} onChange={(event) => setNoIndexSite(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
+                  <span>
+                    <span className="block font-medium text-rose-900 dark:text-rose-100">No-index the whole site</span>
+                    <span className="mt-1 block text-xs text-rose-800/90 dark:text-rose-100/85">When enabled, robots.txt switches to a full-site disallow message and your metadata will ask crawlers not to index the site.</span>
+                  </span>
+                </label>
+
+                <label className="block space-y-2 text-sm">
+                  <span className="font-medium text-slate-700 dark:text-neutral-200">Custom robots.txt directives</span>
+                  <textarea
+                    value={robotsTxtCustom}
+                    onChange={(event) => setRobotsTxtCustom(clampField(event.target.value, SEO_FIELD_LIMITS.robotsTxt))}
+                    maxLength={SEO_FIELD_LIMITS.robotsTxt}
+                    rows={14}
+                    placeholder={'User-agent: GPTBot\nDisallow: /private/'}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+                  />
+                  <span className="block text-xs text-slate-500 dark:text-neutral-400">Add extra directives exactly as they should appear in robots.txt. {getLengthLabel(robotsTxtCustom, SEO_FIELD_LIMITS.robotsTxt)}</span>
+                </label>
+              </section>
+
+              <section className="space-y-2">
+                <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Preview</p>
+                <pre className="min-h-[22rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-800 dark:border-neutral-700 dark:bg-neutral-950/70 dark:text-neutral-200">{robotsPreview}</pre>
+              </section>
+            </div>
+
+            <div className="flex gap-2.5 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setIsRobotsEditorOpen(false)}
+                disabled={savingRobots}
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveRobotsSettings}
+                disabled={savingRobots}
+                className="flex-1 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingRobots ? 'Saving…' : 'Save robots.txt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

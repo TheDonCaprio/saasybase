@@ -29,6 +29,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
     excludedSitemapUrlsRaw,
     googleSiteVerification,
     bingSiteVerification,
+    robotsTxtCustom,
   ] = await Promise.all([
     getSetting(SETTING_KEYS.SEO_HOME_META_TITLE, SETTING_DEFAULTS[SETTING_KEYS.SEO_HOME_META_TITLE]),
     getSetting(SETTING_KEYS.SEO_HOME_META_DESCRIPTION, SETTING_DEFAULTS[SETTING_KEYS.SEO_HOME_META_DESCRIPTION]),
@@ -53,6 +54,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
     getSetting(SETTING_KEYS.SEO_SITEMAP_EXCLUDED_URLS, SETTING_DEFAULTS[SETTING_KEYS.SEO_SITEMAP_EXCLUDED_URLS]),
     getSetting(SETTING_KEYS.SEO_GOOGLE_SITE_VERIFICATION, SETTING_DEFAULTS[SETTING_KEYS.SEO_GOOGLE_SITE_VERIFICATION]),
     getSetting(SETTING_KEYS.SEO_BING_SITE_VERIFICATION, SETTING_DEFAULTS[SETTING_KEYS.SEO_BING_SITE_VERIFICATION]),
+    getSetting(SETTING_KEYS.SEO_ROBOTS_TXT_CUSTOM, SETTING_DEFAULTS[SETTING_KEYS.SEO_ROBOTS_TXT_CUSTOM]),
   ]);
 
   const customSitemapEntries = parseSitemapCustomUrlSetting(customSitemapUrlsRaw);
@@ -96,5 +98,6 @@ export async function getSeoSettings(): Promise<SeoSettings> {
     customSitemapUrls,
     excludedSitemapEntries,
     excludedSitemapUrls,
+    robotsTxtCustom,
   };
 }

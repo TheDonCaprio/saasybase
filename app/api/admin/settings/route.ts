@@ -19,6 +19,33 @@ function isRestrictedCurrencyProvider(providerId: string): boolean {
   return id === 'paystack' || id === 'razorpay';
 }
 
+const SEO_SETTING_MAX_LENGTHS: Record<string, number> = {
+  SEO_HOME_META_TITLE: 60,
+  SEO_HOME_META_DESCRIPTION: 160,
+  SEO_TITLE_SUFFIX: 120,
+  SEO_TITLE_TEMPLATE: 200,
+  SEO_HOME_OG_TITLE: 95,
+  SEO_HOME_OG_DESCRIPTION: 200,
+  SEO_HOME_OG_IMAGE: 2048,
+  SEO_DEFAULT_OG_TITLE: 95,
+  SEO_DEFAULT_OG_DESCRIPTION: 200,
+  SEO_DEFAULT_OG_IMAGE: 2048,
+  SEO_HOME_CANONICAL_URL: 2048,
+  SEO_BLOG_META_TITLE: 60,
+  SEO_BLOG_META_DESCRIPTION: 160,
+  SEO_GOOGLE_SITE_VERIFICATION: 255,
+  SEO_BING_SITE_VERIFICATION: 255,
+  SEO_SITEMAP_CUSTOM_URLS: 5000,
+  SEO_SITEMAP_EXCLUDED_URLS: 5000,
+};
+
+function validateSettingLength(key: string, value: string): string | null {
+  const maxLength = SEO_SETTING_MAX_LENGTHS[key];
+  if (!maxLength) return null;
+  if (value.length <= maxLength) return null;
+  return `${key} must be ${maxLength} characters or fewer.`;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const actorId = await requireAdmin();
@@ -72,6 +99,11 @@ export async function POST(req: NextRequest) {
     const key = typeof b?.key === 'string' ? b.key : undefined;
     const value = b?.value;
     if (!key) return NextResponse.json({ error: 'missing key' }, { status: 400 });
+
+    const lengthError = validateSettingLength(key, String(value ?? ''));
+    if (lengthError) {
+      return NextResponse.json({ error: lengthError }, { status: 400 });
+    }
 
     // Server-side validation for provider-restricted currency selection.
     if (key === 'DEFAULT_CURRENCY') {
@@ -153,6 +185,11 @@ export async function PATCH(req: NextRequest) {
       const value = b?.value;
       if (!key) return NextResponse.json({ error: 'missing key' }, { status: 400 });
 
+      const lengthError = validateSettingLength(key, String(value ?? ''));
+      if (lengthError) {
+        return NextResponse.json({ error: lengthError }, { status: 400 });
+      }
+
       const setting = await prisma.setting.upsert({
         where: { key },
         update: { value: String(value ?? '') },
@@ -187,6 +224,10 @@ export async function PATCH(req: NextRequest) {
       const key = typeof rec?.key === 'string' ? rec.key : '';
       if (!key) continue;
       const value = String(rec?.value ?? '');
+      const lengthError = validateSettingLength(key, value);
+      if (lengthError) {
+        return NextResponse.json({ error: lengthError }, { status: 400 });
+      }
       updates.push({ key, value });
       if (updates.length >= 50) break;
     }

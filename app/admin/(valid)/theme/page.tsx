@@ -38,6 +38,8 @@ export async function generateMetadata() {
 export default async function AdminThemePage() {
   await requireAdminPageAccess('/admin/theme');
 
+  const isContentSecurityPolicyEnabled = process.env.ENABLE_CSP === 'true';
+
   try {
     await requireAdminPageAccess('/admin/theme');
   } catch (err: unknown) {
@@ -74,6 +76,7 @@ export default async function AdminThemePage() {
       />
 
       <ThemeSettingsTabs
+        isContentSecurityPolicyEnabled={isContentSecurityPolicyEnabled}
         initialHeaderLinks={headerLinks}
         initialFooterLinks={footerLinks}
         initialFooterText={footerText}

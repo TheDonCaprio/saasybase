@@ -13,6 +13,7 @@ import { faSliders } from '@fortawesome/free-solid-svg-icons';
 import { Logger } from '../../../../lib/logger';
 import { getAdminEnvironmentSettings } from '../../../../lib/admin-system-snapshot';
 import { getTrafficAnalyticsProviderHealth } from '../../../../lib/traffic-analytics-config';
+import { getSeoSettings } from '../../../../lib/seo';
 
 export async function generateMetadata() {
   return buildDashboardMetadata({
@@ -42,7 +43,10 @@ export default async function AdminSettingsPage() {
     select: { key: true, value: true },
   }) as Array<{ key: string; value: string }>;
   const moderatorPermissions = await fetchModeratorPermissions();
-  const trafficAnalyticsHealth = await getTrafficAnalyticsProviderHealth();
+  const [trafficAnalyticsHealth, seoSettings] = await Promise.all([
+    getTrafficAnalyticsProviderHealth(),
+    getSeoSettings(),
+  ]);
 
   // Environment settings (read-only)
   // NOTE: SITE_NAME is intentionally not listed here so it can be edited and persisted via the Admin UI.
@@ -102,6 +106,10 @@ export default async function AdminSettingsPage() {
   const siteName = readSetting('SITE_NAME', process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
   const databaseType = envSettings.find((setting) => setting.key === 'DATABASE_TYPE')?.value ?? 'N/A';
   const nodeEnv = envSettings.find((setting) => setting.key === 'NODE_ENV')?.value ?? 'development';
+  const authProvider = envSettings.find((setting) => setting.key === 'AUTH_PROVIDER')?.value ?? 'unknown';
+  const paymentProvider = envSettings.find((setting) => setting.key === 'PAYMENT_PROVIDER')?.value ?? 'unknown';
+  const fileStorage = envSettings.find((setting) => setting.key === 'FILE_STORAGE')?.value ?? 'unknown';
+  const searchVisibility = seoSettings.noIndexSite ? 'Hidden from search' : 'Search index enabled';
 
   return (
     <div className="space-y-6">
@@ -114,13 +122,13 @@ export default async function AdminSettingsPage() {
           {
             label: 'Site',
             value: siteName,
-            helper: 'Branding & localization',
+            helper: `${searchVisibility}`,
             tone: 'purple'
           },
           {
-            label: 'Environment',
-            value: nodeEnv,
-            helper: `${databaseType}`,
+            label: 'Runtime',
+            value: `${databaseType} · ${nodeEnv}`,
+            helper: `${authProvider} · ${paymentProvider} · ${fileStorage}`,
             tone: 'blue'
           }
         ]}
@@ -130,6 +138,7 @@ export default async function AdminSettingsPage() {
         databaseSettings={effectiveEditableSettings}
         moderatorPermissions={moderatorPermissions}
         trafficAnalyticsHealth={trafficAnalyticsHealth}
+        seoSettings={seoSettings}
       />
     </div>
   );

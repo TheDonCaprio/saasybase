@@ -1,6 +1,7 @@
 import './globals.css';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import React from 'react';
+import type { Metadata } from 'next';
 import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';
 import AppAuthProvider from '../components/AppAuthProvider';
 import { FormatSettingsProvider } from '../components/FormatSettingsProvider';
@@ -37,13 +38,44 @@ import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
 import { getTrafficAnalyticsClientConfig } from '../lib/traffic-analytics-config';
+import { getSeoSettings } from '../lib/seo';
+import { buildSeoTitleTemplate } from '../lib/seo-shared';
 
 fontAwesomeConfig.autoAddCss = false;
 
-export const metadata = {
-  title: process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME],
-  description: '3D Screenshot SaaS'
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const fallbackSiteName = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => fallbackSiteName),
+    getSeoSettings().catch(() => null),
+  ]);
+
+  const trimmedSiteName = siteName.trim() || fallbackSiteName;
+  const description = seoSettings?.homeMetaDescription.trim() || '3D Screenshot SaaS';
+  const googleVerification = seoSettings?.googleSiteVerification.trim();
+  const bingVerification = seoSettings?.bingSiteVerification.trim();
+  const sitewideRobots = seoSettings?.noIndexSite ? { index: false, follow: false } : undefined;
+
+  return {
+    metadataBase: new URL(seoSettings?.siteUrl || 'http://localhost:3000'),
+    title: {
+      default: trimmedSiteName,
+      template: buildSeoTitleTemplate({
+        siteName: trimmedSiteName,
+        customSuffix: seoSettings?.titleSuffix,
+        customTemplate: seoSettings?.titleTemplate,
+      }),
+    },
+    description,
+    robots: sitewideRobots,
+    verification: googleVerification || bingVerification
+      ? {
+          google: googleVerification || undefined,
+          other: bingVerification ? { 'msvalidate.01': bingVerification } : undefined,
+        }
+      : undefined,
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();

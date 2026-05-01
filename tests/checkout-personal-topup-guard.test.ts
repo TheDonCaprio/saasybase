@@ -23,6 +23,8 @@ const validateInputMock = vi.hoisted(() =>
   vi.fn((_schema: unknown, body: unknown) => ({ success: true, data: body }))
 );
 
+const getCurrentProviderKeyMock = vi.hoisted(() => vi.fn(() => 'stripe'));
+
 const prismaMock = vi.hoisted(() => ({
   plan: {
     findUnique: vi.fn(),
@@ -70,7 +72,7 @@ vi.mock('../lib/settings', () => ({
   getDefaultTokenLabel: vi.fn(async () => 'tokens'),
 }));
 vi.mock('../lib/utils/provider-ids', () => ({
-  getCurrentProviderKey: vi.fn(() => 'stripe'),
+  getCurrentProviderKey: getCurrentProviderKeyMock,
   getIdByProvider: vi.fn((_map: unknown, _provider: string, legacy?: string) => legacy ?? 'price_personal_ot'),
   setIdByProvider: vi.fn(() => ({})),
 }));

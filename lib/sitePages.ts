@@ -4,6 +4,7 @@ import { Logger } from './logger';
 import { sanitizeRichText, summarizePlainText } from './htmlSanitizer';
 import { getSiteName, getSupportEmail, SETTING_DEFAULTS, SETTING_KEYS } from './settings';
 import { buildStringContainsFilter, sanitizeWhereForInsensitiveSearch } from './queryUtils';
+import { getSeoSettings } from './seo';
 
 export type SitePageRecord = SitePage;
 
@@ -288,7 +289,10 @@ export async function buildSitePageMetadata(
     } as const;
   }
 
-  const siteName = await getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
+  ]);
   
   // Title logic: custom metaTitle > page.title
   const baseTitle = page.metaTitle?.trim() || page.title;
@@ -298,20 +302,27 @@ export async function buildSitePageMetadata(
   const description = page.metaDescription?.trim() || page.description || undefined;
 
   // Open Graph / Twitter defaults
-  const ogTitle = page.ogTitle?.trim() || baseTitle;
-  const ogDescription = page.ogDescription?.trim() || description;
-  const ogImage = page.ogImage?.trim() || undefined;
+  const ogTitle = page.ogTitle?.trim() || seoSettings?.defaultOgTitle?.trim() || baseTitle;
+  const ogDescription = page.ogDescription?.trim() || seoSettings?.defaultOgDescription?.trim() || description;
+  const ogImage = page.ogImage?.trim() || seoSettings?.resolvedDefaultOgImageUrl || undefined;
 
   return {
     title,
     description,
-    alternates: page.canonicalUrl?.trim() ? {
-      canonical: page.canonicalUrl.trim()
-    } : undefined,
-    robots: page.noIndex ? {
-      index: false,
-      follow: true
-    } : undefined,
+    alternates: (() => {
+      const explicitCanonical = page.canonicalUrl?.trim();
+      if (explicitCanonical) {
+        return { canonical: explicitCanonical };
+      }
+      if (!seoSettings?.siteUrl) return undefined;
+      const pagePath = options.collection === 'blog' ? `/blog/${page.slug}` : `/${page.slug}`;
+      return { canonical: new URL(pagePath, `${seoSettings.siteUrl}/`).toString() };
+    })(),
+    robots: seoSettings?.noIndexSite
+      ? { index: false, follow: false }
+      : page.noIndex
+        ? { index: false, follow: true }
+        : undefined,
     openGraph: {
       title: ogTitle,
       description: ogDescription,

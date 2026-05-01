@@ -242,9 +242,10 @@ async function handleEmbeddedCheckout(req: NextRequest) {
             // Resolve Price ID
             const usingPlanSeed = Boolean(resolvedPlanSeed);
             if (usingPlanSeed) {
+                const currentProviderKey = getCurrentProviderKey();
                 const resolved = resolvedPlanSeed
                     ? resolveSeededPlanPriceForProvider(resolvedPlanSeed, {
-                        providerKey: getCurrentProviderKey(),
+                        providerKey: currentProviderKey,
                         externalPriceIds: dbPlanRecord?.['externalPriceIds'],
                         legacyExternalPriceId: dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string'
                             ? String(dbPlanRecord['externalPriceId'])
@@ -253,7 +254,10 @@ async function handleEmbeddedCheckout(req: NextRequest) {
                     : { priceId: undefined, envKey: undefined, isLegacy: false, source: 'missing' as const };
                 priceId = resolved.priceId;
                 if (!priceId) {
-                    return jsonError(`Price not configured for plan ${planId}`, 500, 'PLAN_PRICE_MISSING');
+                    const allowsRazorpayOneTimeAmountCheckout = currentProviderKey === 'razorpay' && resolvedPlanSeed?.priceMode === 'payment';
+                    if (!allowsRazorpayOneTimeAmountCheckout) {
+                        return jsonError(`Price not configured for plan ${planId}`, 500, 'PLAN_PRICE_MISSING');
+                    }
                 }
             } else {
                 // Custom plan - use provider-aware lookup from externalPriceIds map

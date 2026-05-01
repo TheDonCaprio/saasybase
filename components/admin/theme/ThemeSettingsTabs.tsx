@@ -60,6 +60,7 @@ interface BlogSidebarWidget {
 }
 
 interface ThemeSettingsTabsProps {
+  isContentSecurityPolicyEnabled: boolean;
   initialHeaderLinks: ThemeLink[];
   initialFooterLinks: ThemeLink[];
   initialFooterText: string;
@@ -96,6 +97,7 @@ const isSafeHref = (href: string) => /^(https?:\/\/|\/)/i.test(href);
 const emptyLink = (): ThemeLink => ({ label: '', href: '' });
 
 export function ThemeSettingsTabs({
+  isContentSecurityPolicyEnabled,
   initialHeaderLinks,
   initialFooterLinks,
   initialFooterText,
@@ -1074,6 +1076,7 @@ export function ThemeSettingsTabs({
       description: 'Custom CSS, HTML head, and body snippets',
       content: (
         <CodeTabContent
+          isContentSecurityPolicyEnabled={isContentSecurityPolicyEnabled}
           customCss={customCss}
           setCustomCss={setCustomCss}
           customHead={customHead}
@@ -1095,6 +1098,7 @@ export function ThemeSettingsTabs({
     headerStyle, headerHeight, headerStickyEnabled, headerStickyScrollY, headerStickyHeight,
     setHeaderStyle, setHeaderHeight, setHeaderStickyEnabled, setHeaderStickyScrollY, setHeaderStickyHeight,
     customCss, customHead, customBody, setCustomCss, setCustomHead, setCustomBody,
+    isContentSecurityPolicyEnabled,
     blogHtmlBeforeFirst, blogHtmlMiddle, blogHtmlAfterLast,
     colorPresets, handleDeleteColorPreset, handleSaveColorPreset,
     lightColors, darkColors, colorMode, setColorMode,

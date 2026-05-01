@@ -9,13 +9,15 @@ import { PaymentProvidersPanel } from './PaymentProvidersPanel';
 import { MODERATOR_SECTIONS, type ModeratorPermissions, type ModeratorSection } from '../../lib/moderator-shared';
 import { showToast } from '../ui/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faPalette, faCog, faShieldAlt, faClock, faCreditCard, faFileExport, faFileImport, faChartLine, faSitemap } from '@fortawesome/free-solid-svg-icons';
 import { PaidTokenOperationsPanel } from './settings/panels/PaidTokenOperationsPanel';
 import { AdminActionNotificationPanel } from './settings/panels/AdminActionNotificationPanel';
 import { EmailAlertSettingsPanel } from './settings/panels/EmailAlertSettingsPanel';
 import { SupportEmailSettingsPanel } from './settings/panels/SupportEmailSettingsPanel';
 import { TrafficAnalyticsSettingsPanel } from './settings/panels/TrafficAnalyticsSettingsPanel';
+import { SeoSettingsPanel } from './settings/panels/SeoSettingsPanel';
 import type { TrafficAnalyticsProviderHealth } from '../../lib/traffic-analytics-config';
+import type { SeoSettings } from '../../lib/seo-shared';
 
 interface Setting {
   key: string;
@@ -27,6 +29,7 @@ interface AdminSettingsTabsProps {
   databaseSettings: Setting[];
   moderatorPermissions: ModeratorPermissions;
   trafficAnalyticsHealth: TrafficAnalyticsProviderHealth;
+  seoSettings: SeoSettings;
 }
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
@@ -97,7 +100,7 @@ const MODERATOR_SECTION_LABELS: Record<ModeratorSection, { label: string; descri
   }
 };
 
-export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, trafficAnalyticsHealth }: AdminSettingsTabsProps) {
+export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, trafficAnalyticsHealth, seoSettings }: AdminSettingsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>('branding');
   const [moderatorAccess, setModeratorAccess] = useState<ModeratorPermissions>(moderatorPermissions);
   const [exporting, setExporting] = useState(false);
@@ -275,6 +278,22 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
         )
       },
       {
+        id: 'seo',
+        label: 'SEO',
+        icon: faSitemap,
+        description: 'Homepage metadata, sitemap, robots, and indexing defaults',
+        content: (
+          <div className="space-y-6">
+            <TabSectionHeader
+              icon={faSitemap}
+              title="Search engine optimization"
+              description="Configure homepage metadata, blog discoverability, sitemap coverage, and Search Console verification from one place."
+            />
+            <SeoSettingsPanel initialSettings={seoSettings} />
+          </div>
+        )
+      },
+      {
         id: 'payments',
         label: 'Payments',
         icon: faCreditCard,
@@ -391,6 +410,7 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
       databaseSettings,
       moderatorAccess,
       trafficAnalyticsHealth,
+      seoSettings,
       savingSections,
       updateModeratorAccess
     ]

@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic';
 
+import type { Metadata } from 'next';
 import PricingList from '../../components/pricing/PricingList';
 import { prisma } from '../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
 import { formatDateServer } from '../../lib/formatDate.server';
 import { pluralize } from '../../lib/pluralize';
-import { getDefaultTokenLabel, getPricingSettings, generatePricingGridClasses, getFreePlanSettings } from '../../lib/settings';
+import { getDefaultTokenLabel, getPricingSettings, generatePricingGridClasses, getFreePlanSettings, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '../../lib/settings';
 import { CurrentPlanStatus } from '../../components/dashboard/CurrentPlanStatus';
 import PlanBillingActions from '../../components/dashboard/PlanBillingActions';
 import ActivatePendingButton from '../../components/dashboard/ActivatePendingButton';
@@ -17,6 +18,39 @@ import Link from 'next/link';
 import { buildPendingSubscriptionSectionCopy } from '../../lib/pending-subscription-display';
 import { PLAN_WITH_BILLING_FIELDS, buildPlanDisplay, getOrganizationPlanContext, getPlanScope, getSubscriptionScopeFilter } from '../../lib/user-plan-context';
 import { buildPricingCardRecurringState } from '../../lib/pricing-card-status';
+import { getSeoSettings } from '../../lib/seo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
+  ]);
+
+  const trimmedSiteName = siteName.trim() || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+  const title = `Pricing | ${trimmedSiteName}`;
+  const description = 'Compare plans, billing cadence, and included usage limits before checkout.';
+  const ogTitle = seoSettings?.defaultOgTitle?.trim() || title;
+  const ogDescription = seoSettings?.defaultOgDescription?.trim() || description;
+  const ogImage = seoSettings?.resolvedDefaultOgImageUrl;
+
+  return {
+    title,
+    description,
+    alternates: seoSettings ? { canonical: new URL('/pricing', `${seoSettings.siteUrl}/`).toString() } : undefined,
+    openGraph: {
+      title: ogTitle,
+      description: ogDescription,
+      type: 'website',
+      images: ogImage ? [{ url: ogImage }] : undefined,
+    },
+    twitter: {
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [ogImage] : undefined,
+      card: ogImage ? 'summary_large_image' : 'summary',
+    },
+  };
+}
 
 export default async function PricingPage() {
   const { userId, orgId } = await authService.getSession();

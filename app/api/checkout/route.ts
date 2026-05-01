@@ -343,9 +343,10 @@ export async function POST(req: NextRequest) {
     let priceId: string | undefined;
     const usingPlanSeed = Boolean(resolvedPlanSeed);
     if (usingPlanSeed) {
+      const currentProviderKey = getCurrentProviderKey();
       const resolved = resolvedPlanSeed
         ? resolveSeededPlanPriceForProvider(resolvedPlanSeed, {
-            providerKey: getCurrentProviderKey(),
+            providerKey: currentProviderKey,
             externalPriceIds: dbPlanRecord?.['externalPriceIds'],
             legacyExternalPriceId: dbPlanRecord && typeof dbPlanRecord['externalPriceId'] === 'string'
               ? String(dbPlanRecord['externalPriceId'])
@@ -354,10 +355,13 @@ export async function POST(req: NextRequest) {
         : { priceId: undefined, envKey: undefined, isLegacy: false, source: 'missing' as const };
       priceId = resolved.priceId;
       if (!priceId) {
-        Logger.error('Checkout error: missing price configuration', { userId, envTried: resolvedPlanSeed?.externalPriceEnv });
-        return NextResponse.json({
-          error: `Price not configured for plan ${planId}`
-        }, { status: 500 });
+        const allowsRazorpayOneTimeAmountCheckout = currentProviderKey === 'razorpay' && resolvedPlanSeed?.priceMode === 'payment';
+        if (!allowsRazorpayOneTimeAmountCheckout) {
+          Logger.error('Checkout error: missing price configuration', { userId, envTried: resolvedPlanSeed?.externalPriceEnv });
+          return NextResponse.json({
+            error: `Price not configured for plan ${planId}`
+          }, { status: 500 });
+        }
       }
       if (resolved.isLegacy) {
         Logger.warn('Checkout resolved price via legacy env var. Rename to new contract name.', {

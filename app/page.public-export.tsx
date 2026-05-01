@@ -1,12 +1,42 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getSeoSettings } from '../lib/seo';
+import { getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
 
-const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'SaaSyBase';
+const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
 
-export const metadata: Metadata = {
-  title: `${FALLBACK_SITE_NAME} Boilerplate`,
-  description: 'A minimal placeholder homepage included in the package. Replace this page with your own product homepage.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => FALLBACK_SITE_NAME),
+    getSeoSettings().catch(() => null),
+  ]);
+
+  const trimmedSiteName = siteName.trim() || FALLBACK_SITE_NAME;
+  const title = seoSettings?.homeMetaTitle.trim() || `${trimmedSiteName} Boilerplate`;
+  const description = seoSettings?.homeMetaDescription.trim() || 'A minimal placeholder homepage included in the package. Replace this page with your own product homepage.';
+  const ogTitle = seoSettings?.homeOgTitle?.trim() || seoSettings?.defaultOgTitle?.trim() || title;
+  const ogDescription = seoSettings?.homeOgDescription?.trim() || seoSettings?.defaultOgDescription?.trim() || description;
+  const ogImage = seoSettings?.resolvedHomeOgImageUrl || seoSettings?.resolvedDefaultOgImageUrl;
+  const canonical = seoSettings?.resolvedHomeCanonicalUrl;
+
+  return {
+    title,
+    description,
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: {
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+      type: 'website',
+    },
+    twitter: {
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [ogImage] : undefined,
+      card: ogImage ? 'summary_large_image' : 'summary',
+    },
+  };
+}
 
 export default function PublicExportHomePage() {
   return (

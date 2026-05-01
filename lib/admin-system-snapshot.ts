@@ -139,6 +139,15 @@ function resolveNodeEnvironmentLabel() {
 export async function getAdminEnvironmentSettings(): Promise<AdminEnvironmentSetting[]> {
   const authProvider = process.env.AUTH_PROVIDER || 'clerk';
   const paymentProvider = process.env.PAYMENT_PROVIDER || 'stripe';
+  const databaseUrl = process.env.DATABASE_URL || '';
+  const normalizedDatabaseUrl = databaseUrl.trim().toLowerCase();
+  const databaseType = normalizedDatabaseUrl.startsWith('file:') || normalizedDatabaseUrl.includes('sqlite')
+    ? 'SQLite'
+    : normalizedDatabaseUrl.startsWith('postgres:') || normalizedDatabaseUrl.startsWith('postgresql:')
+      ? 'PostgreSQL'
+      : databaseUrl
+        ? 'Custom'
+        : 'Unset';
   const maintenanceMode =
     (await getSetting(SETTING_KEYS.MAINTENANCE_MODE, SETTING_DEFAULTS[SETTING_KEYS.MAINTENANCE_MODE])) === 'true'
       ? 'Enabled'
@@ -147,7 +156,7 @@ export async function getAdminEnvironmentSettings(): Promise<AdminEnvironmentSet
 
   return [
     { key: 'MAINTENANCE_MODE', value: maintenanceMode, description: 'Routes are gated behind the maintenance screen when enabled' },
-    { key: 'DATABASE_TYPE', value: process.env.DATABASE_URL?.includes('sqlite') ? 'SQLite' : 'PostgreSQL', description: 'Database engine' },
+    { key: 'DATABASE_TYPE', value: databaseType, description: 'Database engine inferred from DATABASE_URL' },
     { key: 'NODE_ENV', value: resolveNodeEnvironmentLabel(), description: 'Runtime environment as reported or inferred from the current server process' },
     { key: 'AUTH_PROVIDER', value: authProvider, description: 'Active authentication provider' },
     { key: 'PAYMENT_PROVIDER', value: paymentProvider, description: 'Active payment provider' },

@@ -34,6 +34,7 @@ const ALLOWED_FRAME_OR_CONNECT_DOMAINS = [
 ];
 
 export function CodeTabContent({
+  isContentSecurityPolicyEnabled,
   customCss,
   setCustomCss,
   customHead,
@@ -41,6 +42,7 @@ export function CodeTabContent({
   customBody,
   setCustomBody,
 }: {
+  isContentSecurityPolicyEnabled: boolean;
   customCss: string;
   setCustomCss: (value: string) => void;
   customHead: string;
@@ -62,46 +64,48 @@ export function CodeTabContent({
           </div>
         </div>
 
-        <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
-          <div className="space-y-3">
-            <p className="font-semibold">CSP allowlist for injected scripts</p>
-            <p>
-              Header and body snippets still obey the site Content Security Policy. External script, frame, and network URLs that are not on the allowlist in
-              {' '}
-              <span className="font-mono">next.config.mjs</span>
-              {' '}
-              can be blocked even if the markup saves successfully.
-            </p>
-            <div className="space-y-1">
-              <p className="font-medium">Allowed script domains</p>
-              <p className="font-mono text-xs leading-6 break-words">{ALLOWED_SCRIPT_DOMAINS.join(', ')}</p>
+        {isContentSecurityPolicyEnabled ? (
+          <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="space-y-3">
+              <p className="font-semibold">CSP allowlist for injected scripts</p>
+              <p>
+                Header and body snippets still obey the site Content Security Policy. External script, frame, and network URLs that are not on the allowlist in
+                {' '}
+                <span className="font-mono">next.config.mjs</span>
+                {' '}
+                can be blocked even if the markup saves successfully.
+              </p>
+              <div className="space-y-1">
+                <p className="font-medium">Allowed script domains</p>
+                <p className="font-mono text-xs leading-6 break-words">{ALLOWED_SCRIPT_DOMAINS.join(', ')}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">Allowed frame or connect domains</p>
+                <p className="font-mono text-xs leading-6 break-words">{ALLOWED_FRAME_OR_CONNECT_DOMAINS.join(', ')}</p>
+              </div>
+              <p>
+                To allow more domains, update the
+                {' '}
+                <span className="font-mono">buildContentSecurityPolicy()</span>
+                {' '}
+                directives in
+                {' '}
+                <span className="font-mono">next.config.mjs</span>
+                {' '}
+                and add the domain to the relevant list such as
+                {' '}
+                <span className="font-mono">script-src</span>
+                ,
+                {' '}
+                <span className="font-mono">connect-src</span>
+                , or
+                {' '}
+                <span className="font-mono">frame-src</span>
+                .
+              </p>
             </div>
-            <div className="space-y-1">
-              <p className="font-medium">Allowed frame or connect domains</p>
-              <p className="font-mono text-xs leading-6 break-words">{ALLOWED_FRAME_OR_CONNECT_DOMAINS.join(', ')}</p>
-            </div>
-            <p>
-              To allow more domains, update the
-              {' '}
-              <span className="font-mono">buildContentSecurityPolicy()</span>
-              {' '}
-              directives in
-              {' '}
-              <span className="font-mono">next.config.mjs</span>
-              {' '}
-              and add the domain to the relevant list such as
-              {' '}
-              <span className="font-mono">script-src</span>
-              ,
-              {' '}
-              <span className="font-mono">connect-src</span>
-              , or
-              {' '}
-              <span className="font-mono">frame-src</span>
-              .
-            </p>
           </div>
-        </div>
+        ) : null}
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-neutral-50">

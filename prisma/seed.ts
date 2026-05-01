@@ -134,6 +134,38 @@ function getCanonicalAdminUpdate(args: {
   };
 }
 
+async function upsertBetterAuthCredentialAccount(args: {
+  userId: string;
+  hashedPassword: string;
+}) {
+  await prisma.account.upsert({
+    where: {
+      provider_providerAccountId: {
+        provider: 'credential',
+        providerAccountId: args.userId,
+      },
+    },
+    update: {
+      type: 'credentials',
+      provider: 'credential',
+      providerAccountId: args.userId,
+      accountId: args.userId,
+      providerId: 'credential',
+      password: args.hashedPassword,
+      userId: args.userId,
+    },
+    create: {
+      userId: args.userId,
+      type: 'credentials',
+      provider: 'credential',
+      providerAccountId: args.userId,
+      accountId: args.userId,
+      providerId: 'credential',
+      password: args.hashedPassword,
+    },
+  });
+}
+
 export async function reassignUserReferences(oldUserId: string, newUserId: string) {
   await prisma.$transaction(async (tx) => {
     await tx.organization.updateMany({ where: { ownerUserId: oldUserId }, data: { ownerUserId: newUserId } });
@@ -318,13 +350,14 @@ async function upsertLocalAdminUser(args: {
     });
   }
 
-  await prisma.user.upsert({
+  const localAdminUser = await prisma.user.upsert({
     where: { email: args.email },
     update: {
       name: 'Admin User',
       role: 'ADMIN',
       password: args.hashedPassword,
       emailVerified: new Date(),
+      ...(getActiveAuthProvider() === 'betterauth' ? { emailVerifiedBool: true } : {}),
     },
     create: {
       email: args.email,
@@ -332,10 +365,18 @@ async function upsertLocalAdminUser(args: {
       role: 'ADMIN',
       password: args.hashedPassword,
       emailVerified: new Date(),
+      ...(getActiveAuthProvider() === 'betterauth' ? { emailVerifiedBool: true } : {}),
     }
   });
 
-  return args.email;
+  if (getActiveAuthProvider() === 'betterauth') {
+    await upsertBetterAuthCredentialAccount({
+      userId: localAdminUser.id,
+      hashedPassword: args.hashedPassword,
+    });
+  }
+
+  return localAdminUser.id;
 }
 
 async function promptSeedAdminCredentials() {

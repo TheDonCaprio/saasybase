@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 // removed unused imports: Link, buildDashboardMetadata
 import { listPublishedBlogPosts } from '@/lib/blog';
-import { getBlogListingStyle, getBlogSidebarSettings, getBlogListingPageSize } from '@/lib/settings';
+import { getBlogListingStyle, getBlogSidebarSettings, getBlogListingPageSize, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
+import { getSeoSettings } from '@/lib/seo';
 import {
   SimpleListStyle,
   GridStyle,
@@ -12,10 +13,30 @@ import {
 } from '@/components/blog/BlogListingStyles';
 
 export async function generateMetadata() {
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
+  ]);
+
+  const trimmedSiteName = siteName.trim() || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
+  const title = seoSettings?.blogMetaTitle.trim() || `Blog | ${trimmedSiteName}`;
+  const description = seoSettings?.blogMetaDescription.trim() || 'Latest posts and updates';
+  const ogTitle = seoSettings?.defaultOgTitle?.trim() || title;
+  const ogDescription = seoSettings?.defaultOgDescription?.trim() || description;
+  const ogImage = seoSettings?.resolvedDefaultOgImageUrl;
+
   return {
-    title: 'Blog',
-    description: 'Latest posts and updates',
-    openGraph: { title: 'Blog', description: 'Latest posts and updates' }
+    title,
+    description,
+    alternates: seoSettings ? { canonical: new URL('/blog', `${seoSettings.siteUrl}/`).toString() } : undefined,
+    robots: seoSettings?.noIndexSite ? { index: false, follow: false } : seoSettings?.noIndexBlogIndex ? { index: false, follow: true } : undefined,
+    openGraph: { title: ogTitle, description: ogDescription, type: 'website', images: ogImage ? [{ url: ogImage }] : undefined },
+    twitter: {
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [ogImage] : undefined,
+      card: ogImage ? 'summary_large_image' : 'summary',
+    },
   };
 }
 

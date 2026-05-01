@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
 import { getBlogListingStyle, getBlogSidebarSettings, getBlogListingPageSize } from '@/lib/settings';
 import { getBlogCategoryBySlug, listPublishedBlogPosts } from '@/lib/blog';
+import { getSeoSettings } from '@/lib/seo';
 import {
   SimpleListStyle,
   GridStyle,
@@ -13,12 +14,30 @@ import {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolved = await params;
-  const category = await getBlogCategoryBySlug(resolved.slug);
+  const [category, seoSettings] = await Promise.all([
+    getBlogCategoryBySlug(resolved.slug),
+    getSeoSettings().catch(() => null),
+  ]);
   if (!category) return { title: 'Category', description: '' };
+
+  const title = `Category: ${category.title}`;
+  const description = category.description ?? `Posts tagged ${category.title}`;
+  const ogTitle = seoSettings?.defaultOgTitle?.trim() || title;
+  const ogDescription = seoSettings?.defaultOgDescription?.trim() || description;
+  const ogImage = seoSettings?.resolvedDefaultOgImageUrl;
+
   return {
-    title: `Category: ${category.title}`,
-    description: category.description ?? `Posts tagged ${category.title}`,
-    openGraph: { title: `Category: ${category.title}`, description: category.description ?? '' }
+    title,
+    description,
+    alternates: seoSettings ? { canonical: new URL(`/blog/category/${category.slug}`, `${seoSettings.siteUrl}/`).toString() } : undefined,
+    robots: seoSettings?.noIndexSite ? { index: false, follow: false } : seoSettings?.noIndexBlogCategoryPages ? { index: false, follow: true } : undefined,
+    openGraph: { title: ogTitle, description: ogDescription, images: ogImage ? [{ url: ogImage }] : undefined },
+    twitter: {
+      title: ogTitle,
+      description: ogDescription,
+      images: ogImage ? [ogImage] : undefined,
+      card: ogImage ? 'summary_large_image' : 'summary',
+    },
   };
 }
 

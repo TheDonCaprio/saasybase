@@ -102,6 +102,10 @@ const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone:
   { icon: faLock,        title: 'External Secret Providers', desc: 'Keep production secrets in a vault or cloud secret store, with deployment examples and rotation guidance.', tone: 'auth' },
   { icon: faServer,      title: 'Deployment Readiness',     desc: 'Health checks, cron jobs, and production guardrails are ready for Vercel, Coolify, or VPS deployments.', tone: 'tests' },
   { icon: faFileLines,   title: 'Search Engine Optimization',         desc: 'Control over how your site appears on search engines, with meta tags, and sitemaps.', tone: 'meter' },
+  { icon: faTrafficLight, title: 'Feature Toggles',          desc: 'Built-in framework to gate pages and UI based on boolean flags, team subscriptions, or personal plans.', tone: 'security' },
+  { icon: faWaveSquare,   title: 'Webhook Routing',          desc: 'Unified ingress point capable of automatically identifying, verifying, and routing provider payloads.', tone: 'auth' },
+  { icon: faHourglassEnd, title: 'Scheduled Automation',     desc: 'Built-in endpoints handling automated subscription expiry, renewal logic, and scheduled limits cleanup.', tone: 'tests' },
+  { icon: faWrench,       title: 'Maintenance Mode',         desc: 'Toggle system-wide maintenance screens instantly to halt traffic while operating on the database.', tone: 'meter' },
 ];
 
 const PROVIDERS = [
@@ -2540,14 +2544,14 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-cta-row">
                 {isSignedIn ? (
                   <>
-                    <Link href="/dashboard" className="lp-btn-primary">Go to Dashboard →</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" className="lp-btn-primary">Get for free →</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Free Repo</a>
+                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
                   </>
                 ) : (
                   <>
-                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Free Repo →</a>
+                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
                     <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
@@ -2866,6 +2870,23 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           </div>
         </section>
 
+        {/* ── LICENSING ─────────────────────────────────────── */}
+        <div style={{ marginTop: 80, padding: '40px', borderRadius: 20, textAlign: 'center', backgroundColor: 'var(--lp-card-bg)', border: '1px solid var(--lp-card-bdr)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+          <div className="lp-section-tag" style={{ color: 'var(--lp-text1)' }}>Licensing</div>
+          <h2 className="lp-section-h2" style={{ marginBottom: 16 }}>Free to Build.<br />Pay When It&apos;s for Clients.</h2>
+          <div style={{ fontSize: 16, color: 'var(--lp-text3)', lineHeight: 1.7, maxWidth: 650, margin: '0 auto' }}>
+            <p style={{ marginBottom: 12 }}>
+              <strong>SaaSyBase is free to use for building and running your own SaaS products.</strong>
+            </p>
+            <p style={{ marginBottom: 12 }}>
+              Whether you&apos;re launching an MVP, a startup, or an internal tool—you can use it without paying.
+            </p>
+            <p>
+              If you&apos;re using SaaSyBase to build for clients, third parties, or as part of a paid service/agency, a commercial license is required.
+            </p>
+          </div>
+        </div>
+
         {/* ── FINAL CTA ─────────────────────────────────────── */}
         <div className="lp-cta-section">
           <div className="lp-section-tag">Ready to launch?</div>
@@ -2877,16 +2898,17 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           <div className="lp-cta-row" style={{ marginTop: 0 }}>
             {isSignedIn ? (
               <>
-                <Link href="/dashboard" className="lp-btn-primary">Open my Dashboard →</Link>
-                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Free Repo</a>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
+                <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
+                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
               </>
             ) : (
               <>
-                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">View Free Repo →</a>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
                 <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
+                <Link href="/docs/api" className="lp-btn-ghost">API </Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
               </>
             )}
           </div>

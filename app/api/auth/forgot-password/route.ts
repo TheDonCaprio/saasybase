@@ -11,7 +11,7 @@ import { sendEmail } from '@/lib/email';
 import { Logger } from '@/lib/logger';
 import { randomBytes, createHash } from 'crypto';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
-import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
+import { resolveRequestOrigin } from '@/lib/request-origin';
 
 function isBetterAuthProviderEnabled() {
   return process.env.AUTH_PROVIDER === 'betterauth';
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Build reset URL
-    const baseUrl = resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin);
+    const baseUrl = resolveRequestOrigin(request);
     const resetUrl = `${baseUrl}/sign-in?mode=reset-password&token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
     const result = await sendEmail({

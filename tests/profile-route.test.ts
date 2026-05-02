@@ -415,6 +415,7 @@ describe('GET /api/user/profile', () => {
       currentEmail: 'current@example.com',
       newEmail: 'next@example.com',
       name: 'Caprio Files',
+      baseUrl: 'http://localhost',
     });
     expect(body.emailChangePending).toBe(true);
     expect(body.user.email).toBe('current@example.com');

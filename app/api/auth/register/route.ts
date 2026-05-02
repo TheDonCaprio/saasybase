@@ -11,8 +11,8 @@ import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rateLimit';
 import { validatePasswordStrength } from '@/lib/password-policy';
 import { validateAndFormatPersonName } from '@/lib/name-validation';
 import { Logger } from '@/lib/logger';
+import { resolveRequestOrigin, resolveSameOriginUrl } from '@/lib/request-origin';
 import { apiSchemas, validateInput } from '@/lib/validation';
-import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
 
 function isBetterAuthProviderEnabled() {
   return process.env.AUTH_PROVIDER === 'betterauth';
@@ -23,22 +23,11 @@ function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
     return undefined;
   }
 
-  const requestOrigin = new URL(request.url).origin;
-
-  try {
-    if (callbackURL.startsWith('/')) {
-      return new URL(callbackURL, requestOrigin).toString();
-    }
-
-    const candidate = new URL(callbackURL);
-    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+  return resolveSameOriginUrl(request, callbackURL);
 }
 
 function getRequestOrigin(request: NextRequest) {
-  return new URL(request.url).origin;
+  return resolveRequestOrigin(request);
 }
 
 export async function POST(request: NextRequest) {
@@ -143,7 +132,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email,
       name: validatedName.fullName,
-      baseUrl: resolveNextAuthRuntimeBaseUrl(getRequestOrigin(request)),
+      baseUrl: getRequestOrigin(request),
     }).catch(() => {});
 
     return NextResponse.json({ id: user.id, email: user.email, requiresVerification: true }, { status: 201 });

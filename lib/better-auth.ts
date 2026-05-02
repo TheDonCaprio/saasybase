@@ -55,6 +55,16 @@ function getTrustedOrigins() {
   );
 }
 
+function getTrustedOriginsForRequest(request?: Request) {
+  const trustedOrigins = new Set(getTrustedOrigins());
+
+  if (process.env.NODE_ENV !== 'production' && request) {
+    trustedOrigins.add(new URL(request.url).origin);
+  }
+
+  return Array.from(trustedOrigins);
+}
+
 function getUserFirstName(user: { name?: string | null; email?: string | null }) {
   const trimmedName = user.name?.trim();
   if (trimmedName) {
@@ -141,7 +151,7 @@ export const betterAuthConfig = {
   baseURL: getConfiguredBaseUrl(),
   basePath: BETTER_AUTH_BASE_PATH,
   secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  trustedOrigins: getTrustedOrigins(),
+  trustedOrigins: async (request?: Request) => getTrustedOriginsForRequest(request),
   database: basePrismaBetterAuthAdapterFactory,
   user: {
     modelName: 'user',
@@ -297,6 +307,14 @@ export const betterAuthConfig = {
       });
     },
     afterEmailVerification: async (user) => {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedBool: true,
+          emailVerified: new Date(),
+        },
+      }).catch(() => {});
+
       if (!user.email) {
         return;
       }

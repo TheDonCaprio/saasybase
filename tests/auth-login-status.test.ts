@@ -27,6 +27,7 @@ import { POST } from '../app/api/auth/login-status/route';
 describe('auth login-status route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.AUTH_PROVIDER;
   });
 
   it('allows sign-in for verified users with valid credentials', async () => {
@@ -74,6 +75,31 @@ describe('auth login-status route', () => {
     expect(res.status).toBe(403);
     expect(body.code).toBe('EMAIL_NOT_VERIFIED');
     expect(body.error).toBe('Your email is not verified.');
+  });
+
+  it('allows Better Auth verified users when only emailVerifiedBool is set', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_ba_1',
+      email: 'betterauth@example.com',
+      name: 'Better Auth User',
+      password: 'hashed',
+      emailVerified: null,
+      emailVerifiedBool: true,
+    });
+    compareMock.mockResolvedValue(true);
+
+    const req = new NextRequest('http://localhost/api/auth/login-status', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'betterauth@example.com', password: 'secret' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.canSignIn).toBe(true);
   });
 
   it('returns a generic invalid-credentials response for bad passwords', async () => {

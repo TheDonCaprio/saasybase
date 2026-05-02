@@ -256,11 +256,18 @@ function buildProviders(): NextAuthConfig['providers'] {
 
       if (!existingUser?.emailVerified) {
         if (existingUser?.id) {
+          let baseUrl: string | undefined;
+          try {
+            baseUrl = new URL(url).origin;
+          } catch {
+            baseUrl = undefined;
+          }
+
           await sendNextAuthVerificationEmail({
             userId: existingUser.id,
             email,
             name: existingUser.name,
-            baseUrl: new URL(url).origin,
+            baseUrl,
           });
         }
         return;

@@ -10,6 +10,10 @@ export type PendingEmailChange = {
   expires: Date;
 };
 
+function resolveAuthEmailBaseUrl(explicitBaseUrl?: string) {
+  return explicitBaseUrl || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+}
+
 function formatExpiryTime(expires: Date) {
   return expires.toLocaleString('en-US', {
     dateStyle: 'medium',
@@ -51,14 +55,6 @@ export function getEmailVerificationIdentifier(email: string) {
 
 export function getEmailChangeIdentifier(userId: string, newEmail: string) {
   return `${EMAIL_CHANGE_PREFIX}${userId}:${newEmail.toLowerCase().trim()}`;
-}
-
-export function resolveNextAuthRuntimeBaseUrl(runtimeOrigin?: string) {
-  return runtimeOrigin
-    || process.env.NEXT_PUBLIC_APP_URL
-    || process.env.NEXTAUTH_URL
-    || process.env.AUTH_URL
-    || 'http://localhost:3000';
 }
 
 export async function getPendingEmailChangeForUser(userId: string): Promise<PendingEmailChange | null> {
@@ -152,7 +148,7 @@ export async function sendNextAuthVerificationEmail(params: {
     },
   });
 
-  const baseUrl = resolveNextAuthRuntimeBaseUrl(params.baseUrl);
+  const baseUrl = resolveAuthEmailBaseUrl(params.baseUrl);
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 
@@ -200,7 +196,7 @@ export async function sendNextAuthEmailChangeVerification(params: {
     },
   });
 
-  const baseUrl = resolveNextAuthRuntimeBaseUrl(params.baseUrl);
+  const baseUrl = resolveAuthEmailBaseUrl(params.baseUrl);
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${rawToken}&email=${encodeURIComponent(normalizedNewEmail)}`;
   const firstName = params.name?.split(' ')[0] || 'there';
 

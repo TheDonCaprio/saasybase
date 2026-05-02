@@ -592,7 +592,15 @@ function SignInForm({
             Forgot password?
           </button>
 
-          {signUpUrl ? (
+          {onSwitch ? (
+            <button
+              type="button"
+              onClick={() => onSwitch('signup')}
+              className={authMutedLinkClass}
+            >
+              Create account
+            </button>
+          ) : signUpUrl ? (
             <Link href={signUpUrl} className={authMutedLinkClass}>
               Create account
             </Link>
@@ -733,11 +741,13 @@ function SignUpForm({
   fallbackRedirectUrl,
   signInUrl,
   embedded = false,
+  onSwitch,
 }: {
   forceRedirectUrl?: string;
   fallbackRedirectUrl?: string;
   signInUrl?: string;
   embedded?: boolean;
+  onSwitch?: (mode: AuthModalMode) => void;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -827,7 +837,14 @@ function SignUpForm({
         onPendingChange={setPending}
       />
 
-      {signInUrl ? (
+      {onSwitch ? (
+        <p className={authSubtitleClass}>
+          Already have an account?{' '}
+          <button type="button" onClick={() => onSwitch('signin')} className={authAccentLinkClass}>
+            Sign in
+          </button>
+        </p>
+      ) : signInUrl ? (
         <p className={authSubtitleClass}>
           Already have an account?{' '}
           <Link href={signInUrl} className={authAccentLinkClass}>
@@ -1049,7 +1066,7 @@ function AuthModalShell({
 
   let content: React.ReactNode;
   if (mode === 'signup') {
-    content = <SignUpForm embedded signInUrl="/sign-in" />;
+    content = <SignUpForm embedded signInUrl="/sign-in" onSwitch={onSwitch} />;
   } else if (mode === 'magic-link') {
     content = <MagicLinkForm embedded onSwitch={onSwitch} />;
   } else if (mode === 'forgot-password') {

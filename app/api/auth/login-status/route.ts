@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         name: true,
         password: true,
         emailVerified: true,
+        emailVerifiedBool: true,
         suspendedAt: true,
         suspensionReason: true,
         suspensionIsPermanent: true,
@@ -109,7 +110,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (user.emailVerified) {
+    const isBetterAuth = process.env.AUTH_PROVIDER === 'betterauth';
+    const emailVerified = isBetterAuth
+      ? Boolean(user.emailVerifiedBool || user.emailVerified)
+      : Boolean(user.emailVerified);
+
+    if (emailVerified) {
       return NextResponse.json({ ok: true, canSignIn: true });
     }
 

@@ -57,6 +57,7 @@ describe('auth resend-verification route', () => {
       userId: 'user_1',
       email: 'pending@example.com',
       name: 'Pending User',
+      baseUrl: 'http://localhost',
     });
   });
 

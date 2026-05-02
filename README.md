@@ -257,6 +257,8 @@ If you are new to the repo, the normal local loop is: `npm install` → `npm run
 
 The app ships with **three fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable.
 
+> **⚠️ Important Migration Notice:** While SaaSyBase allows you to effortlessly switch between these providers during development, **data does not magically port across them in production**. Clerk stores users in their cloud, while NextAuth and Better Auth use distinct internal database schemas. If you deploy with NextAuth, start taking users, and later change `AUTH_PROVIDER="clerk"`, your existing users will not be able to log in without a formal data migration. Choose your provider before launching.
+
 ```bash
 # .env.local
 AUTH_PROVIDER="nextauth"  # Options: "clerk", "nextauth", "betterauth"

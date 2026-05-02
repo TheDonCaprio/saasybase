@@ -91,6 +91,50 @@ export type SendEmailOptions = {
 	replyTo?: string | null;
 };
 
+function buildGenericEmailFallback(params: {
+	subject: string;
+	variables?: Partial<EmailVariables>;
+}) {
+	const siteName = params.variables?.siteName?.trim() || 'Our team';
+	const firstName = params.variables?.firstName?.trim() || 'there';
+	const actionUrl = params.variables?.actionUrl?.trim();
+	const actionText = params.variables?.actionText?.trim() || 'Open link';
+	const supportEmail = params.variables?.supportEmail?.trim();
+	const intro = `Hi ${firstName},`;
+	const summary = `We are contacting you about: ${params.subject}`;
+	const supportLine = supportEmail ? `Need help? Contact ${supportEmail}.` : undefined;
+
+	const text = [
+		intro,
+		'',
+		summary,
+		...(actionUrl ? ['', `${actionText}: ${actionUrl}`] : []),
+		...(supportLine ? ['', supportLine] : []),
+		'',
+		`The ${siteName} Team`,
+	].join('\n');
+
+	const htmlParts = [
+		`<p>Hi ${escapeHtml(firstName)},</p>`,
+		`<p>${escapeHtml(summary)}</p>`,
+	];
+
+	if (actionUrl) {
+		htmlParts.push(`<p><a href="${escapeHtml(actionUrl)}">${escapeHtml(actionText)}</a></p>`);
+	}
+
+	if (supportLine) {
+		htmlParts.push(`<p>${escapeHtml(supportLine)}</p>`);
+	}
+
+	htmlParts.push(`<p>The ${escapeHtml(siteName)} Team</p>`);
+
+	return {
+		text,
+		html: htmlParts.join(''),
+	};
+}
+
 function assertNoSmtpControlChars(value: string | null | undefined, label: string): string | undefined {
 	if (value == null) return undefined;
 	if (SMTP_CONTROL_CHAR_PATTERN.test(value)) {
@@ -329,6 +373,18 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ success: bool
 			});
 			// Continue with provided text/html as fallback
 		}
+	}
+
+	if (!text && !html) {
+		const fallback = buildGenericEmailFallback({
+			subject: subject || fallbackSubject,
+			variables: templateVariables,
+		});
+		text = fallback.text;
+		html = fallback.html;
+		Logger.info('Generated generic email fallback body', {
+			templateKey: opts.templateKey || null,
+		});
 	}
 
 	subject = ensureSiteNameInSubject(subject, templateVariables?.siteName);

@@ -4,24 +4,14 @@ import { Logger } from '@/lib/logger';
 import { RATE_LIMITS, getClientIP, rateLimit } from '@/lib/rateLimit';
 import { apiSchemas, validateInput } from '@/lib/validation';
 import { handleApiError, ApiError } from '@/lib/api-error';
+import { resolveSameOriginUrl } from '@/lib/request-origin';
 
 function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
   if (!callbackURL) {
     return undefined;
   }
 
-  const requestOrigin = new URL(request.url).origin;
-
-  try {
-    if (callbackURL.startsWith('/')) {
-      return new URL(callbackURL, requestOrigin).toString();
-    }
-
-    const candidate = new URL(callbackURL);
-    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+  return resolveSameOriginUrl(request, callbackURL);
 }
 
 export async function POST(request: NextRequest) {

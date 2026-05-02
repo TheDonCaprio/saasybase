@@ -13,12 +13,12 @@ import { createHash } from 'crypto';
 import { RATE_LIMITS, getClientIP, rateLimit } from '@/lib/rateLimit';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';
 import { Logger } from '@/lib/logger';
+import { resolveRequestOrigin, resolveSameOriginUrl } from '@/lib/request-origin';
 import {
   clearBetterAuthPendingEmailChange,
   hasBetterAuthPendingEmailChange,
   parseBetterAuthEmailChangeToken,
 } from '@/lib/better-auth-email-change';
-import { resolveNextAuthRuntimeBaseUrl } from '@/lib/nextauth-email-verification';
 
 function isBetterAuthProviderEnabled() {
   return process.env.AUTH_PROVIDER === 'betterauth';
@@ -29,18 +29,15 @@ function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
     return undefined;
   }
 
-  const requestOrigin = new URL(request.url).origin;
+  return resolveSameOriginUrl(request, callbackURL);
+}
 
-  try {
-    if (callbackURL.startsWith('/')) {
-      return new URL(callbackURL, requestOrigin).toString();
-    }
+function createRequestRedirect(request: NextRequest, path: string) {
+  return NextResponse.redirect(new URL(path, resolveRequestOrigin(request)));
+}
 
-    const candidate = new URL(callbackURL);
-    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+function getRequestOrigin(request: NextRequest) {
+  return new URL(request.url).origin;
 }
 
 export async function POST(request: NextRequest) {
@@ -110,7 +107,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name,
-      baseUrl: resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin),
+      baseUrl: getRequestOrigin(request),
     });
 
     return NextResponse.json({ message: 'Verification email sent' });
@@ -130,7 +127,7 @@ export async function GET(request: NextRequest) {
       if (parsedToken) {
         const hasPending = await hasBetterAuthPendingEmailChange(parsedToken.userId, parsedToken.newEmail);
         if (!hasPending) {
-          return NextResponse.redirect(new URL('/dashboard/profile?emailChange=canceled', request.url));
+          return createRequestRedirect(request, '/dashboard/profile?emailChange=canceled');
         }
 
         const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
@@ -160,7 +157,7 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email');
 
     if (!token || !email) {
-      return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+      return createRequestRedirect(request, '/sign-in?error=invalid-verification-link');
     }
 
     const hashedToken = createHash('sha256').update(token).digest('hex');
@@ -170,21 +167,21 @@ export async function GET(request: NextRequest) {
       if (record) {
         await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
       }
-      return NextResponse.redirect(new URL('/sign-in?error=expired-verification-link', request.url));
+      return createRequestRedirect(request, '/sign-in?error=expired-verification-link');
     }
 
     const { parseVerificationIdentifier } = await import('@/lib/nextauth-email-verification');
     const parsedIdentifier = parseVerificationIdentifier(record.identifier);
     if (!parsedIdentifier) {
       await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
-      return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+      return createRequestRedirect(request, '/sign-in?error=invalid-verification-link');
     }
 
     if (parsedIdentifier.kind === 'email-verify') {
       const normalizedEmail = email.toLowerCase().trim();
       if (parsedIdentifier.email !== normalizedEmail) {
         await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
-        return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+        return createRequestRedirect(request, '/sign-in?error=invalid-verification-link');
       }
 
       await prisma.user.updateMany({
@@ -202,13 +199,13 @@ export async function GET(request: NextRequest) {
         await sendWelcomeIfNotSent(verifiedUser.id, normalizedEmail).catch(() => {});
       }
 
-      return NextResponse.redirect(new URL('/sign-in?verification=success', request.url));
+      return createRequestRedirect(request, '/sign-in?verification=success');
     }
 
     const normalizedNewEmail = email.toLowerCase().trim();
     if (parsedIdentifier.newEmail !== normalizedNewEmail) {
       await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier, token: hashedToken } });
-      return NextResponse.redirect(new URL('/sign-in?error=invalid-verification-link', request.url));
+      return createRequestRedirect(request, '/sign-in?error=invalid-verification-link');
     }
 
     const user = await prisma.user.findUnique({
@@ -217,7 +214,7 @@ export async function GET(request: NextRequest) {
     });
     if (!user?.id || !user.email) {
       await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
-      return NextResponse.redirect(new URL('/sign-in?error=verification-failed', request.url));
+      return createRequestRedirect(request, '/sign-in?error=verification-failed');
     }
 
     const existing = await prisma.user.findFirst({
@@ -229,7 +226,7 @@ export async function GET(request: NextRequest) {
     });
     if (existing) {
       await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
-      return NextResponse.redirect(new URL('/dashboard/profile?emailChange=already-used', request.url));
+      return createRequestRedirect(request, '/dashboard/profile?emailChange=already-used');
     }
 
     await prisma.user.update({
@@ -242,9 +239,9 @@ export async function GET(request: NextRequest) {
 
     await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
 
-    return NextResponse.redirect(new URL('/dashboard/profile?emailChange=success', request.url));
+    return createRequestRedirect(request, '/dashboard/profile?emailChange=success');
   } catch (err) {
     Logger.error('Verify email error', err);
-    return NextResponse.redirect(new URL('/sign-in?error=verification-failed', request.url));
+    return createRequestRedirect(request, '/sign-in?error=verification-failed');
   }
 }

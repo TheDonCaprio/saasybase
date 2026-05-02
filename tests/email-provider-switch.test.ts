@@ -101,6 +101,31 @@ describe('email provider switching', () => {
 		expect(sendMailMock).not.toHaveBeenCalled();
 	});
 
+	it('generates a generic fallback body when a template is missing', async () => {
+		process.env.EMAIL_PROVIDER = 'resend';
+		process.env.RESEND_API_KEY = 're_test_key';
+		vi.resetModules();
+		const { sendEmail } = await import('../lib/email');
+
+		const result = await sendEmail({
+			to: 'user@example.com',
+			userId: 'user_1',
+			templateKey: 'password_reset',
+			variables: {
+				firstName: 'Caprio',
+				actionUrl: 'https://public-preview.example.test/sign-in?mode=reset-password&token=abc',
+				actionText: 'Reset password',
+			},
+		});
+
+		expect(result.success).toBe(true);
+		expect(resendSendMock).toHaveBeenCalledWith(expect.objectContaining({
+			subject: 'password_reset',
+			text: expect.stringContaining('Reset password: https://public-preview.example.test/sign-in?mode=reset-password&token=abc'),
+			html: expect.stringContaining('https://public-preview.example.test/sign-in?mode=reset-password&amp;token=abc'),
+		}));
+	});
+
 	it('rejects header control characters before attempting delivery', async () => {
 		vi.resetModules();
 		const { sendEmail } = await import('../lib/email');

@@ -39,7 +39,11 @@ describe('POST /api/auth/forgot-password', () => {
     const request = new NextRequest('http://localhost/api/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email: 'user@example.com' }),
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-host': 'public-preview.example.test',
+        'x-forwarded-proto': 'https',
+      },
     });
 
     const response = await POST(request);
@@ -54,5 +58,11 @@ describe('POST /api/auth/forgot-password', () => {
       userId: 'user_1',
       error: 'domain not verified',
     });
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      variables: expect.objectContaining({
+        actionUrl: expect.stringContaining('https://public-preview.example.test/sign-in?mode=reset-password&token='),
+        dashboardUrl: 'https://public-preview.example.test/dashboard',
+      }),
+    }));
   });
 });

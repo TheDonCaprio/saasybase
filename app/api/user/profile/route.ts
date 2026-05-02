@@ -5,7 +5,7 @@ import { prisma } from '../../../../lib/prisma';
 import { authService } from '../../../../lib/auth-provider';
 import { getActiveTeamSubscriptionForOrganization } from '../../../../lib/organization-access';
 import { validateAndFormatPersonName } from '../../../../lib/name-validation';
-import { resolveNextAuthRuntimeBaseUrl, sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
+import { sendNextAuthEmailChangeVerification, sendNextAuthVerificationEmail } from '../../../../lib/nextauth-email-verification';
 import {
   clearBetterAuthPendingEmailChange,
   recordBetterAuthPendingEmailChange,
@@ -468,14 +468,14 @@ export async function PATCH(request: Request) {
         currentEmail: currentUser.email,
         newEmail: pendingEmail,
         name: updated.name,
-        baseUrl: resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin),
+        baseUrl: new URL(request.url).origin,
       }).catch(() => {});
     } else if (verificationRequired && updated.email) {
       sendNextAuthVerificationEmail({
         userId: updated.id,
         email: updated.email,
         name: updated.name,
-        baseUrl: resolveNextAuthRuntimeBaseUrl(new URL(request.url).origin),
+        baseUrl: new URL(request.url).origin,
       }).catch(() => {});
     }
 

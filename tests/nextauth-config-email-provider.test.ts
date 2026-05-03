@@ -206,6 +206,7 @@ describe('nextauth email provider config', () => {
       userId: 'user_2',
       email: 'pending@example.com',
       name: 'Pending User',
+      baseUrl: 'http://localhost:3000',
     });
     expect(sendNextAuthMagicLinkEmailMock).not.toHaveBeenCalled();
   });

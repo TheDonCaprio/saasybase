@@ -90,6 +90,7 @@ describe('seo runtime', () => {
     expect(result.map((entry) => entry.url)).toEqual([
       'https://example.com',
       'https://example.com/blog',
+      'https://example.com/license',
       'https://example.com/about',
       'https://example.com/blog/launch-post',
       'https://example.com/docs/custom',
@@ -116,6 +117,7 @@ describe('seo runtime', () => {
 
     expect(result.map((entry) => entry.url)).toEqual([
       'https://example.com',
+      'https://example.com/license',
       'https://example.com/blog/launch-post',
       'https://example.com/docs/custom',
     ]);

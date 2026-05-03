@@ -47,6 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   addEntry(seoSettings.siteUrl);
   addEntry(new URL('/blog', `${seoSettings.siteUrl}/`).toString());
+  addEntry(new URL('/license', `${seoSettings.siteUrl}/`).toString());
 
   for (const page of sitePages) {
     addEntry(new URL(`/${page.slug}`, `${seoSettings.siteUrl}/`).toString(), page.updatedAt ?? page.publishedAt ?? undefined);

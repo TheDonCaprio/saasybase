@@ -1127,6 +1127,20 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-topbar-text:        rgb(var(--text-secondary));
           --lp-dd-topbar-link:        rgb(var(--text-tertiary));
           --lp-dd-topbar-link-active: rgb(var(--text-primary));
+
+          /* Licensing Premium */
+          --lp-licensing-bg:          #020617;
+          --lp-licensing-mesh-op:     0.8;
+          --lp-licensing-card-bg:     rgba(45, 45, 45, 0.65);
+          --lp-licensing-card-border: rgba(255,255,255,0.06);
+          --lp-licensing-title:       #f8fafc;
+          --lp-licensing-desc:        #94a3b8;
+          --lp-licensing-item:        #cbd5e1;
+          --lp-licensing-orb-bg:      #020617;
+          --lp-licensing-orb-border:  rgba(255,255,255,0.15);
+          --lp-licensing-orb-glow:    #6366f1;
+          --lp-licensing-note:        #64748b;
+          --lp-licensing-note-link:   #94a3b8;
         }
         /* ── CSS vars: light mode ─────────────────────────── */
         .light .lp-root {
@@ -1186,6 +1200,19 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           --lp-dd-topbar-text:        rgba(15,23,42,.8);
           --lp-dd-topbar-link:        rgba(15,23,42,.6);
           --lp-dd-topbar-link-active: rgb(var(--text-primary));
+          /* Licensing Premium Light */
+          --lp-licensing-bg:          linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+          --lp-licensing-mesh-op:     1;
+          --lp-licensing-card-bg:     rgba(255, 255, 255, 0.8);
+          --lp-licensing-card-border: rgba(99, 102, 241, 0.12);
+          --lp-licensing-title:       #0f172a;
+          --lp-licensing-desc:        #64748b;
+          --lp-licensing-item:        #475569;
+          --lp-licensing-orb-bg:      #ffffff;
+          --lp-licensing-orb-border:  rgba(99, 102, 241, 0.2);
+          --lp-licensing-orb-glow:    #6366f1;
+          --lp-licensing-note:        #94a3b8;
+          --lp-licensing-note-link:   #64748b;
         }
 
         /* Keyframes */
@@ -2321,6 +2348,217 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           }
         }
 
+        /* Licensing - Creative Redesign */
+        .lp-licensing-premium {
+          position: relative;
+          margin: 100px 0;
+          padding: 10px 0;
+          border-radius: 48px;
+          overflow: hidden;
+        }
+        .lp-licensing-mesh {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+        .lp-licensing-container {
+          position: relative;
+          z-index: 2;
+          max-width: 1140px;
+          margin: 0 auto;
+          padding: 0 40px;
+          text-align: center;
+        }
+        .lp-licensing-h2-new {
+          font-size: 64px;
+          font-weight: 900;
+          letter-spacing: -3px;
+          line-height: 0.9;
+          margin-bottom: 64px;
+          color: var(--lp-licensing-title);
+        }
+        .lp-licensing-main-card {
+          display: flex;
+          background: var(--lp-licensing-card-bg);
+          border: 1px solid var(--lp-licensing-card-border);
+          border-radius: 40px;
+          overflow: hidden;
+          backdrop-filter: blur(24px);
+          position: relative;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.1);
+        }
+        .lp-licensing-side {
+          flex: 1;
+          padding: 72px;
+          position: relative;
+          text-align: left;
+          display: flex;
+          flex-direction: column;
+          transition: background 0.3s ease;
+        }
+        .lp-licensing-side:hover {
+          background: rgba(99, 102, 241, 0.03);
+        }
+        .lp-licensing-side-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
+        .lp-licensing-header {
+          display: flex;
+          gap: 20px;
+          align-items: center;
+          margin-bottom: 24px;
+        }
+        .lp-licensing-icon-wrap {
+          flex-shrink: 0;
+          width: 52px;
+          height: 52px;
+          background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), transparent);
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #10b981;
+          font-size: 20px;
+          box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.3);
+        }
+        .lp-licensing-icon-wrap.pro {
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), transparent);
+          border-color: rgba(99, 102, 241, 0.4);
+          color: #818cf8;
+          box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.3);
+        }
+        .lp-licensing-side-title {
+          font-size: 32px;
+          font-weight: 800;
+          color: var(--lp-licensing-title);
+          margin-bottom: 0;
+          letter-spacing: -0.5px;
+        }
+        .lp-licensing-side-desc {
+          font-size: 16px;
+          line-height: 1.7;
+          color: var(--lp-licensing-desc);
+          margin-bottom: 36px;
+          max-width: 340px;
+        }
+        .lp-licensing-side-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 48px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .lp-licensing-side-list li {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 15px;
+          color: var(--lp-licensing-item);
+          font-weight: 500;
+        }
+        .lp-licensing-side-list li svg {
+          font-size: 11px;
+          color: #10b981;
+          opacity: 0.9;
+        }
+        .lp-licensing-price {
+          font-size: 36px;
+          font-weight: 900;
+          color: var(--lp-licensing-title);
+          margin-top: auto;
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+        }
+        .lp-licensing-price span {
+          font-size: 14px;
+          color: var(--lp-licensing-note);
+          font-weight: 500;
+          letter-spacing: 0;
+        }
+        .lp-licensing-price-btn {
+          margin-top: auto;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px 32px;
+          background: linear-gradient(135deg, #6366f1, #4f46e5);
+          color: white;
+          border-radius: 14px;
+          font-size: 15px;
+          font-weight: 700;
+          text-decoration: none;
+          transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+          box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.5);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .lp-licensing-price-btn:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 20px 40px -12px rgba(99, 102, 241, 0.6);
+          border-color: rgba(255,255,255,0.2);
+        }
+        
+        .lp-licensing-divider {
+          width: 1px;
+          background: linear-gradient(to bottom, transparent, var(--lp-licensing-orb-border), transparent);
+          position: relative;
+          flex-shrink: 0;
+        }
+        .lp-licensing-divider-orb {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 48px;
+          height: 48px;
+          background: var(--lp-licensing-orb-bg);
+          border: 1px solid var(--lp-licensing-orb-border);
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .lp-licensing-divider-orb::after {
+          content: '';
+          width: 8px;
+          height: 8px;
+          background: var(--lp-licensing-orb-glow);
+          border-radius: 999px;
+          box-shadow: 0 0 15px 2px var(--lp-licensing-orb-glow);
+        }
+        
+        .lp-licensing-bottom-note {
+          margin-top: 48px;
+          font-size: 14px;
+          color: var(--lp-licensing-note);
+          letter-spacing: 0.2px;
+        }
+        .lp-licensing-bottom-note a {
+          color: var(--lp-licensing-note-link);
+          text-decoration: none;
+          font-weight: 700;
+          padding: 0 4px;
+          transition: color 0.2s;
+        }
+        .lp-licensing-bottom-note a:hover { color: var(--lp-licensing-title); }
+        
+        @media (max-width: 1024px) {
+          .lp-licensing-side { padding: 48px; }
+          .lp-licensing-h2-new { font-size: 52px; }
+        }
+        @media (max-width: 860px) {
+          .lp-licensing-main-card { flex-direction: column; }
+          .lp-licensing-divider { width: 100%; height: 1px; background: linear-gradient(to right, transparent, var(--lp-licensing-orb-border), transparent); }
+          .lp-licensing-divider-orb { top: 0; left: 50%; }
+          .lp-licensing-side { padding: 48px; text-align: center; align-items: center; }
+          .lp-licensing-header { flex-direction: column; align-items: center; text-align: center; gap: 20px; }
+          .lp-licensing-side-desc { margin-left: auto; margin-right: auto; }
+          .lp-licensing-side-list { align-items: flex-start; margin-left: auto; margin-right: auto; }
+          .lp-licensing-h2-new { font-size: 40px; margin-bottom: 40px; }
+          .lp-licensing-premium { margin: 80px 0; padding: 60px 0; border-radius: 32px; }
+        }
+
         /* ── Demo: mobile responsive ── */
         .lp-dd-mobile-hdr { display:none; }
         .lp-dd-tbl-mobile { display:none; }
@@ -2842,7 +3080,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 desc: 'Use the starter as the shell, then scaffold your own app surface into it with prompts, copied modules, or direct component swaps.',
                 note: 'The boilerplate stays out of your way, so you can focus on the product layer instead of rebuilding platform basics.',
               },
-              {
+          {
                 step: '03',
                 rail: 'Launch',
                 title: 'Brand, deploy & collect',
@@ -2863,32 +3101,67 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               </div>
             ))}
           </div>
-          <div className="lp-timeline-footer">
-            <p className="lp-timeline-footer-copy">
-              It&apos;s intentionally easy to get from first clone to first customer. The starter ships with strong defaults, clear docs, and the launch-critical systems already connected, so you&apos;re not deciphering infrastructure when you should be shipping.
-            </p>
+        </section>
+
+        {/* ── LICENSING ━━━━━━━━━━━━━━━━━━━━━━━ ⨯ */}
+        <section className="lp-licensing-premium">
+          <div className="lp-licensing-mesh" />
+          <div className="lp-licensing-container">
+            <div className="lp-section-tag" style={{ color: "#818cf8", marginBottom: 24, background: "rgba(99, 102, 241, 0.1)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>Ownership & Usage</div>
+            <h2 className="lp-licensing-h2-new">Built for builders.<br />Fair for everyone.</h2>
+            
+            <div className="lp-licensing-main-card">
+              <div className="lp-licensing-side free-side">
+                <div className="lp-licensing-side-content">
+                  <div className="lp-licensing-header">
+                    <div className="lp-licensing-icon-wrap">
+                      <FontAwesomeIcon icon={faBolt} />
+                    </div>
+                    <h3 className="lp-licensing-side-title">The Founder</h3>
+                  </div>
+                  <p className="lp-licensing-side-desc">You&apos;re building your own dream. No royalties, no recurring fees—just your code, your product.</p>
+                  <ul className="lp-licensing-side-list">
+                    <li><FontAwesomeIcon icon={faShield} /> Personal Projects</li>
+                    <li><FontAwesomeIcon icon={faShield} /> SaaS Startups</li>
+                    <li><FontAwesomeIcon icon={faShield} /> Internal Business Tools</li>
+                  </ul>
+                  <div className="lp-licensing-price">Free <span>/ product</span></div>
+                </div>
+              </div>
+              
+              <div className="lp-licensing-divider">
+                <div className="lp-licensing-divider-orb" />
+              </div>
+              
+              <div className="lp-licensing-side pro-side">
+                <div className="lp-licensing-side-content">
+                  <div className="lp-licensing-header">
+                    <div className="lp-licensing-icon-wrap pro">
+                      <FontAwesomeIcon icon={faBuilding} />
+                    </div>
+                    <h3 className="lp-licensing-side-title">The Professional</h3>
+                  </div>
+                  <p className="lp-licensing-side-desc">You&apos;re building for others. High-velocity delivery for clients with a license for every ship.</p>
+                  <ul className="lp-licensing-side-list">
+                    <li><FontAwesomeIcon icon={faShield} /> Agency Client Work</li>
+                    <li><FontAwesomeIcon icon={faShield} /> Freelance Projects</li>
+                    <li><FontAwesomeIcon icon={faShield} /> Third-party Services</li>
+                  </ul>
+                  <Link href="/license" className="lp-licensing-price-btn">Get Commercial License</Link>
+                </div>
+              </div>
+            </div>
+            
+            <div className="lp-licensing-bottom-note">
+              Complete transparency. <Link href="/license">Read the full legal text →</Link>
+            </div>
           </div>
         </section>
 
-        {/* ── LICENSING ─────────────────────────────────────── */}
-        <div style={{ marginTop: 80, padding: '40px', borderRadius: 20, textAlign: 'center', backgroundColor: 'var(--lp-card-bg)', border: '1px solid var(--lp-card-bdr)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-          <div className="lp-section-tag" style={{ color: 'var(--lp-text1)' }}>Licensing</div>
-          <h2 className="lp-section-h2" style={{ marginBottom: 16 }}>Free to Build.<br />Pay When It&apos;s for Clients.</h2>
-          <div style={{ fontSize: 16, color: 'var(--lp-text3)', lineHeight: 1.7, maxWidth: 650, margin: '0 auto' }}>
-            <p style={{ marginBottom: 12 }}>
-              <strong>SaaSyBase is free to use for building and running your own SaaS products.</strong>
-            </p>
-            <p style={{ marginBottom: 12 }}>
-              Whether you&apos;re launching an MVP, a startup, or an internal tool—you can use it without paying.
-            </p>
-            <p>
-              If you&apos;re using SaaSyBase to build for clients, third parties, or as part of a paid service/agency, a commercial license is required.
-            </p>
-          </div>
-        </div>
+        <hr className="lp-divider" />
 
         {/* ── FINAL CTA ─────────────────────────────────────── */}
-        <div className="lp-cta-section">
+        <div style={{ marginTop: 0, padding: '40px', textAlign: 'center'}}>
           <div className="lp-section-tag">Ready to launch?</div>
           <h2 className="lp-section-h2" style={{ marginBottom: 12 }}>Your SaaS deserves a<br />solid foundation.</h2>
           <p className="lp-cta-desc">

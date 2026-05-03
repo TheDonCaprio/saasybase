@@ -1203,7 +1203,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           /* Licensing Premium Light */
           --lp-licensing-bg:          linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
           --lp-licensing-mesh-op:     1;
-          --lp-licensing-card-bg:     rgba(255, 255, 255, 0.8);
+          --lp-licensing-card-bg:     rgba(255, 255, 255, 0.65);
           --lp-licensing-card-border: rgba(99, 102, 241, 0.12);
           --lp-licensing-title:       #0f172a;
           --lp-licensing-desc:        #64748b;

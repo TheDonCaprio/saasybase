@@ -6,9 +6,9 @@
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
   },
   "scripts": {
-    "predev": "node ./scripts/validate-env.js && npm run generate:docs-search",
-    "predev:turbo": "node ./scripts/validate-env.js && npm run generate:docs-search",
-    "prebuild": "node ./scripts/validate-env.js && npm run generate:docs-search",
+    "predev": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
+    "predev:turbo": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
+    "prebuild": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
     "prestart": "node ./scripts/validate-env.js",
     "dev": "node ./scripts/run-with-secrets.js next dev --webpack",
     "dev:turbo": "node ./scripts/run-with-secrets.js next dev --turbopack",
@@ -29,7 +29,10 @@
     "prisma:push": "node ./scripts/run-with-secrets.js prisma db push --config prisma.config.ts",
     "prisma:pull": "node ./scripts/run-with-secrets.js prisma db pull --config prisma.config.ts",
     "prisma:seed": "node ./scripts/run-with-secrets.js prisma db seed --config prisma.config.ts",
+    "demo:seed": "node ./scripts/run-with-secrets.js tsx scripts/seed-demo.ts",
+    "demo:refresh": "node ./scripts/run-with-secrets.js tsx scripts/refresh-demo.ts",
     "prisma:studio": "node ./scripts/run-with-secrets.js prisma studio --config prisma.config.ts",
+    "prisma:diagnose-provider": "node ./scripts/print-prisma-provider-diagnostics.js",
     "secrets:doctor": "node ./scripts/secrets-doctor.js",
     "secrets:smoke": "node ./scripts/secrets-smoke-test.js",
     "typecheck": "tsc --noEmit",

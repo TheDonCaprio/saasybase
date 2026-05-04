@@ -99,11 +99,11 @@ const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone:
   { icon: faEye,          title: 'Traffic & Growth Analytics',         desc: 'Built-in visit tracking, page-level analytics, referrer breakdown, and admin traffic dashboards — no third-party scripts needed.', tone: 'auth' },
   { icon: faGaugeHigh,    title: 'Rate Limiting & Security',  desc: 'DB-backed rate limiting, CSP and HSTS headers, encrypted fields, webhook secret rotation, and auto-redacted logging.', tone: 'security' },
   { icon: faTriangleExclamation, title: 'Local & Sentry Error Tracking', desc: 'Optional Sentry setup for production monitoring, with client, edge, and server capture helpers already wired.', tone: 'security' },
-  { icon: faLock,        title: 'External Secret Providers', desc: 'Keep production secrets in a vault or cloud secret store, with deployment examples and rotation guidance.', tone: 'auth' },
+  { icon: faLock,        title: 'External Secret Providers', desc: 'Keep production secrets with Doppler or Infisical, with deployment examples and rotation guidance.', tone: 'auth' },
   { icon: faServer,      title: 'Deployment Readiness',     desc: 'Health checks, cron jobs, and production guardrails are ready for Vercel, Coolify, or VPS deployments.', tone: 'tests' },
   { icon: faFileLines,   title: 'Search Engine Optimization',         desc: 'Control over how your site appears on search engines, with meta tags, and sitemaps.', tone: 'meter' },
-  { icon: faTrafficLight, title: 'Feature Toggles',          desc: 'Built-in framework to gate pages and UI based on boolean flags, team subscriptions, or personal plans.', tone: 'security' },
-  { icon: faWaveSquare,   title: 'Webhook Routing',          desc: 'Unified ingress point capable of automatically identifying, verifying, and routing provider payloads.', tone: 'auth' },
+  { icon: faListAlt,      title: 'Audit Logs',               desc: 'Track admin actions, system events, and critical changes with a searchable activity trail.', tone: 'security' },
+  { icon: faCogs,         title: 'System Controls',          desc: 'Manage runtime toggles, maintenance switches, and operational settings from one place.', tone: 'auth' },
   { icon: faHourglassEnd, title: 'Scheduled Automation',     desc: 'Built-in endpoints handling automated subscription expiry, renewal logic, and scheduled limits cleanup.', tone: 'tests' },
   { icon: faWrench,       title: 'Maintenance Mode',         desc: 'Toggle system-wide maintenance screens instantly to halt traffic while operating on the database.', tone: 'meter' },
 ];
@@ -1767,6 +1767,11 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           border-color:rgba(var(--accent-primary-rgb),.14);
           color:rgb(var(--accent-primary));
         }
+        .lp-feature-icon .svg-inline--fa
+        {
+            height: 1.5em;
+            width: 1.5em;
+        }
         .lp-feature-title { font-size:13.5px; font-weight:700; color:var(--lp-text1); margin-bottom:6px; }
         .lp-feature-desc  { font-size:12px; color:var(--lp-text4); line-height:1.65; }
 
@@ -2334,6 +2339,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             margin-top:16px;
             justify-content:stretch;
           }
+          .lp-feature-card {
+            gap: 0px;
+          }
           .lp-signal-pill {
             width:100%;
             min-height:40px;
@@ -2351,8 +2359,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         /* Licensing - Creative Redesign */
         .lp-licensing-premium {
           position: relative;
-          margin: 100px 0;
-          padding: 10px 0;
+          margin: 72px 0;
+          padding: 0;
           border-radius: 48px;
           overflow: hidden;
         }
@@ -2366,7 +2374,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           z-index: 2;
           max-width: 1140px;
           margin: 0 auto;
-          padding: 0 40px;
+          padding: 0 24px;
           text-align: center;
         }
         .lp-licensing-h2-new {
@@ -2374,7 +2382,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           font-weight: 900;
           letter-spacing: -3px;
           line-height: 0.9;
-          margin-bottom: 64px;
+          margin-bottom: 44px;
           color: var(--lp-licensing-title);
         }
         .lp-licensing-main-card {
@@ -2389,7 +2397,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         .lp-licensing-side {
           flex: 1;
-          padding: 72px;
+          padding: 52px;
           position: relative;
           text-align: left;
           display: flex;
@@ -2434,25 +2442,25 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           letter-spacing: -0.5px;
         }
         .lp-licensing-side-desc {
-          font-size: 16px;
+          font-size: 15px;
           line-height: 1.7;
           color: var(--lp-licensing-desc);
-          margin-bottom: 36px;
-          max-width: 340px;
+          margin-bottom: 24px;
+          max-width: 350px;
         }
         .lp-licensing-side-list {
           list-style: none;
           padding: 0;
-          margin: 0 0 48px 0;
+          margin: 0 0 32px 0;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
         }
         .lp-licensing-side-list li {
           display: flex;
           align-items: center;
           gap: 12px;
-          font-size: 15px;
+          font-size: 14px;
           color: var(--lp-licensing-item);
           font-weight: 500;
         }
@@ -2529,7 +2537,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         
         .lp-licensing-bottom-note {
-          margin-top: 48px;
+          margin-top: 32px;
           font-size: 14px;
           color: var(--lp-licensing-note);
           letter-spacing: 0.2px;
@@ -2544,19 +2552,29 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-licensing-bottom-note a:hover { color: var(--lp-licensing-title); }
         
         @media (max-width: 1024px) {
-          .lp-licensing-side { padding: 48px; }
+          .lp-licensing-side { padding: 40px; }
           .lp-licensing-h2-new { font-size: 52px; }
         }
         @media (max-width: 860px) {
           .lp-licensing-main-card { flex-direction: column; }
           .lp-licensing-divider { width: 100%; height: 1px; background: linear-gradient(to right, transparent, var(--lp-licensing-orb-border), transparent); }
           .lp-licensing-divider-orb { top: 0; left: 50%; }
-          .lp-licensing-side { padding: 48px; text-align: center; align-items: center; }
+          .lp-licensing-side { padding: 34px 30px; text-align: center; align-items: center; }
           .lp-licensing-header { flex-direction: column; align-items: center; text-align: center; gap: 20px; }
           .lp-licensing-side-desc { margin-left: auto; margin-right: auto; }
           .lp-licensing-side-list { align-items: flex-start; margin-left: auto; margin-right: auto; }
-          .lp-licensing-h2-new { font-size: 40px; margin-bottom: 40px; }
-          .lp-licensing-premium { margin: 80px 0; padding: 60px 0; border-radius: 32px; }
+          .lp-licensing-h2-new { font-size: 40px; margin-bottom: 32px; }
+          .lp-licensing-premium { margin: 48px 0; padding: 18px 0; border-radius: 32px; }
+        }
+        @media (max-width: 640px) {
+          .lp-licensing-container { padding: 0 14px; }
+          .lp-licensing-main-card { border-radius: 24px; }
+          .lp-licensing-side { padding: 26px 20px; }
+          .lp-licensing-side-title { font-size: 26px; }
+          .lp-licensing-side-desc { max-width: none; line-height: 1.6; }
+          .lp-licensing-h2-new { font-size: 32px; letter-spacing: -1.2px; line-height: 0.98; margin-bottom: 24px; }
+          .lp-licensing-bottom-note { margin-top: 20px; font-size: 13px; }
+          .lp-licensing-premium { margin: 36px 0; padding: 12px 0; }
         }
 
         /* ── Demo: mobile responsive ── */
@@ -3051,7 +3069,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
             </div>
           </div>
-          <div className="lp-switch-bridge">Shared interface above vendor-specific code</div>
+          <p className="lp-section-sub lp-section-sub-sm" style={{ marginTop: 34 }}>You have a shared interface above vendor-specific code. ccc</p>
         </section>
 
         <hr className="lp-divider" />
@@ -3103,13 +3121,17 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           </div>
         </section>
 
+        <hr className="lp-divider" />
+
         {/* ── LICENSING ━━━━━━━━━━━━━━━━━━━━━━━ ⨯ */}
         <section className="lp-licensing-premium">
           <div className="lp-licensing-mesh" />
           <div className="lp-licensing-container">
-            <div className="lp-section-tag" style={{ color: "#818cf8", marginBottom: 24, background: "rgba(99, 102, 241, 0.1)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>Ownership & Usage</div>
-            <h2 className="lp-licensing-h2-new">Built for builders.<br />Fair for everyone.</h2>
-            
+            <div className="lp-section-tag">Ownership & Usage</div>
+            <h2 className="lp-section-h2" style={{ marginBottom: 12 }}>Built for builders. Fair for everyone.</h2>
+            <p className="lp-section-sub lp-section-sub-sm" style={{ marginTop: 14, marginBottom: 32 }}>
+              SaaSyBase has a simple licensing model: it&apos;s free for any project you build for yourself, and there&apos;s a commercial license for agency or client work. No royalties, no usage fees, just a one-time fee.
+            </p>
             <div className="lp-licensing-main-card">
               <div className="lp-licensing-side free-side">
                 <div className="lp-licensing-side-content">

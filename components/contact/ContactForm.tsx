@@ -16,9 +16,11 @@ type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
 const TOPIC_OPTIONS = [
   'Pre-sale question',
+  'Custom license inquiry',
   'Partnership opportunity',
   'Account or billing',
   'Bug report',
+  'Feedback or feature request',
   'Something else'
 ] as const;
 

@@ -27,7 +27,11 @@ import { Logger } from '../../logger';
 import { toError } from '../../runtime-guards';
 import { validateAndFormatPersonName } from '../../name-validation';
 import { getUserSuspensionStatus } from '../../account-suspension';
-import { parseUserAgent } from '../../session-activity';
+import {
+  parseUserAgent,
+  resolveSessionActivityFromHeaders,
+  shouldRefreshSessionActivity,
+} from '../../session-activity';
 
 type BetterAuthSessionPayload = {
   session: {
@@ -98,6 +102,57 @@ async function getBetterAuthSessionFromHeaders(headers: Headers): Promise<Better
   return (await betterAuthServer.api.getSession({
     headers,
   })) as BetterAuthSessionPayload | null;
+}
+
+async function refreshCurrentBetterAuthSessionActivity(userId: string): Promise<void> {
+  try {
+    const headers = await nextHeaders();
+    const session = await getBetterAuthSessionFromHeaders(headers);
+
+    if (!session?.session?.id || session.user.id !== userId) {
+      return;
+    }
+
+    const currentRecord = await prisma.session.findUnique({
+      where: { id: session.session.id },
+      select: {
+        id: true,
+        userId: true,
+        expires: true,
+        expiresAt: true,
+        lastActiveAt: true,
+        ipAddress: true,
+        userAgent: true,
+        country: true,
+        city: true,
+      },
+    });
+
+    if (!currentRecord) {
+      return;
+    }
+
+    const resolvedActivity = await resolveSessionActivityFromHeaders(headers);
+    if (!shouldRefreshSessionActivity(currentRecord, resolvedActivity)) {
+      return;
+    }
+
+    await prisma.session.update({
+      where: { id: currentRecord.id },
+      data: {
+        lastActiveAt: new Date(),
+        ...(resolvedActivity.userAgent ? { userAgent: resolvedActivity.userAgent } : {}),
+        ...(resolvedActivity.ipAddress ? { ipAddress: resolvedActivity.ipAddress } : {}),
+        ...(resolvedActivity.country ? { country: resolvedActivity.country } : {}),
+        ...(resolvedActivity.city ? { city: resolvedActivity.city } : {}),
+      },
+    });
+  } catch (err) {
+    Logger.debug('BetterAuthProvider.refreshCurrentSessionActivity failed', {
+      userId,
+      error: toError(err).message,
+    });
+  }
 }
 
 function toSessionUser(user: BetterAuthSessionPayload['user']): AuthUser {
@@ -389,6 +444,8 @@ export class BetterAuthProvider implements AuthProvider {
   }
 
   async getUserSessions(userId: string): Promise<AuthSessionInfo[]> {
+    await refreshCurrentBetterAuthSessionActivity(userId);
+
     const sessions = await prisma.session.findMany({
       where: { userId },
       orderBy: [{ lastActiveAt: 'desc' }, { expiresAt: 'desc' }, { expires: 'desc' }],

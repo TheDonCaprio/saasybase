@@ -71,6 +71,7 @@ describe('GET /api/user/profile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authServiceMock.providerName = 'nextauth';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://public-preview.example.test';
   });
 
   it('includes paidTokens even when subscription is null', async () => {
@@ -415,7 +416,7 @@ describe('GET /api/user/profile', () => {
       currentEmail: 'current@example.com',
       newEmail: 'next@example.com',
       name: 'Caprio Files',
-      baseUrl: 'http://localhost',
+      baseUrl: 'https://public-preview.example.test',
     });
     expect(body.emailChangePending).toBe(true);
     expect(body.user.email).toBe('current@example.com');
@@ -423,6 +424,7 @@ describe('GET /api/user/profile', () => {
 
   it('keeps the existing email active while Better Auth email change awaits confirmation', async () => {
     authServiceMock.providerName = 'betterauth';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://tanisha-nonreputable-corrin.ngrok-free.dev';
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'user_1',
       name: 'Caprio Files',
@@ -450,7 +452,7 @@ describe('GET /api/user/profile', () => {
       headers: expect.any(Headers),
       body: {
         newEmail: 'next@example.com',
-        callbackURL: 'http://localhost/dashboard/profile?emailChange=success',
+        callbackURL: 'https://tanisha-nonreputable-corrin.ngrok-free.dev/dashboard/profile?emailChange=success',
       },
     });
     expect(body.emailChangePending).toBe(true);

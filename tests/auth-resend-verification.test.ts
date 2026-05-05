@@ -32,6 +32,7 @@ describe('auth resend-verification route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sendNextAuthVerificationEmailMock.mockResolvedValue(undefined);
+    process.env.NEXT_PUBLIC_APP_URL = 'https://public-preview.example.test';
   });
 
   it('resends verification only for unverified users', async () => {
@@ -57,7 +58,7 @@ describe('auth resend-verification route', () => {
       userId: 'user_1',
       email: 'pending@example.com',
       name: 'Pending User',
-      baseUrl: 'http://localhost',
+      baseUrl: 'https://public-preview.example.test',
     });
   });
 

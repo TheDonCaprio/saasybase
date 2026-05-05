@@ -14,6 +14,7 @@ import { RATE_LIMITS, getClientIP, rateLimit } from '@/lib/rateLimit';
 import { sendWelcomeIfNotSent } from '@/lib/welcome';
 import { Logger } from '@/lib/logger';
 import { resolveRequestOrigin, resolveSameOriginUrl } from '@/lib/request-origin';
+import { getConfiguredPublicOrigins, normalizeAppRedirectPath } from '@/lib/url-security';
 import {
   clearBetterAuthPendingEmailChange,
   hasBetterAuthPendingEmailChange,
@@ -32,12 +33,71 @@ function normalizeCallbackUrl(request: NextRequest, callbackURL?: string) {
   return resolveSameOriginUrl(request, callbackURL);
 }
 
+function sanitizeVerifyEmailRequestUrl(request: NextRequest) {
+  const nextUrl = new URL(request.url);
+  const rawCallbackUrl = nextUrl.searchParams.get('callbackURL') || nextUrl.searchParams.get('callbackUrl');
+
+  if (!rawCallbackUrl) {
+    return null;
+  }
+
+  const normalized = normalizeCallbackUrl(request, rawCallbackUrl);
+  if (!normalized) {
+    nextUrl.searchParams.delete('callbackURL');
+    nextUrl.searchParams.delete('callbackUrl');
+    return nextUrl;
+  }
+
+  if (normalized !== rawCallbackUrl) {
+    nextUrl.searchParams.set('callbackURL', normalized);
+    nextUrl.searchParams.delete('callbackUrl');
+    return nextUrl;
+  }
+
+  return null;
+}
+
 function createRequestRedirect(request: NextRequest, path: string) {
   return NextResponse.redirect(new URL(path, resolveRequestOrigin(request)));
 }
 
-function getRequestOrigin(request: NextRequest) {
-  return new URL(request.url).origin;
+function rewriteDelegatedLocation(request: NextRequest, response: Response) {
+  const location = response.headers.get('location');
+  if (!location) {
+    return response;
+  }
+
+  const requestOrigin = resolveRequestOrigin(request);
+  const allowedOrigins = Array.from(new Set([
+    requestOrigin,
+    ...getConfiguredPublicOrigins(),
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://127.0.0.1:3000',
+  ]));
+
+  const normalizedPath = normalizeAppRedirectPath(location, {
+    fallbackPath: '',
+    allowedOrigins,
+  });
+
+  if (!normalizedPath) {
+    return response;
+  }
+
+  const rewrittenLocation = new URL(normalizedPath, requestOrigin).toString();
+  if (rewrittenLocation === location) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set('location', rewrittenLocation);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -107,7 +167,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name,
-      baseUrl: getRequestOrigin(request),
+      baseUrl: resolveRequestOrigin(request),
     });
 
     return NextResponse.json({ message: 'Verification email sent' });
@@ -119,6 +179,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   if (isBetterAuthProviderEnabled()) {
+    const sanitizedUrl = sanitizeVerifyEmailRequestUrl(request);
+    if (sanitizedUrl) {
+      return NextResponse.redirect(sanitizedUrl);
+    }
+
     const secret = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
     const token = request.nextUrl.searchParams.get('token');
 
@@ -143,12 +208,13 @@ export async function GET(request: NextRequest) {
           await clearBetterAuthPendingEmailChange(parsedToken.userId, parsedToken.newEmail);
         }
 
-        return response;
+        return rewriteDelegatedLocation(request, response);
       }
     }
 
     const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
-    return betterAuthNextJsHandler.GET(request);
+    const response = await betterAuthNextJsHandler.GET(request);
+    return rewriteDelegatedLocation(request, response);
   }
 
   try {

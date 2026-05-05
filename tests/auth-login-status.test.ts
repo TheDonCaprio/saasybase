@@ -7,6 +7,11 @@ const getClientIPMock = vi.hoisted(() => vi.fn(() => '127.0.0.1'));
 const prismaMock = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
+    update: vi.fn(),
+  },
+  account: {
+    create: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -86,6 +91,7 @@ describe('auth login-status route', () => {
       password: 'hashed',
       emailVerified: null,
       emailVerifiedBool: true,
+      accounts: [],
     });
     compareMock.mockResolvedValue(true);
 
@@ -100,6 +106,93 @@ describe('auth login-status route', () => {
 
     expect(res.status).toBe(200);
     expect(body.canSignIn).toBe(true);
+    expect(prismaMock.account.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user_ba_1',
+        type: 'credentials',
+        provider: 'credential',
+        providerAccountId: 'user_ba_1',
+        providerId: 'credential',
+        accountId: 'user_ba_1',
+        password: 'hashed',
+      },
+    });
+  });
+
+  it('syncs Better Auth verification state for legacy NextAuth-verified users', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_ba_legacy',
+      email: 'legacy-verified@example.com',
+      name: 'Legacy Verified User',
+      password: 'hashed',
+      emailVerified: new Date(),
+      emailVerifiedBool: false,
+      accounts: [],
+    });
+    compareMock.mockResolvedValue(true);
+
+    const req = new NextRequest('http://localhost/api/auth/login-status', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'legacy-verified@example.com', password: 'secret' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.canSignIn).toBe(true);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_ba_legacy' },
+      data: { emailVerifiedBool: true },
+    });
+  });
+
+  it('repairs an existing Better Auth credential account for legacy NextAuth users', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user_ba_2',
+      email: 'legacy@example.com',
+      name: 'Legacy User',
+      password: 'hashed',
+      emailVerified: new Date(),
+      emailVerifiedBool: false,
+      accounts: [
+        {
+          id: 'acct_1',
+          type: 'oauth',
+          provider: 'credentials',
+          providerId: 'credential',
+          providerAccountId: 'wrong-id',
+          accountId: 'wrong-id',
+          password: 'stale',
+        },
+      ],
+    });
+    compareMock.mockResolvedValue(true);
+
+    const req = new NextRequest('http://localhost/api/auth/login-status', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'legacy@example.com', password: 'secret' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.canSignIn).toBe(true);
+    expect(prismaMock.account.update).toHaveBeenCalledWith({
+      where: { id: 'acct_1' },
+      data: {
+        type: 'credentials',
+        provider: 'credential',
+        providerAccountId: 'user_ba_2',
+        accountId: 'user_ba_2',
+        password: 'hashed',
+      },
+    });
   });
 
   it('returns a generic invalid-credentials response for bad passwords', async () => {

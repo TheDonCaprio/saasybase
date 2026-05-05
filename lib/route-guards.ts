@@ -7,48 +7,23 @@ import {
   type AdminOrModeratorContext,
 } from './auth';
 import { ModeratorSection } from './moderator';
+import { normalizeAppRedirectPath } from './url-security';
 
 const DEFAULT_USER_RETURN_PATH = '/dashboard';
 const DEFAULT_ADMIN_RETURN_PATH = '/admin';
 
 export type RouteSearchParams = Record<string, string | string[] | undefined>;
 
-function sanitizeReturnPath(returnPath?: string | null): string {
-  if (!returnPath || typeof returnPath !== 'string') {
-    return DEFAULT_USER_RETURN_PATH;
-  }
-
-  let candidate = returnPath.trim();
-  if (!candidate) {
-    return DEFAULT_USER_RETURN_PATH;
-  }
-
-  if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-    try {
-      const url = new URL(candidate);
-      candidate = `${url.pathname}${url.search}` || DEFAULT_USER_RETURN_PATH;
-    } catch {
-      return DEFAULT_USER_RETURN_PATH;
-    }
-  }
-
-  if (!candidate.startsWith('/')) {
-    return DEFAULT_USER_RETURN_PATH;
-  }
-
-  if (candidate === '/sign-in' || candidate.startsWith('/sign-in/')) {
-    return DEFAULT_USER_RETURN_PATH;
-  }
-
-  if (candidate === '/sign-up' || candidate.startsWith('/sign-up/')) {
-    return DEFAULT_USER_RETURN_PATH;
-  }
-
-  return candidate;
+export function sanitizeReturnPath(returnPath?: string | null, fallbackPath: string = DEFAULT_USER_RETURN_PATH): string {
+  return normalizeAppRedirectPath(returnPath, {
+    fallbackPath,
+    disallowedPaths: ['/sign-in', '/sign-up'],
+    disallowedPathPrefixes: ['/sign-in', '/sign-up'],
+  });
 }
 
 function buildSignInRedirect(returnPath?: string | null) {
-  const sanitized = sanitizeReturnPath(returnPath);
+  const sanitized = sanitizeReturnPath(returnPath, DEFAULT_USER_RETURN_PATH);
   const params = new URLSearchParams({ redirect_url: sanitized });
   return `/sign-in?${params.toString()}`;
 }
@@ -78,7 +53,7 @@ export function buildReturnPath(basePath: string, searchParams?: RouteSearchPara
   const normalizedBase = ensureBasePath(basePath);
 
   if (!searchParams || Object.keys(searchParams).length === 0) {
-    return sanitizeReturnPath(normalizedBase);
+    return sanitizeReturnPath(normalizedBase, DEFAULT_USER_RETURN_PATH);
   }
 
   const params = new URLSearchParams();
@@ -96,7 +71,7 @@ export function buildReturnPath(basePath: string, searchParams?: RouteSearchPara
 
   const query = params.toString();
   const fullPath = query ? `${normalizedBase}?${query}` : normalizedBase;
-  return sanitizeReturnPath(fullPath);
+  return sanitizeReturnPath(fullPath, DEFAULT_USER_RETURN_PATH);
 }
 
 export async function requireAuth(returnPath?: string): Promise<{ userId: string; orgId?: string | null }> {

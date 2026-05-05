@@ -110,7 +110,7 @@ saasybase/
 │   ├── blog/               # Blog display components
 │   └── team/               # Team/org management components
 ├── lib/                    # Core business logic
-│   ├── auth-provider/      # Auth abstraction layer (Clerk / NextAuth)
+│   ├── auth-provider/      # Auth abstraction layer (Clerk / NextAuth / Better Auth)
 │   ├── payment/            # Payment abstraction layer (Stripe / Paystack / Paddle / Razorpay)
 │   │   ├── providers/      # Individual provider implementations
 │   │   ├── types.ts        # PaymentProvider interface
@@ -257,7 +257,7 @@ If you are new to the repo, the normal local loop is: `npm install` → `npm run
 
 The app ships with **three fully implemented auth providers**. Switch between them using the `AUTH_PROVIDER` environment variable.
 
-> **⚠️ Important Migration Notice:** While SaaSyBase allows you to effortlessly switch between these providers during development, **data does not magically port across them in production**. Clerk stores users in their cloud, while NextAuth and Better Auth use distinct internal database schemas. If you deploy with NextAuth, start taking users, and later change `AUTH_PROVIDER="clerk"`, your existing users will not be able to log in without a formal data migration. Choose your provider before launching.
+> **Auth switching boundary:** Clerk is still a separate migration lane because identities live in Clerk's cloud. NextAuth and Better Auth now share the repo's self-hosted Prisma auth lane, so you can switch between those two without exporting/importing user data. The practical caveat is session continuity: depending on the current rows and cookies in play, a provider switch can still force users to sign in again even when the user/account data is already compatible.
 
 ```bash
 # .env.local
@@ -299,6 +299,8 @@ GOOGLE_CLIENT_SECRET=""
 ```
 
 Better Auth supports local credentials, GitHub OAuth, Google OAuth, magic links, and app-managed organizations while still routing through the same `lib/auth-provider/` abstraction as Clerk and NextAuth. It is the preferred self-hosted provider lane when you want built-in organization primitives without depending on Clerk.
+
+Better Auth and NextAuth are intentionally kept on a shared self-hosted data lane in this repo. User rows, credential hashes, OAuth account mappings, and verification-state compatibility are normalized so that switching between `AUTH_PROVIDER="nextauth"` and `AUTH_PROVIDER="betterauth"` does not require a separate user-data migration.
 
 #### Better Auth GitHub OAuth setup
 
@@ -1420,7 +1422,7 @@ The `AdminActionLog` model records all admin/moderator actions:
 - **Token version** tracking — incremented on password change to invalidate existing sessions
 - **Secure credentials cookies** — `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS for the built-in credentials sign-in route
 - **Generic auth recovery responses** on forgot-password and resend-verification routes to reduce email enumeration risk
-- **Account suspension controls** — admins can temporarily or permanently suspend users, which blocks new sign-ins and invalidates provider-backed access checks consistently across Clerk and NextAuth
+- **Account suspension controls** — admins can temporarily or permanently suspend users, which blocks new sign-ins and invalidates provider-backed access checks consistently across Clerk, NextAuth, and Better Auth
 
 ---
 

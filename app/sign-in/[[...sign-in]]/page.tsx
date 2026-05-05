@@ -3,6 +3,7 @@ import { getAuthFormAppearance } from '@/lib/auth-provider/client/clerk-appearan
 import { AuthLoadingSkeleton } from '@/components/ui/AuthLoadingSkeleton';
 import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 import { authService } from '@/lib/auth-provider';
+import { sanitizeReturnPath } from '@/lib/route-guards';
 import { redirect } from 'next/navigation';
 
 type SearchParams = Record<string, string | string[] | undefined> | undefined;
@@ -11,25 +12,7 @@ function normalizeRedirect(searchParams: SearchParams): string {
   const rawParam = searchParams?.redirect_url ?? searchParams?.returnBackUrl ?? searchParams?.redirectUrl;
   const pick = Array.isArray(rawParam) ? rawParam[0] : rawParam;
 
-  if (!pick || typeof pick !== 'string') {
-    return '/dashboard';
-  }
-
-  let candidate = pick.trim();
-  if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-    try {
-      const url = new URL(candidate);
-      candidate = `${url.pathname}${url.search}` || '/dashboard';
-    } catch {
-      return '/dashboard';
-    }
-  }
-
-  if (!candidate.startsWith('/')) {
-    return '/dashboard';
-  }
-
-  return candidate === '/sign-in' ? '/dashboard' : candidate;
+  return sanitizeReturnPath(pick, '/dashboard');
 }
 
 interface SignInPageProps {

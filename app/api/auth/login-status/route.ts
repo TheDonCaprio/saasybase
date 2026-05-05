@@ -6,6 +6,94 @@ import { Logger } from '@/lib/logger';
 import { getUserSuspensionDetails } from '@/lib/account-suspension';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password. Please try again.';
 
+function findCredentialAccount(accounts: NonNullable<Parameters<typeof ensureBetterAuthCredentialCompatibility>[0]['accounts']>) {
+  const canonicalCredentialAccount = accounts.find((account) => account.provider === 'credential');
+  if (canonicalCredentialAccount) {
+    return canonicalCredentialAccount;
+  }
+
+  return accounts.find((account) => {
+    return account.providerId === 'credential' || account.provider === 'credentials';
+  });
+}
+
+async function ensureBetterAuthCredentialCompatibility(user: {
+  id: string;
+  password: string;
+  emailVerified?: Date | null;
+  emailVerifiedBool?: boolean;
+  accounts?: Array<{
+    id: string;
+    type: string | null;
+    provider: string | null;
+    providerId: string | null;
+    providerAccountId: string | null;
+    accountId: string | null;
+    password: string | null;
+  }>;
+}) {
+  if (user.emailVerified && !user.emailVerifiedBool) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifiedBool: true },
+    });
+  }
+
+  const credentialAccount = user.accounts ? findCredentialAccount(user.accounts) : undefined;
+
+  if (!credentialAccount) {
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        type: 'credentials',
+        provider: 'credential',
+        providerAccountId: user.id,
+        providerId: 'credential',
+        accountId: user.id,
+        password: user.password,
+      },
+    });
+    return;
+  }
+
+  const data: {
+    type?: string;
+    provider?: string;
+    providerAccountId?: string;
+    providerId?: string;
+    accountId?: string;
+    password?: string;
+  } = {};
+
+  if (credentialAccount.type !== 'credentials') {
+    data.type = 'credentials';
+  }
+  if (credentialAccount.provider !== 'credential') {
+    data.provider = 'credential';
+  }
+  if (credentialAccount.providerAccountId !== user.id) {
+    data.providerAccountId = user.id;
+  }
+  if (credentialAccount.providerId !== 'credential') {
+    data.providerId = 'credential';
+  }
+  if (credentialAccount.accountId !== user.id) {
+    data.accountId = user.id;
+  }
+  if (credentialAccount.password !== user.password) {
+    data.password = user.password;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return;
+  }
+
+  await prisma.account.update({
+    where: { id: credentialAccount.id },
+    data,
+  });
+}
+
 function buildOAuthOnlyMessage(providers: string[]) {
   const names = Array.from(new Set(providers))
     .map((provider) => provider.trim().toLowerCase())
@@ -61,20 +149,23 @@ export async function POST(request: NextRequest) {
         suspensionReason: true,
         suspensionIsPermanent: true,
         accounts: {
-          where: {
-            provider: {
-              in: ['github', 'google'],
-            },
-          },
           select: {
+            id: true,
+            type: true,
             provider: true,
+            providerId: true,
+            providerAccountId: true,
+            accountId: true,
+            password: true,
           },
         },
       },
     });
 
     if (!user?.password) {
-      const oauthProviders = (user?.accounts ?? []).map((account) => account.provider);
+      const oauthProviders = (user?.accounts ?? [])
+        .map((account) => account.provider)
+        .filter((provider): provider is string => provider === 'github' || provider === 'google');
 
       if (oauthProviders.length > 0) {
         return NextResponse.json(
@@ -111,6 +202,17 @@ export async function POST(request: NextRequest) {
     }
 
     const isBetterAuth = process.env.AUTH_PROVIDER === 'betterauth';
+
+    if (isBetterAuth) {
+      await ensureBetterAuthCredentialCompatibility({
+        id: user.id,
+        password: user.password,
+        emailVerified: user.emailVerified,
+        emailVerifiedBool: user.emailVerifiedBool,
+        accounts: user.accounts,
+      });
+    }
+
     const emailVerified = isBetterAuth
       ? Boolean(user.emailVerifiedBool || user.emailVerified)
       : Boolean(user.emailVerified);

@@ -284,6 +284,31 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
+function PasswordInput({
+  visible,
+  onToggle,
+  toggleLabel,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  visible: boolean;
+  onToggle: () => void;
+  toggleLabel: { show: string; hide: string };
+}) {
+  return (
+    <div className="relative">
+      <Input {...props} type={visible ? 'text' : 'password'} className="pr-10" />
+      <button
+        type="button"
+        aria-label={visible ? toggleLabel.hide : toggleLabel.show}
+        onClick={onToggle}
+        className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-neutral-500 transition hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+      >
+        {visible ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  );
+}
+
 function Message({
   tone,
   children,
@@ -323,6 +348,25 @@ function GitHubIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
       <path d="M12 .5C5.6.5.5 5.7.5 12.1c0 5.1 3.3 9.4 7.8 11 .6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.4-3.9-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.8 1.4 3.5 1.1.1-.8.4-1.4.8-1.7-2.5-.3-5.2-1.3-5.2-5.8 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11 11 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.3 2.9.1 3.2.8.9 1.2 1.9 1.2 3.2 0 4.5-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.8-5.9 7.8-11C23.5 5.7 18.4.5 12 .5Z" />
+    </svg>
+  );
+}
+ 
+function EyeIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.46 21.46 0 0 1 5.06-5.94" />
+      <path d="M1 1l22 22" />
+      <path d="M9.53 9.53A3.5 3.5 0 0 0 14.47 14.47" />
     </svg>
   );
 }
@@ -749,7 +793,8 @@ function SignUpForm({
   embedded?: boolean;
   onSwitch?: (mode: AuthModalMode) => void;
 }) {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
@@ -773,7 +818,8 @@ function SignUpForm({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name,
+        firstName,
+        lastName,
         email,
         password,
         callbackURL: toAbsoluteUrl(verificationSuccessUrl),
@@ -809,9 +855,15 @@ function SignUpForm({
       {success ? <Message tone="success">{success}</Message> : null}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Full name">
-          <Input value={name} onChange={(event) => setName(event.target.value)} required />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="First name">
+            <Input value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+          </Field>
+
+          <Field label="Last name">
+            <Input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+          </Field>
+        </div>
 
         <Field label="Email address">
           <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -941,6 +993,8 @@ function ResetPasswordForm({
 }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const resetState = useMemo(() => readResetState(), []);
   const [error, setError] = useState<string | null>(resetState.error);
@@ -992,11 +1046,25 @@ function ResetPasswordForm({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="New password">
-          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          <PasswordInput
+            visible={showPassword}
+            onToggle={() => setShowPassword((current) => !current)}
+            toggleLabel={{ show: 'Show password', hide: 'Hide password' }}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
         </Field>
 
         <Field label="Confirm new password">
-          <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
+          <PasswordInput
+            visible={showConfirmPassword}
+            onToggle={() => setShowConfirmPassword((current) => !current)}
+            toggleLabel={{ show: 'Show confirm password', hide: 'Hide confirm password' }}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+          />
         </Field>
 
         <button
@@ -1424,8 +1492,42 @@ export function AuthOrganizationSwitcher({
     }
   }
 
-  if (!isSignedIn || (!loading && orgs.length === 0)) {
+  if (!isSignedIn) {
     return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-500">
+        <span className="flex items-center justify-between">
+          <span>Loading workspaces...</span>
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </span>
+      </div>
+    );
+  }
+
+  if (orgs.length === 0) {
+    if (hidePersonal) {
+      return null;
+    }
+
+    return (
+      <div className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 cursor-default">
+        <span className="flex items-center gap-2 truncate">
+          <span
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-xs font-semibold text-white"
+            style={{ background: '#8b5cf6' }}
+          >
+            P
+          </span>
+          <span className="truncate">Personal workspace</span>
+        </span>
+      </div>
+    );
   }
 
   return (

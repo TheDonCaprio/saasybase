@@ -57,6 +57,7 @@ describe('auth verify-email route', () => {
     rateLimitMock.mockResolvedValue({ allowed: true, reset: Date.now() + 60_000 });
     delete process.env.AUTH_PROVIDER;
     process.env.BETTER_AUTH_SECRET = 'test-secret';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://public-preview.example.test';
   });
 
   it('rate limits authenticated verification resend requests', async () => {
@@ -88,7 +89,7 @@ describe('auth verify-email route', () => {
       userId: 'user_1',
       email: 'pending@example.com',
       name: 'Pending User',
-      baseUrl: 'http://localhost',
+      baseUrl: 'https://public-preview.example.test',
     });
   });
 
@@ -184,5 +185,17 @@ describe('auth verify-email route', () => {
 
     expect(response.status).toBe(307);
     expect(clearBetterAuthPendingEmailChangeMock).toHaveBeenCalledWith('user_1', 'new@example.com');
+  });
+
+  it('rewrites Better Auth localhost verification redirects to the request origin', async () => {
+    process.env.AUTH_PROVIDER = 'betterauth';
+    betterAuthHandlerGetMock.mockResolvedValueOnce(
+      Response.redirect('https://localhost:3000/api/auth/verify-email?token=raw-token&callbackURL=https%3A%2F%2Fpublic-preview.example.test%2Fdashboard', 307)
+    );
+
+    const response = await GET(new NextRequest('https://public-preview.example.test/api/auth/verify-email?token=raw-token&callbackURL=%2Fdashboard'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://public-preview.example.test/api/auth/verify-email?token=raw-token&callbackURL=https%3A%2F%2Fpublic-preview.example.test%2Fdashboard');
   });
 });

@@ -1,3 +1,4 @@
+import type { Prisma } from '@/lib/prisma-client';
 import { prisma } from './prisma';
 import { ensurePlansSeeded } from './plans';
 
@@ -69,7 +70,7 @@ function safeIds(items: string[]) {
   return items.length > 0 ? items : ['__demo-none__'];
 }
 
-async function runTransactionsInChunks(tasks: Array<Promise<unknown>>, size = 100) {
+async function runTransactionsInChunks(tasks: Array<Prisma.PrismaPromise<unknown>>, size = 100) {
   for (let index = 0; index < tasks.length; index += size) {
     const batch = tasks.slice(index, index + size);
     if (batch.length > 0) {

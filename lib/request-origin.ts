@@ -2,34 +2,24 @@ type HeaderSource = {
   get(name: string): string | null;
 };
 
+import { getPreferredPublicOrigin, isSameOriginUrl, normalizeAppRedirectPath } from './url-security';
+
 function getFirstHeaderValue(headers: HeaderSource, name: string) {
   return headers.get(name)?.split(',')[0]?.trim() || null;
 }
 
-function parseOrigin(candidate?: string | null) {
-  if (!candidate) {
-    return null;
-  }
-
-  try {
-    return new URL(candidate).origin;
-  } catch {
-    return null;
-  }
-}
-
 export function resolveRequestOrigin(input: { url: string; headers: HeaderSource }) {
   const requestUrl = new URL(input.url);
-  const originHeader = parseOrigin(getFirstHeaderValue(input.headers, 'origin'));
-  if (originHeader) {
-    return originHeader;
-  }
-
   const forwardedHost = getFirstHeaderValue(input.headers, 'x-forwarded-host');
   const forwardedProto = getFirstHeaderValue(input.headers, 'x-forwarded-proto');
   if (forwardedHost) {
     const protocol = forwardedProto || requestUrl.protocol.replace(/:$/, '') || 'https';
     return `${protocol}://${forwardedHost}`;
+  }
+
+  const configuredOrigin = getPreferredPublicOrigin();
+  if (configuredOrigin) {
+    return configuredOrigin;
   }
 
   const host = getFirstHeaderValue(input.headers, 'host');
@@ -42,14 +32,18 @@ export function resolveRequestOrigin(input: { url: string; headers: HeaderSource
 
 export function resolveSameOriginUrl(input: { url: string; headers: HeaderSource }, pathOrUrl: string) {
   const requestOrigin = resolveRequestOrigin(input);
+  const normalizedPath = normalizeAppRedirectPath(pathOrUrl, {
+    fallbackPath: '',
+    allowedOrigins: [requestOrigin],
+  });
+
+  if (normalizedPath) {
+    return new URL(normalizedPath, requestOrigin).toString();
+  }
 
   try {
-    if (pathOrUrl.startsWith('/')) {
-      return new URL(pathOrUrl, requestOrigin).toString();
-    }
-
     const candidate = new URL(pathOrUrl);
-    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
+    return isSameOriginUrl(candidate.toString(), [requestOrigin]) ? candidate.toString() : undefined;
   } catch {
     return undefined;
   }

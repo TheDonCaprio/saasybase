@@ -14,6 +14,7 @@
 - Adding components to `components/`
 - Using existing UI primitives (`components/ui/`)
 - Integrating with the token system, feature gating, and auth
+- Working within the admin-managed SEO/discoverability system before adding route-specific metadata overrides
 
 **Key files to know:**
 - `app/dashboard/(valid)/layout.tsx` — Dashboard layout with sidebar nav and workspace chrome
@@ -24,6 +25,8 @@
 - `lib/validation.ts` — Zod schemas for input validation
 - `lib/features.ts` — Feature gating registry
 - `lib/featureGate.tsx` — Server-side feature gate component
+- `components/admin/settings/panels/SeoSettingsPanel.tsx` — Structured SEO settings UI
+- `lib/seo-shared.ts` — Canonical, robots, sitemap, and verification helpers
 
 **Rules:**
 - For user-scoped protected API routes, use `authService.requireUserId()`; for admin/moderator routes, use the dedicated guard helpers already used by that area.
@@ -74,7 +77,7 @@
 **Role:** Work with authentication, authorization, security headers, and access control.
 
 **Expertise:**
-- Dual auth provider system (Clerk / NextAuth)
+- Multi-provider auth system (Clerk / NextAuth / Better Auth)
 - Middleware and route protection
 - Role-based access (USER, ADMIN, MODERATOR)
 - Organization/team access control
@@ -85,6 +88,8 @@
 - `lib/auth-provider/` — Full auth abstraction layer
 - `lib/auth-provider/service.ts` — `authService` singleton
 - `lib/auth-provider/types.ts` — `AuthProvider` interface, `AuthSession`, `AuthUser`
+- `lib/better-auth.ts` — Better Auth server config and coexistence hooks
+- `app/api/auth/login-status/route.ts` — credential preflight and Better Auth coexistence repair path
 - `lib/auth-provider/middleware.ts` — Conditional middleware dispatch
 - `proxy.ts` — Edge middleware (route protection)
 - `lib/auth.ts` — Core auth helpers and role resolution
@@ -143,6 +148,7 @@
 - Admin CRUD operations for users, plans, subscriptions, coupons
 - Dashboard UI with sidebar navigation and badges
 - Theme/branding system
+- Structured SEO and discoverability settings
 - Blog CMS and site page management
 - Support ticket system
 - Notification system
@@ -153,9 +159,11 @@
 - `app/dashboard/` — All user dashboard pages
 - `components/admin/` — Admin-specific components
 - `components/dashboard/` — Dashboard-specific components
+- `components/admin/settings/panels/SeoSettingsPanel.tsx` — SEO settings UI
 - `lib/admin-api.ts` — Admin API helpers
 - `lib/settings.ts` — Settings system (50+ configurable keys)
 - `lib/blog.ts` — Blog CRUD operations
+- `lib/seo-shared.ts` — Shared SEO/sitemap/robots helpers
 - `lib/sitePages.ts` — Site page management
 - `lib/notifications.ts` — Notification system
 - `lib/email-templates.ts` — Email template management
@@ -165,6 +173,7 @@
 - Log all admin actions to `AdminActionLog`
 - Support both light and dark mode in admin UI
 - Use the settings system (`lib/settings.ts`) for configurable values — don't hardcode
+- Prefer the structured SEO settings system over ad-hoc metadata or robots changes when the behavior is sitewide
 - Test admin operations with the existing test patterns
 
 ---

@@ -23,9 +23,9 @@
 │  │  │ Abstraction │  │ Abstraction  │  │ System   │  │      │
 │  │  └──────┬──────┘  └──────┬───────┘  └────┬─────┘  │      │
 │  │         │                │                │        │      │
-│  │  ┌──────┴──────┐  ┌─────┴────────┐       │        │      │
-│  │  │ Clerk │ NA  │  │ Stripe │ PS  │       │        │      │
-│  │  │       │     │  │ Paddle │ RZ  │       │        │      │
+│  │  ┌──────┴─────────────┐  ┌─────┴────────┐       │        │      │
+│  │  │ Clerk │ NA │ BA    │  │ Stripe │ PS  │       │        │      │
+│  │  │       │    │       │  │ Paddle │ RZ  │       │        │      │
 │  │  └─────────────┘  └──────────────┘       │        │      │
 │  │                                          │        │      │
 │  │  ┌────────────────────────────────────────┘        │      │
@@ -59,7 +59,8 @@ proxy.ts (Edge Middleware)
   │
   ├── lib/auth-provider/middleware.ts
   │     ├── Clerk middleware (if AUTH_PROVIDER=clerk)
-  │     └── NextAuth middleware (if AUTH_PROVIDER=nextauth)
+  │     ├── NextAuth middleware (if AUTH_PROVIDER=nextauth)
+  │     └── Better Auth middleware (if AUTH_PROVIDER=betterauth)
   │
   └── Route protection rules
         ├── /admin/* → requires AUTH
@@ -73,10 +74,16 @@ lib/auth-provider/
   ├── middleware.ts          # Conditional middleware dispatch
   ├── providers/
   │     ├── clerk.ts         # Clerk implementation
-  │     └── nextauth.ts      # NextAuth implementation
+  │     ├── nextauth.ts      # NextAuth implementation
+  │     └── betterauth.ts    # Better Auth implementation
   └── client/
         ├── index.ts         # Client-side hook exports
         └── components.tsx   # AuthSignIn, AuthSignUp, AuthLoaded, etc.
+
+lib/better-auth.ts
+  ├── Better Auth server config
+  ├── Prisma coexistence field mapping
+  └── database hooks for legacy/self-hosted auth compatibility
 ```
 
 **Data flow:** Request → Middleware (verify session) → Route handler → `authService.requireUserId()` → Business logic
@@ -84,8 +91,26 @@ lib/auth-provider/
 Notes:
 - `/dashboard/*` is protected primarily by server-side guards such as `requireAuth()` rather than edge middleware.
 - Under `AUTH_PROVIDER=nextauth`, session resolution reads the DB-backed `Session` row and active-organization cookie via `lib/auth-provider/providers/nextauth.ts`.
+- Under `AUTH_PROVIDER=betterauth`, the app uses the Better Auth runtime in `lib/better-auth.ts` plus the provider adapter in `lib/auth-provider/providers/betterauth.ts`.
+- NextAuth and Better Auth share the self-hosted Prisma auth lane in the current schema. Switching between those two does not require exporting/importing users, though active sessions may still be rotated or require re-login after a provider switch.
 
-### 1.1 Route Grouping And 404 Boundaries
+### 1.1 SEO And Discoverability Layer
+
+```
+components/admin/settings/panels/SeoSettingsPanel.tsx
+  │
+  ├── lib/settings.ts                # persisted SEO setting values
+  ├── lib/seo-shared.ts              # site URL, canonical, robots, sitemap helpers
+  ├── app/layout.tsx                 # metadataBase, title templating, verification tags
+  ├── app/sitemap.ts                 # generated sitemap.xml
+  └── app/robots.txt/route.ts        # generated robots.txt output
+```
+
+Notes:
+- Sitewide SEO is structured and admin-managed rather than scattered through handwritten route metadata.
+- Blog posts and editable site pages still keep per-entry SEO fields, but cross-site crawler behavior, verification tags, sitemap curation, and sitewide no-index state flow through the shared SEO layer.
+
+### 1.2 Route Grouping And 404 Boundaries
 
 ```
 app/

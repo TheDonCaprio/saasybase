@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const socialSignInMock = vi.hoisted(() => vi.fn());
+const useAuthSessionMock = vi.hoisted(() => vi.fn());
+const useAuthInstanceMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => (
@@ -31,8 +33,17 @@ vi.mock('../lib/better-auth-client', () => ({
     requestPasswordReset: vi.fn(),
   },
 }));
+vi.mock('../lib/auth-provider/client/providers/betterauth/hooks', () => ({
+  useAuthSession: useAuthSessionMock,
+  useAuthInstance: useAuthInstanceMock,
+  useAuthUser: vi.fn(() => ({ isLoaded: false, user: null })),
+}));
 
-import { AuthSignIn, AuthSignUp } from '../lib/auth-provider/client/providers/betterauth/components';
+import {
+  AuthOrganizationSwitcher,
+  AuthSignIn,
+  AuthSignUp,
+} from '../lib/auth-provider/client/providers/betterauth/components';
 
 describe('Better Auth social buttons UI', () => {
   let root: Root | null = null;
@@ -40,6 +51,8 @@ describe('Better Auth social buttons UI', () => {
   beforeEach(() => {
     socialSignInMock.mockReset();
     socialSignInMock.mockResolvedValue({ error: { message: 'OAuth unavailable in test' } });
+    useAuthSessionMock.mockReturnValue({ isLoaded: true, isSignedIn: true });
+    useAuthInstanceMock.mockReturnValue({ setActiveOrganization: vi.fn() });
     window.history.replaceState({}, '', '/sign-in');
   });
 
@@ -126,5 +139,28 @@ describe('Better Auth social buttons UI', () => {
       errorCallbackURL: '/welcome',
       requestSignUp: true,
     });
+  });
+
+  it('shows a personal workspace fallback when Better Auth has no organizations', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/user/active-org') {
+        return new Response(JSON.stringify({ activeOrgId: null, organizations: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ github: false, google: false }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const container = await render(<AuthOrganizationSwitcher />);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/user/active-org', { cache: 'no-store' });
+    expect(container.textContent).toContain('Personal workspace');
+    expect(container.textContent).not.toContain('Loading workspaces');
   });
 });

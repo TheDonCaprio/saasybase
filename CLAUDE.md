@@ -32,6 +32,7 @@ Most features are **already wired and ready to go**. The user's job is to build 
 | What | Where |
 |------|-------|
 | Auth abstraction | `lib/auth-provider/` — service, types, providers, client components |
+| Better Auth runtime | `lib/better-auth.ts`, `app/api/auth/login-status/route.ts` |
 | Payment abstraction | `lib/payment/` — factory, registry, types, providers |
 | Database client | `lib/prisma.ts` (singleton with hot-reload safety) |
 | Validation schemas | `lib/validation.ts` (Zod) |
@@ -49,6 +50,7 @@ Most features are **already wired and ready to go**. The user's job is to build 
 | Prisma schema | `prisma/schema.prisma` |
 | Middleware (auth) | `proxy.ts` → `lib/auth-provider/middleware.ts` |
 | Root layout | `app/layout.tsx` |
+| SEO & discoverability | `components/admin/settings/panels/SeoSettingsPanel.tsx`, `lib/seo-shared.ts`, `app/sitemap.ts`, `app/docs/seo-and-discoverability/page.tsx` |
 | Dashboard layout | `app/dashboard/(valid)/layout.tsx` |
 | Admin layout | `app/admin/(valid)/layout.tsx` |
 | Webhook ingress | `app/api/webhooks/payments/route.ts` (auto-detects provider) |
@@ -60,7 +62,7 @@ Most features are **already wired and ready to go**. The user's job is to build 
 Auth and payment providers are selected via environment variables, not code changes:
 
 ```bash
-AUTH_PROVIDER="nextauth"        # or "clerk"
+AUTH_PROVIDER="nextauth"        # or "betterauth", "clerk"
 PAYMENT_PROVIDER="stripe"      # or "paystack", "paddle", "razorpay"
 ```
 
@@ -126,12 +128,14 @@ Tests cover: payment provider flows, webhook normalization, subscription lifecyc
 | Pitfall | Fix |
 |---------|-----|
 | Importing `@clerk/nextjs` directly | Use `lib/auth-provider/` abstraction |
+| Importing `better-auth` directly in business logic | Use `lib/auth-provider/` and `lib/better-auth.ts` integration points |
 | Importing `stripe` directly for business logic | Use `PaymentProviderFactory.getProvider()` |
 | Using `console.log` | Use `Logger.info()` / `Logger.warn()` / `Logger.error()` |
 | Raw `req.json()` without validation | Parse with Zod schema from `lib/validation.ts` |
 | Querying only `externalSubscriptionId` | Also check `externalSubscriptionIds` JSON map for multi-provider setups |
 | Missing rate limiting on API route | Add `rateLimit(key, RATE_LIMITS.API_GENERAL)` |
 | Hardcoding currency | Use `getActiveCurrency()` or `getActiveCurrencyAsync()` and let `DEFAULT_CURRENCY` / `PAYMENTS_CURRENCY` resolve through the payment registry |
+| Hardcoding public SEO tags in random routes | Prefer the SEO settings system and metadata helpers before adding route-specific overrides |
 | Direct `new PrismaClient()` | Use singleton from `lib/prisma.ts` |
 
 ---
@@ -167,3 +171,8 @@ Use `FeatureGate` server component or `isProFeature()` check. Gates automaticall
 
 ### Settings System
 50+ configurable settings stored in the `Setting` model. Read with `getSetting(key, default)`. 5-second in-memory cache. Covers site branding, token policies, theme colors, blog config, pricing layout, and more.
+
+### Structured SEO System
+- Global SEO and discoverability settings are managed from `/admin/settings` via `components/admin/settings/panels/SeoSettingsPanel.tsx`.
+- Runtime helpers in `lib/seo-shared.ts` drive canonical URLs, title templating, verification tags, sitemap generation, and robots.txt behavior.
+- Blog posts and editable site pages still support per-entry SEO fields, but sitewide defaults and crawler controls should flow through the structured settings first.

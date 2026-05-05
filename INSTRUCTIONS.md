@@ -47,7 +47,7 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 │   ├── api/              # API routes (REST endpoints)
 │   ├── admin/            # Admin pages; real routes live under `(valid)/`
 │   ├── dashboard/        # User dashboard pages; real routes live under `(valid)/`
-│   ├── auth/             # Auth pages (NextAuth flow)
+│   ├── auth/             # Auth pages (provider-switched UI for NextAuth / Better Auth / Clerk)
 │   ├── blog/             # Blog pages
 │   ├── checkout/         # Payment checkout flow
 │   ├── pricing/          # Pricing page
@@ -63,8 +63,9 @@ With Prisma 7, seeding only runs when you explicitly execute `npx prisma db seed
 │   ├── blog/             # Blog components
 │   └── hooks/            # Client-side React hooks
 ├── lib/                  # Server-side business logic
-│   ├── auth-provider/    # Auth abstraction (Clerk / NextAuth)
+│   ├── auth-provider/    # Auth abstraction (Clerk / NextAuth / Better Auth)
 │   ├── payment/          # Payment abstraction (Stripe / Paystack / Paddle / Razorpay)
+│   ├── seo-shared.ts     # Structured SEO helpers for canonical, robots, and sitemap behavior
 │   ├── email.ts          # Transactional email sending
 │   ├── email-templates.ts# Email template rendering and variables
 │   └── ...               # Settings, subscriptions, notifications, teams, tokens, etc.
@@ -104,6 +105,8 @@ if (authService.supportsFeature('organizations')) { /* ... */ }
 ```
 
 Client-side auth components are re-exported from `lib/auth-provider/client/components` and automatically switch based on the active provider.
+
+For Better Auth coexistence, the server runtime lives in `lib/better-auth.ts` and the credential preflight/repair path lives in `app/api/auth/login-status/route.ts`.
 
 ### Payment Provider Abstraction
 
@@ -172,6 +175,15 @@ Logger.warn('Payment retry failed', { attempt: 3 });
 Logger.error('Webhook signature invalid', { provider: 'stripe' });
 // Never use console.log — Logger auto-redacts secrets and persists to DB
 ```
+
+### Structured SEO and Discoverability
+
+Prefer the existing structured SEO system before adding route-local metadata or robots logic.
+
+- Global SEO settings live in `/admin/settings` via `components/admin/settings/panels/SeoSettingsPanel.tsx`
+- Shared runtime helpers live in `lib/seo-shared.ts`
+- Sitemap and crawler output are generated from code in `app/sitemap.ts` and `app/robots.txt`
+- Per-entry SEO still belongs to blog posts and editable site pages when a specific page needs custom copy
 
 ---
 

@@ -4,26 +4,38 @@
 
 During development and testing: **Yes.** Changing the `AUTH_PROVIDER` environment variable will instantly swap the UI and backend logic to use the selected provider.
 
-In production (with live user data): **No. Data does not port across providers.**
+In production (with live user data): **It depends on which providers you are switching between.**
 
-## Why Data Does Not Port
+## What Is Actually Swappable
 
-SaaSyBase allows you to choose your provider, but each provider manages data entirely differently:
+SaaSyBase currently has two auth data lanes:
 
-1. **Clerk**: A hosted service. It stores user identities, passwords, and sessions in its own cloud database. It syncs minimal data to your local Prisma database via Webhooks.
-2. **NextAuth (Auth.js)**: A self-hosted library. It stores users in your Prisma database (`User`, `Account`, `Session`, `VerificationToken`) using NextAuth's specific schema.
-3. **Better Auth**: A self-hosted library. It stores users in your Prisma database using a completely different schema structure than NextAuth (e.g., `account` vs `Account`, different password storage mappings, different org structures depending on plugins).
+1. **Clerk**: A hosted identity lane. Users, passwords, and sessions live in Clerk's cloud, with selected records mirrored into your local database.
+2. **Self-hosted Prisma auth**: NextAuth and Better Auth both operate on the app's local Prisma-backed auth tables in the current repo.
 
-### The Migration Reality
+### NextAuth And Better Auth
 
-If you launch your app with NextAuth and get 1,000 sign-ups, those users exist in the NextAuth `User` table with NextAuth-compatible password hashes. 
+NextAuth and Better Auth are now designed to coexist on the same underlying Prisma auth data:
 
-If you just change `AUTH_PROVIDER="clerk"`, those 1,000 NextAuth users do not exist in Clerk's cloud database. The users will appear logged out and will be unable to log in because Clerk has no record of them.
+- shared `User`, `Account`, `Session`, and verification compatibility fields
+- credential-hash compatibility for the self-hosted email/password lane
+- compatibility normalization for OAuth account fields and verification state
 
-If you change `AUTH_PROVIDER="betterauth"`, Better Auth will look at its own tables and fail to find the NextAuth sessions or mappings. 
+That means switching between `AUTH_PROVIDER="nextauth"` and `AUTH_PROVIDER="betterauth"` does **not** require exporting/importing users or running a one-time production user migration just to preserve sign-in capability.
+
+Practical caveats still apply:
+
+- active sessions may not survive the switch cleanly, so users can still be forced to sign in again
+- if your database predates the current coexistence shape, you should normalize it before assuming a seamless switch
+- this statement applies to the self-hosted lane only, not to Clerk
+
+### Clerk
+
+If you launch your app with NextAuth or Better Auth and later change `AUTH_PROVIDER="clerk"`, your local users do not automatically appear in Clerk's cloud database. The reverse is also true: switching away from Clerk is still a real identity migration problem unless you separately provision those users into the self-hosted lane.
 
 ## Recommendation
 
-**Pick your auth provider before launching to production.**
+**Pick your auth lane before launching to production.**
 
-If you must switch providers after your product is live, you will need to perform a formal data migration. You must export your users (and potentially password hashes, depending on the target provider's hash compatibility) and import them into the new provider's system. SaaSyBase provides the unified abstraction to write the code against, but we *do not* provide automated inter-provider data migration scripts.
+- Switching between **NextAuth and Better Auth** is supported on the shared self-hosted Prisma auth lane, with the expectation that you may still rotate sessions or ask users to sign in again.
+- Switching **to or from Clerk** still requires a formal identity migration strategy because Clerk is not just another view over the same local auth tables.

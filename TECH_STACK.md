@@ -23,8 +23,11 @@ Node 18 is not supported by the current stack. Next.js 16 requires Node 20.9+, a
 |-----------|---------|---------|-------------|
 | **Clerk** | @clerk/nextjs 7.x | Managed auth with organizations, SSO, MFA | `AUTH_PROVIDER="clerk"` |
 | **NextAuth (Auth.js)** | v5 beta | Self-hosted auth with credentials, OAuth, magic link | `AUTH_PROVIDER="nextauth"` |
+| **Better Auth** | better-auth 1.x | Self-hosted auth with credentials, OAuth, magic link, organizations | `AUTH_PROVIDER="betterauth"` |
 
 **Auth is selected via env var** — the abstraction layer (`lib/auth-provider/`) provides a unified interface. Unused provider code is dead-code eliminated at build time.
+
+Clerk remains a separate hosted identity lane. NextAuth and Better Auth share the repo's Prisma-backed self-hosted auth lane, so switching between those two does not require exporting/importing user data, though active sessions may still be recreated on switch.
 
 ### Clerk Dependencies
 - `@clerk/nextjs` — Server + client auth
@@ -35,6 +38,11 @@ Node 18 is not supported by the current stack. Next.js 16 requires Node 20.9+, a
 - `next-auth` v5 — Core auth framework
 - `@auth/prisma-adapter` — Database adapter for sessions/accounts
 - `bcryptjs` — Password hashing
+
+### Better Auth Dependencies
+- `better-auth` — Core auth framework
+- `@better-auth/prisma-adapter` — Prisma adapter
+- `bcryptjs` — Password hashing and cross-provider credential compatibility
 
 ---
 

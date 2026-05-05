@@ -2800,17 +2800,17 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-cta-row">
                 {isSignedIn ? (
                   <>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" className="lp-btn-primary">Get for free →</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 ) : (
                   <>
-                    <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 )}
               </div>

@@ -11,8 +11,8 @@
 | What You're Adding | Where It Goes |
 |-------------------|---------------|
 | New public page | `app/<page-name>/page.tsx` |
-| New dashboard page | `app/dashboard/<page-name>/page.tsx` |
-| New admin page | `app/admin/<page-name>/page.tsx` |
+| New dashboard page | `app/dashboard/(valid)/<page-name>/page.tsx` |
+| New admin page | `app/admin/(valid)/<page-name>/page.tsx` |
 | New API endpoint | `app/api/<domain>/route.ts` |
 | New API with dynamic param | `app/api/<domain>/[id]/route.ts` |
 | Server-side business logic | `lib/<domain>.ts` or `lib/<domain>/` |
@@ -27,6 +27,8 @@
 | Database migration | `npx prisma migrate dev --name <name>` (auto-generated) |
 | Operational script | `scripts/<action-name>.ts` |
 | Documentation | `docs/<topic>.md` |
+
+Dashboard and admin routes use route groups in this repo. The `(valid)` segment is part of the filesystem layout, not the public URL.
 
 ### Naming Patterns
 
@@ -146,7 +148,9 @@ Logger.error('External service failed', error);
 | `PADDLE_` | Paddle provider config | `PADDLE_API_KEY` |
 | `RAZORPAY_` | Razorpay provider config | `RAZORPAY_KEY_ID` |
 | `CLERK_` | Clerk auth config | `CLERK_SECRET_KEY` |
+| `BETTER_AUTH_` | Better Auth config | `BETTER_AUTH_SECRET` |
 | `AUTH_` | NextAuth config | `AUTH_SECRET` |
+| `NEXTAUTH_` | Shared/self-hosted auth compatibility config | `NEXTAUTH_SECRET` |
 | `SMTP_` | Email config | `SMTP_HOST` |
 | `AWS_` / `LOGO_` | Storage config | `AWS_ACCESS_KEY_ID` |
 | `GA_` | Analytics config | `GA_PROPERTY_ID` |
@@ -155,6 +159,8 @@ Logger.error('External service failed', error);
 | `PAYMENT_` | Payment provider selection and shared catalog config | `PAYMENT_PROVIDER`, `PAYMENT_AUTO_CREATE` |
 
 Seeded plans no longer rely on manual `PAYMENT_PRICE_*` or `SUBSCRIPTION_PRICE_*` environment variables in the standard setup. Provider price IDs are stored in the database and synced through the catalog flow.
+
+Self-hosted auth note: `AUTH_PROVIDER="nextauth"` and `AUTH_PROVIDER="betterauth"` are expected to operate on the same Prisma-backed auth data lane in this repo. Clerk remains separate because the source of truth for identity data lives outside your database.
 
 ---
 
@@ -176,6 +182,16 @@ These are provider-agnostic, style-consistent primitives:
 | `Stat` | `label`, `value`, `icon`, `trend` | Dashboard stat cards |
 
 ### Always check `components/ui/` before creating a new primitive.
+
+### Sitewide SEO Changes
+
+If the behavior is global or crawler-facing, prefer the structured SEO layer before adding ad hoc metadata code:
+
+- Admin control surface: `components/admin/settings/panels/SeoSettingsPanel.tsx`
+- Shared runtime helpers: `lib/seo-shared.ts`
+- Route outputs: `app/sitemap.ts` and `app/robots.txt/route.ts`
+
+Use per-route metadata only when a specific page genuinely needs custom behavior outside the existing structured settings.
 
 ---
 

@@ -13,6 +13,7 @@ import {
 import { getDefaultTokenLabel } from '../../../../lib/settings';
 import { formatDateServer } from '../../../../lib/formatDate.server';
 import { Logger } from '../../../../lib/logger';
+import { resolveRequestOrigin, resolveSameOriginUrl } from '../../../../lib/request-origin';
 import {
   getEffectiveMemberTokenCap,
   getMemberCapStrategy,
@@ -37,18 +38,7 @@ function normalizeCallbackUrl(request: Request, callbackURL?: string) {
     return undefined;
   }
 
-  const requestOrigin = new URL(request.url).origin;
-
-  try {
-    if (callbackURL.startsWith('/')) {
-      return new URL(callbackURL, requestOrigin).toString();
-    }
-
-    const candidate = new URL(callbackURL);
-    return candidate.origin === requestOrigin ? candidate.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+  return resolveSameOriginUrl(request, callbackURL);
 }
 
 function normalizeBetterAuthProfileError(error: unknown): { status: number; message: string } | null {
@@ -468,14 +458,14 @@ export async function PATCH(request: Request) {
         currentEmail: currentUser.email,
         newEmail: pendingEmail,
         name: updated.name,
-        baseUrl: new URL(request.url).origin,
+        baseUrl: resolveRequestOrigin(request),
       }).catch(() => {});
     } else if (verificationRequired && updated.email) {
       sendNextAuthVerificationEmail({
         userId: updated.id,
         email: updated.email,
         name: updated.name,
-        baseUrl: new URL(request.url).origin,
+        baseUrl: resolveRequestOrigin(request),
       }).catch(() => {});
     }
 

@@ -630,6 +630,7 @@ export type OrganizationMembershipCreateOrConnectWithoutUserInput = {
 
 export type OrganizationMembershipCreateManyUserInputEnvelope = {
   data: Prisma.OrganizationMembershipCreateManyUserInput | Prisma.OrganizationMembershipCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type OrganizationMembershipUpsertWithWhereUniqueWithoutUserInput = {
@@ -698,6 +699,7 @@ export type OrganizationMembershipCreateOrConnectWithoutOrganizationInput = {
 
 export type OrganizationMembershipCreateManyOrganizationInputEnvelope = {
   data: Prisma.OrganizationMembershipCreateManyOrganizationInput | Prisma.OrganizationMembershipCreateManyOrganizationInput[]
+  skipDuplicates?: boolean
 }
 
 export type OrganizationMembershipUpsertWithWhereUniqueWithoutOrganizationInput = {
@@ -1586,6 +1588,7 @@ export type OrganizationMembershipCreateManyArgs<ExtArgs extends runtime.Types.E
    * The data used to create many OrganizationMemberships.
    */
   data: Prisma.OrganizationMembershipCreateManyInput | Prisma.OrganizationMembershipCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1604,6 +1607,7 @@ export type OrganizationMembershipCreateManyAndReturnArgs<ExtArgs extends runtim
    * The data used to create many OrganizationMemberships.
    */
   data: Prisma.OrganizationMembershipCreateManyInput | Prisma.OrganizationMembershipCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

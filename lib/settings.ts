@@ -1409,12 +1409,13 @@ export async function resetUserTokensIfNeeded(userId: string): Promise<boolean> 
   const freePlanSettings = await getFreePlanSettings();
   const now = new Date();
 
-  // Reset tokens
-  // Use a raw SQL update here because the generated Prisma client in this
-  // environment may not yet include the `freeTokenBalance`/`freeTokensLastResetAt`
-  // fields until `prisma generate` is run. This avoids type errors while still
-  // performing a safe DB update.
-  await prisma.$executeRaw`UPDATE "User" SET "freeTokenBalance" = ${freePlanSettings.tokenLimit}, "freeTokensLastResetAt" = ${now} WHERE id = ${userId}`;
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      freeTokenBalance: freePlanSettings.tokenLimit,
+      freeTokensLastResetAt: now,
+    },
+  });
 
   return true;
 }
@@ -1426,9 +1427,13 @@ export async function initializeNewUserTokens(userId: string): Promise<void> {
   const freePlanSettings = await getFreePlanSettings();
   const now = new Date();
 
-  // Set initial token balance based on free plan configuration
-  // Use raw SQL update to avoid depending on generated client types during a staged migration
-  await prisma.$executeRaw`UPDATE "User" SET "freeTokenBalance" = ${freePlanSettings.tokenLimit}, "freeTokensLastResetAt" = ${requiresFreePlanResetTracking(freePlanSettings.renewalType) ? now : null} WHERE id = ${userId}`;
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      freeTokenBalance: freePlanSettings.tokenLimit,
+      freeTokensLastResetAt: requiresFreePlanResetTracking(freePlanSettings.renewalType) ? now : null,
+    },
+  });
 }
 
 export async function getBlogListingStyle(): Promise<string> {

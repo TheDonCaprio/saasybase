@@ -406,6 +406,7 @@ export type BlogPostCategoryCreateOrConnectWithoutPostInput = {
 
 export type BlogPostCategoryCreateManyPostInputEnvelope = {
   data: Prisma.BlogPostCategoryCreateManyPostInput | Prisma.BlogPostCategoryCreateManyPostInput[]
+  skipDuplicates?: boolean
 }
 
 export type BlogPostCategoryUpsertWithWhereUniqueWithoutPostInput = {
@@ -453,6 +454,7 @@ export type BlogPostCategoryCreateOrConnectWithoutCategoryInput = {
 
 export type BlogPostCategoryCreateManyCategoryInputEnvelope = {
   data: Prisma.BlogPostCategoryCreateManyCategoryInput | Prisma.BlogPostCategoryCreateManyCategoryInput[]
+  skipDuplicates?: boolean
 }
 
 export type BlogPostCategoryUpsertWithWhereUniqueWithoutCategoryInput = {
@@ -1243,6 +1245,7 @@ export type BlogPostCategoryCreateManyArgs<ExtArgs extends runtime.Types.Extensi
    * The data used to create many BlogPostCategories.
    */
   data: Prisma.BlogPostCategoryCreateManyInput | Prisma.BlogPostCategoryCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1261,6 +1264,7 @@ export type BlogPostCategoryCreateManyAndReturnArgs<ExtArgs extends runtime.Type
    * The data used to create many BlogPostCategories.
    */
   data: Prisma.BlogPostCategoryCreateManyInput | Prisma.BlogPostCategoryCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

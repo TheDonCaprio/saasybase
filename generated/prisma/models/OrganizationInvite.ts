@@ -568,6 +568,7 @@ export type OrganizationInviteCreateOrConnectWithoutInvitedByInput = {
 
 export type OrganizationInviteCreateManyInvitedByInputEnvelope = {
   data: Prisma.OrganizationInviteCreateManyInvitedByInput | Prisma.OrganizationInviteCreateManyInvitedByInput[]
+  skipDuplicates?: boolean
 }
 
 export type OrganizationInviteUpsertWithWhereUniqueWithoutInvitedByInput = {
@@ -636,6 +637,7 @@ export type OrganizationInviteCreateOrConnectWithoutOrganizationInput = {
 
 export type OrganizationInviteCreateManyOrganizationInputEnvelope = {
   data: Prisma.OrganizationInviteCreateManyOrganizationInput | Prisma.OrganizationInviteCreateManyOrganizationInput[]
+  skipDuplicates?: boolean
 }
 
 export type OrganizationInviteUpsertWithWhereUniqueWithoutOrganizationInput = {
@@ -1524,6 +1526,7 @@ export type OrganizationInviteCreateManyArgs<ExtArgs extends runtime.Types.Exten
    * The data used to create many OrganizationInvites.
    */
   data: Prisma.OrganizationInviteCreateManyInput | Prisma.OrganizationInviteCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1542,6 +1545,7 @@ export type OrganizationInviteCreateManyAndReturnArgs<ExtArgs extends runtime.Ty
    * The data used to create many OrganizationInvites.
    */
   data: Prisma.OrganizationInviteCreateManyInput | Prisma.OrganizationInviteCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

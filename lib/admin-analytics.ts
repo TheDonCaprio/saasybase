@@ -5,6 +5,56 @@ import type { AdminAnalyticsPeriod, AdminAnalyticsResponse } from './admin-analy
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function getDayKey(date: Date): string {
+	return date.toISOString().slice(0, 10);
+}
+
+function sortDayBucketsDesc<T extends { date: string }>(buckets: T[]): T[] {
+	return buckets.sort((left, right) => right.date.localeCompare(left.date));
+}
+
+function buildCountBuckets(records: Array<{ createdAt: Date }>): Array<{ date: string; count: number }> {
+	const counts = new Map<string, number>();
+
+	for (const record of records) {
+		const dayKey = getDayKey(record.createdAt);
+		counts.set(dayKey, (counts.get(dayKey) ?? 0) + 1);
+	}
+
+	return sortDayBucketsDesc(
+		Array.from(counts.entries(), ([date, count]) => ({ date, count }))
+	);
+}
+
+function buildRevenueBuckets(records: Array<{ createdAt: Date; amountCents: number }>): Array<{ date: string; revenue: number }> {
+	const revenue = new Map<string, number>();
+
+	for (const record of records) {
+		const dayKey = getDayKey(record.createdAt);
+		revenue.set(dayKey, (revenue.get(dayKey) ?? 0) + record.amountCents);
+	}
+
+	return sortDayBucketsDesc(
+		Array.from(revenue.entries(), ([date, amountCents]) => ({
+			date,
+			revenue: amountCents / 100,
+		}))
+	);
+}
+
+function buildTopCounts(items: Array<string | null | undefined>, limit: number): Array<{ value: string; count: number }> {
+	const counts = new Map<string, number>();
+
+	for (const item of items) {
+		if (!item) continue;
+		counts.set(item, (counts.get(item) ?? 0) + 1);
+	}
+
+	return Array.from(counts.entries(), ([value, count]) => ({ value, count }))
+		.sort((left, right) => right.count - left.count || left.value.localeCompare(right.value))
+		.slice(0, limit);
+}
+
 export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): Promise<AdminAnalyticsResponse> {
 	try {
 		const now = new Date();
@@ -64,27 +114,24 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			activeUsers,
 			currentPeriodUsers,
 			previousPeriodUsers,
-			usersByDay,
+			usersByDayRecords,
 			usersToday,
 			usersThisWeek,
 			totalSubs,
 			activeSubs,
 			pendingSubs,
 			canceledSubs,
-			planRevenue,
+			planRevenueByPlan,
+			plans,
 			featureUsage,
 			currentPeriodSubs,
 			previousPeriodSubs,
-			_currentPeriodFeatureUsage,
-			_previousPeriodFeatureUsage,
-			revenueByDay,
-			subscriptionsByDay,
+			revenueByDayRecords,
+			subscriptionsByDayRecords,
 			totalVisits,
 			currentPeriodVisits,
 			previousPeriodVisits,
-			uniqueVisitors,
-			visitsByCountry,
-			pageViews
+			currentPeriodVisitRecords
 		] = await Promise.all([
 			prisma.payment.aggregate({
 				_sum: { amountCents: true },
@@ -126,13 +173,10 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			prisma.user.count({
 				where: { createdAt: { gte: previousStartDate, lt: previousEndDate } }
 			}),
-			prisma.$queryRaw`
-				SELECT date(createdAt/1000, 'unixepoch') as date, COUNT(*) as users
-				FROM User
-				WHERE createdAt >= ${startDate.getTime()} AND createdAt < ${endDate.getTime()}
-				GROUP BY date(createdAt/1000, 'unixepoch')
-				ORDER BY date DESC
-			`,
+			prisma.user.findMany({
+				where: { createdAt: { gte: startDate, lt: endDate } },
+				select: { createdAt: true }
+			}),
 			prisma.user.count({ where: { createdAt: { gte: startOfToday, lt: startOfTomorrow } } }),
 			prisma.user.count({ where: { createdAt: { gte: startOfWeek, lt: startOfTomorrow } } }),
 			prisma.subscription.count(),
@@ -140,21 +184,24 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			prisma.subscription.count({ where: { status: 'PENDING' } }),
 			// Count canonical 'CANCELLED' only now that DB rows have been normalized
 			prisma.subscription.count({ where: { status: 'CANCELLED' } }),
-			prisma.$queryRaw`
-				SELECT
-					p.name,
-					p.id,
-					COALESCE(SUM(pay.amountCents), 0) as revenue,
-					COUNT(DISTINCT s.userId) as users
-				FROM Plan p
-				LEFT JOIN Subscription s ON p.id = s.planId
-				LEFT JOIN Payment pay ON s.id = pay.subscriptionId
-					AND pay.status IN ('COMPLETED', 'SUCCEEDED')
-					AND pay.createdAt >= ${startDate.getTime()}
-					AND pay.createdAt < ${endDate.getTime()}
-				GROUP BY p.id, p.name
-				ORDER BY revenue DESC
-			`,
+			prisma.payment.groupBy({
+				by: ['planId'],
+				_sum: { amountCents: true },
+				where: {
+					status: { in: ['COMPLETED', 'SUCCEEDED'] },
+					createdAt: { gte: startDate, lt: endDate },
+					planId: { not: null },
+				}
+			}),
+			prisma.plan.findMany({
+				select: {
+					id: true,
+					name: true,
+					subscriptions: {
+						select: { userId: true }
+					}
+				}
+			}),
 			prisma.featureUsageLog.groupBy({
 				by: ['feature'],
 				_sum: { count: true },
@@ -166,110 +213,29 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			prisma.subscription.count({
 				where: { createdAt: { gte: previousStartDate, lt: previousEndDate } }
 			}),
-			prisma.featureUsageLog.groupBy({
-				by: ['feature'],
-				_sum: { count: true },
-				_count: { userId: true },
+			prisma.payment.findMany({
+				where: {
+					status: { in: ['COMPLETED', 'SUCCEEDED'] },
+					createdAt: { gte: startDate, lt: endDate }
+				},
+				select: { createdAt: true, amountCents: true }
+			}),
+			prisma.subscription.findMany({
 				where: { createdAt: { gte: startDate, lt: endDate } },
-				orderBy: { _sum: { count: 'desc' } }
+				select: { createdAt: true }
 			}),
-			prisma.featureUsageLog.groupBy({
-				by: ['feature'],
-				_sum: { count: true },
-				_count: { userId: true },
-				where: { createdAt: { gte: previousStartDate, lt: previousEndDate } },
-				orderBy: { _sum: { count: 'desc' } }
-			}),
-			prisma.$queryRaw`
-				SELECT date(createdAt/1000, 'unixepoch') as date, COALESCE(SUM(amountCents), 0) as revenue
-				FROM Payment
-				WHERE status IN ('COMPLETED', 'SUCCEEDED')
-					AND createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-				GROUP BY date(createdAt/1000, 'unixepoch')
-				ORDER BY date DESC
-			`,
-			prisma.$queryRaw`
-				SELECT date(createdAt/1000, 'unixepoch') as date, COUNT(*) as subscriptions
-				FROM Subscription
-				WHERE createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-				GROUP BY date(createdAt/1000, 'unixepoch')
-				ORDER BY date DESC
-			`,
-			prisma.$queryRaw`SELECT COUNT(*) as count FROM VisitLog`
-				.then((result: unknown) => {
-					if (Array.isArray(result) && result.length > 0) {
-						const first = result[0] as Record<string, unknown>;
-						return Number(first['count'] ?? 0);
-					}
-					return 0;
-				})
-				.catch(() => 0),
-			prisma.$queryRaw`
-				SELECT COUNT(*) as count FROM VisitLog
-				WHERE createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-			`
-				.then((result: unknown) => {
-					if (Array.isArray(result) && result.length > 0) {
-						const first = result[0] as Record<string, unknown>;
-						return Number(first['count'] ?? 0);
-					}
-					return 0;
-				})
-				.catch(() => 0),
-			prisma.$queryRaw`
-				SELECT COUNT(*) as count FROM VisitLog
-				WHERE createdAt >= ${previousStartDate.getTime()}
-					AND createdAt < ${previousEndDate.getTime()}
-			`
-				.then((result: unknown) => {
-					if (Array.isArray(result) && result.length > 0) {
-						const first = result[0] as Record<string, unknown>;
-						return Number(first['count'] ?? 0);
-					}
-					return 0;
-				})
-				.catch(() => 0),
-			prisma.$queryRaw`
-				SELECT COUNT(DISTINCT sessionId) as count FROM VisitLog
-				WHERE createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-			`
-				.then((result: unknown) => {
-					if (Array.isArray(result) && result.length > 0) {
-						const first = result[0] as Record<string, unknown>;
-						return Number(first['count'] ?? 0);
-					}
-					return 0;
-				})
-				.catch(() => 0),
-			prisma.$queryRaw`
-				SELECT country, COUNT(*) as visits FROM VisitLog
-				WHERE createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-					AND country IS NOT NULL
-				GROUP BY country
-				ORDER BY visits DESC
-				LIMIT 10
-			`
-				.then((res: unknown) => (Array.isArray(res) ? (res as Array<Record<string, unknown>>) : []))
-				.catch(() => []),
-			prisma.$queryRaw`
-				SELECT path, COUNT(*) as views FROM VisitLog
-				WHERE createdAt >= ${startDate.getTime()}
-					AND createdAt < ${endDate.getTime()}
-				GROUP BY path
-				ORDER BY views DESC
-				LIMIT 10
-			`
-				.then((res: unknown) => (Array.isArray(res) ? (res as Array<Record<string, unknown>>) : []))
-				.catch(() => [])
+			prisma.visitLog.count().catch(() => 0),
+			prisma.visitLog.count({ where: { createdAt: { gte: startDate, lt: endDate } } }).catch(() => 0),
+			prisma.visitLog.count({ where: { createdAt: { gte: previousStartDate, lt: previousEndDate } } }).catch(() => 0),
+			prisma.visitLog.findMany({
+				where: { createdAt: { gte: startDate, lt: endDate } },
+				select: {
+					sessionId: true,
+					country: true,
+					path: true,
+				}
+			}).catch(() => [])
 		]);
-
-		void _currentPeriodFeatureUsage;
-		void _previousPeriodFeatureUsage;
 
 		const currentPeriodRevenueAmount = (currentPeriodRevenue._sum.amountCents || 0) / 100;
 		const previousPeriodRevenueAmount = (previousPeriodRevenue._sum.amountCents || 0) / 100;
@@ -280,7 +246,7 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 		const totalVisitsNum = Number(totalVisits);
 		const currentPeriodVisitsNum = Number(currentPeriodVisits);
 		const previousPeriodVisitsNum = Number(previousPeriodVisits);
-		const uniqueVisitorsNum = Number(uniqueVisitors);
+		const uniqueVisitorsNum = new Set(currentPeriodVisitRecords.map((visit) => visit.sessionId)).size;
 
 		const totalUsersNum = Number(totalUsers);
 		const activeUsersNum = Number(activeUsers);
@@ -312,19 +278,27 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 		const mrr = dailyAvgRevenue * 30;
 		const arr = mrr * 12;
 
-		const planArr = Array.isArray(planRevenue) ? (planRevenue as Array<Record<string, unknown>>) : [];
-		const totalPlanRevenue = planArr.reduce(
-			(sum, plan) => sum + (Number(plan['revenue'] ?? 0) || 0),
-			0
+		const planRevenueById = new Map(
+			planRevenueByPlan
+				.filter((entry) => entry.planId)
+				.map((entry) => [entry.planId as string, entry._sum.amountCents ?? 0])
 		);
+		const totalPlanRevenue = Array.from(planRevenueById.values()).reduce((sum, revenue) => sum + revenue, 0);
 
-		const planData = planArr.map((plan) => ({
-			id: String(plan['id'] ?? ''),
-			name: String(plan['name'] ?? ''),
-			revenue: (Number(plan['revenue'] ?? 0) || 0) / 100,
-			users: Number(plan['users'] ?? 0) || 0,
-			percentage: totalPlanRevenue > 0 ? ((Number(plan['revenue'] ?? 0) / totalPlanRevenue) * 100) : 0
-		}));
+		const planData = plans
+			.map((plan) => {
+				const revenueCents = planRevenueById.get(plan.id) ?? 0;
+				const distinctUsers = new Set(plan.subscriptions.map((subscription) => subscription.userId)).size;
+
+				return {
+					id: plan.id,
+					name: plan.name,
+					revenue: revenueCents / 100,
+					users: distinctUsers,
+					percentage: totalPlanRevenue > 0 ? (revenueCents / totalPlanRevenue) * 100 : 0,
+				};
+			})
+			.sort((left, right) => right.revenue - left.revenue || left.name.localeCompare(right.name));
 
 		const featureArr = Array.isArray(featureUsage)
 			? (featureUsage as Array<Record<string, unknown>>)
@@ -343,28 +317,14 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			? ((currentPeriodSubsNum - previousPeriodSubsNum) / previousPeriodSubsNum) * 100
 			: 0;
 
-		const revenueByDayArr = Array.isArray(revenueByDay)
-			? (revenueByDay as Array<Record<string, unknown>>)
-			: [];
-		const processedRevenueByDay = revenueByDayArr.map((day) => ({
-			date: String(day['date'] ?? ''),
-			revenue: (Number(day['revenue'] ?? 0) || 0) / 100
+		const processedRevenueByDay = buildRevenueBuckets(revenueByDayRecords);
+		const processedSubscriptionsByDay = buildCountBuckets(subscriptionsByDayRecords).map((day) => ({
+			date: day.date,
+			subscriptions: day.count,
 		}));
-
-		const subscriptionsByDayArr = Array.isArray(subscriptionsByDay)
-			? (subscriptionsByDay as Array<Record<string, unknown>>)
-			: [];
-		const processedSubscriptionsByDay = subscriptionsByDayArr.map((day) => ({
-			date: String(day['date'] ?? ''),
-			subscriptions: Number(day['subscriptions'] ?? 0) || 0
-		}));
-
-		const usersByDayArr = Array.isArray(usersByDay)
-			? (usersByDay as Array<Record<string, unknown>>)
-			: [];
-		const userGrowthData = usersByDayArr.map((day) => ({
-			date: String(day['date'] ?? ''),
-			users: Number(day['users'] ?? 0) || 0
+		const userGrowthData = buildCountBuckets(usersByDayRecords).map((day) => ({
+			date: day.date,
+			users: day.count,
 		}));
 
 		const visitGrowthRate = previousPeriodVisitsNum > 0
@@ -375,28 +335,21 @@ export async function getAdminAnalytics(period: AdminAnalyticsPeriod = '30d'): P
 			? ((currentPeriodVisitsNum - uniqueVisitorsNum) / currentPeriodVisitsNum) * 100
 			: 0;
 
-		const visitsByCountryArr = Array.isArray(visitsByCountry)
-			? (visitsByCountry as Array<Record<string, unknown>>)
-			: [];
-		const visitsByCountryData = visitsByCountryArr.map((country) => ({
-			country: String(country['country'] ?? ''),
-			visits: Number(country['visits'] ?? 0) || 0,
-			percentage:
-				currentPeriodVisitsNum > 0
-					? ((Number(country['visits'] ?? 0) / currentPeriodVisitsNum) * 100)
-					: 0
+		const visitsByCountryData = buildTopCounts(
+			currentPeriodVisitRecords.map((visit) => visit.country),
+			10
+		).map((country) => ({
+			country: country.value,
+			visits: country.count,
+			percentage: currentPeriodVisitsNum > 0 ? (country.count / currentPeriodVisitsNum) * 100 : 0,
 		}));
-
-		const pageViewsArr = Array.isArray(pageViews)
-			? (pageViews as Array<Record<string, unknown>>)
-			: [];
-		const pageViewsData = pageViewsArr.map((page) => ({
-			path: String(page['path'] ?? ''),
-			views: Number(page['views'] ?? 0) || 0,
-			percentage:
-				currentPeriodVisitsNum > 0
-					? ((Number(page['views'] ?? 0) / currentPeriodVisitsNum) * 100)
-					: 0
+		const pageViewsData = buildTopCounts(
+			currentPeriodVisitRecords.map((visit) => visit.path),
+			10
+		).map((page) => ({
+			path: page.value,
+			views: page.count,
+			percentage: currentPeriodVisitsNum > 0 ? (page.count / currentPeriodVisitsNum) * 100 : 0,
 		}));
 
 		return {

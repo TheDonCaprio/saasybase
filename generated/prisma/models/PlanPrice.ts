@@ -527,6 +527,7 @@ export type PlanPriceCreateOrConnectWithoutPlanInput = {
 
 export type PlanPriceCreateManyPlanInputEnvelope = {
   data: Prisma.PlanPriceCreateManyPlanInput | Prisma.PlanPriceCreateManyPlanInput[]
+  skipDuplicates?: boolean
 }
 
 export type PlanPriceUpsertWithWhereUniqueWithoutPlanInput = {
@@ -1350,6 +1351,7 @@ export type PlanPriceCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * The data used to create many PlanPrices.
    */
   data: Prisma.PlanPriceCreateManyInput | Prisma.PlanPriceCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1368,6 +1370,7 @@ export type PlanPriceCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Exten
    * The data used to create many PlanPrices.
    */
   data: Prisma.PlanPriceCreateManyInput | Prisma.PlanPriceCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

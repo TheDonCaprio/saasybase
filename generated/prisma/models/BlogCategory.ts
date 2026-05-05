@@ -1158,6 +1158,7 @@ export type BlogCategoryCreateManyArgs<ExtArgs extends runtime.Types.Extensions.
    * The data used to create many BlogCategories.
    */
   data: Prisma.BlogCategoryCreateManyInput | Prisma.BlogCategoryCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1176,6 +1177,7 @@ export type BlogCategoryCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * The data used to create many BlogCategories.
    */
   data: Prisma.BlogCategoryCreateManyInput | Prisma.BlogCategoryCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**

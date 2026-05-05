@@ -602,6 +602,7 @@ export type PaymentAuthorizationCreateOrConnectWithoutUserInput = {
 
 export type PaymentAuthorizationCreateManyUserInputEnvelope = {
   data: Prisma.PaymentAuthorizationCreateManyUserInput | Prisma.PaymentAuthorizationCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type PaymentAuthorizationUpsertWithWhereUniqueWithoutUserInput = {
@@ -1480,6 +1481,7 @@ export type PaymentAuthorizationCreateManyArgs<ExtArgs extends runtime.Types.Ext
    * The data used to create many PaymentAuthorizations.
    */
   data: Prisma.PaymentAuthorizationCreateManyInput | Prisma.PaymentAuthorizationCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1498,6 +1500,7 @@ export type PaymentAuthorizationCreateManyAndReturnArgs<ExtArgs extends runtime.
    * The data used to create many PaymentAuthorizations.
    */
   data: Prisma.PaymentAuthorizationCreateManyInput | Prisma.PaymentAuthorizationCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

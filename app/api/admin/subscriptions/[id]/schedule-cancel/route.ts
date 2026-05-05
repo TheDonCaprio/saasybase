@@ -69,29 +69,19 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
 
     // Always update local DB, even if provider call failed
-    await prisma.subscription.update({ 
-      where: { id }, 
-      data: { 
+    await prisma.subscription.update({
+      where: { id },
+      data: {
         canceledAt: scheduledDate,
-        cancelAtPeriodEnd: true // Mark as scheduled for cancellation
-      } 
+        cancelAtPeriodEnd: true,
+        clearPaidTokensOnExpiry: clearPaidTokens,
+      }
     });
 
     // If admin requested clearing paid tokens when this subscription actually expires,
     // record that intention on the subscription instead of clearing the user's paid balance now.
-    try {
-      if (clearPaidTokens) {
-  // Persist admin intent to clear paid tokens when the subscription actually expires.
-  // Use a raw update here because the generated Prisma client in some environments
-  // may not yet include the new field until `prisma generate` is run. This avoids
-  // requiring a local TypeScript cast while still performing a safe DB update.
-  await prisma.$executeRaw`UPDATE "Subscription" SET "clearPaidTokensOnExpiry" = true WHERE id = ${id}`;
-      } else {
-        Logger.info('Skipping paid token clear during schedule-cancel (clearPaidTokens=false)', { actorId, subscriptionId: id, userId: sub.userId });
-      }
-    } catch (err: unknown) {
-      const e = toError(err);
-      Logger.warn('Failed to persist clearPaidTokensOnExpiry during schedule-cancel', { actorId, subscriptionId: id, userId: sub.userId, error: e.message });
+    if (!clearPaidTokens) {
+      Logger.info('Skipping paid token clear during schedule-cancel (clearPaidTokens=false)', { actorId, subscriptionId: id, userId: sub.userId });
     }
     Logger.info('Admin scheduled subscription cancel', { actorId, subscriptionId: id, providerCancelFailed });
 

@@ -500,6 +500,7 @@ export type VisitLogCreateOrConnectWithoutUserInput = {
 
 export type VisitLogCreateManyUserInputEnvelope = {
   data: Prisma.VisitLogCreateManyUserInput | Prisma.VisitLogCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type VisitLogUpsertWithWhereUniqueWithoutUserInput = {
@@ -1334,6 +1335,7 @@ export type VisitLogCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many VisitLogs.
    */
   data: Prisma.VisitLogCreateManyInput | Prisma.VisitLogCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1352,6 +1354,7 @@ export type VisitLogCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * The data used to create many VisitLogs.
    */
   data: Prisma.VisitLogCreateManyInput | Prisma.VisitLogCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

@@ -1580,6 +1580,7 @@ export type SitePageCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many SitePages.
    */
   data: Prisma.SitePageCreateManyInput | Prisma.SitePageCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1598,6 +1599,7 @@ export type SitePageCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * The data used to create many SitePages.
    */
   data: Prisma.SitePageCreateManyInput | Prisma.SitePageCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**

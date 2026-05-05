@@ -93,20 +93,18 @@ export class SecureLogger {
       return true
     }
 
+    const delegate = this.getSystemLogDelegate()
+    if (!delegate) {
+      systemLogAvailability = 'missing'
+      emitUnmigratedDbHealthWarningOnce('SystemLog')
+      this.systemLogUnavailable = true
+      return false
+    }
+
     if (!systemLogAvailabilityPromise) {
       systemLogAvailabilityPromise = (async () => {
         try {
-          const result = await prisma.$queryRawUnsafe<Array<{ name: string }>>(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'SystemLog' LIMIT 1"
-          )
-          const exists = Array.isArray(result) && result.length > 0
-          systemLogAvailability = exists ? 'available' : 'missing'
-          if (!exists) {
-            emitUnmigratedDbHealthWarningOnce('SystemLog')
-          }
-          return exists
-        } catch {
-          systemLogAvailability = 'unknown'
+          systemLogAvailability = 'available'
           return true
         } finally {
           systemLogAvailabilityPromise = null

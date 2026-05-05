@@ -472,6 +472,7 @@ export type FeatureUsageLogCreateOrConnectWithoutUserInput = {
 
 export type FeatureUsageLogCreateManyUserInputEnvelope = {
   data: Prisma.FeatureUsageLogCreateManyUserInput | Prisma.FeatureUsageLogCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type FeatureUsageLogUpsertWithWhereUniqueWithoutUserInput = {
@@ -1273,6 +1274,7 @@ export type FeatureUsageLogCreateManyArgs<ExtArgs extends runtime.Types.Extensio
    * The data used to create many FeatureUsageLogs.
    */
   data: Prisma.FeatureUsageLogCreateManyInput | Prisma.FeatureUsageLogCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1291,6 +1293,7 @@ export type FeatureUsageLogCreateManyAndReturnArgs<ExtArgs extends runtime.Types
    * The data used to create many FeatureUsageLogs.
    */
   data: Prisma.FeatureUsageLogCreateManyInput | Prisma.FeatureUsageLogCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

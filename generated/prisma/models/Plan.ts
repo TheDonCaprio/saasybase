@@ -2963,6 +2963,7 @@ export type PlanCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * The data used to create many Plans.
    */
   data: Prisma.PlanCreateManyInput | Prisma.PlanCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -2981,6 +2982,7 @@ export type PlanCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * The data used to create many Plans.
    */
   data: Prisma.PlanCreateManyInput | Prisma.PlanCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**

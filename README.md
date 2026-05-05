@@ -1,6 +1,6 @@
 # SaaSyBase
 
-A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with SQLite (dev) / PostgreSQL (prod), and a full-featured admin dashboard.
+A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with a committed PostgreSQL migration baseline, and a full-featured admin dashboard.
 
 For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/seo-and-discoverability`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
 
@@ -75,7 +75,7 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 | Framework | Next.js 16 (App Router) |
 | Auth | **Clerk** or **NextAuth (Auth.js v5)** — switchable via `AUTH_PROVIDER` |
 | Payment | **Stripe**, **Paystack**, **Paddle**, **Razorpay** — switchable via `PAYMENT_PROVIDER` |
-| Database | Prisma 7 ORM · SQLite (dev) · PostgreSQL (prod) |
+| Database | Prisma 7 ORM · PostgreSQL migration baseline · see the database guide for provider-switching rules |
 | Styling | Tailwind CSS |
 | Rich Text Editor | TipTap (blog posts and editable site pages) |
 | Email | Nodemailer (SMTP) or Resend, switchable via `EMAIL_PROVIDER` |
@@ -171,7 +171,7 @@ cp .env.example .env.local
 # 2. Install dependencies
 npm install
 
-# 3. Apply existing database migrations
+# 3. Point DATABASE_URL at PostgreSQL and apply the committed migration history
 npm run prisma:deploy
 
 # 4. Seed the database (prompts for admin email/password)
@@ -181,20 +181,27 @@ npx prisma db seed
 npm run dev
 ```
 
-If `npm run prisma:deploy` reports an old failed migration on what you expected to be a fresh install, check which `DATABASE_URL` Prisma actually resolved. The repo default is `file:./dev.db`, but `.env.local`, `.env.development`, `.env`, or an enabled secrets provider such as Doppler or Infisical can override that and point Prisma at an older local database file instead.
+The committed Prisma migration history in this repo is now **PostgreSQL-only**. `DATABASE_URL` selects which PostgreSQL database Prisma targets, but it does **not** switch the Prisma connector itself, and Prisma 7 does not allow `provider = env("DATABASE_PROVIDER")` in `schema.prisma`.
+
+If `npm run prisma:deploy` reports an old failed migration on what you expected to be a fresh install, check which `DATABASE_URL` Prisma actually resolved. `.env.local`, `.env.development`, `.env`, or an enabled secrets provider such as Doppler or Infisical can still override your intended target and point Prisma at an older database.
 
 If the issue persists, you should use npx prisma migrate reset (only if you're sure you're targeting a fresh database or a db you wouldn't mind resetting).
+
+If you are moving from an older SQLite-based local setup to PostgreSQL and hit `P3019`, use the recovery flow in [docs/prisma-provider-migrations.md](docs/prisma-provider-migrations.md).
 
 ### Choose your database
 
 You have three normal paths:
 
-- SQLite, zero setup: keep `DATABASE_URL="file:./dev.db"` for local development. This is the fastest way to get started.
-- Local PostgreSQL, more production parity: run PostgreSQL on your own machine with the official installer or the official Docker image.
+- Local PostgreSQL, recommended: run PostgreSQL on your own machine with the official installer or the official Docker image.
 - Hosted PostgreSQL, easiest production path: use any managed provider that gives you a normal PostgreSQL connection string.
+- Local SQLite, separate local-only lane: fine for throwaway prototyping, but it is **not** compatible with the committed PostgreSQL migration history in this repo. Do not expect SQLite migrations or `dev.db` files to deploy cleanly to PostgreSQL later.
 
 Useful official docs and provider guides:
 
+- Postgres.app for macOS: <https://postgresapp.com/>
+- EDB PostgreSQL Interactive Installer: <https://www.enterprisedb.com/downloads/postgres-postgresql-downloads>
+- pgAdmin downloads: <https://www.pgadmin.org/download/>
 - PostgreSQL downloads: <https://www.postgresql.org/download/>
 - PostgreSQL Docker image: <https://hub.docker.com/_/postgres>
 - Neon docs: <https://neon.com/docs>
@@ -202,7 +209,19 @@ Useful official docs and provider guides:
 - Railway PostgreSQL docs: <https://docs.railway.com/guides/postgresql>
 - Render PostgreSQL docs: <https://render.com/docs/postgresql>
 
-Smallest local SQLite path:
+If you want the easiest native local setup:
+
+- macOS: Postgres.app is usually the fastest path.
+- Windows/macOS/Linux: the official interactive PostgreSQL installer from EDB is a straightforward guided setup.
+- GUI management: pgAdmin is useful for creating databases and inspecting schema state, but it is not the PostgreSQL server itself.
+
+Typical local PostgreSQL shape:
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/DBNAME?schema=public"
+```
+
+Smallest SQLite-only prototype path:
 
 ```bash
 DATABASE_URL="file:./dev.db"
@@ -218,7 +237,7 @@ After running `npm run dev`, open [http://localhost:3000](http://localhost:3000)
 
 With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
 
-> **Database note:** The default `DATABASE_URL=file:./dev.db` keeps everything local. For deployments on read-only filesystems (Vercel, Netlify previews), point `DATABASE_URL` at a hosted PostgreSQL instance.
+> **Database note:** the shared Prisma schema and committed migration history are PostgreSQL. Use PostgreSQL for any workflow that relies on `npm run prisma:deploy` or committed migrations. If you still prototype with SQLite locally, treat that as a separate disposable lane and do not carry its migrations into production.
 
 ### Alternative dev scripts
 
@@ -244,14 +263,15 @@ These are the commands most people actually need when working on or operating th
 | `npm run lint` | Run ESLint |
 | `npm test` | Run Vitest unit/integration tests |
 | `npm run prisma:studio` | Open Prisma Studio using the repo's Prisma config |
-| `npm run prisma:migrate` | Create and apply a new local Prisma migration when you change the schema |
-| `npm run prisma:deploy` | Apply the existing Prisma migration history to a fresh or deployed database |
+| `npm run prisma:migrate` | Create and apply a new PostgreSQL Prisma migration when you change the schema |
+| `npm run prisma:deploy` | Apply the committed PostgreSQL migration history to a fresh or deployed database |
+| `npm run prisma:diagnose-provider` | Print the resolved `DATABASE_URL` provider and the schema provider before you migrate |
 | `npm run secrets:doctor` | Run the provider command directly and report the detected output shape before boot |
 | `npm run backfill:team-subscription-org-links` | Repair legacy organization/subscription links |
 
-`npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`). If you have a secrets provider enabled, it can still fill missing values, so confirm the resolved `DATABASE_URL` before assuming Prisma is targeting the default local SQLite file.
+`npm run prisma:migrate` and `npm run prisma:deploy` explicitly pass `--config prisma.config.ts`, so Prisma CLI commands read the same env precedence as the app (`.env.local` → `.env.development` → `.env`). If you have a secrets provider enabled, it can still fill missing values, so confirm the resolved `DATABASE_URL` before migrating.
 
-If you are new to the repo, the normal local loop is: `npm install` → `npm run prisma:deploy` → `npx prisma db seed` → `npm run dev`.
+If you are new to the repo, the normal local loop is: `npm install` → set a PostgreSQL `DATABASE_URL` → `npm run prisma:diagnose-provider` → `npm run prisma:deploy` → `npx prisma db seed` → `npm run dev`.
 
 ---
 
@@ -1523,6 +1543,8 @@ Complete these steps after local development is finished and before you point re
 4. If admins will upload logos or other managed files in production, switch from local filesystem storage to S3-compatible storage.
 5. Configure your webhook endpoints and verify signatures before accepting live traffic.
 
+If your team previously developed against SQLite and you are now moving to PostgreSQL, do not reuse that SQLite migration chain or local `dev.db` file in production. Start from a fresh PostgreSQL database and follow [docs/prisma-provider-migrations.md](docs/prisma-provider-migrations.md) for the supported recovery path.
+
 ### Required environment variables
 
 ```bash
@@ -1888,7 +1910,7 @@ A complete list of supported env vars is in `.env.example`. Key groups:
 
 | Group | Key prefix | Notes |
 |---|---|---|
-| Database | `DATABASE_URL` | SQLite for dev, PostgreSQL for prod |
+| Database | `DATABASE_URL` | Points Prisma at the target database. The committed provider/migration lane is PostgreSQL. |
 | App | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_APP_DOMAIN` | Public-facing URL and branding |
 | Branding | `NEXT_PUBLIC_SITE_LOGO`, `NEXT_PUBLIC_SITE_LOGO_LIGHT/DARK`, `NEXT_PUBLIC_SITE_LOGO_HEIGHT` | Site logo configuration |
 | Auth | `AUTH_PROVIDER`, `CLERK_*`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `AUTH_SECRET`, `NEXTAUTH_SECRET` | Choose Clerk, Better Auth, or NextAuth |

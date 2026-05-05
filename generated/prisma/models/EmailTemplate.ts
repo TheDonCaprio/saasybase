@@ -1156,6 +1156,7 @@ export type EmailTemplateCreateManyArgs<ExtArgs extends runtime.Types.Extensions
    * The data used to create many EmailTemplates.
    */
   data: Prisma.EmailTemplateCreateManyInput | Prisma.EmailTemplateCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1174,6 +1175,7 @@ export type EmailTemplateCreateManyAndReturnArgs<ExtArgs extends runtime.Types.E
    * The data used to create many EmailTemplates.
    */
   data: Prisma.EmailTemplateCreateManyInput | Prisma.EmailTemplateCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**

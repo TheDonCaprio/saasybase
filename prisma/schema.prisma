@@ -4,7 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // Prisma does not allow env("DATABASE_PROVIDER") here.
+  // The connector and committed migration history are provider-specific;
+  // DATABASE_URL only chooses the database instance within this provider lane.
+  provider = "postgresql"
 }
 
 // NOTE: Using plain string fields for status/role because the SQLite connector

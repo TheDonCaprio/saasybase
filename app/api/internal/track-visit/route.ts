@@ -35,24 +35,28 @@ export async function POST(request: NextRequest) {
       path
     } = data;
 
-    await prisma.$executeRaw`
-      INSERT INTO VisitLog (id, sessionId, ipAddress, userAgent, country, referrer, path, createdAt)
-      VALUES (
-        ${`visit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`},
-        ${sessionId},
-        ${ip},
-        ${userAgent},
-        ${country},
-        ${referrer},
-        ${path},
-        ${new Date().toISOString()}
-      )
-    `;
+    await prisma.visitLog.create({
+      data: {
+        sessionId,
+        ipAddress: ip,
+        userAgent,
+        country,
+        referrer,
+        path,
+      },
+    });
 
     return NextResponse.json({ success: true });
     
   } catch (error) {
-    if (error instanceof Error && error.message.includes('no such table')) {
+    if (
+      error instanceof Error
+      && (
+        error.message.includes('no such table')
+        || error.message.includes('does not exist')
+        || error.message.includes('P2021')
+      )
+    ) {
       Logger.error('Visit tracking failed because VisitLog is missing; run migrations', error);
     }
     Logger.error('Visit tracking API error', error);

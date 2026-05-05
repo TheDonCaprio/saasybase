@@ -1013,6 +1013,52 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
         }
       },
       {
+        method: 'GET',
+        path: '/api/user/active-org',
+        summary: 'Get active workspace state',
+        description: 'Returns the signed-in user\'s active organization id plus the list of active organization memberships the workspace switcher can target.',
+        access: 'user',
+        notes: [
+          'Auth: requires an authenticated user session from the active auth provider.',
+          'The handler validates the current cookie/session org and clears stale org selections automatically when membership no longer exists.',
+          'Returned planName is derived from the owner\'s effective active team subscription when available, not just the stored organization row.'
+        ],
+        rateLimitTier: 'user',
+        example: {},
+        response: {
+          activeOrgId: 'org_1',
+          organizations: [
+            {
+              id: 'org_1',
+              name: 'Acme Workspace',
+              slug: 'acme-workspace',
+              role: 'OWNER',
+              isOwner: true,
+              planName: 'Team Pro'
+            }
+          ]
+        }
+      },
+      {
+        method: 'POST',
+        path: '/api/user/active-org',
+        summary: 'Set or clear the active workspace',
+        description: 'Sets the active organization for app-managed workspace switching, or clears it to return the user to their personal workspace context.',
+        access: 'user',
+        body: {
+          orgId: 'string | null — target organization id, or null to switch back to the personal workspace',
+        },
+        notes: [
+          'Auth: requires an authenticated user session.',
+          'Better Auth routes active-org updates through its provider API and mirrors the resolved id back into the app cookie.',
+          'When orgId is null, the handler clears the active-org cookie and returns activeOrgId:null.',
+          'Returns 403 when the caller tries to switch to an organization they are not actively a member of.'
+        ],
+        rateLimitTier: 'user',
+        example: { orgId: null },
+        response: { activeOrgId: null }
+      },
+      {
         method: 'POST',
         path: '/api/team/provision',
         summary: 'Provision a team workspace',
@@ -1065,6 +1111,45 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
             ownerExemptFromCaps: true
           }
         }
+      },
+      {
+        method: 'GET',
+        path: '/api/organization/check-deletion-eligibility',
+        summary: 'Check whether a workspace can be deleted',
+        description: 'Returns whether the current team workspace, or an explicitly requested organization id, still has an active team plan that blocks deletion.',
+        access: 'user',
+        params: {
+          organizationId: 'string? — optional organization id to evaluate; defaults to the active session orgId when omitted',
+        },
+        notes: [
+          'Auth: requires an authenticated user session.',
+          'Owners and active members can query this route for organizations they belong to; unrelated organizations return 404.',
+          'When no organizationId is supplied and the session has no active org, the route treats the caller as being in a personal workspace and returns canDelete:true.',
+          'Deletion is blocked when the organization or its owner still has an active TEAM subscription attached.'
+        ],
+        rateLimitTier: 'user',
+        example: { query: { organizationId: 'org_1' } },
+        response: { canDelete: false, hasActivePlans: true, planNames: ['Team Pro'] }
+      },
+      {
+        method: 'DELETE',
+        path: '/api/organization/delete',
+        summary: 'Delete a team workspace',
+        description: 'Deletes the specified organization for its owner after confirming no active team plan still protects that workspace.',
+        access: 'user',
+        body: {
+          organizationId: 'string — required organization id owned by the signed-in user',
+        },
+        notes: [
+          'Auth: requires an authenticated user session and ownership of the organization.',
+          'Returns 409 with hasActivePlans:true when a current team plan still blocks deletion.',
+          'When providerOrganizationId exists, deletion is routed through the auth-provider abstraction so Clerk, Better Auth, and NextAuth stay aligned.',
+          'When no providerOrganizationId exists, the route detaches subscription/payment rows from the local organization and deletes the local record directly.',
+          'Clients should typically clear the active workspace afterwards by calling POST /api/user/active-org with { orgId: null }.'
+        ],
+        rateLimitTier: 'user',
+        example: { organizationId: 'org_1' },
+        response: { ok: true, deletedOrganizationId: 'org_1' }
       },
       {
         method: 'PATCH',
@@ -3707,6 +3792,15 @@ const RATE_LIMITS: AdminApiRateLimit[] = [
 ];
 
 const CHANGELOG = [
+  {
+    version: '2026.05.05',
+    releasedAt: '2026-05-05T00:00:00.000Z',
+    notes: [
+      'Added curated docs for GET /api/organization/check-deletion-eligibility and DELETE /api/organization/delete.',
+      'Expanded team API coverage for GET/POST /api/user/active-org, including personal-workspace clearing after organization deletion.',
+      'Documented the team-dashboard organization deletion flow, including active-plan gating inside the confirmation modal.'
+    ]
+  },
   {
     version: '2026.04.16',
     releasedAt: '2026-04-16T00:00:00.000Z',

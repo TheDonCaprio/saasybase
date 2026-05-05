@@ -1147,6 +1147,20 @@ export const ADMIN_API_INVENTORY: AdminApiInventoryEndpoint[] = [
   },
   {
     "method": "GET",
+    "path": "/api/organization/check-deletion-eligibility",
+    "access": "user",
+    "summary": "Inventory entry for /api/organization/check-deletion-eligibility",
+    "source": "app/api/organization/check-deletion-eligibility/route.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/organization/delete",
+    "access": "user",
+    "summary": "Inventory entry for /api/organization/delete",
+    "source": "app/api/organization/delete/route.ts"
+  },
+  {
+    "method": "GET",
     "path": "/api/user/active-org",
     "access": "user",
     "summary": "Inventory entry for /api/user/active-org",

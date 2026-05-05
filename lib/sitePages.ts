@@ -217,25 +217,25 @@ export async function ensureCorePages(): Promise<void> {
 
       const sanitizedContent = await sanitizeRichText(contentWithEmails);
       const description = clampDescription((definition.description || '').replace(/SaaSyBase Pro/gi, siteName).replace(/\{\{siteName\}\}/g, siteName), sanitizedContent);
-      try {
-        await prisma.sitePage.create({
-          data: {
+      await prisma.sitePage.upsert({
+        where: {
+          collection_slug: {
             collection: DEFAULT_COLLECTION,
             slug: definition.slug,
-            title: definition.title,
-            description,
-            content: sanitizedContent,
-            system: true,
-            published: true,
-            publishedAt: new Date()
-          } as unknown as Prisma.SitePageCreateInput
-        });
-      } catch (createErr: unknown) {
-        // P2002 = unique constraint violation — a concurrent request already
-        // inserted this core page between our findFirst check and this create.
-        // That is fine; the row exists with the right data so we move on.
-        if ((createErr as { code?: string }).code !== 'P2002') throw createErr;
-      }
+          },
+        },
+        create: {
+          collection: DEFAULT_COLLECTION,
+          slug: definition.slug,
+          title: definition.title,
+          description,
+          content: sanitizedContent,
+          system: true,
+          published: true,
+          publishedAt: new Date()
+        } as unknown as Prisma.SitePageCreateInput,
+        update: {}
+      });
       continue;
     }
 

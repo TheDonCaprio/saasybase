@@ -1,5 +1,6 @@
 import { authService } from '@/lib/auth-provider/service';
 import { handleApiError } from '@/lib/api-error';
+import { prisma } from '@/lib/prisma';
 import { getOrganizationActiveTeamPlans } from '@/lib/teams';
 import { NextResponse } from 'next/server';
 
@@ -9,16 +10,36 @@ import { NextResponse } from 'next/server';
  * Check if the current active organization can be deleted.
  * Returns whether it has active team plans that would prevent deletion.
  */
-export async function GET() {
+export async function GET(request: Request) {
 	try {
-		const { orgId } = await authService.getSession();
+		const { userId, orgId } = await authService.getSession();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
+		const requestedOrganizationId = new URL(request.url).searchParams.get('organizationId') || orgId;
 
 		// No org context = personal workspace, no team plan to worry about
-		if (!orgId) {
+		if (!requestedOrganizationId) {
 			return NextResponse.json({ canDelete: true, hasActivePlans: false });
 		}
 
-		const activeTeamPlans = await getOrganizationActiveTeamPlans(orgId);
+		const organization = await prisma.organization.findFirst({
+			where: {
+				id: requestedOrganizationId,
+				OR: [
+					{ ownerUserId: userId },
+					{ memberships: { some: { userId, status: 'ACTIVE' } } },
+				],
+			},
+			select: { id: true },
+		});
+
+		if (!organization) {
+			return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+		}
+
+		const activeTeamPlans = await getOrganizationActiveTeamPlans(organization.id);
 		const hasActivePlans = activeTeamPlans && activeTeamPlans.length > 0;
 
 		return NextResponse.json({

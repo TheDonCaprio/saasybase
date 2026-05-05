@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { TeamDashboardOrganization, TeamDashboardState } from '../../lib/team-dashboard';
@@ -11,6 +13,7 @@ import { useAuthSession } from '@/lib/auth-provider/client';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../dashboard/dashboardSurfaces';
 import { ProvisionRefreshButton } from './ProvisionRefreshButton';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 import { TeamMembersList } from './TeamMembersList';
 import { InviteAcceptanceClient } from './InviteAcceptanceClient';
@@ -27,6 +30,13 @@ interface StatusBanner {
   tone: 'success' | 'error';
   message: string;
 }
+
+type DeleteEligibilityState = {
+  loading: boolean;
+  hasActivePlans: boolean;
+  planNames: string[];
+  error: string | null;
+};
 
 type ApiResponse = {
   ok: boolean;
@@ -59,7 +69,14 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
   const [autoSynced, setAutoSynced] = useState(false);
   const [showCapsModal, setShowCapsModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [orgNameInput, setOrgNameInput] = useState('');
+  const [deleteEligibility, setDeleteEligibility] = useState<DeleteEligibilityState>({
+	loading: false,
+	hasActivePlans: false,
+	planNames: [],
+	error: null,
+  });
   const previousOrgIdRef = useRef(currentOrgId);
   const ORG_NAME_MAX = 30;
   const ORG_NAME_RE = /^[A-Za-z0-9\-\.\s,']+$/;
@@ -256,6 +273,39 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
     setBusyAction(null);
   }, [isOwner, callEndpoint]);
 
+  const handleDeleteOrganization = useCallback(async () => {
+  if (!organization || !isOwner) return;
+
+  setBusyAction('delete-org');
+  try {
+    const response = await fetch('/api/organization/delete', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ organizationId: organization.id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+    throw new Error(typeof payload?.error === 'string' ? payload.error : 'Failed to delete organization');
+    }
+
+    await fetch('/api/user/active-org', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orgId: null }),
+    }).catch(() => null);
+
+    router.replace('/dashboard/team?orgDeleted=1');
+    router.refresh();
+  } catch (error) {
+    console.error(error);
+    setStatus({
+    tone: 'error',
+    message: error instanceof Error ? error.message : 'Failed to delete organization.',
+    });
+    setBusyAction(null);
+  }
+  }, [organization, isOwner, router]);
+
   const pendingInvites = useMemo(() => {
     if (!organization) return [] as TeamDashboardOrganization['invites'];
     // Only show actively pending invites in the management UI; expired or
@@ -281,7 +331,9 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
     setBusyAction(null);
     setShowCapsModal(false);
     setShowInviteModal(false);
+    setShowDeleteModal(false);
     setAutoSynced(false);
+    setDeleteEligibility({ loading: false, hasActivePlans: false, planNames: [], error: null });
   }, [initialState]);
 
   useEffect(() => {
@@ -320,6 +372,50 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
       cancelled = true;
     };
   }, [autoSynced, refresh]);
+
+  useEffect(() => {
+  if (!showDeleteModal || !organization || !isOwner) {
+    return;
+  }
+
+  let cancelled = false;
+
+  const loadDeleteEligibility = async () => {
+    setDeleteEligibility({ loading: true, hasActivePlans: false, planNames: [], error: null });
+    try {
+    const response = await fetch(`/api/organization/check-deletion-eligibility?organizationId=${encodeURIComponent(organization.id)}`);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof payload?.error === 'string' ? payload.error : 'Failed to check deletion eligibility');
+    }
+    if (!cancelled) {
+      setDeleteEligibility({
+      loading: false,
+      hasActivePlans: payload.hasActivePlans === true,
+      planNames: Array.isArray(payload.planNames) ? payload.planNames.filter((value: unknown): value is string => typeof value === 'string') : [],
+      error: null,
+      });
+    }
+    } catch (error) {
+    if (!cancelled) {
+      setDeleteEligibility({
+      loading: false,
+      hasActivePlans: false,
+      planNames: [],
+      error: error instanceof Error ? error.message : defaultError,
+      });
+    }
+    }
+  };
+
+  loadDeleteEligibility().catch((error) => {
+    console.error(error);
+  });
+
+  return () => {
+    cancelled = true;
+  };
+  }, [showDeleteModal, organization, isOwner]);
 
   const seatSummary = useMemo(() => {
     if (!organization) return null;
@@ -508,7 +604,23 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
             <h2 className="text-xl font-semibold text-slate-900 dark:text-neutral-100">{organization.name}</h2>
             <p className="text-sm text-slate-600 dark:text-neutral-400">Slug: {organization.slug}</p>
           </div>
-          <ProvisionRefreshButton onRefresh={() => refresh(true)} disabled={busyAction === 'refresh'} />
+          <div className="flex items-center gap-1.5">
+            <ProvisionRefreshButton onRefresh={() => refresh(true)} disabled={busyAction === 'refresh'} />
+            {isOwner ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus(null);
+                  setShowDeleteModal(true);
+                }}
+                aria-label="Delete organization"
+                title="Delete organization"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300 bg-white text-red-700 shadow-sm transition hover:border-red-400 hover:bg-red-50 dark:border-red-500/50 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/10"
+              >
+                <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+              </button>
+            ) : null}
+          </div>
         </div>
         {renderStatus()}
         <div className="grid gap-4 md:grid-cols-3">
@@ -636,6 +748,49 @@ export function TeamManagementClient({ initialState, viewer, pendingInvitesForVi
           />
         </>
       )}
+
+    <ConfirmModal
+    isOpen={showDeleteModal}
+    onClose={() => {
+      if (busyAction === 'delete-org') return;
+      setShowDeleteModal(false);
+    }}
+    onConfirm={handleDeleteOrganization}
+    title="Delete organization"
+    description="Delete this workspace and remove its memberships and invites. Historical billing records remain detached for continuity. This action cannot be undone."
+    confirmLabel="Delete organization"
+    loading={busyAction === 'delete-org'}
+    confirmDisabled={!organization || deleteEligibility.loading || deleteEligibility.hasActivePlans || Boolean(deleteEligibility.error)}
+    >
+    <div className="space-y-3 text-sm">
+      {deleteEligibility.loading ? (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+        Checking whether this workspace can be deleted...
+      </div>
+      ) : null}
+      {deleteEligibility.error ? (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+        {deleteEligibility.error}
+      </div>
+      ) : null}
+      {deleteEligibility.hasActivePlans ? (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+        <p className="font-semibold">This workspace has an active team plan.</p>
+        <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+        Cancel the team plan before deleting this organization. {deleteEligibility.planNames.length > 0 ? `Active plan${deleteEligibility.planNames.length === 1 ? '' : 's'}: ${deleteEligibility.planNames.join(', ')}.` : ''}
+        </p>
+        <Link href="/dashboard/billing" className="mt-2 inline-flex text-xs font-semibold underline hover:opacity-80">
+        Go to billing
+        </Link>
+      </div>
+      ) : null}
+      {!deleteEligibility.loading && !deleteEligibility.error && !deleteEligibility.hasActivePlans ? (
+      <p className="text-slate-600 dark:text-neutral-300">
+        The confirm button is enabled because this workspace no longer has an active team plan attached.
+      </p>
+      ) : null}
+    </div>
+    </ConfirmModal>
     </div>
   );
 }

@@ -14,7 +14,6 @@ import { getCurrentUserWithFallback } from '../../../lib/user-helpers';
 import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
 import { Logger } from '../../../lib/logger';
 import { getOrganizationReferenceWhere } from '../../../lib/organization-reference';
-import { TeamPlanDeletionWarning } from '../../../components/dashboard/TeamPlanDeletionWarning';
 
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
 import { buildDashboardSidebarItems } from '../../../lib/dashboard-nav/groups';
@@ -144,7 +143,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <GracePeriodNotice />
         <AnnouncementBanner message={announcementMessage} />
         <PurchaseNotice />
-        <TeamPlanDeletionWarning />
         {suspendedOrganizationNotice && (
           <WorkspaceSuspendedNotice
             reason={suspendedOrganizationNotice.reason}

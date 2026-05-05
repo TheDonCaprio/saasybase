@@ -23,6 +23,7 @@ describe('SecureLogger Sentry fan-out', () => {
   const env = process.env as Record<string, string | undefined>
   const originalNodeEnv = process.env.NODE_ENV
   const originalSentryCaptureInDevelopment = process.env.SENTRY_CAPTURE_IN_DEVELOPMENT
+  const originalDisableDbLogPersistence = process.env.DISABLE_DB_LOG_PERSISTENCE
   let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
   let consoleWarnSpy: ReturnType<typeof vi.spyOn> | null = null
   const flushAsyncWork = async (): Promise<void> => {
@@ -36,6 +37,7 @@ describe('SecureLogger Sentry fan-out', () => {
     vi.resetModules()
     env.NODE_ENV = 'production'
     delete env.SENTRY_CAPTURE_IN_DEVELOPMENT
+    env.DISABLE_DB_LOG_PERSISTENCE = 'false'
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
@@ -50,6 +52,7 @@ describe('SecureLogger Sentry fan-out', () => {
   afterAll(() => {
     env.NODE_ENV = originalNodeEnv
     env.SENTRY_CAPTURE_IN_DEVELOPMENT = originalSentryCaptureInDevelopment
+    env.DISABLE_DB_LOG_PERSISTENCE = originalDisableDbLogPersistence
   })
 
   it('forwards production errors to Sentry without skipping SystemLog persistence', async () => {

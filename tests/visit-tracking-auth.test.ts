@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const executeRawMock = vi.hoisted(() => vi.fn());
+const createVisitLogMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    $executeRaw: executeRawMock,
+    visitLog: {
+      create: createVisitLogMock,
+    },
   },
 }));
 
@@ -42,7 +44,7 @@ describe('visit tracking internal auth', () => {
   });
 
   it('accepts a matching bearer token', async () => {
-    executeRawMock.mockResolvedValue(undefined);
+    createVisitLogMock.mockResolvedValue(undefined);
 
     const req = new NextRequest('http://localhost/api/internal/track-visit', {
       method: 'POST',
@@ -58,12 +60,21 @@ describe('visit tracking internal auth', () => {
 
     expect(res.status).toBe(200);
     expect(body).toEqual({ success: true });
-    expect(executeRawMock).toHaveBeenCalled();
+    expect(createVisitLogMock).toHaveBeenCalledWith({
+      data: {
+        sessionId: 'session_1',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla',
+        country: 'US',
+        referrer: 'direct',
+        path: '/',
+      },
+    });
   });
 
   it('fails cleanly when the VisitLog table is missing instead of creating schema at request time', async () => {
     const missingTableError = new Error('no such table: VisitLog');
-    executeRawMock.mockRejectedValueOnce(missingTableError);
+    createVisitLogMock.mockRejectedValueOnce(missingTableError);
 
     const req = new NextRequest('http://localhost/api/internal/track-visit', {
       method: 'POST',
@@ -79,7 +90,7 @@ describe('visit tracking internal auth', () => {
 
     expect(res.status).toBe(500);
     expect(body).toEqual({ success: false });
-    expect(executeRawMock).toHaveBeenCalledTimes(1);
+    expect(createVisitLogMock).toHaveBeenCalledTimes(1);
   });
 
   it('sends bearer auth from the visit-tracking client helper', async () => {

@@ -10,6 +10,12 @@ let unmigratedDbHealthWarned = false
 let systemLogAvailability: 'unknown' | 'available' | 'missing' = 'unknown'
 let systemLogAvailabilityPromise: Promise<boolean> | null = null
 
+function shouldPersistLogsToDatabase(): boolean {
+  if (process.env.NODE_ENV === 'test') return false
+  if (process.env.DISABLE_DB_LOG_PERSISTENCE === 'true') return false
+  return true
+}
+
 export function emitUnmigratedDbHealthWarningOnce(missingTable: 'Setting' | 'SystemLog' | 'unknown' = 'unknown'): void {
   if (process.env.NODE_ENV === 'test') return
   if (unmigratedDbHealthWarned) return
@@ -120,6 +126,10 @@ export class SecureLogger {
   }
 
   private async persistLog(level: 'WARN' | 'ERROR', message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
+    if (!shouldPersistLogsToDatabase()) {
+      return
+    }
+
     if (this.systemLogUnavailable) {
       return
     }

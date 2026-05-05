@@ -4,6 +4,8 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TeamSubscriptionStatus } from '../lib/organization-access';
+import type { TeamDashboardState } from '../lib/team-dashboard';
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -92,16 +94,35 @@ describe('TeamManagementClient delete organization modal', () => {
 	}
 
 	function buildState() {
+		const subscription = {
+			id: 'sub_1',
+			status: 'ACTIVE',
+			expiresAt: '2999-01-01T00:00:00.000Z',
+			plan: {
+				id: 'plan_team',
+				name: 'Team',
+				shortDescription: 'Team workspace plan',
+				description: 'Allows managing a shared team workspace.',
+				priceCents: 0,
+				durationHours: 720,
+				isLifetime: false,
+				autoRenew: true,
+				recurringInterval: 'month',
+				tokenLimit: 1000,
+				tokenName: 'tokens',
+				organizationSeatLimit: 5,
+				organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+				supportsOrganizations: true,
+			},
+			scheduledPlan: null,
+		} as unknown as Extract<TeamSubscriptionStatus, { allowed: true; kind: 'OWNER' }>['subscription'];
+
 		return {
 			access: {
 				allowed: true,
 				kind: 'OWNER',
-				subscription: {
-					id: 'sub_1',
-					status: 'ACTIVE',
-					expiresAt: '2999-01-01T00:00:00.000Z',
-				},
-				plan: { id: 'plan_team' },
+				subscription,
+				plan: subscription.plan,
 			},
 			organization: {
 				id: 'org_1',
@@ -127,7 +148,7 @@ describe('TeamManagementClient delete organization modal', () => {
 					seatsRemaining: 4,
 				},
 			},
-		} as const;
+		} satisfies TeamDashboardState;
 	}
 
 	function installFetchMock(eligibilityResponses: Array<{ canDelete: boolean; hasActivePlans: boolean; planNames?: string[] }>) {

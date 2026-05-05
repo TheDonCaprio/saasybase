@@ -183,6 +183,8 @@ npm run dev
 
 If `npm run prisma:deploy` reports an old failed migration on what you expected to be a fresh install, check which `DATABASE_URL` Prisma actually resolved. The repo default is `file:./dev.db`, but `.env.local`, `.env.development`, `.env`, or an enabled secrets provider such as Doppler or Infisical can override that and point Prisma at an older local database file instead.
 
+If the issue persists, you should use npx prisma migrate reset (only if you're sure you're targeting a fresh database or a db you wouldn't mind resetting).
+
 ### Choose your database
 
 You have three normal paths:

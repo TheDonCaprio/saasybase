@@ -57,7 +57,6 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@sentry/nextjs": "^10.49.0",
-    "@solana/web3.js": "^1.98.4",
     "@stripe/react-stripe-js": "^5.4.0",
     "@stripe/stripe-js": "^8.5.2",
     "@tiptap/extension-color": "^3.7.2",
@@ -101,7 +100,10 @@
     "protobufjs": "7.5.5",
     "@hono/node-server": "1.19.14",
     "hono": "4.12.14",
-    "svix": "1.92.2"
+    "svix": "1.92.2",
+    "@clerk/themes": {
+      "@clerk/shared": "3.47.5"
+    }
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

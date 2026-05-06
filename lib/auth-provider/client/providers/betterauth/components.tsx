@@ -276,10 +276,11 @@ function Field({
 }
 
 function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const { className, ...rest } = props;
   return (
     <input
-      {...props}
-      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-violet-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+      {...rest}
+      className={`w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-violet-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 ${className ?? ''}`.trim()}
     />
   );
 }
@@ -533,6 +534,7 @@ function SignInForm({
   const initialQueryState = useMemo(() => readSignInQueryState(), []);
   const [email, setEmail] = useState(initialQueryState.email);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(initialQueryState.error);
   const [success, setSuccess] = useState<string | null>(initialQueryState.success);
@@ -624,7 +626,14 @@ function SignInForm({
         </Field>
 
         <Field label="Password">
-          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          <PasswordInput
+            visible={showPassword}
+            onToggle={() => setShowPassword((current) => !current)}
+            toggleLabel={{ show: 'Show password', hide: 'Hide password' }}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
         </Field>
 
         <div className="flex items-center justify-between gap-4 text-sm">
@@ -797,6 +806,7 @@ function SignUpForm({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -870,7 +880,14 @@ function SignUpForm({
         </Field>
 
         <Field label="Password">
-          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          <PasswordInput
+            visible={showPassword}
+            onToggle={() => setShowPassword((current) => !current)}
+            toggleLabel={{ show: 'Show password', hide: 'Hide password' }}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
         </Field>
 
         <button

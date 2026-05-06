@@ -14,10 +14,10 @@ export async function SitePageView({ page }: { page: SitePageRecord }) {
     : [];
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-16">
+    <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 pt-10 pb-4 sm:py-6 lg:py-16">
       <div className={`grid gap-6 lg:gap-12 items-stretch ${pagesSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
-        <article className={`${pagesSidebarEnabled ? 'lg:col-span-2' : 'max-w-4xl mx-auto'} min-h-0`}> 
-          <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 lg:p-12 h-full flex flex-col">
+        <article className={`${pagesSidebarEnabled ? 'lg:col-span-2' : 'max-w-5xl mx-auto'} min-h-0`}> 
+          <div className="h-full flex flex-col">
             <header className="mb-6 lg:mb-12">
               <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: page.title }]} />
               <h1 className="mb-4 lg:mb-6 text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight" style={{ lineHeight: '1.2' }}>{page.title}</h1>

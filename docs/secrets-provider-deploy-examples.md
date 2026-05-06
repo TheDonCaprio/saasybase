@@ -10,6 +10,11 @@ Use this mental model:
 - staging and production: prefer platform-native encrypted env vars first
 - centralized secret management across platforms: opt into Infisical or Doppler bootstrap
 
+One more rule that trips up first-time operators:
+
+- managed platforms such as Vercel and Coolify normally handle dependency installation for you during build
+- `npx prisma db seed` is a one-time bootstrap command for a brand-new database, not a command to run on every deploy
+
 The app already knows how to do this. When enabled, the built-in loader resolves missing secrets from the selected provider before `build`, `start`, and Prisma commands run.
 
 ## Start Here
@@ -198,11 +203,17 @@ If you can run `doppler run -- npm run build` manually but deploy/runtime fails,
 
 Recommended default: use Vercel encrypted env vars directly.
 
+Vercel handles dependency installation during the build, so you normally do not add a separate manual `npm install` step in the Vercel dashboard.
+
+If the production database is brand new and empty, run `npx prisma db seed` one time after `npm run prisma:deploy` so the starter admin, plans, settings, and editable pages exist.
+
 If you want centralized secrets instead, use Infisical or Doppler and authenticate the provider CLI in the build/runtime environment.
 
 ## Coolify
 
 Recommended default: use Coolify application secrets/env vars directly.
+
+In the standard Node/Nixpacks flow, Coolify handles dependency installation during image build. Your job is to define migration, build, and start behavior clearly.
 
 If your team already standardized on Infisical or Doppler, use the same envs shown above and make sure the corresponding CLI is available in the build/runtime image.
 
@@ -211,12 +222,15 @@ Recommended commands:
 - pre-deploy migration hook: `npm run prisma:deploy`
 - build: `npm run build`
 - start: `npm run start`
+- one-time bootstrap for a brand-new database: `npx prisma db seed`
 - validation before cutover: `npm run secrets:doctor` and `npm run secrets:smoke`
 - scheduled cron caller: `Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>` (the route also accepts `CRON_SECRET` and `CRON_TOKEN`)
 
 ## Self-Hosted Linux VPS
 
 Recommended default: use a locked-down environment file and systemd.
+
+On a VPS, you do run `npm install` yourself because you control the server directly. Use `npx prisma db seed` only once for the first setup of an empty database.
 
 If you want centralized bootstrap instead, install and authenticate the provider CLI for the app user, then use the same Infisical or Doppler envs shown above.
 

@@ -235,6 +235,8 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DBNAME?schema=public"
 
 After running `npm run dev`, open [http://localhost:3000](http://localhost:3000). You'll see the landing page. Sign in at `/sign-in` or go to `/admin` once you've set up an admin user (see [Admin Setup](#admin-setup)).
 
+If you access local development through a custom hostname or tunnel instead of plain `localhost`, set `ALLOWED_DEV_ORIGINS` in `.env.local`. Example: `ALLOWED_DEV_ORIGINS="app.localhost.test,*.ngrok-free.dev"`. Leave it empty for normal localhost development, and restart the dev server after changing it.
+
 With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
 
 > **Database note:** the shared Prisma schema and committed migration history are PostgreSQL. Use PostgreSQL for any workflow that relies on `npm run prisma:deploy` or committed migrations. If you still prototype with SQLite locally, treat that as a separate disposable lane and do not carry its migrations into production.

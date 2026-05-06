@@ -6,6 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isContentSecurityPolicyEnabled = process.env.ENABLE_CSP === 'true';
+const allowedDevOrigins = (process.env.ALLOWED_DEV_ORIGINS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 function buildContentSecurityPolicy() {
   const directives = [
@@ -151,12 +155,9 @@ function buildContentSecurityPolicy() {
 const contentSecurityPolicy = buildContentSecurityPolicy();
 
 const nextConfig = {
-  // Allow accessing the dev server from local network devices and the current
-  // ngrok tunnel so HMR and other Next.js dev assets are not blocked.
-  allowedDevOrigins: [
-    '192.168.0.11',
-    'tanisha-nonreputable-corrin.ngrok-free.dev',
-  ],
+  // Most installs only use the default dev origin, so keep extra dev origins
+  // opt-in via ALLOWED_DEV_ORIGINS="host1,host2,*.example.test".
+  ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),
 
   // Expose AUTH_PROVIDER to client-side code under NEXT_PUBLIC_ prefix.
   // This enables build-time conditional imports in the auth abstraction layer.

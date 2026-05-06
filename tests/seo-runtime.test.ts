@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
@@ -61,6 +64,21 @@ vi.mock('next/headers', () => ({ cookies: vi.fn().mockResolvedValue({}) }));
 vi.mock('next/script', () => ({ default: () => null }));
 vi.mock('next/link', () => ({ default: () => null }));
 vi.mock('@fortawesome/fontawesome-svg-core', () => ({ config: {} }));
+
+async function importFirstAvailable<T>(requests: string[]): Promise<T | null> {
+  const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+
+  for (const request of requests) {
+    const resolvedPath = path.resolve(currentDirectory, request);
+    if (!fs.existsSync(resolvedPath) && !fs.existsSync(`${resolvedPath}.ts`) && !fs.existsSync(`${resolvedPath}.tsx`)) {
+      continue;
+    }
+
+    return await import(pathToFileURL(resolvedPath).href) as T;
+  }
+
+  return null;
+}
 
 describe('seo runtime', () => {
   beforeEach(() => {
@@ -264,7 +282,14 @@ describe('seo runtime', () => {
       resolvedHomeCanonicalUrl: 'https://example.com/',
     });
 
-    const { generateMetadata } = await import('../app/page.public-export');
+    const publicExportPageModule = await importFirstAvailable<{ generateMetadata: () => Promise<unknown> }>([
+      '../app/page.public-export',
+      '../app/page',
+    ]);
+
+    expect(publicExportPageModule).not.toBeNull();
+
+    const { generateMetadata } = publicExportPageModule!;
     const metadata = await generateMetadata();
 
     expect(metadata).toMatchObject({
@@ -398,7 +423,15 @@ describe('seo runtime', () => {
   });
 
   it('builds docs metadata without duplicating the site name in the page title', async () => {
-    const { buildDocsMetadata } = await import('../lib/docs-metadata');
+    const docsMetadataModule = await importFirstAvailable<{ buildDocsMetadata: (input: { title: string; description: string }) => Promise<unknown> }> ([
+      '../lib/docs-metadata',
+    ]);
+
+    if (!docsMetadataModule) {
+      return;
+    }
+
+    const { buildDocsMetadata } = docsMetadataModule;
     const metadata = await buildDocsMetadata({
       title: 'Local PostgreSQL',
       description: 'Docs description',

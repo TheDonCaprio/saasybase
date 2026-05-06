@@ -31,7 +31,7 @@ export default async function BlogPostPage({ params }: PageParams) {
   const relatedEnabled = await getRelatedPostsEnabled();
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-0 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-16">
+    <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-16">
       <div className={`grid gap-6 lg:gap-12 items-stretch ${singleSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
         <article className={`${singleSidebarEnabled ? 'lg:col-span-2' : 'max-w-4xl mx-auto'} min-h-0`}>
           <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 lg:p-12 h-full flex flex-col">

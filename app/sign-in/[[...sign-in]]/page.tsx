@@ -3,16 +3,17 @@ import { getAuthFormAppearance } from '@/lib/auth-provider/client/clerk-appearan
 import { AuthLoadingSkeleton } from '@/components/ui/AuthLoadingSkeleton';
 import { AuthFormWrapper } from '@/components/ui/AuthFormWrapper';
 import { authService } from '@/lib/auth-provider';
+import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 import { sanitizeReturnPath } from '@/lib/route-guards';
 import { redirect } from 'next/navigation';
 
 type SearchParams = Record<string, string | string[] | undefined> | undefined;
 
-function normalizeRedirect(searchParams: SearchParams): string {
+function normalizeRedirect(searchParams: SearchParams, fallbackPath: string): string {
   const rawParam = searchParams?.redirect_url ?? searchParams?.returnBackUrl ?? searchParams?.redirectUrl;
   const pick = Array.isArray(rawParam) ? rawParam[0] : rawParam;
 
-  return sanitizeReturnPath(pick, '/dashboard');
+  return sanitizeReturnPath(pick, fallbackPath);
 }
 
 interface SignInPageProps {
@@ -23,7 +24,7 @@ const pageCardClass = 'w-full rounded-2xl border border-neutral-200 bg-white p-6
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const resolvedSearchParams = await searchParams;
-  const redirectPath = normalizeRedirect(resolvedSearchParams);
+  const redirectPath = normalizeRedirect(resolvedSearchParams, adminOnlyPublicSiteMode ? '/admin' : '/dashboard');
   const { userId } = await authService.getSession();
   const isNextAuth = (process.env.AUTH_PROVIDER || 'clerk').toLowerCase() === 'nextauth';
 
@@ -38,10 +39,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       <div className="w-full max-w-[28rem] space-y-8 mt-6">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-white">
-            Sign in to your account
+            {adminOnlyPublicSiteMode ? 'Admin sign in' : 'Sign in to your account'}
           </h2>
           <p className="mt-2 text-sm text-neutral-400">
-            Access your dashboard and manage your subscription
+            {adminOnlyPublicSiteMode
+              ? 'Access the admin area for this public-site deployment'
+              : 'Access your dashboard and manage your subscription'}
           </p>
         </div>
         <AuthFormWrapper fallback={<AuthLoadingSkeleton />}>
@@ -54,7 +57,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 appearance={getAuthFormAppearance('page')}
                 fallbackRedirectUrl={redirectPath}
                 forceRedirectUrl={redirectPath}
-                signUpUrl={signUpUrl}
+                {...(!adminOnlyPublicSiteMode ? { signUpUrl } : {})}
               />
             </div>
           </div>

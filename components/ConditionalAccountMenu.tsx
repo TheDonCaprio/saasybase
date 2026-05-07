@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 
 const AccountMenu = dynamic(() => import('./AccountMenu'), {
   ssr: false,
@@ -21,10 +22,13 @@ const AccountMenu = dynamic(() => import('./AccountMenu'), {
 
 export function ConditionalAccountMenu() {
   const pathname = usePathname();
-  
-  // Show AccountMenu on all pages, but hide on mobile for dashboard/admin
   const isAdminOrDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-  
+
+  if (adminOnlyPublicSiteMode && !isAdminOrDashboard) {
+    return null;
+  }
+
+  // Show AccountMenu on all pages, but hide on mobile for dashboard/admin
   return (
     <div className={isAdminOrDashboard ? 'hidden lg:block' : ''}>
       <AccountMenu />

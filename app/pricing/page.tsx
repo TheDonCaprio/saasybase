@@ -19,6 +19,8 @@ import { buildPendingSubscriptionSectionCopy } from '../../lib/pending-subscript
 import { PLAN_WITH_BILLING_FIELDS, buildPlanDisplay, getOrganizationPlanContext, getPlanScope, getSubscriptionScopeFilter } from '../../lib/user-plan-context';
 import { buildPricingCardRecurringState } from '../../lib/pricing-card-status';
 import { getSeoSettings } from '../../lib/seo';
+import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [siteName, seoSettings] = await Promise.all([
@@ -53,6 +55,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PricingPage() {
+  if (adminOnlyPublicSiteMode) {
+    redirect('/');
+  }
+
   const { userId, orgId } = await authService.getSession();
   const activeCurrency = await getActiveCurrencyAsync();
   const now = new Date();

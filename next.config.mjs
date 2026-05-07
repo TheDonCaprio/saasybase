@@ -163,6 +163,7 @@ const nextConfig = {
   // This enables build-time conditional imports in the auth abstraction layer.
   env: {
     NEXT_PUBLIC_AUTH_PROVIDER: process.env.AUTH_PROVIDER || 'clerk',
+    NEXT_PUBLIC_ADMIN_ONLY_PUBLIC_SITE: process.env.ADMIN_ONLY_PUBLIC_SITE || 'false',
   },
 
   // Prevent output tracing from walking up to an unrelated workspace root

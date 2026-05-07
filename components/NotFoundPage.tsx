@@ -1,7 +1,23 @@
 import React from 'react';
 import Link from 'next/link';
+import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 
 export function NotFoundPage() {
+  const popularPages = [
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'Sign in', href: '/sign-in' },
+    { label: 'Sign up', href: '/sign-up' },
+    { label: 'Privacy', href: '/privacy' },
+    { label: 'Terms', href: '/terms' },
+  ].filter(({ href }) => {
+    if (adminOnlyPublicSiteMode && (href === '/pricing' || href === '/sign-up')) {
+      return false;
+    }
+
+    return true;
+  });
+
   return (
     <div
       data-not-found-page="true"
@@ -58,14 +74,7 @@ export function NotFoundPage() {
           Popular pages
         </p>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {[
-            { label: 'Pricing', href: '/pricing' },
-            { label: 'Contact', href: '/contact' },
-            { label: 'Sign in', href: '/sign-in' },
-            { label: 'Sign up', href: '/sign-up' },
-            { label: 'Privacy', href: '/privacy' },
-            { label: 'Terms', href: '/terms' },
-          ].map(({ label, href }) => (
+          {popularPages.map(({ label, href }) => (
             <li key={href}>
               <Link
                 href={href}

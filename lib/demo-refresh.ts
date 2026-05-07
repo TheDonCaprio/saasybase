@@ -74,7 +74,7 @@ async function runTransactionsInChunks(tasks: Array<Prisma.PrismaPromise<unknown
   for (let index = 0; index < tasks.length; index += size) {
     const batch = tasks.slice(index, index + size);
     if (batch.length > 0) {
-      await prisma.$transaction(batch);
+      await Promise.all(batch);
     }
   }
 }

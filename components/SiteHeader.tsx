@@ -10,6 +10,7 @@ import { ConditionalDashboardDrawer } from './ConditionalDashboardDrawer';
 import { ConditionalAdminDrawer } from './ConditionalAdminDrawer';
 import { HeaderMobileMenu } from './HeaderMobileMenu';
 import type { HeaderStyle, ThemeLink } from '../lib/settings';
+import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 
 export type HeaderLayoutSettings = {
   style: HeaderStyle;
@@ -41,6 +42,9 @@ export function SiteHeader({
   const [isSticky, setIsSticky] = useState(false);
   const [headerBlurPx, setHeaderBlurPx] = useState<number | null>(null);
   const [stickyHeaderBlurPx, setStickyHeaderBlurPx] = useState<number | null>(null);
+  const visibleHeaderLinks = adminOnlyPublicSiteMode
+    ? headerLinks.filter((link) => link.href !== '/pricing')
+    : headerLinks;
   const stickyActive = layout.stickyEnabled && isSticky;
   const stickyOverlayClassName = !layout.stickyEnabled
     ? '-translate-y-full opacity-0 pointer-events-none'
@@ -152,12 +156,12 @@ export function SiteHeader({
       <ConditionalAccountMenu />
       <ConditionalDashboardDrawer />
       <ConditionalAdminDrawer />
-      {headerLinks.length ? <HeaderMobileMenu links={headerLinks} /> : null}
+      {visibleHeaderLinks.length ? <HeaderMobileMenu links={visibleHeaderLinks} /> : null}
     </div>
   );
 
   const renderHeaderInner = (sticky: boolean) => {
-    const nav = headerLinks.length ? (
+    const nav = visibleHeaderLinks.length ? (
       <nav
         className={
           sticky
@@ -169,7 +173,7 @@ export function SiteHeader({
           fontWeight: 'var(--theme-header-menu-font-weight)',
         }}
       >
-        {headerLinks.map((link) => renderNavLink(link, sticky))}
+        {visibleHeaderLinks.map((link) => renderNavLink(link, sticky))}
       </nav>
     ) : null;
 

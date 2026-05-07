@@ -75,7 +75,7 @@ export function EditableSettings({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [settings, setSettings] = useState(databaseSettings);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const keysToRender = (editableKeys?.length ? editableKeys : DEFAULT_EDITABLE_SETTING_KEYS).filter((key) =>
     DEFAULT_EDITABLE_SETTING_KEYS.includes(key)
@@ -150,13 +150,14 @@ export function EditableSettings({
           {keysToRender.map((key) => {
             const existing = settings.find((s) => s.key === key);
             const isEditing = editingKey === key;
+            const isUploading = uploadingKey === key;
             const currentValue = existing?.value ?? '';
             const isImageKey = key === 'SITE_LOGO' || key === 'SITE_LOGO_LIGHT' || key === 'SITE_LOGO_DARK' || key === 'SITE_FAVICON';
             const isFaviconKey = key === 'SITE_FAVICON';
 
             const handleImageUpload = async (file: File) => {
               const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e));
-              setUploading(true);
+              setUploadingKey(key);
               try {
                 const resp = await fetch('/api/admin/file/upload', {
                   method: 'POST',
@@ -188,7 +189,7 @@ export function EditableSettings({
                 console.error(getErrorMessage(err));
                 showToast('Upload error', 'error');
               } finally {
-                setUploading(false);
+                setUploadingKey((current) => (current === key ? null : current));
               }
             };
 
@@ -208,15 +209,16 @@ export function EditableSettings({
                       {/* Action buttons */}
                       <div className="flex items-center gap-1.5">
                         {isImageKey && !isEditing && (
-                          <label className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 cursor-pointer transition-colors hover:bg-blue-100 hover:border-blue-300 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40">
+                          <label className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${isUploading ? 'cursor-wait border-blue-200 bg-blue-50 text-blue-700 opacity-80 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400' : 'cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40'}`}>
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            Upload
+                            {isUploading ? 'Uploading...' : 'Upload'}
                             <input
                               type="file"
                               accept="image/*"
                               className="hidden"
+                              disabled={isUploading}
                               onChange={(event) => {
                                 const file = event.target.files?.[0];
                                 if (file) {
@@ -392,7 +394,7 @@ export function EditableSettings({
                                   </>
                                 ) : (
                                   <div className="flex-shrink-0">
-                                    <Image src={currentValue} alt="Site logo" width={96} height={24} className="object-contain rounded" />
+                                    <Image src={currentValue} alt="Site logo" width={96} height={24} className="h-6 w-auto rounded object-contain" />
                                   </div>
                                 )}
                                 <div className="break-all text-sm text-slate-600 dark:text-neutral-400 font-mono">{currentValue}</div>
@@ -403,7 +405,7 @@ export function EditableSettings({
                           ) : (
                             <span className="text-sm italic text-slate-400 dark:text-neutral-500">Not configured</span>
                           )}
-                          {uploading && (
+                          {isUploading && (
                             <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
                               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

@@ -182,15 +182,15 @@ function RefundModalPanel({
               <div className="space-y-3">
                 {hasProviderSubscription ? (
                   <>
-                    <label className="flex items-start gap-2 cursor-pointer">
+                    <label className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={cancelSubscription}
                         onChange={(e) => setCancelSubscription(e.target.checked)}
                         disabled={loading}
-                        className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
                       />
-                      <div className="flex-1">
+                      <div className="min-w-0">
                         <div className="text-xs font-medium text-white">Cancel subscription with payment provider</div>
                         <div className="text-[11px] text-neutral-400 mt-0.5">
                           If checked, choose how the provider should handle the cancellation (immediate vs. at period end).
@@ -202,7 +202,7 @@ function RefundModalPanel({
                       <div className="space-y-2 rounded border border-neutral-800 bg-neutral-900/50 p-3">
                         <label className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Provider cancellation timing</label>
                         <div className="grid grid-cols-1 gap-2">
-                          <label className={`flex items-start gap-2 rounded border ${cancelMode === 'immediate' ? 'border-red-500 bg-red-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
+                          <label className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded border ${cancelMode === 'immediate' ? 'border-red-500 bg-red-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
                             <input
                               type="radio"
                               name="cancel-mode"
@@ -210,9 +210,9 @@ function RefundModalPanel({
                               checked={cancelMode === 'immediate'}
                               onChange={() => setCancelMode('immediate')}
                               disabled={loading}
-                              className="mt-0.5 w-4 h-4 border-neutral-600 text-red-600 focus:ring-red-500"
+                              className="mt-0.5 h-4 w-4 shrink-0 border-neutral-600 text-red-600 focus:ring-red-500"
                             />
-                            <div className="text-xs text-neutral-200">
+                            <div className="min-w-0 text-xs text-neutral-200">
                               <div className="font-semibold text-white">Cancel immediately</div>
                               <p className="mt-1 text-neutral-400">
                                 Access is revoked right away, the subscription status becomes <strong>CANCELLED</strong>, and future renewals are stopped.
@@ -220,7 +220,7 @@ function RefundModalPanel({
                             </div>
                           </label>
 
-                          <label className={`flex items-start gap-2 rounded border ${cancelMode === 'period_end' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
+                          <label className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded border ${cancelMode === 'period_end' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
                             <input
                               type="radio"
                               name="cancel-mode"
@@ -228,9 +228,9 @@ function RefundModalPanel({
                               checked={cancelMode === 'period_end'}
                               onChange={() => setCancelMode('period_end')}
                               disabled={loading}
-                              className="mt-0.5 w-4 h-4 border-neutral-600 text-amber-600 focus:ring-amber-500"
+                              className="mt-0.5 h-4 w-4 shrink-0 border-neutral-600 text-amber-600 focus:ring-amber-500"
                             />
-                            <div className="text-xs text-neutral-200">
+                            <div className="min-w-0 text-xs text-neutral-200">
                               <div className="font-semibold text-white">Cancel at period end</div>
                               <p className="mt-1 text-neutral-400">
                                 The customer keeps access until the billing period ends. The cancellation is scheduled and we mark the subscription as pending cancellation locally.
@@ -254,7 +254,7 @@ function RefundModalPanel({
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Local access handling</label>
                 <div className="grid grid-cols-1 gap-2">
-                  <label className={`flex items-start gap-2 rounded border ${localCancelMode === 'immediate' ? 'border-rose-500 bg-rose-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
+                  <label className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded border ${localCancelMode === 'immediate' ? 'border-rose-500 bg-rose-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
                     <input
                       type="radio"
                       name="local-cancel-mode"
@@ -262,9 +262,9 @@ function RefundModalPanel({
                       checked={localCancelMode === 'immediate'}
                       onChange={() => setLocalCancelMode('immediate')}
                       disabled={loading}
-                      className="mt-0.5 w-4 h-4 border-neutral-600 text-rose-500 focus:ring-rose-500"
+                      className="mt-0.5 h-4 w-4 shrink-0 border-neutral-600 text-rose-500 focus:ring-rose-500"
                     />
-                    <div className="text-xs text-neutral-200">
+                    <div className="min-w-0 text-xs text-neutral-200">
                       <div className="font-semibold text-white">Revoke access immediately</div>
                       <p className="mt-1 text-neutral-400">
                         We expire the local entitlement now and promote any pending subscriptions for this user.
@@ -272,7 +272,7 @@ function RefundModalPanel({
                     </div>
                   </label>
 
-                  <label className={`flex items-start gap-2 rounded border ${localCancelMode === 'period_end' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
+                  <label className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded border ${localCancelMode === 'period_end' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-700 bg-neutral-800/50'} p-2 transition cursor-pointer`}>
                     <input
                       type="radio"
                       name="local-cancel-mode"
@@ -280,9 +280,9 @@ function RefundModalPanel({
                       checked={localCancelMode === 'period_end'}
                       onChange={() => setLocalCancelMode('period_end')}
                       disabled={loading}
-                      className="mt-0.5 w-4 h-4 border-neutral-600 text-amber-500 focus:ring-amber-500"
+                      className="mt-0.5 h-4 w-4 shrink-0 border-neutral-600 text-amber-500 focus:ring-amber-500"
                     />
-                    <div className="text-xs text-neutral-200">
+                    <div className="min-w-0 text-xs text-neutral-200">
                       <div className="font-semibold text-white">Keep access until it expires</div>
                         <p className="mt-1 text-neutral-400">
                         We will leave the local subscription active until the current term ends{formattedExpiresAt ? ` (${formattedExpiresAt})` : ''}.
@@ -301,15 +301,15 @@ function RefundModalPanel({
 
           {/* Clear paid tokens toggle for admin actions (show even when no active subscription) */}
           <div className="p-3 border-t border-neutral-800">
-            <label className="flex items-start gap-2 cursor-pointer">
+            <label className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={clearPaidTokens}
                 onChange={(e) => setClearPaidTokens(e.target.checked)}
                 disabled={loading}
-                className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
               />
-              <div className="flex-1">
+              <div className="min-w-0">
                 <div className="text-xs font-medium text-white">Also clear paid tokens</div>
                 <div className="text-[11px] text-neutral-400 mt-0.5">
                   When checked, this will zero the paid token balance for the user as part of processing this refund/cancellation.

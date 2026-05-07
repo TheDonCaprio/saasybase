@@ -155,15 +155,15 @@ function SubscriptionEditModalPanel({
                 </p>
               </div>
 
-              <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+              <label className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                 <input
                   type="checkbox"
                   checked={clearScheduledCancellation}
                   onChange={(event) => setClearScheduledCancellation(event.target.checked)}
                   disabled={loading}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 bg-white text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800"
                 />
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs font-medium text-slate-900 dark:text-white">Clear scheduled cancellation</div>
                   <div className="mt-1 text-[11px] text-slate-500 dark:text-neutral-400">
                     If the provider still has a cancel-at-period-end flag, the server will try to undo it before saving locally.
@@ -172,15 +172,15 @@ function SubscriptionEditModalPanel({
               </label>
 
               {isProviderBacked ? (
-                <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/70 dark:bg-amber-950/20">
+                <label className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/70 dark:bg-amber-950/20">
                   <input
                     type="checkbox"
                     checked={allowLocalOverride}
                     onChange={(event) => setAllowLocalOverride(event.target.checked)}
                     disabled={loading}
-                    className="mt-0.5 h-4 w-4 rounded border-amber-300 bg-white text-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-0 disabled:opacity-50 dark:border-amber-700 dark:bg-neutral-800 dark:text-amber-500"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-300 bg-white text-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-0 disabled:opacity-50 dark:border-amber-700 dark:bg-neutral-800 dark:text-amber-500"
                   />
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs font-medium text-amber-950 dark:text-white">Allow local override if {providerLabel} cannot match this change</div>
                     <div className="mt-1 text-[11px] text-amber-800 dark:text-neutral-400">
                       Keep this off to require provider-backed verification. Turn it on only when you intentionally want the app state to diverge from the provider for repair purposes.

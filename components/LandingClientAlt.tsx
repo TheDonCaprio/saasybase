@@ -1656,8 +1656,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           margin-top:32px; animation:lpFadeUp .7s .3s ease both;
         }
         .lp-btn-primary {
-          display:inline-flex; align-items:center; justify-content:center; min-height:46px;
-          padding:13px 28px; border-radius:12px; font-weight:700; font-size:15px; line-height:1;
+          display:inline-flex; align-items:center; justify-content:center; min-height:32px;
+          padding:5px 15px; border-radius:15px; font-weight:700; font-size:12px; line-height:1;
           white-space:nowrap; background:linear-gradient(135deg, #2d6fcd 0%, #1f59b4 100%);
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
           box-shadow:0 10px 24px rgba(37, 99, 235, .18);
@@ -1665,8 +1665,8 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 14px 30px rgba(37, 99, 235, .24); filter:saturate(1.03); color:#fff !important; }
         .lp-btn-ghost {
-          display:inline-flex; align-items:center; justify-content:center; min-height:46px;
-          padding:13px 28px; border-radius:12px; font-weight:600; font-size:15px; line-height:1;
+          display:inline-flex; align-items:center; justify-content:center; min-height:32px;
+          padding:5px 15px; border-radius:15px; font-weight:600; font-size:12px; line-height:1;
           white-space:nowrap; background:linear-gradient(135deg, #25b6c6 0%, #19a9bd 100%);
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
           box-shadow:0 10px 24px rgba(20, 184, 166, .16);
@@ -2410,29 +2410,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         .lp-licensing-side-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
         .lp-licensing-header {
           display: flex;
-          gap: 20px;
+          gap: 14px;
           align-items: center;
-          margin-bottom: 24px;
-        }
-        .lp-licensing-icon-wrap {
-          flex-shrink: 0;
-          width: 52px;
-          height: 52px;
-          background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), transparent);
-          border: 1px solid rgba(16, 185, 129, 0.4);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #10b981;
-          font-size: 20px;
-          box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.3);
-        }
-        .lp-licensing-icon-wrap.pro {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), transparent);
-          border-color: rgba(99, 102, 241, 0.4);
-          color: #818cf8;
-          box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.3);
+          margin-bottom: 18px;
         }
         .lp-licensing-side-title {
           font-size: 32px;
@@ -2446,7 +2426,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           line-height: 1.7;
           color: var(--lp-licensing-desc);
           margin-bottom: 24px;
-          max-width: 350px;
+          max-width: 420px;
         }
         .lp-licensing-side-list {
           list-style: none;
@@ -2557,21 +2537,32 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         @media (max-width: 860px) {
           .lp-licensing-main-card { flex-direction: column; }
-          .lp-licensing-divider { width: 100%; height: 1px; background: linear-gradient(to right, transparent, var(--lp-licensing-orb-border), transparent); }
-          .lp-licensing-divider-orb { top: 0; left: 50%; }
-          .lp-licensing-side { padding: 34px 30px; text-align: center; align-items: center; }
-          .lp-licensing-header { flex-direction: column; align-items: center; text-align: center; gap: 20px; }
-          .lp-licensing-side-desc { margin-left: auto; margin-right: auto; }
-          .lp-licensing-side-list { align-items: flex-start; margin-left: auto; margin-right: auto; }
+          .lp-licensing-divider {
+            width: calc(100% - 40px);
+            height: 1px;
+            margin: 0 auto;
+            background: linear-gradient(to right, transparent, var(--lp-licensing-orb-border), transparent);
+          }
+          .lp-licensing-divider-orb { display: none; }
+          .lp-licensing-side { padding: 32px 30px; text-align: left; align-items: stretch; }
+          .lp-licensing-header { flex-direction: row; align-items: flex-start; text-align: left; gap: 12px; }
+          .lp-licensing-side-desc { margin-left: 0; margin-right: 0; max-width: none; }
+          .lp-licensing-side-list { align-items: stretch; margin-left: 0; margin-right: 0; }
+          .lp-licensing-price,
+          .lp-licensing-price-btn { align-self: flex-start; }
           .lp-licensing-h2-new { font-size: 40px; margin-bottom: 32px; }
           .lp-licensing-premium { margin: 48px 0; padding: 18px 0; border-radius: 32px; }
         }
         @media (max-width: 640px) {
-          .lp-licensing-container { padding: 0 14px; }
+          .lp-licensing-container { padding: 0 0px; }
           .lp-licensing-main-card { border-radius: 24px; }
-          .lp-licensing-side { padding: 26px 20px; }
+          .lp-licensing-side { padding: 24px 20px; }
           .lp-licensing-side-title { font-size: 26px; }
-          .lp-licensing-side-desc { max-width: none; line-height: 1.6; }
+          .lp-licensing-header { margin-bottom: 14px; }
+          .lp-licensing-side-desc { max-width: none; line-height: 1.6; margin-bottom: 18px; }
+          .lp-licensing-side-list { gap: 10px; margin-bottom: 22px; }
+          .lp-licensing-side-list li { font-size: 15px; }
+          .lp-licensing-price { font-size: 30px; }
           .lp-licensing-h2-new { font-size: 32px; letter-spacing: -1.2px; line-height: 0.98; margin-bottom: 24px; }
           .lp-licensing-bottom-note { margin-top: 20px; font-size: 13px; }
           .lp-licensing-premium { margin: 36px 0; padding: 12px 0; }
@@ -2800,17 +2791,17 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-cta-row">
                 {isSignedIn ? (
                   <>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
                     <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 ) : (
                   <>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 )}
               </div>
@@ -3136,9 +3127,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-licensing-side free-side">
                 <div className="lp-licensing-side-content">
                   <div className="lp-licensing-header">
-                    <div className="lp-licensing-icon-wrap">
-                      <FontAwesomeIcon icon={faBolt} />
-                    </div>
                     <h3 className="lp-licensing-side-title">The Founder</h3>
                   </div>
                   <p className="lp-licensing-side-desc">You&apos;re building your own dream. No royalties, no recurring fees—just your code, your product.</p>
@@ -3158,9 +3146,6 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-licensing-side pro-side">
                 <div className="lp-licensing-side-content">
                   <div className="lp-licensing-header">
-                    <div className="lp-licensing-icon-wrap pro">
-                      <FontAwesomeIcon icon={faBuilding} />
-                    </div>
                     <h3 className="lp-licensing-side-title">The Professional</h3>
                   </div>
                   <p className="lp-licensing-side-desc">You&apos;re building for others. High-velocity delivery for clients with a license for every ship.</p>
@@ -3201,9 +3186,9 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             ) : (
               <>
                 <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
-                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API </Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
+                <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
+                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
               </>
             )}
           </div>

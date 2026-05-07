@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthUser, useAuthSession, useAuthInstance, AuthSignInButton, AuthSignUpButton, AuthOrganizationSwitcher } from '@/lib/auth-provider/client';
 import { getOrganizationSwitcherAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays, faBars, faFileInvoiceDollar, faSackDollar, faHouse } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faRightFromBracket, faCrown, faCoins, faCalendarDays, faBars, faFileInvoiceDollar, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { TransientNavLink } from '@/components/ui/TransientNavLink';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { refreshVisibleRoute } from '@/lib/client-route-revalidation';
@@ -294,16 +294,6 @@ export default function AccountMenu() {
               </div>
 
               <div className="border-t border-neutral-200 dark:border-neutral-800">
-                <TransientNavLink
-                  href="/dashboard"
-                  className={shortcutClass('/dashboard')}
-                  onClick={() => setIsOpen(false)}
-                >
-                  <span className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5 opacity-60" />
-                    <span>Dashboard</span>
-                  </span>
-                </TransientNavLink>
                 <TransientNavLink
                   href="/dashboard/profile"
                   className={shortcutClass('/dashboard/profile')}

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faUser, faHouse, faBars, faFileInvoiceDollar, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { faXmark, faUser, faBars, faFileInvoiceDollar, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import type { NavItem } from './SidebarNav';
 import { AuthSignOutButton, useAuthUser, useAuthInstance } from '@/lib/auth-provider/client';
 import { createPortal } from 'react-dom';
@@ -28,11 +29,10 @@ interface DashboardHeaderDrawerProps {
 interface DrawerShortcut {
   href: string;
   label: string;
-  icon: typeof faHouse;
+  icon: IconDefinition;
 }
 
 const ACCOUNT_DRAWER_SHORTCUTS: DrawerShortcut[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: faHouse },
   { href: '/dashboard/profile', label: 'Profile & Settings', icon: faUser },
   { href: '/dashboard/plan', label: 'Plan', icon: faBars },
   { href: '/dashboard/billing', label: 'Billing', icon: faFileInvoiceDollar },

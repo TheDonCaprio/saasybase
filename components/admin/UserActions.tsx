@@ -169,7 +169,7 @@ export function UserActions({ user, onEdit, onUpdated, currentAdminId }: UserAct
         {!isSuspended && (
           <div className="space-y-4">
             <div>
-              <label htmlFor={`user-suspension-reason-${user.id}`} className="mb-1 block text-sm font-medium text-neutral-200">
+              <label htmlFor={`user-suspension-reason-${user.id}`} className="mb-1 block text-sm font-medium text-neutral-500">
                 Reason
               </label>
               <textarea
@@ -182,7 +182,7 @@ export function UserActions({ user, onEdit, onUpdated, currentAdminId }: UserAct
               />
             </div>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-neutral-200">Suspension type</legend>
+              <legend className="text-sm font-medium text-neutral-500">Suspension type</legend>
               <label className="flex items-center gap-2 text-sm text-neutral-300">
                 <input
                   type="radio"

@@ -1244,7 +1244,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           animation:lpBadge .6s ease both;
         }
         .lp-hero-h1 {
-          font-size:clamp(2.6rem,6vw,4.2rem); font-weight:800; line-height:1.1;
+          font-size:clamp(2.4rem,6vw,4.0rem); font-weight:800; line-height:1.1;
           letter-spacing:-1.5px; color:var(--lp-text1);
           animation:lpFadeUp .7s .1s ease both;
         }
@@ -2777,7 +2777,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     backgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     textShadow: '0 10px 30px rgba(99,102,241,0.15)',
-                    fontSize: '2.9rem',
+                    fontSize: '2.6rem',
                   }}
                 >
                   One codebase ready to ship today.

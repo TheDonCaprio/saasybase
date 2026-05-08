@@ -536,9 +536,9 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     stickyHeaderShadow: '#0f172a14',
     stickyHeaderShadowBlur: 22,
     stickyHeaderShadowSpread: -16,
-    pageGradientFrom: '#f3f4f6',
-    pageGradientVia: '#eef1f5',
-    pageGradientTo: '#f7f8fa',
+    pageGradientFrom: '#f6f7f9',
+    pageGradientVia: '#f2f5f8',
+    pageGradientTo: '#fbfcfd',
     heroGradientFrom: '#fbfcfd',
     heroGradientVia: '#f3f5f8',
     heroGradientTo: '#eff2f6',
@@ -606,9 +606,9 @@ export const DEFAULT_THEME_COLOR_PALETTE: ThemeColorPalette = {
     stickyHeaderShadow: '#00000038',
     stickyHeaderShadowBlur: 24,
     stickyHeaderShadowSpread: -16,
-    pageGradientFrom: '#0f1115',
-    pageGradientVia: '#12161d',
-    pageGradientTo: '#0f1115',
+    pageGradientFrom: '#13171d',
+    pageGradientVia: '#171c24',
+    pageGradientTo: '#12161c',
     heroGradientFrom: '#14181e',
     heroGradientVia: '#181d25',
     heroGradientTo: '#14181e',
@@ -893,7 +893,7 @@ const mergeThemeColorTokens = (raw: unknown, fallback: ThemeColorTokens): ThemeC
 
 const MAX_THEME_COLOR_PRESETS = 25;
 const MAX_THEME_PRESET_NAME_CHARS = 48;
-const THEME_DEFAULT_MIGRATION_VERSION = '2026-04-minimal-default';
+const THEME_DEFAULT_MIGRATION_VERSION = '2026-05-minimal-default-page-gradient';
 
 const themePalettesEqual = (left: ThemeColorPalette, right: ThemeColorPalette): boolean => {
   return JSON.stringify(left) === JSON.stringify(right);

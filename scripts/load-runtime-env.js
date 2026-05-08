@@ -117,7 +117,7 @@ function loadDotenvFiles() {
     for (const name of candidates) {
       const filePath = path.join(root, name);
       if (fs.existsSync(filePath)) {
-        dotenv.config({ path: filePath });
+        dotenv.config({ path: filePath, quiet: true });
       }
     }
   } catch {

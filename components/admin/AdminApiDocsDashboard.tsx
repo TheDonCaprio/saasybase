@@ -93,7 +93,7 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div data-docs-copy-block="api-dashboard" className="space-y-6">
       {/* Filter bar */}
       <section className={dashboardMutedPanelClass('space-y-4 sm:space-y-0 sm:flex sm:items-center sm:gap-3')}>
         <div className="relative flex-1">
@@ -142,7 +142,7 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
         </select>
       </section>
 
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+      <p data-docs-api-summary="true" className="text-xs uppercase tracking-wide text-slate-500 dark:text-neutral-400">
         {resultsCount} {resultsCount === 1 ? 'endpoint' : 'endpoints'} across {filteredCategories.length}{' '}
         {filteredCategories.length === 1 ? 'category' : 'categories'}
       </p>
@@ -152,7 +152,7 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
         {filteredCategories.map((category) => {
           const isOpen = expandedCategories.has(category.id);
           return (
-            <section key={category.id} className={dashboardPanelClass('!p-0 overflow-hidden')}>
+            <section key={category.id} data-docs-api-category="true" className={dashboardPanelClass('!p-0 overflow-hidden')}>
               {/* Category header — clickable toggle */}
               <div
                 role="button"
@@ -166,10 +166,10 @@ export default function AdminApiDocsDashboard({ catalog }: AdminApiDocsDashboard
                   className="mt-1.5 h-3 w-3 shrink-0 text-slate-400 dark:text-neutral-500"
                 />
                 <div className="min-w-0 flex-1 pr-2">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{category.title}</h3>
-                  <p className="mt-0.5 text-xs whitespace-normal break-words text-slate-500 dark:text-neutral-400">{category.description}</p>
+                  <h3 data-docs-api-category-title="true" className="text-sm font-semibold text-slate-900 dark:text-neutral-50">{category.title}</h3>
+                  <p data-docs-api-category-description="true" className="mt-0.5 text-xs whitespace-normal break-words text-slate-500 dark:text-neutral-400">{category.description}</p>
                 </div>
-                <span className="mt-0.5 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                <span data-docs-api-category-count="true" className="mt-0.5 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
                   {category.endpoints.length}
                 </span>
               </div>
@@ -217,7 +217,14 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
   }, [endpoint.path]);
 
   return (
-    <div className={clsx(!isLast && 'border-b border-slate-100 dark:border-neutral-800')}>
+    <div
+      data-docs-api-endpoint="true"
+      data-docs-api-method={endpoint.method}
+      data-docs-api-path={endpoint.path}
+      data-docs-api-access={ACCESS_LABELS[endpoint.access]}
+      data-docs-api-summary={endpoint.summary}
+      className={clsx(!isLast && 'border-b border-slate-100 dark:border-neutral-800')}
+    >
       {/* Collapsed row */}
       <div
         role="button"
@@ -257,7 +264,7 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
       </div>
 
       {/* Mobile access badge — shown below on small screens */}
-      <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:hidden">
+      <div data-docs-copy-exclude="true" className="flex items-center gap-2 px-3 pt-2 pb-2 sm:hidden">
         <span className={clsx('rounded px-2 py-0.5 text-[10px] font-bold tracking-wider', accessBadge)}>
           {ACCESS_LABELS[endpoint.access]}
         </span>

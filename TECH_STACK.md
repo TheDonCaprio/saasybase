@@ -175,7 +175,7 @@ Optional dependency: `@aws-sdk/client-s3` (in `optionalDependencies`)
 | **Vitest** | latest | Unit & integration tests | `vitest.config.mts` |
 
 ### Test Stats
-- **90+ unit test files** covering payments, auth, subscriptions, tokens, webhooks
+- **140+ test files and 500+ tests** covering payments, auth, subscriptions, tokens, webhooks
 - **Manual regression coverage** for UI-heavy flows when browser-level verification is needed
 
 ---

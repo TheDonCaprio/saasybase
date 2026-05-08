@@ -192,7 +192,7 @@
 - `vitest.config.mts` — Vitest configuration (Node environment, path aliases)
 - `tests/vitest.setup.ts` — Global test setup
 - `tests/mocks/` — Mock modules (server-only, etc.)
-- `tests/*.test.ts` — 90+ test files with patterns to follow
+- `tests/*.test.ts` — 140+ test files with patterns to follow
 - `tests/README.md` — Test documentation
 
 **Rules:**

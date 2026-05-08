@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const trimmedSiteName = siteName.trim() || FALLBACK_SITE_NAME;
   const title = seoSettings?.homeMetaTitle.trim() || `${trimmedSiteName} — The complete Next.js SaaS boilerplate`;
-  const description = seoSettings?.homeMetaDescription.trim() || 'Three auth providers, four payment processors, subscriptions, teams, admin dashboard, optional Infisical or Doppler bootstrap, and 90+ automated tests plus manual regression coverage - all wired up.';
+  const description = seoSettings?.homeMetaDescription.trim() || 'Three auth providers, four payment processors, subscriptions, teams, admin dashboard, optional Infisical or Doppler bootstrap, and 500+ automated tests across 140+ files plus manual regression coverage - all wired up.';
   const ogTitle = seoSettings?.homeOgTitle?.trim() || seoSettings?.defaultOgTitle?.trim() || title;
   const ogDescription = seoSettings?.homeOgDescription?.trim() || seoSettings?.defaultOgDescription?.trim() || description;
   const ogImage = seoSettings?.resolvedHomeOgImageUrl || seoSettings?.resolvedDefaultOgImageUrl;

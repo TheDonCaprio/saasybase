@@ -10,7 +10,7 @@ SaaSyBase is a **complete SaaS foundation** — not a starter template. It gives
 
 **Who is it for?**
 
-- **Professional developers** who want a battle-tested architecture to build on, with clean abstractions, 90+ unit tests, and production-hardened patterns.
+- **Professional developers** who want a battle-tested architecture to build on, with clean abstractions, 500+ unit tests, and production-hardened patterns.
 - **Vibecoders and AI-assisted builders** (Cursor, Lovable, Windsurf, etc.) who want a working SaaS backend they can scaffold their app into without building billing, auth, and admin from scratch.
 
 You plug in your own product logic — SaaSyBase handles the business infrastructure.
@@ -125,7 +125,7 @@ saasybase/
 │   ├── schema.prisma       # Database schema (25+ models)
 │   └── seed.ts             # Database seeding script
 ├── scripts/                # Operational scripts (backfills, admin tools)
-├── tests/                  # 90+ Vitest unit/integration tests
+├── tests/                  # 500+ Vitest unit/integration tests across 140+ files
 ├── docs/                   # Implementation guides and internal notes
 ├── ops/                    # Production operations (indexes, runbooks)
 └── .env.example            # Full environment variable template
@@ -1473,7 +1473,7 @@ npm test              # Run all unit tests
 npm test -- --watch   # Watch mode
 ```
 
-90+ test files covering:
+140+ test files covering 500+ individual tests:
 - Payment provider flows (Stripe, Paystack, Paddle, Razorpay)
 - Webhook handling and event normalization
 - Subscription lifecycle (checkout, proration, cancellation, resurrection)

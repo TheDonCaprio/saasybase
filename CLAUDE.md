@@ -104,7 +104,7 @@ Mirror the existing pattern in `lib/auth-provider/`:
 ## Testing
 
 ```bash
-npm test                    # Vitest unit tests (90+ test files)
+npm test                    # Vitest unit tests (500+ tests across 140+ files)
 npm run typecheck           # TypeScript type checking
 npm run lint                # ESLint
 ```

@@ -257,7 +257,7 @@ function EndpointRow({ endpoint, isLast }: { endpoint: AdminApiEndpoint; isLast:
       </div>
 
       {/* Mobile access badge — shown below on small screens */}
-      <div className="flex items-center gap-2 px-3 pb-2 sm:hidden">
+      <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:hidden">
         <span className={clsx('rounded px-2 py-0.5 text-[10px] font-bold tracking-wider', accessBadge)}>
           {ACCESS_LABELS[endpoint.access]}
         </span>

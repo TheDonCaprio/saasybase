@@ -7,7 +7,7 @@ import { useAuthInstance, useAuthSession } from '@/lib/auth-provider/client';
 import { isCurrentPageNotFound } from '@/lib/client-not-found';
 import { showToast } from '../ui/Toast';
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
+const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'betterauth';
 const IS_CLERK = AUTH_PROVIDER === 'clerk';
 const RECOVERY_COOLDOWN_MS = 15000;
 const RECOVERY_TOAST_KEY = 'org-validity:toast-message';

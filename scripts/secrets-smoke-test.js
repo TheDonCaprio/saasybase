@@ -33,7 +33,7 @@ function buildDefaultChecks() {
   pushCheck(checks, 'health token', ['HEALTHCHECK_TOKEN']);
   pushCheck(checks, 'cron token', ['CRON_PROCESS_EXPIRY_TOKEN', 'CRON_SECRET', 'CRON_TOKEN']);
 
-  const authProvider = (process.env.AUTH_PROVIDER || process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk').trim().toLowerCase();
+  const authProvider = (process.env.AUTH_PROVIDER || process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'betterauth').trim().toLowerCase();
   if (authProvider === 'clerk') {
     pushCheck(checks, 'clerk publishable key', ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']);
     pushCheck(checks, 'clerk secret key', ['CLERK_SECRET_KEY']);

@@ -285,10 +285,10 @@ The app ships with **three fully implemented auth providers**. Switch between th
 
 ```bash
 # .env.local
-AUTH_PROVIDER="nextauth"  # Options: "clerk", "nextauth", "betterauth"
+AUTH_PROVIDER="betterauth"  # Options: "clerk", "nextauth", "betterauth"
 ```
 
-> **Default behavior:** The `.env.example` template ships with `AUTH_PROVIDER="nextauth"` so you can start locally without any third-party accounts. The code's internal fallback is `clerk` if the variable is unset, but since `.env.example` explicitly sets it, most new setups use NextAuth by default.
+> **Default behavior:** The `.env.example` template ships with `AUTH_PROVIDER="betterauth"` so you can start locally without any third-party accounts. The code's internal fallback is also `betterauth` if the variable is unset, so new setups land on the preferred self-hosted lane by default.
 
 `next.config.mjs` automatically exposes this as `NEXT_PUBLIC_AUTH_PROVIDER` to the client bundle so that the auth abstraction layer (`lib/auth-provider`) can DCE (dead-code eliminate) the unused provider at build time.
 
@@ -1570,7 +1570,7 @@ NEXT_PUBLIC_APP_DOMAIN="yourdomain.com"
 NEXT_PUBLIC_SITE_NAME="Your App"
 
 # Auth (pick one)
-AUTH_PROVIDER="clerk"   # or "nextauth"
+AUTH_PROVIDER="betterauth"   # or "nextauth" or "clerk"
 
 # Payment (pick one)
 PAYMENT_PROVIDER="stripe"

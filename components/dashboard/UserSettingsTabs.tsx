@@ -13,7 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 
 const cx = (...inputs: ClassValue[]) => twMerge(clsx(...inputs));
-const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
+const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'betterauth';
 const hasAppManagedEmailVerification = authProvider === 'nextauth' || authProvider === 'betterauth';
 
 interface BaseUser {

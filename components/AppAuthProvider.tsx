@@ -6,7 +6,7 @@ import { AuthProvider } from '@/lib/auth-provider/client';
 import { getAuthProviderAppearance } from '@/lib/auth-provider/client/clerk-appearance';
 import { shouldReloadOnBackNavigation } from '@/lib/auth-provider/client/should-reload-on-back-navigation';
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
+const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'betterauth';
 const IS_CLERK = AUTH_PROVIDER === 'clerk';
 const NEXTAUTH_WEBKIT_RESUME_RELOAD_THRESHOLD_MS = 45_000;
 

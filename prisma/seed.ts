@@ -94,7 +94,7 @@ function getActiveAuthProvider() {
   return (
     process.env.AUTH_PROVIDER ||
     process.env.NEXT_PUBLIC_AUTH_PROVIDER ||
-    'clerk'
+    'betterauth'
   ).toLowerCase();
 }
 

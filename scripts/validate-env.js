@@ -104,7 +104,7 @@ async function main() {
 
   validateDatabaseUrl('DATABASE_URL', process.env.DATABASE_URL || '');
 
-  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'clerk';
+  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER || 'betterauth';
   if (authProvider === 'clerk') {
     if (!isNonEmptyString(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '')) {
       fail('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be set when AUTH_PROVIDER=clerk. Provide it in .env.local, platform envs, or the optional secrets bootstrap.');

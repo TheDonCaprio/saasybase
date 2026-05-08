@@ -137,7 +137,7 @@ function resolveNodeEnvironmentLabel() {
 }
 
 export async function getAdminEnvironmentSettings(): Promise<AdminEnvironmentSetting[]> {
-  const authProvider = process.env.AUTH_PROVIDER || 'clerk';
+  const authProvider = process.env.AUTH_PROVIDER || 'betterauth';
   const paymentProvider = process.env.PAYMENT_PROVIDER || 'stripe';
   const databaseUrl = process.env.DATABASE_URL || '';
   const normalizedDatabaseUrl = databaseUrl.trim().toLowerCase();
@@ -196,7 +196,7 @@ export async function getAdminEnvironmentSettings(): Promise<AdminEnvironmentSet
 
 export async function getAdminRuntimeSnapshot(): Promise<AdminRuntimeSnapshot> {
   const memoryUsage = process.memoryUsage();
-  const authProvider = process.env.AUTH_PROVIDER || 'clerk';
+  const authProvider = process.env.AUTH_PROVIDER || 'betterauth';
   const paymentProvider = process.env.PAYMENT_PROVIDER || 'stripe';
   const maintenanceMode =
     (await getSetting(SETTING_KEYS.MAINTENANCE_MODE, SETTING_DEFAULTS[SETTING_KEYS.MAINTENANCE_MODE])) === 'true'

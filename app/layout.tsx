@@ -290,7 +290,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const shouldInjectGa = trafficAnalytics.googleAnalytics.shouldInject;
   const shouldInjectPostHog = trafficAnalytics.postHog.shouldInject;
   const gaConfigExtras = process.env.NODE_ENV !== 'production' ? ', debug_mode: true' : '';
-  const activeAuthProvider = process.env.AUTH_PROVIDER || 'clerk';
+  const activeAuthProvider = process.env.AUTH_PROVIDER || 'betterauth';
   const clerkEnabled = activeAuthProvider === 'clerk' && !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const themeCookie = cookieStore.get('themeResolved')?.value;
   const initialThemeClass = themeCookie === 'dark' || themeCookie === 'light' ? themeCookie : undefined;

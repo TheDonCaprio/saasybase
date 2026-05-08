@@ -162,7 +162,7 @@ const nextConfig = {
   // Expose AUTH_PROVIDER to client-side code under NEXT_PUBLIC_ prefix.
   // This enables build-time conditional imports in the auth abstraction layer.
   env: {
-    NEXT_PUBLIC_AUTH_PROVIDER: process.env.AUTH_PROVIDER || 'clerk',
+    NEXT_PUBLIC_AUTH_PROVIDER: process.env.AUTH_PROVIDER || 'betterauth',
     NEXT_PUBLIC_ADMIN_ONLY_PUBLIC_SITE: process.env.ADMIN_ONLY_PUBLIC_SITE || 'false',
   },
 

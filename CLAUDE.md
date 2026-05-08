@@ -62,7 +62,7 @@ Most features are **already wired and ready to go**. The user's job is to build 
 Auth and payment providers are selected via environment variables, not code changes:
 
 ```bash
-AUTH_PROVIDER="nextauth"        # or "betterauth", "clerk"
+AUTH_PROVIDER="betterauth"     # or "nextauth", "clerk"
 PAYMENT_PROVIDER="stripe"      # or "paystack", "paddle", "razorpay"
 ```
 

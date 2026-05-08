@@ -3,7 +3,7 @@
  * ======================
  * Mirrors `lib/payment/factory.ts`.
  *
- * Reads `AUTH_PROVIDER` env var (default: 'clerk'), validates the env,
+ * Reads `AUTH_PROVIDER` env var (default: 'betterauth'), validates the env,
  * and returns a configured `AuthProvider` instance.
  *
  * Usage:
@@ -15,7 +15,7 @@ import type { AuthProvider } from './types';
 import { AUTH_PROVIDER_REGISTRY } from './registry';
 
 /** Default provider when AUTH_PROVIDER env var is not set. */
-const DEFAULT_AUTH_PROVIDER = 'clerk';
+const DEFAULT_AUTH_PROVIDER = 'betterauth';
 
 export class AuthProviderFactory {
   /**

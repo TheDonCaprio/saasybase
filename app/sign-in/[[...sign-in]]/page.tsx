@@ -26,7 +26,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const resolvedSearchParams = await searchParams;
   const redirectPath = normalizeRedirect(resolvedSearchParams, adminOnlyPublicSiteMode ? '/admin' : '/dashboard');
   const { userId } = await authService.getSession();
-  const isNextAuth = (process.env.AUTH_PROVIDER || 'clerk').toLowerCase() === 'nextauth';
+  const isNextAuth = (process.env.AUTH_PROVIDER || 'betterauth').toLowerCase() === 'nextauth';
 
   if (userId) {
     redirect(redirectPath);

@@ -5,7 +5,7 @@ function isConfigured(value: string | undefined) {
 }
 
 export async function GET() {
-  const authProvider = process.env.AUTH_PROVIDER || process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk';
+  const authProvider = process.env.AUTH_PROVIDER || process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'betterauth';
 
   if (authProvider !== 'betterauth') {
     return NextResponse.json({

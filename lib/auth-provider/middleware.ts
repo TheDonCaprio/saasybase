@@ -16,7 +16,7 @@ import {
 import type { NextRequest } from 'next/server';
 import { Logger } from '@/lib/logger';
 
-const AUTH_PROVIDER = process.env.AUTH_PROVIDER || 'clerk';
+const AUTH_PROVIDER = process.env.AUTH_PROVIDER || 'betterauth';
 
 type MiddlewareHandler = (auth: unknown, req: NextRequest) => void | Response | Promise<void | Response>;
 type MiddlewareWrapper = (req: NextRequest) => Promise<void | Response>;

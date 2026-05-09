@@ -9,6 +9,8 @@ export interface SystemBadgeProps {
   label: string;
   value: string;
   tone?: 'emerald' | 'amber' | 'blue' | 'violet' | 'slate';
+  title?: string;
+  valueClassName?: string;
 }
 
 // Use a loose string index here to avoid narrowing issues when `tone` may be undefined.
@@ -25,11 +27,11 @@ const toneMap: Record<string, string> = {
     'from-slate-100 to-white border-slate-200 text-slate-700 shadow-sm dark:from-slate-500/15 dark:to-slate-500/5 dark:border-slate-500/30 dark:text-slate-100 dark:shadow-inner'
 };
 
-export function SystemBadge({ label, value, tone = 'slate' }: SystemBadgeProps) {
+export function SystemBadge({ label, value, tone = 'slate', title, valueClassName }: SystemBadgeProps) {
   return (
-    <div className={cx('rounded-2xl border bg-gradient-to-br p-4', toneMap[tone])}>
+    <div className={cx('rounded-2xl border bg-gradient-to-br p-4', toneMap[tone])} title={title}>
       <p className="text-xs uppercase tracking-wide opacity-80">{label}</p>
-      <p className="mt-2 text-lg font-semibold leading-tight">{value}</p>
+      <p className={cx('mt-2 text-[0.8rem] font-semibold leading-tight sm:text-sm', valueClassName)}>{value}</p>
     </div>
   );
 }

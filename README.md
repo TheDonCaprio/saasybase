@@ -1545,6 +1545,8 @@ Complete these steps after local development is finished and before you point re
 4. If admins will upload logos or other managed files in production, switch from local filesystem storage to S3-compatible storage.
 5. Configure your webhook endpoints and verify signatures before accepting live traffic.
 
+For Coolify and similar self-hosted platforms, set the production environment variables in the platform UI before the first deploy attempt. This app reads the database during `npm run build` for static generation, so a missing or broken `DATABASE_URL` can fail the build before the app ever starts.
+
 If your team previously developed against SQLite and you are now moving to PostgreSQL, do not reuse that SQLite migration chain or local `dev.db` file in production. Start from a fresh PostgreSQL database and follow [docs/prisma-provider-migrations.md](docs/prisma-provider-migrations.md) for the supported recovery path.
 
 ### Required environment variables
@@ -1602,6 +1604,28 @@ Notes:
 - If `EMAIL_PROVIDER` is unset, the app defaults to `nodemailer`.
 - Use `EMAIL_PROVIDER="nodemailer"` for SMTP delivery. In local development, the default SMTP values can point at MailHog.
 - Use `EMAIL_PROVIDER="resend"` with `RESEND_API_KEY` set. The `SMTP_*` variables are ignored in that mode.
+
+### Coolify deployment commands
+
+Coolify should not rely on plain `npm run build` alone for first deploys or schema changes. In this repo, `build` runs Prisma client generation plus Next.js build, but it does not apply migrations.
+
+Recommended Coolify setup:
+
+```bash
+# Build command
+npm run deploy:build
+
+# Start command
+npm run start
+```
+
+`npm run deploy:build` runs:
+
+```bash
+npm run prisma:deploy && npm run build
+```
+
+Set all required env vars in Coolify before the first deployment attempt. Also use a `DATABASE_URL` that works in the build container, not only at runtime. If the URL depends on a local CA file path such as `sslrootcert=/etc/ssl/certs/coolify-ca.crt`, the build can fail during Prisma access unless that certificate file is present inside the builder image too.
 
 ### Secrets providers (optional)
 

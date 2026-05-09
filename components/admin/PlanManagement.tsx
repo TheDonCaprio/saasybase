@@ -827,17 +827,17 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
       </ConfirmModal>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl overflow-hidden flex flex-col max-h-full">
+          <div className="relative flex max-h-[90vh] w-full max-w-3xl min-w-0 flex-col overflow-x-hidden">
+            <div className="flex max-h-full min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-xl">
               <div className="flex items-center justify-between p-4 border-b border-neutral-800 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-neutral-100">{editingPlanId ? 'Edit plan' : 'New plan'}</h3>
                 <button aria-label="Close" onClick={() => setShowModal(false)} className="text-neutral-400 hover:text-neutral-100 p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                   ✕
                 </button>
               </div>
-              <form className="p-5 space-y-4 overflow-y-auto" onSubmit={(e) => { e.preventDefault(); save(); }}>
+              <form className="min-w-0 overflow-y-auto overflow-x-hidden p-5 space-y-4" onSubmit={(e) => { e.preventDefault(); save(); }}>
                 {isEditingExistingPlan ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                     Interval, plan type, and duration cannot be changed after creation. Duplicate or recreate the plan instead.

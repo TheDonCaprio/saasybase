@@ -182,8 +182,8 @@ export default async function AdminSettingsPage() {
           },
           {
             label: 'Runtime',
-            value: `${databaseType} · ${nodeEnv}`,
-            helper: `${authProvider} · ${paymentProvider} · ${fileStorage}`,
+            value: `${nodeEnv}`,
+            helper: `${authProvider} · ${paymentProvider}`,
             tone: 'blue'
           }
         ]}

@@ -910,7 +910,7 @@ export function ColorTabContent({
 
           {/* ── Normal header ── */}
           <div
-            className="relative flex items-center justify-between gap-3 px-4 py-2.5"
+            className="relative flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4"
             style={{
               backgroundColor: colors.headerBg,
               borderBottom: `${clampInt(colors.headerBorderWidth, 0, 4, 1)}px solid ${colors.headerBorder}`,
@@ -920,8 +920,8 @@ export function ColorTabContent({
           >
             {/* Brand */}
             <div className="flex items-center gap-2">
-              <div className="h-5 w-5 rounded-md flex-shrink-0" style={{ backgroundColor: colors.accentPrimary }} />
-              <span className="text-xs font-bold tracking-tight" style={{ color: colors.headerText }}>
+              <div className="h-6 w-6 rounded-md flex-shrink-0 sm:h-5 sm:w-5" style={{ backgroundColor: colors.accentPrimary }} />
+              <span className="text-sm font-semibold tracking-tight sm:text-xs sm:font-bold" style={{ color: colors.headerText }}>
                 SaaSyBase
               </span>
             </div>
@@ -933,8 +933,34 @@ export function ColorTabContent({
                 </span>
               ))}
             </div>
-            {/* CTA + avatar */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:hidden">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-semibold shadow-sm"
+                style={{
+                  borderColor: colors.headerBorder,
+                  backgroundColor: colors.panelBg,
+                  color: colors.headerText,
+                }}
+              >
+                <span aria-hidden="true">◐</span>
+              </div>
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full border shadow-sm"
+                style={{
+                  borderColor: colors.headerBorder,
+                  backgroundColor: colors.panelBg,
+                  color: colors.headerText,
+                }}
+              >
+                <div className="flex flex-col gap-[3px]">
+                  <span className="block h-[1.5px] w-3 rounded-full" style={{ backgroundColor: colors.headerText }} />
+                  <span className="block h-[1.5px] w-3 rounded-full" style={{ backgroundColor: colors.headerText }} />
+                  <span className="block h-[1.5px] w-3 rounded-full" style={{ backgroundColor: colors.headerText }} />
+                </div>
+              </div>
+            </div>
+            {/* Desktop CTA + avatar */}
+            <div className="hidden items-center gap-2 sm:flex">
               <div
                 className="rounded-md px-2.5 py-1 text-xs font-semibold"
                 style={{ backgroundColor: colors.accentPrimary, color: '#fff' }}
@@ -947,7 +973,7 @@ export function ColorTabContent({
 
           {/* ── Sticky header preview (compact strip) ── */}
           <div
-            className="relative flex items-center justify-between gap-3 px-4 py-1.5"
+            className="relative flex items-center justify-between gap-3 px-3.5 py-1.5 sm:px-4"
             style={{
               backgroundColor: colors.stickyHeaderBg,
               borderBottom: `${clampInt(colors.stickyHeaderBorderWidth, 0, 4, 1)}px solid ${colors.stickyHeaderBorder}`,
@@ -967,6 +993,18 @@ export function ColorTabContent({
                 sticky
               </span>
             </div>
+            <div className="flex items-center gap-2 sm:hidden">
+              <div
+                className="flex h-6 w-6 items-center justify-center rounded-full border"
+                style={{ borderColor: colors.stickyHeaderBorder, color: colors.stickyHeaderText, opacity: 0.9 }}
+              >
+                <div className="flex flex-col gap-[2px]">
+                  <span className="block h-px w-2.5 rounded-full" style={{ backgroundColor: colors.stickyHeaderText }} />
+                  <span className="block h-px w-2.5 rounded-full" style={{ backgroundColor: colors.stickyHeaderText }} />
+                  <span className="block h-px w-2.5 rounded-full" style={{ backgroundColor: colors.stickyHeaderText }} />
+                </div>
+              </div>
+            </div>
             <div className="hidden sm:flex items-center gap-3">
               {['Pricing', 'Blog'].map((label) => (
                 <span key={label} className="text-[10px]" style={{ color: colors.stickyHeaderText }}>
@@ -977,41 +1015,49 @@ export function ColorTabContent({
           </div>
 
           {/* ── Body: sidebar + main ── */}
-          <div className="relative flex min-h-0">
+          <div className="relative flex min-h-0 flex-col sm:flex-row">
             {/* Sidebar */}
             <div
-              className="relative w-32 flex-shrink-0 px-3 py-4 space-y-1"
+              className="relative hidden w-full flex-shrink-0 px-3 py-3 sm:block sm:w-32 sm:px-3 sm:py-4"
               style={{
                 backgroundColor: colors.sidebarBg,
                 borderRight: `1px solid ${colors.sidebarBorder}`,
                 boxShadow: `0 12px ${clampInt(colors.sidebarShadowBlur, 0, 80, clampInt(colors.panelShadowBlur, 0, 80, 24))}px ${clampInt(colors.sidebarShadowSpread, -80, 80, clampInt(colors.panelShadowSpread, -80, 80, -18))}px ${colors.sidebarShadow}`,
               }}
             >
-              {[
-                { label: 'Overview', active: true },
-                { label: 'Billing', active: false },
-                { label: 'Analytics', active: false, hovered: true },
-                { label: 'Settings', active: false },
-              ].map(({ label, active, hovered }) => (
-                <div
-                  key={label}
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
-                  style={{
-                    backgroundColor: active
-                      ? `${colors.accentPrimary}18`
-                      : (hovered as boolean) ? colors.bgQuaternary : 'transparent',
-                    color: active ? colors.accentPrimary : colors.textSecondary,
-                  }}
-                >
-                  {label}
-                </div>
-              ))}
+              <div
+                className="grid grid-cols-2 gap-1 sm:block sm:space-y-1"
+                style={{
+                  borderBottom: `1px solid ${colors.sidebarBorder}`,
+                  paddingBottom: '0.125rem',
+                }}
+              >
+                {[
+                  { label: 'Overview', active: true },
+                  { label: 'Billing', active: false },
+                  { label: 'Analytics', active: false, hovered: true },
+                  { label: 'Settings', active: false },
+                ].map(({ label, active, hovered }) => (
+                  <div
+                    key={label}
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
+                    style={{
+                      backgroundColor: active
+                        ? `${colors.accentPrimary}18`
+                        : (hovered as boolean) ? colors.bgQuaternary : 'transparent',
+                      color: active ? colors.accentPrimary : colors.textSecondary,
+                    }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Main content */}
-            <div className="relative flex-1 overflow-hidden p-4 space-y-3">
+            <div className="relative flex-1 overflow-hidden p-3 sm:p-4 space-y-3">
               {/* Flat page heading */}
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: colors.textTertiary }}>
                     Workspace overview
@@ -1023,7 +1069,7 @@ export function ColorTabContent({
                     Billing, activity, and team health at a glance.
                   </p>
                 </div>
-                <div className="grid min-w-[180px] grid-cols-2 gap-2 text-sm">
+                <div className="grid w-full grid-cols-1 gap-2 text-sm sm:min-w-[180px] sm:w-auto sm:grid-cols-2">
                   {[
                     { label: 'Personal', value: '18,420', detail: 'tokens available' },
                     { label: 'Workspace', value: '7,250', detail: 'shared this month' },
@@ -1058,7 +1104,7 @@ export function ColorTabContent({
               </div>
 
               {/* Stat cards — uses cardGradient */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {[
                   { label: 'Revenue', value: '$4,820' },
                   { label: 'Users', value: '1,240' },
@@ -1108,7 +1154,7 @@ export function ColorTabContent({
 
               {/* Tab strip — uses tabsGradient */}
               <div
-                className="relative flex items-center gap-1 px-1.5 py-1"
+                className="relative flex flex-wrap items-center gap-1 px-1.5 py-1 sm:flex-nowrap"
                 style={{
                   borderRadius: `${surfaceRadius}px`,
                   background: `linear-gradient(135deg, ${colors.tabsGradientFrom ?? colors.pageGradientFrom}, ${colors.tabsGradientVia ?? colors.pageGradientVia}, ${colors.tabsGradientTo ?? colors.pageGradientTo})`,
@@ -1130,7 +1176,7 @@ export function ColorTabContent({
                 {['Activity', 'Invoices', 'Team'].map((label, i) => (
                   <div
                     key={label}
-                    className="relative z-10 px-3 py-1 text-xs font-medium"
+                    className="relative z-10 flex-1 px-3 py-1 text-center text-xs font-medium"
                     style={{
                       color: i === 0 ? colors.accentPrimary : colors.textSecondary,
                       borderRadius: `${Math.max(surfaceRadius - 2, 4)}px`,
@@ -1170,7 +1216,7 @@ export function ColorTabContent({
               </div>
 
               {/* Input row */}
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <div
                   role="textbox"
                   aria-readonly="true"

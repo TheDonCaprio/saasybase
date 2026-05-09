@@ -67,9 +67,9 @@ const themedStatTone = {
 	wrapper:
 		'theme-shadow-card rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.24))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.12))] px-3 py-2',
 	label:
-		'text-xs uppercase tracking-wide text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.82))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.9))]',
+		'text-[11px] uppercase tracking-[0.06em] text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.82))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.9))]',
 	value:
-		'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
+		'mt-1 text-[0.95rem] font-semibold text-[color:rgb(var(--text-primary))] sm:text-[0.98rem]',
 	helper:
 		'text-xs text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.82))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.88))]'
 };
@@ -85,8 +85,8 @@ const statToneStyles: Record<Tone, { wrapper: string; label: string; value: stri
 	slate: {
 		wrapper:
 			'rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.75))),linear-gradient(135deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] px-3 py-2 shadow-sm backdrop-blur-sm',
-		label: 'text-xs uppercase tracking-wide text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.85))]',
-		value: 'mt-1 text-base font-semibold text-[color:rgb(var(--text-primary))]',
+		label: 'text-[11px] uppercase tracking-[0.06em] text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.85))]',
+		value: 'mt-1 text-[0.95rem] font-semibold text-[color:rgb(var(--text-primary))] sm:text-[0.98rem]',
 		helper: 'text-xs text-[color:rgb(var(--text-secondary-rgb)_/_calc(var(--text-secondary-a)*0.80))]'
 	}
 };

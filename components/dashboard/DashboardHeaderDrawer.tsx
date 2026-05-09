@@ -206,7 +206,7 @@ export function DashboardHeaderDrawer({
                       key={item.href}
                       href={item.href}
                       onClick={close}
-                      className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
+                      className={`group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-[0.95rem] transition ${
                         active
                           ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
                           : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'

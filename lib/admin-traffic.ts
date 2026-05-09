@@ -29,7 +29,7 @@ import {
 	getActiveTrafficProviderMeta,
 	type TrafficFilters
 } from './traffic-analytics-provider';
-import { toError } from './runtime-guards';
+import { errorToLogDetails, toError } from './runtime-guards';
 import { Logger } from './logger';
 
 const ALLOWED_PERIODS: AdminTrafficPeriod[] = ['1d', '2d', '7d', '30d', '90d', '6m', '12m', 'lifetime', 'custom'];
@@ -367,13 +367,13 @@ export async function getAdminTrafficSnapshot(
 
 		if (isProviderConfigurationError(resolvedError.message)) {
 			Logger.warn('getAdminTrafficSnapshot unavailable due to provider configuration; returning empty snapshot', {
-				error: resolvedError,
+				error: errorToLogDetails(resolvedError),
 				filters: normalizedFilters,
 				provider: provider.key,
 			});
 		} else {
 			Logger.error('getAdminTrafficSnapshot failed; returning empty snapshot', {
-				error: resolvedError,
+				error: errorToLogDetails(resolvedError),
 				filters: normalizedFilters,
 				provider: provider.key,
 			});

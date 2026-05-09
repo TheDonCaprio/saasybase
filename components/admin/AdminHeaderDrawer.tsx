@@ -270,7 +270,7 @@ export function AdminHeaderDrawer({
                       <div key={group.title} className="mb-2">
                         <button
                           onClick={() => toggleGroup(group.title)}
-                          className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${
+                          className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-[0.82rem] font-semibold transition ${
                             isExpanded || hasActiveItem
                               ? 'text-neutral-100'
                               : 'text-neutral-500 hover:text-neutral-300'
@@ -292,7 +292,7 @@ export function AdminHeaderDrawer({
                                   key={item.href}
                                   href={item.href}
                                   onClick={close}
-                                  className={`group flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs transition ${
+                                  className={`group flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-[0.91rem] transition ${
                                     active
                                       ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
                                       : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
@@ -349,7 +349,7 @@ export function AdminHeaderDrawer({
                             ? 'border-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.35))] bg-[rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.14))] text-neutral-100 shadow-sm'
                             : 'border-transparent text-neutral-300 hover:border-[color:rgb(var(--border-primary))] hover:bg-neutral-900/60'
                         }`}
-                        style={{ fontSize: '0.85rem' }}
+                        style={{ fontSize: '0.91rem' }}
                       >
                         <span className="flex items-center gap-2">
                           {item.icon && (

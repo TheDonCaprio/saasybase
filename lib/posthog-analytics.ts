@@ -1,5 +1,5 @@
 import { Logger } from './logger';
-import { toError } from './runtime-guards';
+import { errorToLogDetails, toError } from './runtime-guards';
 import type {
   AdminTrafficBreakdownGroup,
   AdminTrafficProviderMeta,
@@ -283,6 +283,12 @@ async function runPostHogQuery(sql: string, name: string): Promise<QueryRow[]> {
   }
 
   const payload = (await response.json()) as PostHogQueryResponse;
+  const queryStatus = payload.query_status;
+
+  if (queryStatus?.error) {
+    throw new Error(queryStatus.error_message?.trim() || 'PostHog query failed');
+  }
+
   const results = payload.results ?? payload.query_status?.results ?? [];
   const columns = payload.columns ?? payload.query_status?.columns ?? [];
 
@@ -527,7 +533,7 @@ export async function fetchPostHogTrafficSnapshot(filters: TrafficFilters): Prom
     };
   } catch (error: unknown) {
     Logger.error('PostHog analytics error', {
-      error: toError(error),
+      error: errorToLogDetails(error),
       period: filters.period,
       filters,
     });
@@ -606,7 +612,7 @@ export async function fetchPostHogTrafficBreakdown(
     };
   } catch (error: unknown) {
     Logger.error('PostHog breakdown fetch error', {
-      error: toError(error),
+      error: errorToLogDetails(error),
       group,
       filters,
       page,

@@ -44,4 +44,14 @@ export const toError = (e: unknown): Error => {
   }
 };
 
+export const errorToLogDetails = (e: unknown): Record<string, unknown> => {
+  const error = toError(e);
+
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+};
+
 // Named exports only - avoid anonymous default export which trips import/no-anonymous-default-export

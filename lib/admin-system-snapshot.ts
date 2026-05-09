@@ -18,7 +18,7 @@ export type AdminRuntimeSnapshot = {
   fileStorage: string;
   emailDelivery: string;
   platform: string;
-  architecture: string;
+  loadAverage: string;
   cpuCores: string;
   totalMemory: string;
   freeMemory: string;
@@ -112,6 +112,13 @@ function formatDuration(totalSeconds: number) {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+function formatLoadAverage(values: number[]) {
+  const [oneMinute = 0, fiveMinute = 0, fifteenMinute = 0] = values;
+  return [oneMinute, fiveMinute, fifteenMinute]
+    .map((value) => value.toFixed(2))
+    .join('/');
 }
 
 function resolveNodeEnvironmentLabel() {
@@ -214,7 +221,7 @@ export async function getAdminRuntimeSnapshot(): Promise<AdminRuntimeSnapshot> {
     fileStorage: resolveStorageBackend(),
     emailDelivery: resolveEmailDelivery(),
     platform: `${os.type()} ${os.release()}`,
-    architecture: os.arch(),
+    loadAverage: formatLoadAverage(os.loadavg()),
     cpuCores: `${os.cpus().length} logical cores`,
     totalMemory: formatBytes(os.totalmem()),
     freeMemory: formatBytes(os.freemem()),

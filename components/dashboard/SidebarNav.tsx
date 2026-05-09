@@ -83,7 +83,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                 ? 'bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] text-slate-900 dark:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))] dark:text-neutral-50'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-neutral-800/50'
             }`}
-            style={{ fontSize: '0.85rem' }}
+            style={{ fontSize: '0.91rem' }}
           >
             <span className="flex items-center gap-2">
               {it.icon && (

@@ -57,8 +57,14 @@ export function AdminSystemPanel({
         <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60 dark:shadow-lg">
           <h3 className="text-lg font-medium text-slate-900 dark:text-neutral-100">Machine profile</h3>
           <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-3">
-            <SystemBadge label="Platform" value={runtimeSnapshot.platform} tone="slate" />
-            <SystemBadge label="Arch" value={runtimeSnapshot.architecture} tone="slate" />
+            <SystemBadge
+              label="Platform"
+              value={runtimeSnapshot.platform}
+              tone="slate"
+              title={runtimeSnapshot.platform}
+              valueClassName="truncate whitespace-nowrap"
+            />
+            <SystemBadge label="Load avg" value={runtimeSnapshot.loadAverage} tone="slate" />
             <SystemBadge label="CPU" value={runtimeSnapshot.cpuCores} tone="blue" />
             <SystemBadge label="Total RAM" value={runtimeSnapshot.totalMemory} tone="emerald" />
             <SystemBadge label="Free RAM" value={runtimeSnapshot.freeMemory} tone="emerald" />

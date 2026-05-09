@@ -380,9 +380,9 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
 
       {isRobotsEditorOpen && typeof document !== 'undefined'
         ? createPortal(
-        <div className={`fixed inset-0 z-[70000] flex min-h-screen items-center justify-center p-4 transition-opacity duration-150 ${isRobotsModalVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`fixed inset-0 z-[70000] flex min-h-screen items-start justify-center overflow-y-auto overflow-x-hidden p-3 pt-4 sm:items-center sm:p-4 transition-opacity duration-150 ${isRobotsModalVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!savingRobots) setIsRobotsEditorOpen(false); }} />
-          <div className={`relative z-10 w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30 ${isRobotsModalVisible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'}`}>
+          <div className={`relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30 sm:max-h-[90vh] ${isRobotsModalVisible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'}`}>
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit robots.txt</h2>
@@ -401,7 +401,7 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
               </button>
             </div>
 
-            <div className="space-y-5 px-5 py-4">
+            <div className="min-h-0 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-5">
               <label className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-sm dark:border-rose-900/70 dark:bg-rose-950/30">
                 <input type="checkbox" checked={noIndexSite} onChange={(event) => setNoIndexSite(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
                 <span>
@@ -410,8 +410,8 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
                 </span>
               </label>
 
-              <div className="grid gap-5 lg:grid-cols-2">
-                <section className="space-y-3">
+              <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+                <section className="min-w-0 space-y-3">
                   <label className="block space-y-2 text-sm">
                     <span className="font-medium text-slate-700 dark:text-neutral-200">Custom robots.txt directives</span>
                     <textarea
@@ -420,20 +420,20 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
                       maxLength={SEO_FIELD_LIMITS.robotsTxt}
                       rows={14}
                       placeholder={'User-agent: GPTBot\nDisallow: /private/'}
-                      className="h-[22rem] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+                      className="h-[22rem] w-full max-w-full touch-auto overflow-y-auto overflow-x-hidden rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 overscroll-contain break-words focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
                     />
                     <span className="block text-xs text-slate-500 dark:text-neutral-400">Add extra directives exactly as they should appear in robots.txt. {getLengthLabel(robotsTxtCustom, SEO_FIELD_LIMITS.robotsTxt)}</span>
                   </label>
                 </section>
 
-                <section className="space-y-2">
+                <section className="min-w-0 space-y-2">
                   <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Preview</p>
-                  <pre className="h-[22rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-800 dark:border-neutral-700 dark:bg-neutral-950/70 dark:text-neutral-200">{robotsPreview}</pre>
+                  <pre className="h-[22rem] overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-800 dark:border-neutral-700 dark:bg-neutral-950/70 dark:text-neutral-200">{robotsPreview}</pre>
                 </section>
               </div>
             </div>
 
-            <div className="flex gap-2.5 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
+            <div className="flex flex-col gap-2.5 border-t border-slate-200 px-4 py-4 sm:flex-row sm:px-5 dark:border-neutral-800">
               <button
                 type="button"
                 onClick={() => setIsRobotsEditorOpen(false)}

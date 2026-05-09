@@ -523,13 +523,13 @@ export default async function AdminHome() {
                         key={payment.id}
                         className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-neutral-700"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="min-w-0">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 flex-1">
                             <p className="truncate font-semibold text-slate-900 dark:text-neutral-100">{payment.user?.email || 'Unknown user'}</p>
                             <p className="text-xs text-slate-500 dark:text-neutral-400">{payment.subscription?.plan?.name || 'Plan removed'}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="font-mono text-sm text-slate-900 dark:text-neutral-100">{formatCurrency(payment.amountCents / 100)}</p>
+                          <div className="border-t border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] pt-3 sm:border-t-0 sm:pt-0 sm:pl-4 text-left sm:text-right">
+                            <p className="font-mono text-base sm:text-sm text-slate-900 dark:text-neutral-100">{formatCurrency(payment.amountCents / 100)}</p>
                             <p className="text-xs text-slate-500 dark:text-neutral-400">{payment.formattedCreatedAt ?? '—'}</p>
                           </div>
                         </div>

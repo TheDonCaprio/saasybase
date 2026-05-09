@@ -104,11 +104,9 @@ export default async function AdminSettingsPage() {
   });
 
   const siteName = readSetting('SITE_NAME', process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]);
-  const databaseType = envSettings.find((setting) => setting.key === 'DATABASE_TYPE')?.value ?? 'N/A';
   const nodeEnv = envSettings.find((setting) => setting.key === 'NODE_ENV')?.value ?? 'development';
   const authProvider = envSettings.find((setting) => setting.key === 'AUTH_PROVIDER')?.value ?? 'unknown';
   const paymentProvider = envSettings.find((setting) => setting.key === 'PAYMENT_PROVIDER')?.value ?? 'unknown';
-  const fileStorage = envSettings.find((setting) => setting.key === 'FILE_STORAGE')?.value ?? 'unknown';
   const searchVisibility = seoSettings.noIndexSite ? 'Hidden from search' : 'Search index enabled';
   const restoreDefaultsKeys = [
     'format.mode',

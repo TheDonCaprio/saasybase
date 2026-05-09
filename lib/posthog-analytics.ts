@@ -1,5 +1,5 @@
 import { Logger } from './logger';
-import { errorToLogDetails, toError } from './runtime-guards';
+import { errorToLogDetails } from './runtime-guards';
 import type {
   AdminTrafficBreakdownGroup,
   AdminTrafficProviderMeta,

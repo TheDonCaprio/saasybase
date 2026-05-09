@@ -239,6 +239,8 @@ If you access local development through a custom hostname or tunnel instead of p
 
 With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
 
+If you want the shipped admin dashboards, user dashboard, and long lists to look populated during local development, run `npm run demo:seed` after the normal bootstrap seed. That script inserts demo-namespaced sample users, payments, organizations, tickets, notifications, and blog content so you can inspect the UI with realistic data. Treat it as a local-only sandbox helper, not as staging or production seed data.
+
 > **Database note:** the shared Prisma schema and committed migration history are PostgreSQL. Use PostgreSQL for any workflow that relies on `npm run prisma:deploy` or committed migrations. If you still prototype with SQLite locally, treat that as a separate disposable lane and do not carry its migrations into production.
 
 ### Alternative dev scripts
@@ -708,6 +710,8 @@ The public export intentionally omits:
 - operational runbooks, public-history tooling, generated docs-search artifacts, local DB files, and the in-app docs source under `app/docs/`
 
 Public implementation guides that are useful to downstream users, such as [`docs/adding-payment-providers.md`](docs/adding-payment-providers.md), remain included.
+
+The public export now keeps `scripts/seed-demo.ts`, so downstream users can run `npm run demo:seed` locally if they want to inspect the shipped admin/dashboard UI with populated sample data. That helper is for local development only and should not be used to seed staging or production environments.
 
 ---
 

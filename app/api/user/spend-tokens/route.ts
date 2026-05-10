@@ -547,12 +547,26 @@ export async function POST(req: NextRequest) {
 
         const sharedOrgId = sharedContext && sharedContext.ok ? sharedContext.organizationId : null;
 
-        const [freshUser, freshOrg] = await Promise.all([
+        const resolvedSharedContext = sharedContext && sharedContext.ok ? sharedContext : null;
+
+        const [freshUser, freshOrg, freshMembership] = await Promise.all([
           tx.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
           effectiveBucket === 'shared' && sharedOrgId
             ? tx.organization.findUnique({ where: { id: sharedOrgId }, select: { tokenBalance: true } })
             : Promise.resolve(null),
+          effectiveBucket === 'shared' && resolvedSharedContext?.membershipId
+            ? tx.organizationMembership.findFirst({
+                where: { id: resolvedSharedContext.membershipId },
+                select: { sharedTokenBalance: true },
+              })
+            : Promise.resolve(null),
         ]);
+
+        const sharedDisplayBalance = effectiveBucket === 'shared' && resolvedSharedContext
+          ? resolvedSharedContext.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'
+            ? Math.max(0, Number(freshMembership?.sharedTokenBalance ?? resolvedSharedContext.memberAllocatedBalance ?? 0))
+            : Math.max(0, Number(freshOrg?.tokenBalance ?? resolvedSharedContext.poolBalance ?? 0))
+          : null;
 
         return {
           status: 200,
@@ -567,6 +581,7 @@ export async function POST(req: NextRequest) {
             balances: {
               paid: Math.max(0, Number(freshUser?.tokenBalance ?? paidBalance)),
               free: Math.max(0, Number(freshUser?.freeTokenBalance ?? freeBalance)),
+              shared: sharedDisplayBalance,
               sharedPool: effectiveBucket === 'shared' ? Math.max(0, Number(freshOrg?.tokenBalance ?? 0)) : null,
             },
           },

@@ -13,6 +13,7 @@ import {
 import { usePathname } from 'next/navigation';
 import { useAuthSession, useAuthUser } from '@/lib/auth-provider/client';
 import { isCurrentPageNotFound } from '@/lib/client-not-found';
+import { TOKEN_BALANCES_UPDATED_EVENT, type TokenBalancesUpdatedDetail } from '@/lib/token-balance-sync';
 
 export interface SharedUserProfile {
   user: {
@@ -97,6 +98,7 @@ type ProfileState = {
 };
 
 const PROFILE_FETCH_RETRY_DELAY_MS = 450;
+const TOKEN_BALANCE_REFRESH_DEBOUNCE_MS = 250;
 
 const UserProfileContext = createContext<UserProfileContextValue | null>(null);
 
@@ -133,10 +135,18 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const inFlightPromiseRef = useRef<Promise<SharedUserProfile | null> | null>(null);
   const prevOrgIdRef = useRef(currentOrgId);
+  const tokenRefreshTimeoutRef = useRef<number | null>(null);
 
   const abortActiveProfileRequest = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+  }, []);
+
+  const clearTokenRefreshTimeout = useCallback(() => {
+    if (tokenRefreshTimeoutRef.current !== null) {
+      window.clearTimeout(tokenRefreshTimeoutRef.current);
+      tokenRefreshTimeoutRef.current = null;
+    }
   }, []);
 
   const resetProfile = useCallback(() => {
@@ -339,10 +349,101 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
+      clearTokenRefreshTimeout();
       abortActiveProfileRequest();
       inFlightPromiseRef.current = null;
     };
-  }, [abortActiveProfileRequest]);
+  }, [abortActiveProfileRequest, clearTokenRefreshTimeout]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) {
+      return;
+    }
+
+    const applyTokenBalanceUpdate = (detail: TokenBalancesUpdatedDetail) => {
+      setProfileState((prev) => {
+        if (!prev.profile || prev.orgId !== currentOrgId) {
+          return prev;
+        }
+
+        const nextProfile: SharedUserProfile = { ...prev.profile };
+        let changed = false;
+
+        const paidBalance = detail.balances?.paid;
+        if (typeof paidBalance === 'number') {
+          if (nextProfile.paidTokens && nextProfile.paidTokens.remaining !== paidBalance) {
+            nextProfile.paidTokens = {
+              ...nextProfile.paidTokens,
+              remaining: paidBalance,
+              displayRemaining: nextProfile.paidTokens.isUnlimited ? 'Unlimited' : paidBalance.toLocaleString(),
+            };
+            changed = true;
+          }
+
+          if (nextProfile.subscription?.tokens && !nextProfile.subscription.tokens.isUnlimited && nextProfile.subscription.tokens.remaining !== paidBalance) {
+            nextProfile.subscription = {
+              ...nextProfile.subscription,
+              tokens: {
+                ...nextProfile.subscription.tokens,
+                remaining: paidBalance,
+                used: nextProfile.subscription.tokens.total != null
+                  ? Math.max(0, nextProfile.subscription.tokens.total - paidBalance)
+                  : nextProfile.subscription.tokens.used,
+                displayRemaining: paidBalance.toLocaleString(),
+              },
+            };
+            changed = true;
+          }
+        }
+
+        const freeBalance = detail.balances?.free;
+        if (typeof freeBalance === 'number' && nextProfile.freeTokens && nextProfile.freeTokens.remaining !== freeBalance) {
+          nextProfile.freeTokens = {
+            ...nextProfile.freeTokens,
+            remaining: freeBalance,
+          };
+          changed = true;
+        }
+
+        const sharedBalance = detail.balances?.shared;
+        const sameOrganization = !detail.organizationId || detail.organizationId === nextProfile.organization?.id;
+        if (typeof sharedBalance === 'number' && sameOrganization && nextProfile.sharedTokens && nextProfile.sharedTokens.remaining !== sharedBalance) {
+          nextProfile.sharedTokens = {
+            ...nextProfile.sharedTokens,
+            remaining: sharedBalance,
+          };
+          changed = true;
+        }
+
+        return changed ? { ...prev, profile: nextProfile } : prev;
+      });
+    };
+
+    const scheduleRefresh = () => {
+      clearTokenRefreshTimeout();
+      tokenRefreshTimeoutRef.current = window.setTimeout(() => {
+        tokenRefreshTimeoutRef.current = null;
+        void refreshProfile();
+      }, TOKEN_BALANCE_REFRESH_DEBOUNCE_MS);
+    };
+
+    const handleTokenBalancesUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<TokenBalancesUpdatedDetail>;
+      if (!customEvent.detail) {
+        return;
+      }
+
+      applyTokenBalanceUpdate(customEvent.detail);
+      scheduleRefresh();
+    };
+
+    window.addEventListener(TOKEN_BALANCES_UPDATED_EVENT, handleTokenBalancesUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener(TOKEN_BALANCES_UPDATED_EVENT, handleTokenBalancesUpdated as EventListener);
+      clearTokenRefreshTimeout();
+    };
+  }, [clearTokenRefreshTimeout, currentOrgId, isLoaded, isSignedIn, refreshProfile]);
 
   const value = useMemo<UserProfileContextValue>(() => ({
     currentOrgId,

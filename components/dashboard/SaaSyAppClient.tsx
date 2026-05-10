@@ -11,6 +11,7 @@ import {
   dashboardPillClass,
 } from '@/components/dashboard/dashboardSurfaces';
 import { WarningsModal, type AppWarning, type SharedCapContext } from '@/components/ui/WarningsModal';
+import { emitTokenBalancesUpdated } from '@/lib/token-balance-sync';
 
 type Bucket = 'auto' | 'paid' | 'free' | 'shared';
 
@@ -33,11 +34,13 @@ type SpendResponseOk = {
   ok: true;
   amount: number;
   bucket: Exclude<Bucket, 'auto'>;
+  organizationId?: string | null;
   warnings?: AppWarning[];
   sharedCap?: SharedCapContext;
   balances: {
     paid: number;
     free: number;
+    shared: number | null;
     sharedPool: number | null;
   };
 };
@@ -74,6 +77,34 @@ function safeInt(value: unknown) {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function applyBalanceSnapshot(profile: ProfilePayload | null, balances: SpendResponseOk['balances']) {
+  if (!profile) {
+    return profile;
+  }
+
+  return {
+    ...profile,
+    paidTokens: profile.paidTokens
+      ? {
+          ...profile.paidTokens,
+          remaining: balances.paid,
+        }
+      : profile.paidTokens,
+    freeTokens: profile.freeTokens
+      ? {
+          ...profile.freeTokens,
+          remaining: balances.free,
+        }
+      : profile.freeTokens,
+    sharedTokens: profile.sharedTokens && typeof balances.shared === 'number'
+      ? {
+          ...profile.sharedTokens,
+          remaining: balances.shared,
+        }
+      : profile.sharedTokens,
+  };
 }
 
 function defaultBucketForProfile(profile: ProfilePayload | null, isTeamWorkspace: boolean): Bucket {
@@ -280,7 +311,12 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
         setWarningOpen(true);
       }
 
-      await refreshProfile();
+      setProfile((current) => applyBalanceSnapshot(current, payload.balances));
+      emitTokenBalancesUpdated({
+        bucket: payload.bucket,
+        organizationId: payload.organizationId ?? null,
+        balances: payload.balances,
+      });
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : 'Failed to spend tokens');
     } finally {

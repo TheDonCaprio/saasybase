@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { DashboardPageHeader } from '@/components/dashboard/DashboardPageHeader';
+import { SaaSyAppHeaderTokenStatValue } from '@/components/dashboard/SaaSyAppHeaderTokenStatValue';
 import SaaSyAppClient from '@/components/dashboard/SaaSyAppClient';
 import { buildDashboardMetadata } from '@/lib/dashboardMetadata';
 import { buildReturnPath, requireAuth } from '@/lib/route-guards';
@@ -92,18 +93,30 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         stats={[
           {
             label: 'Personal',
-            value: isTeamWorkspace
-              ? 'Unavailable'
-              : personalStatValue,
+            value: (
+              <SaaSyAppHeaderTokenStatValue
+                kind="personal"
+                initialValue={isTeamWorkspace ? 'Unavailable' : personalStatValue}
+                isTeamWorkspace={isTeamWorkspace}
+                orgTokenName={orgTokenName}
+                hasUnlimitedWorkspaceTokens={hasUnlimitedWorkspaceTokens}
+              />
+            ),
             helper: isTeamWorkspace
               ? 'Switch to personal workspace'
               : 'Available in personal workspace',
           },
           {
             label: orgName,
-            value: isTeamWorkspace
-              ? workspaceStatValue
-              : 'Unavailable',
+            value: (
+              <SaaSyAppHeaderTokenStatValue
+                kind="workspace"
+                initialValue={isTeamWorkspace ? workspaceStatValue : 'Unavailable'}
+                isTeamWorkspace={isTeamWorkspace}
+                orgTokenName={orgTokenName}
+                hasUnlimitedWorkspaceTokens={hasUnlimitedWorkspaceTokens}
+              />
+            ),
             helper: isTeamWorkspace
               ? `Available in ${orgName} workspace`
               : 'Switch to a team workspace',

@@ -37,6 +37,7 @@ import VisitTracker from '../components/VisitTracker';
 import { OrgValidityCheck } from '../components/dashboard/OrgValidityCheck';
 import { TokenExpiryCleanupPing } from '../components/dashboard/TokenExpiryCleanupPing';
 import ChunkLoadRecovery from '../components/ui/ChunkLoadRecovery';
+import { NavigationProgress } from '../components/ui/NavigationProgress';
 import { getTrafficAnalyticsClientConfig } from '../lib/traffic-analytics-config';
 import { getSeoSettings } from '../lib/seo';
 import { buildSeoTitleTemplate } from '../lib/seo-shared';
@@ -338,6 +339,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           suppressHydrationWarning={true}
         >
           <AppAuthProvider publishableKey={clerkEnabled ? (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '') : ''}>
+            <NavigationProgress />
             {/* Indicate to client code whether Clerk is active so client-only
               helpers can avoid calling Clerk APIs on self-hosted auth lanes. */}
             {clerkEnabled ? <meta name="x-clerk-enabled" content="true" /> : null}

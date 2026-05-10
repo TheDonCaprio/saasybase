@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  memo,
+  startTransition,
   useState,
   useEffect,
   useRef,
@@ -9,7 +11,6 @@ import {
   type DragEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import { showToast } from './Toast';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -72,6 +73,45 @@ const formatDateTime = (value?: string) => {
   }
 };
 
+const ImageGridItem = memo(function ImageGridItem({
+  image,
+  isSelected,
+  onSelect,
+  onInsert,
+}: {
+  image: ImageFile;
+  isSelected: boolean;
+  onSelect: (image: ImageFile) => void;
+  onInsert: (image: ImageFile) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(image)}
+      onDoubleClick={() => onInsert(image)}
+      className={`group relative aspect-square overflow-hidden rounded-lg border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 ${
+        isSelected
+          ? 'border-violet-500 bg-violet-50/30 dark:bg-violet-900/20'
+          : 'border-neutral-200 hover:border-violet-400 dark:border-neutral-700 dark:hover:border-violet-500'
+      }`}
+      title={image.filename}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={image.url}
+        alt={image.filename}
+        className="h-full w-full object-cover"
+        loading="lazy"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
+      <div className="absolute inset-x-0 bottom-0 flex items-center bg-black/60 px-2 py-1 text-xs text-white">
+        <span className="truncate">{image.filename}</span>
+      </div>
+    </button>
+  );
+});
+
 export function ImagePickerModal({
   isOpen,
   onClose,
@@ -80,6 +120,8 @@ export function ImagePickerModal({
   allowUpload = true,
   uploadScope = 'file',
 }: ImagePickerModalProps) {
+  const INITIAL_FETCH_LIMIT = 12;
+  const PAGINATED_FETCH_LIMIT = 20;
   const [images, setImages] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -162,7 +204,7 @@ export function ImagePickerModal({
 
       try {
         const params = new URLSearchParams();
-        params.set('limit', '20');
+        params.set('limit', String(reset ? INITIAL_FETCH_LIMIT : PAGINATED_FETCH_LIMIT));
         if (cursorParam) {
           params.set('cursor', cursorParam);
         }
@@ -188,40 +230,36 @@ export function ImagePickerModal({
         const newImages: ImageFile[] = Array.isArray(data.files) ? data.files : [];
         const next = data.pagination?.nextCursor ?? null;
 
-        setNextCursor(next);
-        setHasMore(Boolean(next));
+        startTransition(() => {
+          setNextCursor(next);
+          setHasMore(Boolean(next));
 
-        if (reset) {
-          setImages(newImages);
-          imagesRef.current = newImages;
-          setSelectedImage((previous) => {
-            if (!newImages.length) return null;
-            if (previous) {
+          if (reset) {
+            setImages(newImages);
+            imagesRef.current = newImages;
+            setSelectedImage((previous) => {
+              if (!newImages.length || !previous) return null;
               const previousId = imageIdentifier(previous);
-              const existing = newImages.find((item) => imageIdentifier(item) === previousId);
-              if (existing) {
-                return existing;
+              return newImages.find((item) => imageIdentifier(item) === previousId) ?? null;
+            });
+          } else if (newImages.length) {
+            setImages((prev) => {
+              if (!prev.length) {
+                imagesRef.current = newImages;
+                return newImages;
               }
-            }
-            return newImages[0];
-          });
-        } else if (newImages.length) {
-          setImages((prev) => {
-            if (!prev.length) {
-              imagesRef.current = newImages;
-              return newImages;
-            }
-            const existingIds = new Set(prev.map(imageIdentifier));
-            const deduped = newImages.filter((item) => !existingIds.has(imageIdentifier(item)));
-            if (!deduped.length) {
-              imagesRef.current = prev;
-              return prev;
-            }
-            const merged = [...prev, ...deduped];
-            imagesRef.current = merged;
-            return merged;
-          });
-        }
+              const existingIds = new Set(prev.map(imageIdentifier));
+              const deduped = newImages.filter((item) => !existingIds.has(imageIdentifier(item)));
+              if (!deduped.length) {
+                imagesRef.current = prev;
+                return prev;
+              }
+              const merged = [...prev, ...deduped];
+              imagesRef.current = merged;
+              return merged;
+            });
+          }
+        });
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return;
@@ -513,7 +551,11 @@ export function ImagePickerModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    fetchImages(null, true, true);
+    const frame = window.requestAnimationFrame(() => {
+      void fetchImages(null, true, true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, searchQuery, fetchImages]);
 
   useEffect(() => {
@@ -550,6 +592,7 @@ export function ImagePickerModal({
 
   const selectedSizeLabel = formatBytes(selectedImage?.size);
   const selectedUploadedLabel = formatDateTime(selectedImage?.uploadedAt);
+  const selectedImageId = selectedImage ? imageIdentifier(selectedImage) : null;
   const selectedDimensionsLabel = selectedImage
     ? dimensionsLoading
       ? 'Loading…'
@@ -561,13 +604,13 @@ export function ImagePickerModal({
   const detailsPanelContent = selectedImage ? (
     <div className="flex h-full w-full flex-col gap-4 overflow-x-hidden">
       <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={selectedImage.url}
           alt={selectedImage.filename}
-          width={360}
-          height={360}
           className="h-full w-full object-contain"
-          unoptimized
+          loading="eager"
+          decoding="async"
         />
       </div>
   <div className="min-h-[150px] w-full space-y-3 overflow-x-hidden text-sm text-neutral-600 dark:text-neutral-300">
@@ -615,7 +658,7 @@ export function ImagePickerModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
@@ -624,7 +667,7 @@ export function ImagePickerModal({
       <div className="relative flex h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-xl dark:bg-neutral-900 sm:h-auto sm:max-h-[85vh] mx-4">
         {allowUpload && dragActive && (
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-            <div className="mx-8 w-full max-w-3xl rounded-2xl border-2 border-dashed border-violet-400 bg-violet-600/20 px-8 py-12 text-center text-violet-50 backdrop-blur-sm">
+            <div className="mx-8 w-full max-w-3xl rounded-2xl border-2 border-dashed border-violet-400 bg-violet-600/20 px-8 py-12 text-center text-violet-50">
               <p className="text-lg font-semibold tracking-tight">Drop images to upload</p>
               <p className="mt-2 text-sm text-violet-50/80">Your files will start uploading immediately.</p>
             </div>
@@ -737,37 +780,15 @@ export function ImagePickerModal({
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6">
-                {images.map((image) => {
-                  const isSelected = selectedImage && imageIdentifier(selectedImage) === imageIdentifier(image);
-                  return (
-                    <button
-                      type="button"
-                      key={imageIdentifier(image)}
-                      onClick={() => handleImageClick(image)}
-                      onDoubleClick={() => handleInsertImage(image)}
-                      className={`group relative aspect-square overflow-hidden rounded-lg border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 ${
-                        isSelected
-                          ? 'border-violet-500 ring-2 ring-violet-500 ring-offset-2 ring-offset-white dark:ring-offset-neutral-900'
-                          : 'border-neutral-200 hover:border-violet-400 dark:border-neutral-700 dark:hover:border-violet-500'
-                      }`}
-                      title={image.filename}
-                    >
-                      <Image
-                        src={image.url}
-                        alt={image.filename}
-                        width={320}
-                        height={320}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
-                      <div className="absolute inset-x-0 bottom-0 flex items-center bg-black/60 px-2 py-1 text-xs text-white">
-                        <span className="truncate">{image.filename}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+                {images.map((image) => (
+                  <ImageGridItem
+                    key={imageIdentifier(image)}
+                    image={image}
+                    isSelected={selectedImageId === imageIdentifier(image)}
+                    onSelect={handleImageClick}
+                    onInsert={handleInsertImage}
+                  />
+                ))}
               </div>
             )}
 

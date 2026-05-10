@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
 import PricingList from '../../components/pricing/PricingList';
 import { prisma } from '../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
@@ -21,6 +22,7 @@ import { buildPricingCardRecurringState } from '../../lib/pricing-card-status';
 import { getSeoSettings } from '../../lib/seo';
 import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 import { redirect } from 'next/navigation';
+import { buildBreadcrumbSchema, buildWebPageSchema } from '@/lib/schema';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [siteName, seoSettings] = await Promise.all([
@@ -332,9 +334,30 @@ export default async function PricingPage() {
     oneTime: oneTimePlans.length > 0 ? generatePricingGridClasses(oneTimePlans.length, pricingSettings.maxColumns, pricingSettings.centerUneven) : undefined,
     recurring: recurringPlans.length > 0 ? generatePricingGridClasses(recurringPlans.length, pricingSettings.maxColumns, pricingSettings.centerUneven) : undefined,
   };
+  const [siteName, seoSettings] = await Promise.all([
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
+  ]);
+  const schemaData = [
+    buildWebPageSchema({
+      title: `Pricing | ${siteName}`,
+      description: 'Compare plans, billing cadence, and included usage limits before checkout.',
+      path: '/pricing',
+      siteUrl: seoSettings?.siteUrl,
+    }),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Home', path: '/' },
+        { name: 'Pricing', path: '/pricing' },
+      ],
+      seoSettings?.siteUrl,
+    ),
+  ];
 
   return (
-    <PricingPageClient>
+    <>
+      <JsonLd data={schemaData} />
+      <PricingPageClient>
       <div className="mx-auto w-full max-w-[1440px] px-4 lg:px-8 space-y-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
@@ -516,6 +539,7 @@ export default async function PricingPage() {
           <p>• <span className="text-yellow-400">●</span> One-time plans require manual renewal when they expire</p>
         </div>
       </div>
-    </PricingPageClient>
+      </PricingPageClient>
+    </>
   );
 }

@@ -1,12 +1,15 @@
 export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
+import JsonLd from '@/components/seo/JsonLd';
 import { getPublishedBlogBySlug, buildBlogMetadata, listPublishedBlogPosts } from '@/lib/blog';
 import { SiteContentRenderer } from '@/components/site-pages/SiteContentRenderer';
 import { formatDate } from '@/lib/formatDate';
-import { getBlogSidebarSettings, getRelatedPostsEnabled, getBlogHtmlSnippets } from '@/lib/settings';
+import { getBlogSidebarSettings, getRelatedPostsEnabled, getBlogHtmlSnippets, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
 import { BlogSidebar } from '@/components/blog/BlogSidebar';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import RelatedPosts from '@/components/blog/RelatedPosts';
+import { buildBlogPostingSchema, buildBreadcrumbSchema } from '@/lib/schema';
+import { getSeoSettings } from '@/lib/seo';
 
 interface PageParams {
   params: Promise<{ slug: string }>;
@@ -22,17 +25,44 @@ export default async function BlogPostPage({ params }: PageParams) {
   const slug = resolved.slug;
   const post = await getPublishedBlogBySlug(slug);
   if (!post) return notFound();
-  const sidebarSettings = await getBlogSidebarSettings();
-  const snippets = await getBlogHtmlSnippets();
+  const [sidebarSettings, snippets, relatedEnabled, siteName, seoSettings] = await Promise.all([
+    getBlogSidebarSettings(),
+    getBlogHtmlSnippets(),
+    getRelatedPostsEnabled(),
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
+  ]);
   const singleSidebarEnabled = sidebarSettings.enabledSingle ?? sidebarSettings.enabled;
   const recentPosts = singleSidebarEnabled && sidebarSettings.showRecent
     ? await listPublishedBlogPosts({ page: 1, limit: Math.max(5, sidebarSettings.recentCount + 3) }).then(r => r.posts.filter(p => p.slug !== slug))
     : [];
-  const relatedEnabled = await getRelatedPostsEnabled();
+  const schemaData = [
+    buildBlogPostingSchema({
+      title: post.title,
+      description: post.description,
+      path: `/blog/${post.slug}`,
+      siteName,
+      siteUrl: seoSettings?.siteUrl,
+      imageUrl: post.ogImage?.trim() || seoSettings?.resolvedDefaultOgImageUrl,
+      datePublished: (post.publishedAt ?? post.updatedAt).toISOString(),
+      dateModified: post.updatedAt.toISOString(),
+    }),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Home', path: '/' },
+        { name: 'Blog', path: '/blog' },
+        ...(post.categories && post.categories.length > 0 ? [{ name: post.categories[0].title, path: `/blog/category/${post.categories[0].slug}` }] : []),
+        { name: post.title, path: `/blog/${post.slug}` },
+      ],
+      seoSettings?.siteUrl,
+    ),
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 pt-10 pb-4 sm:py-6 lg:py-16">
-      <div className={`grid gap-6 lg:gap-12 items-stretch ${singleSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
+    <>
+      <JsonLd data={schemaData} />
+      <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 pt-10 pb-4 sm:py-6 lg:py-16">
+        <div className={`grid gap-6 lg:gap-12 items-stretch ${singleSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
         <article className={`${singleSidebarEnabled ? 'lg:col-span-2' : 'max-w-5xl mx-auto'} min-h-0`}>
           <div className="h-full flex flex-col">
             <header className="mb-6 lg:mb-12">
@@ -125,7 +155,8 @@ export default async function BlogPostPage({ params }: PageParams) {
             />
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

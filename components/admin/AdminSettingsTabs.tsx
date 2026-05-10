@@ -399,8 +399,8 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
                         : 'border-slate-200 bg-white text-slate-700 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200'
                     )}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
+                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4">
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold">{meta.label}</p>
                         <p className="mt-1 text-xs text-slate-600 dark:text-neutral-400">{meta.description}</p>
                       </div>
@@ -411,7 +411,7 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
                         onClick={() => updateModeratorAccess(section, !enabled)}
                         disabled={saving}
                         className={cx(
-                          'relative inline-flex h-6 w-11 items-center rounded-full transition',
+                          'relative mt-1 inline-flex h-6 w-11 shrink-0 items-center self-start rounded-full transition',
                           enabled ? 'bg-emerald-500' : 'bg-slate-300',
                           saving ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                         )}

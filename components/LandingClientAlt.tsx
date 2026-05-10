@@ -72,6 +72,8 @@ const FAKE_USERS = [
 type DemoView = 'finance' | 'users' | 'overview';
 const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
 const DEMO_HOLD_MS = [9500, 8500, 6500];
+const DEMO_MIN_VIEW_MS = [2200, 2200, 1800];
+const DEMO_ADVANCE_AFTER_SCROLL_MS = 450;
 
 type SurfaceTone = 'auth' | 'tests' | 'security' | 'meter';
 
@@ -342,7 +344,12 @@ function DashboardDemo() {
   const tiltRef = useRef<HTMLDivElement>(null);
   const tiltInnerRef = useRef<HTMLDivElement>(null);
   const viewIdxRef = useRef(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollTrackRef = useRef<HTMLDivElement>(null);
+  const scrollOffsetRef = useRef(0);
+  const scrollViewRef = useRef<DemoView>('finance');
+  const viewStartedAtRef = useRef(0);
+  const scrollCompletedAtRef = useRef<number | null>(null);
   const canAnimateDemo = demoInView && !pageScrollActive;
 
   useEffect(() => {
@@ -393,18 +400,44 @@ function DashboardDemo() {
 
     let timer: ReturnType<typeof setTimeout>;
     let transitionTimer: ReturnType<typeof setTimeout>;
+    const advanceView = () => {
+      setTransitioning(true);
+      transitionTimer = setTimeout(() => {
+        viewIdxRef.current = (viewIdxRef.current + 1) % DEMO_VIEWS.length;
+        setDemoView(DEMO_VIEWS[viewIdxRef.current]);
+        setTransitioning(false);
+      }, 350);
+    };
 
     const scheduleNext = () => {
-      timer = setTimeout(() => {
-        setTransitioning(true);
-        transitionTimer = setTimeout(() => {
-          viewIdxRef.current = (viewIdxRef.current + 1) % DEMO_VIEWS.length;
-          setDemoView(DEMO_VIEWS[viewIdxRef.current]);
-          setTransitioning(false);
-          scheduleNext();
-        }, 350);
-      }, DEMO_HOLD_MS[viewIdxRef.current]);
+      const now = performance.now();
+      const viewIndex = viewIdxRef.current;
+      const elapsed = now - viewStartedAtRef.current;
+      const maxRemaining = Math.max(0, DEMO_HOLD_MS[viewIndex] - elapsed);
+      const minRemaining = Math.max(0, DEMO_MIN_VIEW_MS[viewIndex] - elapsed);
+      const scrollCompletedAt = scrollCompletedAtRef.current;
+
+      if (maxRemaining <= 0) {
+        advanceView();
+        return;
+      }
+
+      if (scrollCompletedAt != null) {
+        const settleRemaining = Math.max(0, DEMO_ADVANCE_AFTER_SCROLL_MS - (now - scrollCompletedAt));
+        const nextDelay = Math.max(minRemaining, settleRemaining);
+
+        if (nextDelay <= 0) {
+          advanceView();
+          return;
+        }
+
+        timer = setTimeout(scheduleNext, Math.min(nextDelay, maxRemaining));
+        return;
+      }
+
+      timer = setTimeout(scheduleNext, Math.min(220, maxRemaining));
     };
+
     scheduleNext();
     return () => {
       clearTimeout(timer);
@@ -412,26 +445,86 @@ function DashboardDemo() {
     };
   }, [canAnimateDemo]);
 
+  useEffect(() => {
+    if (scrollViewRef.current === demoView) {
+      return;
+    }
+
+    scrollViewRef.current = demoView;
+    scrollOffsetRef.current = 0;
+    viewStartedAtRef.current = performance.now();
+    scrollCompletedAtRef.current = null;
+
+    if (scrollTrackRef.current) {
+      scrollTrackRef.current.style.transform = 'translate3d(0, 0, 0)';
+    }
+  }, [demoView]);
+
+  useEffect(() => {
+    if (viewStartedAtRef.current === 0) {
+      viewStartedAtRef.current = performance.now();
+    }
+  }, []);
+
   // auto-scroll each view slowly
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || transitioning || !canAnimateDemo) return;
-    el.scrollTop = 0;
+    const viewport = scrollViewportRef.current;
+    const track = scrollTrackRef.current;
+    if (!viewport || !track || transitioning || !canAnimateDemo) return;
+    track.style.transform = `translate3d(0, ${-scrollOffsetRef.current}px, 0)`;
     let raf = 0;
-    const delay = setTimeout(() => {
-      const target = el.scrollHeight - el.clientHeight;
-      if (target <= 0) return;
-      const dur = Math.max(target * 22, 3500);
+    let stableFrameCount = 0;
+    let lastMeasuredHeight = -1;
+
+    const startScroll = () => {
+      const target = track.scrollHeight - viewport.clientHeight;
+      const initialOffset = Math.min(scrollOffsetRef.current, target);
+      const remainingDistance = target - initialOffset;
+      if (remainingDistance <= 0) {
+        if (scrollCompletedAtRef.current == null) {
+          scrollCompletedAtRef.current = performance.now();
+        }
+        return;
+      }
+      const dur = Math.max(remainingDistance * 18, 1200);
       const start = performance.now();
       const step = (now: number) => {
         const p = Math.min((now - start) / dur, 1);
-        const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        el.scrollTop = ease * target;
-        if (p < 1) raf = requestAnimationFrame(step);
+        const nextOffset = initialOffset + p * remainingDistance;
+        scrollOffsetRef.current = nextOffset;
+        track.style.transform = `translate3d(0, ${-nextOffset}px, 0)`;
+        if (p < 1) {
+          raf = requestAnimationFrame(step);
+          return;
+        }
+
+        scrollCompletedAtRef.current = performance.now();
       };
       raf = requestAnimationFrame(step);
-    }, 900);
-    return () => { clearTimeout(delay); cancelAnimationFrame(raf); };
+    };
+
+    const waitForStableLayout = () => {
+      const currentHeight = track.scrollHeight;
+
+      if (currentHeight === lastMeasuredHeight) {
+        stableFrameCount += 1;
+      } else {
+        stableFrameCount = 0;
+        lastMeasuredHeight = currentHeight;
+      }
+
+      if (stableFrameCount >= 2) {
+        startScroll();
+        return;
+      }
+
+      raf = requestAnimationFrame(waitForStableLayout);
+    };
+
+    raf = requestAnimationFrame(waitForStableLayout);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
   }, [canAnimateDemo, demoView, transitioning]);
 
   useEffect(() => {
@@ -635,7 +728,8 @@ function DashboardDemo() {
 
             {/* ── Finance / Transactions view ── */}
             {demoView === 'finance' && (
-              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ display: 'flex', minHeight: '100%', flexDirection: 'column', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div style={{ margin: '12px 14px 0' }}>
                   <DashboardPageHeader
                     eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Finances</span>}
@@ -702,8 +796,8 @@ function DashboardDemo() {
                           </div>
                         ))}
                       </div>
-                      {FAKE_TRANSACTIONS.map((tx, i) => (
-                        <div key={tx.id} className="lp-tx-row" style={{ display: 'grid', gridTemplateColumns: '0.6fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr 0.6fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)', animationDelay: `${300 + i * 180}ms` }}>
+                      {FAKE_TRANSACTIONS.map((tx) => (
+                        <div key={tx.id} className="lp-tx-row" style={{ display: 'grid', gridTemplateColumns: '0.6fr 1.4fr 2fr 1.7fr 1.1fr 0.9fr 0.6fr', padding: '6px 12px', gap: 8, alignItems: 'center', borderTop: '1px solid var(--lp-dd-row-border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                             <PaymentProviderBadge provider={tx.provider} size="xs" showName={false} />
                           </div>
@@ -728,8 +822,8 @@ function DashboardDemo() {
                     </div>
                     {/* Mobile card layout */}
                     <div className="lp-dd-tbl-mobile">
-                      {FAKE_TRANSACTIONS.map((tx, i) => (
-                        <div key={tx.id} className="lp-tx-row" style={{ padding: '8px 12px', borderTop: '1px solid var(--lp-dd-row-border)', animationDelay: `${300 + i * 180}ms` }}>
+                      {FAKE_TRANSACTIONS.map((tx) => (
+                        <div key={tx.id} className="lp-tx-row" style={{ padding: '8px 12px', borderTop: '1px solid var(--lp-dd-row-border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                             <span style={{ fontSize: 10.5, color: 'var(--lp-dd-row-text)', fontWeight: 500 }}>{tx.user}</span>
                             <span className="flex items-center gap-2">
@@ -760,12 +854,14 @@ function DashboardDemo() {
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             )}
 
             {/* ── Users view ── */}
             {demoView === 'users' && (
-              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ display: 'flex', minHeight: '100%', flexDirection: 'column', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div style={{ margin: '12px 14px 0' }}>
                   <DashboardPageHeader
                     eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Accounts</span>}
@@ -882,12 +978,14 @@ function DashboardDemo() {
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             )}
 
             {/* ── Overview / Dashboard view ── */}
             {demoView === 'overview' && (
-              <div ref={scrollRef} className="lp-dd-content" style={{ flex: 1, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+                <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ minHeight: '100%', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div className="space-y-4 p-4">
                     <DashboardPageHeader
                     eyebrow={<span style={{ fontSize: 11, lineHeight: 1 }}>Operations center</span>}
@@ -1064,6 +1162,7 @@ function DashboardDemo() {
                       </div>
                     </div>
                   </section>
+                </div>
                 </div>
               </div>
             )}
@@ -2680,7 +2779,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         /* ── Demo: mobile responsive ── */
         .lp-dd-mobile-hdr { display:none; }
         .lp-dd-tbl-mobile { display:none; }
-        .lp-tx-row { animation: lpFadeUp 0.3s ease both; }
+        .lp-tx-row { animation: lpFadeUp 0.22s ease both; }
         .lp-dd-content { overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; overscroll-behavior:auto; touch-action:auto; }
         .lp-dd-content::-webkit-scrollbar { display:none; }
         .lp-dd-topbar {

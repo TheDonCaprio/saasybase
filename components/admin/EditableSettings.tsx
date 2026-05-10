@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { showToast } from '../ui/Toast';
-import Image from 'next/image';
 import { ImagePickerModal } from '../ui/ImagePickerModal';
 
 function formatSettingLabel(key: string) {
@@ -382,7 +381,15 @@ export function EditableSettings({
                                   </>
                                 ) : (
                                   <div className="flex-shrink-0">
-                                    <Image src={currentValue} alt="Site logo" width={96} height={24} className="h-6 w-auto rounded object-contain" />
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={currentValue}
+                                      alt="Site logo"
+                                      className="rounded object-contain"
+                                      style={{ height: '24px', width: 'auto' }}
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
                                   </div>
                                 )}
                                 <div className="break-all text-sm text-slate-600 dark:text-neutral-400 font-mono">{currentValue}</div>

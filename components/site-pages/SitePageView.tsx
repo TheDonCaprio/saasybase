@@ -1,21 +1,45 @@
 import type { SitePageRecord } from '@/lib/sitePages';
+import JsonLd from '@/components/seo/JsonLd';
 import { formatDate } from '@/lib/formatDate';
 import { SiteContentRenderer } from './SiteContentRenderer';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { getBlogSidebarSettings } from '@/lib/settings';
 import { BlogSidebar } from '@/components/blog/BlogSidebar';
 import { listPublishedBlogPosts } from '@/lib/blog';
+import { getSeoSettings } from '@/lib/seo';
+import { buildBreadcrumbSchema, buildWebPageSchema } from '@/lib/schema';
 
 export async function SitePageView({ page }: { page: SitePageRecord }) {
-  const sidebarSettings = await getBlogSidebarSettings();
+  const [sidebarSettings, seoSettings] = await Promise.all([
+    getBlogSidebarSettings(),
+    getSeoSettings().catch(() => null),
+  ]);
   const pagesSidebarEnabled = sidebarSettings.enabledPages ?? sidebarSettings.enabled;
   const recentPosts = pagesSidebarEnabled && sidebarSettings.showRecent
     ? await listPublishedBlogPosts({ page: 1, limit: Math.max(5, sidebarSettings.recentCount + 3) }).then(r => r.posts)
     : [];
+  const schemaData = [
+    buildWebPageSchema({
+      title: page.title,
+      description: page.description,
+      path: `/${page.slug}`,
+      siteUrl: seoSettings?.siteUrl,
+      dateModified: page.updatedAt.toISOString(),
+    }),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Home', path: '/' },
+        { name: page.title, path: `/${page.slug}` },
+      ],
+      seoSettings?.siteUrl,
+    ),
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 pt-10 pb-4 sm:py-6 lg:py-16">
-      <div className={`grid gap-6 lg:gap-12 items-stretch ${pagesSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
+    <>
+      <JsonLd data={schemaData} />
+      <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-4 lg:px-8 pt-10 pb-4 sm:py-6 lg:py-16">
+        <div className={`grid gap-6 lg:gap-12 items-stretch ${pagesSidebarEnabled ? 'lg:grid-cols-3' : ''}`}>
         <article className={`${pagesSidebarEnabled ? 'lg:col-span-2' : 'max-w-5xl mx-auto'} min-h-0`}> 
           <div className="h-full flex flex-col">
             <header className="mb-6 lg:mb-12">
@@ -47,7 +71,8 @@ export async function SitePageView({ page }: { page: SitePageRecord }) {
             />
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

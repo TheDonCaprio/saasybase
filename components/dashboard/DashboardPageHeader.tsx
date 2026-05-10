@@ -106,6 +106,7 @@ export function DashboardPageHeader({
 	className
 }: DashboardPageHeaderProps) {
 	const palette = accentStyles[accent];
+	const hasRightStats = Boolean(stats && stats.length > 0);
 	const toneForAccent: Record<Accent, Tone> = {
 		theme: 'theme',
 		indigo: 'theme',
@@ -124,7 +125,12 @@ export function DashboardPageHeader({
 			)}
 		>
 			<div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-				<div className="max-w-2xl space-y-3">
+				<div
+					className={cx(
+						'space-y-3',
+						actionsAlign === 'right' && !hasRightStats ? 'min-w-0 flex-1 max-w-none' : 'max-w-2xl',
+					)}
+				>
 					{eyebrow ? (
 						<div className={palette.pill}>
 							<span className={palette.dot} />
@@ -147,15 +153,15 @@ export function DashboardPageHeader({
 					) : null}
 				</div>
 
-				{actionsAlign === 'right' || (stats && stats.length > 0) ? (
-					<div className="w-full max-w-lg space-y-2">
+				{actionsAlign === 'right' || hasRightStats ? (
+					<div className={cx(hasRightStats ? 'w-full max-w-lg space-y-2' : 'ml-auto w-auto max-w-full space-y-2')}>
 						{actions && actionsAlign === 'right' ? (
 							<div className="flex w-full justify-end">
 								<div className="flex flex-col gap-2 sm:flex-row sm:items-center">{actions}</div>
 							</div>
 						) : null}
 
-						{stats && stats.length > 0 ? (
+						{hasRightStats ? (
 							<div className="grid w-full gap-2 text-sm grid-cols-2">
 								{stats.map((stat, index) => {
 								const tone = statToneStyles[stat.tone ?? toneForAccent[accent]];

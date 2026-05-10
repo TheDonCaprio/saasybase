@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { getAuthSafe } from '../lib/auth';
 import LandingClientAlt from '../components/LandingClientAlt';
 export const dynamic = 'force-dynamic';
-import { getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
+import JsonLd from '@/components/seo/JsonLd';
+import { buildOrganizationSchema, buildSoftwareApplicationSchema } from '@/lib/schema';
+import { getSiteLogo, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '../lib/settings';
 import { getSeoSettings } from '../lib/seo';
 
 const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
@@ -41,6 +43,33 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const auth = await getAuthSafe();
-  return <LandingClientAlt isSignedIn={Boolean(auth?.userId)} />;
+  const [auth, siteName, seoSettings, siteLogo] = await Promise.all([
+    getAuthSafe(),
+    getSiteName().catch(() => FALLBACK_SITE_NAME),
+    getSeoSettings().catch(() => null),
+    getSiteLogo().catch(() => ''),
+  ]);
+
+  const trimmedSiteName = siteName.trim() || FALLBACK_SITE_NAME;
+  const description = seoSettings?.homeMetaDescription.trim() || 'Three auth providers, four payment processors, subscriptions, teams, admin dashboard, optional Infisical or Doppler bootstrap, and 500+ automated tests across 140+ files plus manual regression coverage - all wired up.';
+
+  return (
+    <>
+      <JsonLd
+        data={[
+          buildOrganizationSchema({
+            siteName: trimmedSiteName,
+            siteUrl: seoSettings?.siteUrl,
+            logoUrl: siteLogo,
+          }),
+          buildSoftwareApplicationSchema({
+            siteName: trimmedSiteName,
+            siteUrl: seoSettings?.siteUrl,
+            description,
+          }),
+        ]}
+      />
+      <LandingClientAlt isSignedIn={Boolean(auth?.userId)} />
+    </>
+  );
 }

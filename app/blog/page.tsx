@@ -1,8 +1,10 @@
 export const dynamic = 'force-dynamic';
 // removed unused imports: Link, buildDashboardMetadata
+import JsonLd from '@/components/seo/JsonLd';
 import { listPublishedBlogPosts } from '@/lib/blog';
 import { getBlogListingStyle, getBlogSidebarSettings, getBlogListingPageSize, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
 import { getSeoSettings } from '@/lib/seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '@/lib/schema';
 import {
   SimpleListStyle,
   GridStyle,
@@ -45,10 +47,12 @@ export default async function BlogListPage({ searchParams }: { searchParams?: Pr
   const page = Math.max(1, Math.floor(Number(resolvedSearchParams?.page) || 1));
   const pageSize = await getBlogListingPageSize();
 
-  const [result, listingStyle, sidebarSettings] = await Promise.all([
+  const [result, listingStyle, sidebarSettings, siteName, seoSettings] = await Promise.all([
     listPublishedBlogPosts({ page, limit: pageSize }),
     getBlogListingStyle(),
-    getBlogSidebarSettings()
+    getBlogSidebarSettings(),
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
   ]);
 
   const posts = result.posts || [];
@@ -70,19 +74,35 @@ export default async function BlogListPage({ searchParams }: { searchParams?: Pr
     }
   };
 
+  const schemaData = [
+    buildCollectionPageSchema({
+      title: `Blog | ${siteName}`,
+      description: seoSettings?.blogMetaDescription.trim() || 'Latest posts and updates',
+      path: '/blog',
+      siteUrl: seoSettings?.siteUrl,
+    }),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Home', path: '/' },
+        { name: 'Blog', path: '/blog' },
+      ],
+      seoSettings?.siteUrl,
+    ),
+  ];
+
   switch (listingStyle) {
     case 'grid':
-      return <GridStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><GridStyle {...styleProps} /></>;
     case 'magazine':
-      return <MagazineStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><MagazineStyle {...styleProps} /></>;
     case 'minimal':
-      return <MinimalStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><MinimalStyle {...styleProps} /></>;
     case 'timeline':
-      return <TimelineStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><TimelineStyle {...styleProps} /></>;
     case 'classic':
-      return <ClassicStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><ClassicStyle {...styleProps} /></>;
     case 'simple':
     default:
-      return <SimpleListStyle {...styleProps} />;
+      return <><JsonLd data={schemaData} /><SimpleListStyle {...styleProps} /></>;
   }
 }

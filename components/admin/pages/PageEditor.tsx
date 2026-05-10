@@ -1570,7 +1570,7 @@ export default function PageEditor({
                 ? `New ${entityNames.singularLower}`
                 : `Edit ${entityNames.singularLower}`}
             </span>
-            <span className="flex shrink-0 items-center gap-2 sm:hidden">
+            <span className="flex shrink-0 items-center gap-2 xl:hidden">
               <button
                 type="button"
                 onClick={handleBackNavigation}
@@ -1612,7 +1612,7 @@ export default function PageEditor({
             <button
               type="button"
               onClick={handleBackNavigation}
-              className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.55))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] hover:text-[color:rgb(var(--text-primary))]"
+              className="hidden xl:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.55))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.55))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--text-secondary))] transition-colors hover:bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] hover:text-[color:rgb(var(--text-primary))]"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1625,7 +1625,7 @@ export default function PageEditor({
                 href={previewHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))]"
+                className="hidden xl:inline-flex items-center gap-2 rounded-lg border border-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.25))] bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.10))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.92))] transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.16))]"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path

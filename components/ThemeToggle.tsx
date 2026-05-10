@@ -7,10 +7,25 @@ import { useAuthSession } from '@/lib/auth-provider/client';
 import { fetchUserSettings, updateCachedUserSetting } from '@/lib/user-settings.client';
 
 type ThemePreference = 'light' | 'dark' | 'auto';
+const THEME_PREFERENCE_EVENT = 'theme-preference-changed';
 
 function setThemeResolvedCookie(theme: 'light' | 'dark') {
   if (typeof document === 'undefined') return;
   document.cookie = `themeResolved=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
+function storeThemePreference(theme: ThemePreference) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('themePreference', theme);
+  } catch (e) {
+    void e;
+  }
+}
+
+function broadcastThemePreference(theme: ThemePreference) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ThemePreference>(THEME_PREFERENCE_EVENT, { detail: theme }));
 }
 
 function readLocalPreference(): ThemePreference {
@@ -56,18 +71,17 @@ export function ThemeToggle() {
       }
     }
 
-    try {
-      localStorage.setItem('themePreference', theme);
-    } catch (e) {
-      void e;
-    }
   }, []);
+
+  const syncThemePreference = useCallback((nextPreference: ThemePreference) => {
+    setPreference(nextPreference);
+    applyTheme(nextPreference);
+  }, [applyTheme]);
 
   // Sync with stored preference and user settings if signed in
   useEffect(() => {
     const initial = readLocalPreference();
-    setPreference(initial);
-    applyTheme(initial);
+    syncThemePreference(initial);
 
     if (!isLoaded || !isSignedIn) return;
 
@@ -78,8 +92,7 @@ export function ThemeToggle() {
         const maybeTheme = settings.find((setting) => setting.key === 'THEME_PREFERENCE');
         const serverTheme = maybeTheme?.value;
         if (!cancelled && (serverTheme === 'light' || serverTheme === 'dark' || serverTheme === 'auto')) {
-          setPreference(serverTheme);
-          applyTheme(serverTheme);
+          syncThemePreference(serverTheme);
         }
       } catch (e) {
         // Likely unauthenticated (401) or network issues; safe to ignore because we still honor local preference.
@@ -90,11 +103,37 @@ export function ThemeToggle() {
     return () => {
       cancelled = true;
     };
-  }, [applyTheme, isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, syncThemePreference]);
+
+  useEffect(() => {
+    const handleThemePreferenceSync = (event: Event) => {
+      const nextPreference = (event as CustomEvent<ThemePreference>).detail;
+      if (nextPreference === 'light' || nextPreference === 'dark' || nextPreference === 'auto') {
+        syncThemePreference(nextPreference);
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== 'themePreference') return;
+      const nextPreference = event.newValue;
+      if (nextPreference === 'light' || nextPreference === 'dark' || nextPreference === 'auto') {
+        syncThemePreference(nextPreference);
+      }
+    };
+
+    window.addEventListener(THEME_PREFERENCE_EVENT, handleThemePreferenceSync as EventListener);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener(THEME_PREFERENCE_EVENT, handleThemePreferenceSync as EventListener);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [syncThemePreference]);
 
   const persistPreference = useCallback(async (nextPreference: ThemePreference) => {
-    setPreference(nextPreference);
-    applyTheme(nextPreference);
+    syncThemePreference(nextPreference);
+    storeThemePreference(nextPreference);
+    broadcastThemePreference(nextPreference);
 
     if (!isSignedIn) {
       return;
@@ -120,7 +159,7 @@ export function ThemeToggle() {
     } finally {
       setSaving(false);
     }
-  }, [applyTheme, isSignedIn]);
+  }, [isSignedIn, syncThemePreference]);
 
   const handleToggle = useCallback(() => {
     const next = preference === 'dark' ? 'light' : 'dark';

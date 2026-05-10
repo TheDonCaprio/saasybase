@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import JsonLd from '@/components/seo/JsonLd';
 import { ContactForm } from '@/components/contact/ContactForm';
 import { SiteContentRenderer } from '@/components/site-pages/SiteContentRenderer';
 import { buildSitePageMetadata, getPublishedPageBySlug } from '../../lib/sitePages';
-import { getSupportEmail } from '@/lib/settings';
+import { getSiteName, getSupportEmail, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
+import { getSeoSettings } from '@/lib/seo';
+import { buildBreadcrumbSchema, buildContactPageSchema } from '@/lib/schema';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +15,11 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
-  const [page, supportEmail] = await Promise.all([
+  const [page, supportEmail, siteName, seoSettings] = await Promise.all([
     getPublishedPageBySlug('contact'),
     getSupportEmail().catch(() => 'support@example.com'),
+    getSiteName().catch(() => SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME]),
+    getSeoSettings().catch(() => null),
   ]);
   if (!page) {
     notFound();
@@ -22,9 +27,28 @@ export default async function ContactPage() {
 
   const effectiveSupportEmail = supportEmail && supportEmail.trim().length > 0 ? supportEmail.trim() : 'support@example.com';
   const partnersEmail = process.env.PARTNERS_EMAIL || 'partners@' + (effectiveSupportEmail.split('@')[1] || 'example.com');
+  const schemaData = [
+    buildContactPageSchema({
+      title: page.title,
+      description: page.description,
+      path: '/contact',
+      siteName,
+      siteUrl: seoSettings?.siteUrl,
+      email: effectiveSupportEmail,
+    }),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Home', path: '/' },
+        { name: page.title, path: '/contact' },
+      ],
+      seoSettings?.siteUrl,
+    ),
+  ];
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
+    <>
+      <JsonLd data={schemaData} />
+      <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
 
       {/* Page header */}
       <div className="mb-12 max-w-2xl">
@@ -114,6 +138,7 @@ export default async function ContactPage() {
         </div>
 
       </div>
-    </div>
+      </div>
+    </>
   );
 }

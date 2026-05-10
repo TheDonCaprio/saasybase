@@ -106,7 +106,8 @@ export function DashboardPageHeader({
 	className
 }: DashboardPageHeaderProps) {
 	const palette = accentStyles[accent];
-	const hasRightStats = Boolean(stats && stats.length > 0);
+	const rightStats = stats ?? [];
+	const hasRightStats = rightStats.length > 0;
 	const toneForAccent: Record<Accent, Tone> = {
 		theme: 'theme',
 		indigo: 'theme',
@@ -163,7 +164,7 @@ export function DashboardPageHeader({
 
 						{hasRightStats ? (
 							<div className="grid w-full gap-2 text-sm grid-cols-2">
-								{stats.map((stat, index) => {
+								{rightStats.map((stat, index) => {
 								const tone = statToneStyles[stat.tone ?? toneForAccent[accent]];
 									return (
 										<div key={index} className={tone.wrapper}>

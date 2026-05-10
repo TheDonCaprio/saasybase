@@ -44,6 +44,7 @@ export async function POST(request: Request) {
                     select: {
                         id: true,
                         providerOrganizationId: true,
+                        suspendedAt: true,
                         ownerUserId: true,
                     }
                 }
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
                 .map((row) => row.ownerId)
         );
 
-        const deletableOrgIds = Array.from(
+        const expiredOrgIds = Array.from(
             new Set(
                 memberships
                     .filter((m) => !graceOwnerIds.has(m.organization.ownerUserId))
@@ -139,14 +140,36 @@ export async function POST(request: Request) {
             )
         );
 
+        const deletableOrgIds = Array.from(
+            new Set(
+                memberships
+                    .filter((m) => !m.organization.suspendedAt && !graceOwnerIds.has(m.organization.ownerUserId))
+                    .map((m) => m.organization.id)
+            )
+        );
+
+        const alreadySuspendedOrgIds = expiredOrgIds.filter((orgId) => !deletableOrgIds.includes(orgId));
+
         if (deletableOrgIds.length === 0) {
+            if (alreadySuspendedOrgIds.length > 0) {
+                Logger.info('Lazy Check: No valid organization owners; grace window elapsed, but all matching organizations were already suspended locally; skipping scoped cleanup', {
+                    userId,
+                    ownerIds,
+                    expiredOrgIds,
+                    alreadySuspendedOrgIds,
+                    graceOwnerIds: Array.from(graceOwnerIds),
+                });
+            }
+
             return NextResponse.json({ valid: true, reason: 'grace_period', clearActiveOrg, activeOrgReason });
         }
 
-        Logger.info('Lazy Check: No valid organization owners; grace window elapsed; triggering scoped cleanup', {
+        Logger.info('Lazy Check: No valid organization owners; grace window elapsed; triggering scoped cleanup for non-suspended organizations', {
             userId,
             ownerIds,
+            expiredOrgIds,
             orgIds: deletableOrgIds,
+            alreadySuspendedOrgIds,
             graceOwnerIds: Array.from(graceOwnerIds),
         });
 

@@ -43,7 +43,7 @@ export default function PublicExportHomePage() {
     <section className="mx-auto flex min-h-[calc(100svh-13.5rem)] w-full max-w-4xl flex-col justify-center px-3 py-8 text-slate-950 dark:text-neutral-50 sm:min-h-[calc(100svh-14.5rem)] sm:px-10 sm:py-10">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-12">
           <div className="mb-4 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-            Public export homepage
+            Minimal Landing Page
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
             Your SaaS boilerplate is ready.

@@ -336,23 +336,68 @@ function DemoActionIconButton({
 function DashboardDemo() {
   const [demoView, setDemoView] = useState<DemoView>('finance');
   const [transitioning, setTransitioning] = useState(false);
+  const [demoInView, setDemoInView] = useState(true);
+  const [pageScrollActive, setPageScrollActive] = useState(false);
   const tiltDisabledRef = useRef(false);
   const tiltRef = useRef<HTMLDivElement>(null);
   const tiltInnerRef = useRef<HTMLDivElement>(null);
   const viewIdxRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const canAnimateDemo = demoInView && !pageScrollActive;
 
   useEffect(() => {
     tiltDisabledRef.current = shouldDisableLandingDemoTilt(window.navigator.userAgent);
   }, []);
 
+  useEffect(() => {
+    const demoElement = tiltRef.current;
+    if (!demoElement || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setDemoInView(entry.isIntersecting && entry.intersectionRatio >= 0.2);
+      },
+      {
+        threshold: [0, 0.2, 0.35],
+        rootMargin: '120px 0px',
+      },
+    );
+
+    observer.observe(demoElement);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let scrollIdleTimer = 0;
+
+    const handleWindowScroll = () => {
+      setPageScrollActive((current) => (current ? current : true));
+      window.clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = window.setTimeout(() => {
+        setPageScrollActive(false);
+      }, 140);
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleWindowScroll);
+      window.clearTimeout(scrollIdleTimer);
+    };
+  }, []);
+
   // auto-cycle views
   useEffect(() => {
+    if (!canAnimateDemo) return;
+
     let timer: ReturnType<typeof setTimeout>;
+    let transitionTimer: ReturnType<typeof setTimeout>;
+
     const scheduleNext = () => {
       timer = setTimeout(() => {
         setTransitioning(true);
-        setTimeout(() => {
+        transitionTimer = setTimeout(() => {
           viewIdxRef.current = (viewIdxRef.current + 1) % DEMO_VIEWS.length;
           setDemoView(DEMO_VIEWS[viewIdxRef.current]);
           setTransitioning(false);
@@ -361,13 +406,16 @@ function DashboardDemo() {
       }, DEMO_HOLD_MS[viewIdxRef.current]);
     };
     scheduleNext();
-    return () => clearTimeout(timer);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(transitionTimer);
+    };
+  }, [canAnimateDemo]);
 
   // auto-scroll each view slowly
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || transitioning) return;
+    if (!el || transitioning || !canAnimateDemo) return;
     el.scrollTop = 0;
     let raf = 0;
     const delay = setTimeout(() => {
@@ -384,11 +432,17 @@ function DashboardDemo() {
       raf = requestAnimationFrame(step);
     }, 900);
     return () => { clearTimeout(delay); cancelAnimationFrame(raf); };
-  }, [demoView, transitioning]);
+  }, [canAnimateDemo, demoView, transitioning]);
+
+  useEffect(() => {
+    if (canAnimateDemo || !tiltInnerRef.current) return;
+    tiltInnerRef.current.style.transition = 'transform 180ms ease-out';
+    tiltInnerRef.current.style.transform = 'perspective(450px) rotateX(0deg) rotateY(0deg) scale(1)';
+  }, [canAnimateDemo]);
 
   // 3D tilt — direct DOM update to avoid per-mousemove re-renders
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (tiltDisabledRef.current) return;
+    if (tiltDisabledRef.current || !canAnimateDemo) return;
     const rect = tiltRef.current?.getBoundingClientRect();
     if (!rect || !tiltInnerRef.current) return;
     const dxRaw = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
@@ -445,7 +499,7 @@ function DashboardDemo() {
       <div ref={tiltInnerRef} className="lp-dd-tilt" style={{
         position: 'relative', zIndex: 1,
         transition: 'transform 260ms ease-out',
-        willChange: 'transform',
+        willChange: canAnimateDemo ? 'transform' : 'auto',
         transformStyle: 'preserve-3d',
         backfaceVisibility: 'hidden',
         WebkitBackfaceVisibility: 'hidden',

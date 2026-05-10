@@ -244,7 +244,7 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
             />
             <EditableSettings
               databaseSettings={databaseSettings}
-              editableKeys={['SITE_NAME', 'ANNOUNCEMENT_MESSAGE', 'SUPPORT_EMAIL', 'SITE_LOGO_HEIGHT', 'SITE_LOGO', 'SITE_LOGO_LIGHT', 'SITE_LOGO_DARK', 'SITE_FAVICON']}
+              editableKeys={['SITE_NAME', 'ANNOUNCEMENT_MESSAGE', 'SUPPORT_EMAIL', 'SITE_LOGO_HEIGHT', 'SITE_LOGO', 'SITE_FAVICON', 'SITE_LOGO_LIGHT', 'SITE_LOGO_DARK']}
               showHeading={false}
               showEnvironment={false}
             />

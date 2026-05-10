@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { showToast } from '../ui/Toast';
 import Image from 'next/image';
+import { ImagePickerModal } from '../ui/ImagePickerModal';
 
 function formatSettingLabel(key: string) {
   const MAP: Record<string, string> = {
@@ -54,9 +55,9 @@ export const DEFAULT_EDITABLE_SETTING_KEYS = [
   'SITE_NAME',
   'SITE_LOGO_HEIGHT',
   'SITE_LOGO',
+  'SITE_FAVICON',
   'SITE_LOGO_LIGHT',
   'SITE_LOGO_DARK',
-  'SITE_FAVICON',
   'PRICING_MAX_COLUMNS',
   'PRICING_CENTER_UNEVEN'
 ];
@@ -76,6 +77,7 @@ export function EditableSettings({
   const [editValue, setEditValue] = useState('');
   const [settings, setSettings] = useState(databaseSettings);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [imagePickerKey, setImagePickerKey] = useState<string | null>(null);
 
   const keysToRender = (editableKeys?.length ? editableKeys : DEFAULT_EDITABLE_SETTING_KEYS).filter((key) =>
     DEFAULT_EDITABLE_SETTING_KEYS.includes(key)
@@ -91,37 +93,68 @@ export function EditableSettings({
     setEditValue('');
   };
 
+  const upsertSetting = (setting: Setting) => {
+    setSettings((prev) => {
+      const existing = prev.find((item) => item.key === setting.key);
+      if (existing) {
+        return prev.map((item) => (item.key === setting.key ? setting : item));
+      }
+      return [...prev, setting];
+    });
+  };
+
+  const saveSettingValue = async (key: string, value: string) => {
+    const response = await fetch('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to save setting');
+    }
+
+    const { setting } = await response.json();
+    upsertSetting(setting);
+    return setting as Setting;
+  };
+
   const saveEdit = async (key: string) => {
     if (loading) return;
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value: editValue })
-      });
-
-      if (response.ok) {
-        const { setting } = await response.json();
-        setSettings((prev) => {
-          const existing = prev.find((s) => s.key === key);
-          if (existing) {
-            return prev.map((s) => (s.key === key ? setting : s));
-          }
-          return [...prev, setting];
-        });
-        cancelEdit();
-      } else {
-        const error = await response.json();
-        showToast(`Failed to save: ${error.error}`, 'error');
-      }
+      await saveSettingValue(key, editValue);
+      cancelEdit();
     } catch (err: unknown) {
       const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e));
       console.error('Error saving setting:', getErrorMessage(err));
-      showToast('Error saving setting', 'error');
+      showToast(`Error saving setting: ${getErrorMessage(err)}`, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const closeImagePicker = () => {
+    if (uploadingKey) return;
+    setImagePickerKey(null);
+  };
+
+  const handleImageSelect = async (imageUrl: string) => {
+    if (!imagePickerKey) return;
+
+    setUploadingKey(imagePickerKey);
+    try {
+      await saveSettingValue(imagePickerKey, imageUrl);
+      setImagePickerKey(null);
+      showToast('Image updated', 'success');
+    } catch (err: unknown) {
+      const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e));
+      console.error('Error saving image setting:', getErrorMessage(err));
+      showToast(`Failed to save image setting: ${getErrorMessage(err)}`, 'error');
+    } finally {
+      setUploadingKey((current) => (current === imagePickerKey ? null : current));
     }
   };
 
@@ -155,44 +188,6 @@ export function EditableSettings({
             const isImageKey = key === 'SITE_LOGO' || key === 'SITE_LOGO_LIGHT' || key === 'SITE_LOGO_DARK' || key === 'SITE_FAVICON';
             const isFaviconKey = key === 'SITE_FAVICON';
 
-            const handleImageUpload = async (file: File) => {
-              const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e));
-              setUploadingKey(key);
-              try {
-                const resp = await fetch('/api/admin/file/upload', {
-                  method: 'POST',
-                  headers: {
-                    'x-filename': file.name,
-                    'x-mimetype': file.type,
-                    'x-upload-scope': 'logo'
-                  },
-                  body: file
-                });
-                const data = await resp.json();
-                if (resp.ok && data.url) {
-                  const save = await fetch('/api/admin/settings', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, value: data.url })
-                  });
-                  if (save.ok) {
-                    const { setting } = await save.json();
-                    setSettings((prev) => prev.map((s) => (s.key === key ? setting : s)));
-                  } else {
-                    const err = await save.json();
-                    showToast('Failed to save image setting: ' + err.error, 'error');
-                  }
-                } else {
-                  showToast('Upload failed: ' + (data?.error || 'unknown'), 'error');
-                }
-              } catch (err: unknown) {
-                console.error(getErrorMessage(err));
-                showToast('Upload error', 'error');
-              } finally {
-                setUploadingKey((current) => (current === key ? null : current));
-              }
-            };
-
             return (
               <div
                 key={key}
@@ -209,24 +204,17 @@ export function EditableSettings({
                       {/* Action buttons */}
                       <div className="flex items-center gap-1.5">
                         {isImageKey && !isEditing && (
-                          <label className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${isUploading ? 'cursor-wait border-blue-200 bg-blue-50 text-blue-700 opacity-80 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400' : 'cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40'}`}>
+                          <button
+                            type="button"
+                            onClick={() => setImagePickerKey(key)}
+                            disabled={isUploading}
+                            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${isUploading ? 'cursor-wait border-blue-200 bg-blue-50 text-blue-700 opacity-80 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400' : 'cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 dark:border-blue-700/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40'}`}
+                          >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            {isUploading ? 'Uploading...' : 'Upload'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={isUploading}
-                              onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                if (file) {
-                                  void handleImageUpload(file);
-                                }
-                              }}
-                            />
-                          </label>
+                            {isUploading ? 'Saving...' : 'Upload'}
+                          </button>
                         )}
                         
                         {isEditing ? (
@@ -428,6 +416,17 @@ export function EditableSettings({
       {showEnvironment && environmentSettings && environmentSettings.length > 0 && (
         <EnvironmentSettingsList settings={environmentSettings} showRawKeys={showRawKeys} />
       )}
+
+      <ImagePickerModal
+        isOpen={Boolean(imagePickerKey)}
+        onClose={closeImagePicker}
+        onSelectImage={(imageUrl) => {
+          void handleImageSelect(imageUrl);
+        }}
+        title={imagePickerKey ? `Select ${formatSettingLabel(imagePickerKey)}` : 'Select image'}
+        allowUpload
+        uploadScope="logo"
+      />
     </div>
   );
 }

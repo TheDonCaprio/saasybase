@@ -81,6 +81,8 @@ const CLERK_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320
 
 const BETTER_AUTH_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 500 500"><path fill="#000" d="M0 0h500v500H0z"/><path fill="#fff" d="M69 121h86.988v259H69zM337.575 121H430v259h-92.425z"/><path fill="#fff" d="M427.282 121v83.456h-174.52V121zM430 296.544V380H252.762v-83.456z"/><path fill="#fff" d="M252.762 204.455v92.089h-96.774v-92.089z"/></svg>`;
 
+const ESLINT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="ESLint"><path fill="#4B32C3" d="M111.2 8.7a32 32 0 0 1 33.6 0l71.4 41.2a32 32 0 0 1 16 27.7V160a32 32 0 0 1-16 27.7l-71.4 41.2a32 32 0 0 1-33.6 0L39.8 187.7A32 32 0 0 1 23.8 160V77.6a32 32 0 0 1 16-27.7Z"/><path fill="#fff" d="M128 55.3 69.8 89v67.3l58.2 33.6 58.2-33.6V89Zm0 21.5 39.6 22.9v45.7L128 168.3l-39.6-22.9V99.7Zm0 22.6-20 11.5v23.1l20 11.5 20-11.5v-23.1Z"/></svg>`;
+
 const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone: SurfaceTone }> = [
   { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle are already wired behind one payment interface.', tone: 'meter' },
   { icon: faLock,         title: 'Auth & User Management',   desc: 'Clerk, Better Auth, and NextAuth sit behind one app boundary, with sessions, OAuth, and provider-specific magic links already handled.', tone: 'auth' },
@@ -108,19 +110,6 @@ const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string; tone:
   { icon: faWrench,       title: 'Maintenance Mode',         desc: 'Toggle system-wide maintenance screens instantly to halt traffic while operating on the database.', tone: 'meter' },
 ];
 
-const PROVIDERS = [
-  { name: 'Stripe',   color: '#5469D4', logoUrl: '/images/providers/stripe.svg' },
-  { name: 'Paystack', color: '#00C3F7', logoUrl: '/images/providers/paystack.svg' },
-  { name: 'Razorpay', color: '#3293FB', logoUrl: '/images/providers/razorpay.svg' },
-  { name: 'Paddle',   color: '#1DCD9F', logoUrl: '/images/providers/paddle.svg' },
-];
-
-const AUTH_PROVIDERS = [
-  { name: 'Clerk', color: '#6366F1', logoSvg: CLERK_LOGO_SVG },
-  { name: 'Better Auth', color: '#111827', logoSvg: BETTER_AUTH_LOGO_SVG },
-  { name: 'NextAuth', color: '#0F172A', logoSvg: NEXTAUTH_LOGO_SVG },
-];
-
 const TECH_STACK_ICONS: Array<
   | { label: string; kind: 'fa'; icon: unknown }
   | { label: string; kind: 'svg'; svg: string }
@@ -139,39 +128,84 @@ const TECH_STACK_ICONS: Array<
   { label: 'Nodemailer', kind: 'svg', svg: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="#10B981"/><path d="m6.5 8.5 5.5 4 5.5-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15h8" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>' },
 ];
 
-const PROVIDER_NAMES = ['stripe', 'razorpay', 'paystack', 'paddle'];
-const AUTH_PROVIDER_NAMES = ['clerk', 'betterauth', 'nextauth'];
+const HERO_AUTH_PROVIDERS = [
+  { name: 'Clerk', logoSvg: CLERK_LOGO_SVG, logoClassName: 'lp-auth-provider-logo' },
+  { name: 'Better Auth', logoSvg: BETTER_AUTH_LOGO_SVG, logoClassName: 'lp-auth-provider-logo' },
+  { name: 'NextAuth', logoSvg: NEXTAUTH_LOGO_SVG, logoClassName: 'lp-auth-provider-logo' },
+] as const;
 
-/* ─── Typewriter for provider env section ─── */
-function TypewriterProvider() {
+const HERO_PAYMENT_PROVIDERS = ['stripe', 'paystack', 'razorpay', 'paddle']
+  .map((providerId) => PAYMENT_PROVIDERS[providerId])
+  .filter((provider): provider is NonNullable<typeof provider> => Boolean(provider.logoSvg));
+
+function getTechSvg(label: string) {
+  const icon = TECH_STACK_ICONS.find((entry) => entry.label === label && entry.kind === 'svg');
+  return icon && icon.kind === 'svg' ? icon.svg : null;
+}
+
+const ENGINEERING_STANDARD_LOGOS = {
+  typescript: getTechSvg('TypeScript'),
+  prisma: getTechSvg('Prisma'),
+  zod: getTechSvg('Zod'),
+  vitest: getTechSvg('Vitest'),
+  eslint: ESLINT_LOGO_SVG,
+} as const;
+
+function LogoChip({
+  label,
+  logoSvg,
+  logoClassName = 'lp-provider-logo',
+  className = 'lp-provider-chip',
+}: {
+  label: string;
+  logoSvg: string;
+  logoClassName?: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <span
+        className={logoClassName}
+        aria-hidden
+        dangerouslySetInnerHTML={{ __html: logoSvg }}
+      />
+      {label}
+    </div>
+  );
+}
+
+const HERO_PAYMENT_PROVIDER_NAMES = ['stripe', 'paddle', 'paystack', 'razorpay'];
+const HERO_AUTH_PROVIDER_NAMES = ['betterauth', 'nextauth', 'clerk'];
+
+function HeroTypewriterProvider() {
   const [providerIdx, setProviderIdx] = useState(0);
-  const [displayed, setDisplayed] = useState('stripe');
+  const [displayed, setDisplayed] = useState(HERO_PAYMENT_PROVIDER_NAMES[0]);
   const [phase, setPhase] = useState<'typing' | 'hold' | 'erasing'>('hold');
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-    const target = PROVIDER_NAMES[providerIdx];
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const target = HERO_PAYMENT_PROVIDER_NAMES[providerIdx];
+
     if (phase === 'hold') {
-      t = setTimeout(() => setPhase('erasing'), 1800);
+      timeoutId = setTimeout(() => setPhase('erasing'), 1800);
     } else if (phase === 'erasing') {
       if (displayed.length > 0) {
-        t = setTimeout(() => setDisplayed(d => d.slice(0, -1)), 55);
+        timeoutId = setTimeout(() => setDisplayed((value) => value.slice(0, -1)), 55);
       } else {
-        const next = (providerIdx + 1) % PROVIDER_NAMES.length;
-        t = setTimeout(() => {
+        const next = (providerIdx + 1) % HERO_PAYMENT_PROVIDER_NAMES.length;
+        timeoutId = setTimeout(() => {
           setProviderIdx(next);
           setPhase('typing');
         }, 0);
       }
+    } else if (displayed.length < target.length) {
+      timeoutId = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
     } else {
-      if (displayed.length < target.length) {
-        t = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
-      } else {
-        t = setTimeout(() => setPhase('hold'), 0);
-      }
+      timeoutId = setTimeout(() => setPhase('hold'), 0);
     }
-    return () => clearTimeout(t);
-  }, [phase, displayed, providerIdx]);
+
+    return () => clearTimeout(timeoutId);
+  }, [displayed, phase, providerIdx]);
 
   return (
     <span className="lp-code-string">
@@ -180,32 +214,34 @@ function TypewriterProvider() {
   );
 }
 
-function TypewriterAuthProvider() {
+function HeroTypewriterAuthProvider() {
   const [providerIdx, setProviderIdx] = useState(0);
-  const [displayed, setDisplayed] = useState('clerk');
+  const [displayed, setDisplayed] = useState(HERO_AUTH_PROVIDER_NAMES[0]);
   const [phase, setPhase] = useState<'typing' | 'hold' | 'erasing'>('hold');
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-    const target = AUTH_PROVIDER_NAMES[providerIdx];
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const target = HERO_AUTH_PROVIDER_NAMES[providerIdx];
+
     if (phase === 'hold') {
-      t = setTimeout(() => setPhase('erasing'), 1800);
+      timeoutId = setTimeout(() => setPhase('erasing'), 1800);
     } else if (phase === 'erasing') {
       if (displayed.length > 0) {
-        t = setTimeout(() => setDisplayed((value) => value.slice(0, -1)), 55);
+        timeoutId = setTimeout(() => setDisplayed((value) => value.slice(0, -1)), 55);
       } else {
-        const next = (providerIdx + 1) % AUTH_PROVIDER_NAMES.length;
-        t = setTimeout(() => {
+        const next = (providerIdx + 1) % HERO_AUTH_PROVIDER_NAMES.length;
+        timeoutId = setTimeout(() => {
           setProviderIdx(next);
           setPhase('typing');
         }, 0);
       }
     } else if (displayed.length < target.length) {
-      t = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
+      timeoutId = setTimeout(() => setDisplayed(target.slice(0, displayed.length + 1)), 90);
     } else {
-      t = setTimeout(() => setPhase('hold'), 0);
+      timeoutId = setTimeout(() => setPhase('hold'), 0);
     }
-    return () => clearTimeout(t);
+
+    return () => clearTimeout(timeoutId);
   }, [displayed, phase, providerIdx]);
 
   return (
@@ -1483,6 +1519,25 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           background:rgba(var(--accent-primary-rgb),.16);
           border:1px solid rgba(var(--accent-primary-rgb),.07);
         }
+        .lp-hero-panel .lp-chip-strong-logo {
+          gap:7px;
+        }
+        .lp-hero-panel .lp-chip-strong-logo .lp-provider-logo {
+          width:16px;
+          height:16px;
+        }
+        .lp-hero-panel .lp-chip-strong-logo .lp-provider-logo svg {
+          width:16px;
+          height:16px;
+        }
+        .lp-hero-panel .lp-chip-strong-logo .lp-auth-provider-logo {
+          width:15px;
+          height:15px;
+        }
+        .lp-hero-panel .lp-chip-strong-logo .lp-auth-provider-logo svg {
+          width:15px;
+          height:15px;
+        }
         .lp-chip-soft {
           color:var(--lp-chip-text);
           background:var(--lp-chip-bg);
@@ -2677,6 +2732,25 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             padding:7px 9px;
             font-size:10px;
           }
+          .lp-hero-panel .lp-chip-strong-logo {
+            gap:6px;
+          }
+          .lp-hero-panel .lp-chip-strong-logo .lp-provider-logo {
+            width:14px;
+            height:14px;
+          }
+          .lp-hero-panel .lp-chip-strong-logo .lp-provider-logo svg {
+            width:14px;
+            height:14px;
+          }
+          .lp-hero-panel .lp-chip-strong-logo .lp-auth-provider-logo {
+            width:13px;
+            height:13px;
+          }
+          .lp-hero-panel .lp-chip-strong-logo .lp-auth-provider-logo svg {
+            width:13px;
+            height:13px;
+          }
           .lp-env-line {
             gap:6px;
             padding:8px 10px;
@@ -2838,20 +2912,22 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     <span className="lp-chip-soft">Swap providers</span>
                   </div>
                   <div className="lp-chip-row" style={{ marginBottom: 10 }}>
-                    <span className="lp-chip-strong">Clerk</span>
-                    <span className="lp-chip-strong">Better Auth</span>
-                    <span className="lp-chip-strong">NextAuth</span>
+                    {HERO_AUTH_PROVIDERS.map((provider) => (
+                      <LogoChip
+                        key={provider.name}
+                        label={provider.name}
+                        logoSvg={provider.logoSvg}
+                        logoClassName={provider.logoClassName}
+                        className="lp-chip-strong lp-chip-strong-logo"
+                      />
+                    ))}
                     <span className="lp-chip-soft">GitHub + Google</span>
                   </div>
                   <div className="lp-env-line">
                     <span className="lp-code-key">AUTH_PROVIDER</span>
                     <span>=</span>
-                    <span className="lp-code-string">&quot;clerk&quot;</span>
-                    <span className="lp-code-comment">or</span>
-                    <span className="lp-code-string">&quot;betterauth&quot;</span>
-                    <span className="lp-code-comment">or</span>
-                    <span className="lp-code-string">&quot;nextauth&quot;</span>
-                    <span className="lp-code-comment"># Self-hosted options or Clerk</span>
+                    {mounted ? <HeroTypewriterAuthProvider /> : <span className="lp-code-string">&quot;betterauth&quot;</span>}
+                    <span className="lp-code-comment"># Self-hosted NextAuth and Better Auth or Clerk.</span>
                   </div>
                 </div>
 
@@ -2861,19 +2937,23 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                       <span className="lp-arch-icon"><FontAwesomeIcon icon={faCreditCard} /></span>
                       Billing Layer
                     </div>
-                    <span className="lp-chip-soft">One checkout lifecycle</span>
+                    <span className="lp-chip-soft">Edge cases covered</span>
                   </div>
                   <div className="lp-chip-row" style={{ marginBottom: 10 }}>
-                    <span className="lp-chip-strong">Stripe</span>
-                    <span className="lp-chip-strong">Paystack</span>
-                    <span className="lp-chip-strong">Razorpay</span>
-                    <span className="lp-chip-strong">Paddle</span>
+                    {HERO_PAYMENT_PROVIDERS.map((provider) => (
+                      <LogoChip
+                        key={provider.id}
+                        label={provider.displayName}
+                        logoSvg={provider.logoSvg ?? ''}
+                        className="lp-chip-strong lp-chip-strong-logo"
+                      />
+                    ))}
                   </div>
                   <div className="lp-env-line">
                     <span className="lp-code-key">PAYMENT_PROVIDER</span>
                     <span>=</span>
-                    <span className="lp-code-string">&quot;stripe&quot;</span>
-                    <span className="lp-code-comment"># Provider-agnostic routes, webhooks, plans</span>
+                    {mounted ? <HeroTypewriterProvider /> : <span className="lp-code-string">&quot;stripe&quot;</span>}
+                    <span className="lp-code-comment"># Switch between Stripe, Paddle, Paystack, or Razorpay.</span>
                   </div>
                 </div>
 
@@ -2981,86 +3061,58 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
 
         <hr className="lp-divider" />
 
-        {/* ── PROVIDERS ─────────────────────────────────────── */}
+        {/* ── QUALITY & STANDARDS ─────────────────────────────────────── */}
         <section style={{ textAlign: 'center' }}>
-          <div className="lp-section-tag">Switchable infrastructure</div>
-          <h2 className="lp-section-h2">Four payment rails. Three auth providers.</h2>
+          <div className="lp-section-tag">Engineering standards</div>
+          <h2 className="lp-section-h2">Production-ready from day one.</h2>
           <p className="lp-section-sub">
-            The billing layer and the auth layer are both swappable, so you can change vendors without rewriting your product surface.
+            Built with strict checks, end-to-end type safety, and comprehensive test coverage so you can deeply trust your foundation.
           </p>
 
           <div className="lp-switch-grid">
             <div className="lp-switch-card lp-switch-card-pay">
-              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Payments</div>
-              <div className="lp-switch-title">One checkout model across four processors.</div>
+              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Type Safety</div>
+              <div className="lp-switch-title">End-to-end TypeScript.</div>
               <div className="lp-switch-sub">
-                Stripe, Paystack, Razorpay, and Paddle all plug into the same plans, routes, webhooks, and admin flows.
+                Every API route, webhook, database query, and UI component is strictly typed. Catch regressions at compile time instead of runtime.
               </div>
               <div className="lp-provider-row" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
-                {PROVIDERS.map(p => {
-                  const cfg = PAYMENT_PROVIDERS[p.name.toLowerCase()];
-                  return (
-                    <div key={p.name} className="lp-provider-chip">
-                      {cfg?.logoSvg ? (
-                        <span
-                          className="lp-provider-logo"
-                          aria-hidden
-                          style={{ color: p.color }}
-                          dangerouslySetInnerHTML={{ __html: cfg.logoSvg }}
-                        />
-                      ) : (
-                        <span className="lp-provider-dot" style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }} />
-                      )}
-                      {p.name}
-                    </div>
-                  );
-                })}
+                  <LogoChip label="TypeScript" logoSvg={ENGINEERING_STANDARD_LOGOS.typescript ?? ''} />
+                  <LogoChip label="Prisma ORM" logoSvg={ENGINEERING_STANDARD_LOGOS.prisma ?? ''} />
+                  <LogoChip label="Zod" logoSvg={ENGINEERING_STANDARD_LOGOS.zod ?? ''} />
               </div>
 
               <div className="lp-code-block">
-                <div><span className="lp-code-comment"># .env — switch the billing rail</span></div>
-                <div>
-                  <span className="lp-code-key">PAYMENT_PROVIDER</span>
-                  <span className="lp-code-comment"> = </span>
-                  {mounted ? <TypewriterProvider /> : <span className="lp-code-string">&quot;stripe&quot;</span>}
-                </div>
-                <div><span className="lp-code-comment"># stripe | razorpay | paystack | paddle</span></div>
+                <div><span className="lp-code-comment"># Strict mode enabled globally</span></div>
+                <div><span className="lp-code-key">&quot;compilerOptions&quot;:</span> {"{"}</div>
+                <div style={{ paddingLeft: '1rem' }}><span className="lp-code-key">&quot;strict&quot;:</span> <span className="lp-code-string">true</span>,</div>
+                <div style={{ paddingLeft: '1rem' }}><span className="lp-code-key">&quot;noImplicitAny&quot;:</span> <span className="lp-code-string">true</span></div>
+                <div>{"}"}</div>
               </div>
             </div>
 
             <div className="lp-switch-card lp-switch-card-auth">
-              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Authentication</div>
-              <div className="lp-switch-title">Clerk, Better Auth, or self-hosted NextAuth</div>
+              <div className="lp-switch-kicker"><span className="lp-switch-kicker-dot" />Quality Assurance</div>
+              <div className="lp-switch-title">Linting &amp; Regression Tests.</div>
               <div className="lp-switch-sub">
-                Clerk, Better Auth, and NextAuth sit behind the same integration boundary, so account flows can stay stable while your auth provider changes.
+                500+ automated Vitest tests across 140+ files covering billing math, auth guards, and multi-tenant logic, backed by strict ESLint rules.
               </div>
               <div className="lp-provider-row" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
-                {AUTH_PROVIDERS.map((provider) => (
-                  <div key={provider.name} className="lp-provider-chip">
-                    <span
-                      className="lp-auth-provider-logo"
-                      aria-hidden
-                      dangerouslySetInnerHTML={{ __html: provider.logoSvg }}
-                    />
-                    {provider.name}
-                  </div>
-                ))}
-
+                  <LogoChip label="Vitest" logoSvg={ENGINEERING_STANDARD_LOGOS.vitest ?? ''} />
+                  <LogoChip label="ESLint" logoSvg={ENGINEERING_STANDARD_LOGOS.eslint} />
               </div>
 
               <div className="lp-code-block">
-                <div><span className="lp-code-comment"># .env — switch the auth layer</span></div>
-                <div>
-                  <span className="lp-code-key">AUTH_PROVIDER</span>
-                  <span className="lp-code-comment"> = </span>
-                  {mounted ? <TypewriterAuthProvider /> : <span className="lp-code-string">&quot;clerk&quot;</span>}
-                </div>
-                <div><span className="lp-code-comment"># clerk | betterauth | nextauth</span></div>
+                <div><span className="lp-code-comment"># CI checks before deploy</span></div>
+                <div><span className="lp-code-key">$</span> <span className="lp-code-string">npm run typecheck</span></div>
+                <div><span className="lp-code-key">$</span> <span className="lp-code-string">npm run lint</span></div>
+                <div><span className="lp-code-key">$</span> <span className="lp-code-string">npm run test</span></div>
+                <div><span className="lp-code-comment" style={{ marginTop: '0.5rem', display: 'inline-block' }}>✓ 500+ tests passed</span></div>
               </div>
 
             </div>
           </div>
-          <p className="lp-section-sub lp-section-sub-sm" style={{ marginTop: 34 }}>You have a shared interface above vendor-specific code. ccc</p>
+          <p className="lp-section-sub lp-section-sub-sm" style={{ marginTop: 34 }}>Solid primitives and robust test suites out of the box.</p>
         </section>
 
         <hr className="lp-divider" />

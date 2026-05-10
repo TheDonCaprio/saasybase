@@ -49,7 +49,7 @@ export default function PublicExportHomePage() {
             Your SaaS boilerplate is ready.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 dark:text-neutral-300 sm:text-lg">
-            This intentionally minimal homepage ships with the public export as a placeholder. Swap it for your own landing page,
+            This minimal homepage ships with the codebase as a placeholder. Swap it for your own landing page,
             app shell, waitlist, or product marketing site.
           </p>
 

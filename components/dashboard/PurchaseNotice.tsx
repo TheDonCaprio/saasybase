@@ -1,5 +1,6 @@
 'use client';
 
+import { startTransition } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { showToast } from '../ui/Toast';
@@ -241,6 +242,14 @@ export function PurchaseNotice() {
     const nextQuery = nextParams.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     router.replace(nextUrl);
+
+    if (message.tone === 'success') {
+      window.setTimeout(() => {
+        startTransition(() => {
+          router.refresh();
+        });
+      }, 0);
+    }
   }, [message, params, pathname, router]);
 
   // Loading state while fetching payment details

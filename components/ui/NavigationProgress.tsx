@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 const COMPLETE_HIDE_DELAY_MS = 180;
+const COMPLETE_SETTLE_DELAY_MS = 220;
+const MIN_VISIBLE_MS = 420;
 const PROGRESS_INTERVAL_MS = 160;
 
 function clearTimer(timerRef: { current: number | null }) {
@@ -67,7 +69,9 @@ export function NavigationProgress() {
 	const inFlightRef = useRef(false);
 	const progressIntervalRef = useRef<number | null>(null);
 	const hideTimeoutRef = useRef<number | null>(null);
+	const completeTimeoutRef = useRef<number | null>(null);
 	const routeKeyRef = useRef<string>('');
+	const visibleStartedAtRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		routeKeyRef.current = `${pathname}?${searchParams.toString()}`;
@@ -75,12 +79,14 @@ export function NavigationProgress() {
 
 	useEffect(() => {
 		const start = () => {
+			clearTimer(completeTimeoutRef);
 			clearTimer(hideTimeoutRef);
 			if (inFlightRef.current) {
 				return;
 			}
 
 			inFlightRef.current = true;
+			visibleStartedAtRef.current = Date.now();
 			setVisible(true);
 			setProgress(14);
 			clearIntervalTimer(progressIntervalRef);
@@ -123,6 +129,7 @@ export function NavigationProgress() {
 		return () => {
 			document.removeEventListener('click', handleClick, true);
 			window.removeEventListener('popstate', handlePopState);
+			clearTimer(completeTimeoutRef);
 			clearIntervalTimer(progressIntervalRef);
 			clearTimer(hideTimeoutRef);
 		};
@@ -133,21 +140,32 @@ export function NavigationProgress() {
 			return;
 		}
 
-		const frame = window.requestAnimationFrame(() => {
-			clearIntervalTimer(progressIntervalRef);
-			inFlightRef.current = false;
-			setVisible(true);
-			setProgress(100);
-			clearTimer(hideTimeoutRef);
-			hideTimeoutRef.current = window.setTimeout(() => {
-				setVisible(false);
-				setProgress(0);
-				hideTimeoutRef.current = null;
-			}, COMPLETE_HIDE_DELAY_MS);
-		});
+		const elapsed = visibleStartedAtRef.current == null ? 0 : Date.now() - visibleStartedAtRef.current;
+		const completionDelay = Math.max(COMPLETE_SETTLE_DELAY_MS, MIN_VISIBLE_MS - elapsed, 0);
+
+		completeTimeoutRef.current = window.setTimeout(() => {
+			const frame = window.requestAnimationFrame(() => {
+				clearIntervalTimer(progressIntervalRef);
+				inFlightRef.current = false;
+				setVisible(true);
+				setProgress(100);
+				clearTimer(hideTimeoutRef);
+				hideTimeoutRef.current = window.setTimeout(() => {
+					setVisible(false);
+					setProgress(0);
+					visibleStartedAtRef.current = null;
+					hideTimeoutRef.current = null;
+				}, COMPLETE_HIDE_DELAY_MS);
+			});
+
+			completeTimeoutRef.current = null;
+			return () => {
+				window.cancelAnimationFrame(frame);
+			};
+		}, completionDelay);
 
 		return () => {
-			window.cancelAnimationFrame(frame);
+			clearTimer(completeTimeoutRef);
 		};
 	}, [pathname, searchParams]);
 

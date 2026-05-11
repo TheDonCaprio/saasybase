@@ -41,6 +41,7 @@ import { NavigationProgress } from '../components/ui/NavigationProgress';
 import { getTrafficAnalyticsClientConfig } from '../lib/traffic-analytics-config';
 import { getSeoSettings } from '../lib/seo';
 import { buildSeoTitleTemplate } from '../lib/seo-shared';
+import { renderFooterText } from '../lib/footer-text';
 
 fontAwesomeConfig.autoAddCss = false;
 
@@ -414,7 +415,7 @@ gtag('config', '${gaMeasurementId}', { anonymize_ip: true, send_page_view: false
                 ))}
               </nav>
             ) : null}
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">{footerText}</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">{renderFooterText(footerText)}</div>
             {enableBackgroundRefreshChecks ? <OrgValidityCheck /> : null}
             {enableBackgroundRefreshChecks ? <TokenExpiryCleanupPing /> : null}
           </footer>

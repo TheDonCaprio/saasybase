@@ -81,7 +81,9 @@ const FINANCE_SUBMENU = [
 
 type DemoView = 'finance' | 'users' | 'overview';
 const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
-const DEMO_HOLD_MS = [9500, 8500, 6500];
+const DEMO_HOLD_MS = [6200, 5200, 3200];
+const DEMO_TRANSITION_MS = 260;
+const DEMO_SCROLL_START_DELAY_MS = 250;
 
 const FEATURES: Array<{ icon: IconDefinition; title: string; desc: string }> = [
   { icon: faCreditCard,   title: 'Multi-Provider Payments',  desc: 'Stripe, Paystack, Razorpay, and Paddle — all wired up. Switch providers with one env var.' },
@@ -244,19 +246,23 @@ function DashboardDemo() {
   // auto-cycle views
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
+    let transitionTimer: ReturnType<typeof setTimeout>;
     const scheduleNext = () => {
       timer = setTimeout(() => {
         setTransitioning(true);
-        setTimeout(() => {
+        transitionTimer = setTimeout(() => {
           viewIdxRef.current = (viewIdxRef.current + 1) % DEMO_VIEWS.length;
           setDemoView(DEMO_VIEWS[viewIdxRef.current]);
           setTransitioning(false);
           scheduleNext();
-        }, 350);
+        }, DEMO_TRANSITION_MS);
       }, DEMO_HOLD_MS[viewIdxRef.current]);
     };
     scheduleNext();
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(transitionTimer);
+    };
   }, []);
 
   // auto-scroll each view slowly
@@ -277,7 +283,7 @@ function DashboardDemo() {
         if (p < 1) raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
-    }, 900);
+    }, DEMO_SCROLL_START_DELAY_MS);
     return () => { clearTimeout(delay); cancelAnimationFrame(raf); };
   }, [demoView, transitioning]);
 

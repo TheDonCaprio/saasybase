@@ -7,6 +7,10 @@ import { buildSupportEmail } from '../../../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail } from '../../../../../../lib/email';
 import { isSupportEmailNotificationEnabled } from '../../../../../../lib/notifications';
 import { rateLimit, getClientIP } from '../../../../../../lib/rateLimit';
+import {
+  getSupportTicketValidationIssues,
+  parseSupportTicketReplyInput,
+} from '../../../../../../lib/support-ticket-input';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ ticketId: string }> }) {
   const params = await ctx.params;
@@ -17,21 +21,15 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ ticket
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const sanitizeMessage = (value: unknown) => {
-      const raw = typeof value === 'string' ? value : '';
-      const cleaned = raw
-        .replace(/\0/g, '')
-        .replace(/\r\n|\r/g, '\n')
-        .trim();
-      return cleaned.slice(0, 5000);
-    };
+    const body = await request.json() as unknown;
+    const parsed = parseSupportTicketReplyInput(body);
 
-    const body = (await request.json()) as { message?: unknown };
-    const message = sanitizeMessage(body?.message);
-
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!parsed.success) {
+      const issues = getSupportTicketValidationIssues(parsed.error);
+      return NextResponse.json({ error: 'Invalid ticket reply', issues }, { status: 400 });
     }
+
+    const { message } = parsed.data;
 
     const clientIp = getClientIP(request);
     const limiterKey = `support-tickets:reply:user:${userId}`;

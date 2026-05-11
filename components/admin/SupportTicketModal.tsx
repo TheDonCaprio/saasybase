@@ -7,6 +7,7 @@ import { SupportTeamIcon } from '../ui/SupportTeamIcon';
 import { formatDate } from '../../lib/formatDate';
 import { useFormatSettings } from '../FormatSettingsProvider';
 import { getSupportTicketCategoryLabel } from '../../lib/support-ticket-categories';
+import { SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH } from '../../lib/support-ticket-input';
 
 interface SupportTicket {
   id: string;
@@ -454,9 +455,13 @@ export default function SupportTicketModal({ ticket, open, onClose, onUpdate }: 
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
                 placeholder="Type your response..."
+                maxLength={SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH}
                 className="w-full h-28 px-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-neutral-400"
                 disabled={isSubmitting}
               />
+              <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
+                {replyMessage.length}/{SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH}
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => {

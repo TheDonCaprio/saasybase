@@ -2,6 +2,10 @@
 
 import { useCallback, useState } from 'react';
 
+const CONTACT_NAME_MAX_LENGTH = 120;
+const CONTACT_COMPANY_MAX_LENGTH = 160;
+const CONTACT_MESSAGE_MAX_LENGTH = 2000;
+
 type FormState = {
   name: string;
   email: string;
@@ -116,11 +120,13 @@ export function ContactForm() {
                 type="text"
                 value={form.name}
                 onChange={(event) => updateField('name', event.target.value)}
+                maxLength={CONTACT_NAME_MAX_LENGTH}
                 required
                 className={`w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 ${fieldErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Jane Doe"
                 autoComplete="name"
               />
+              <p className="mt-1 text-right text-[11px] text-slate-400 dark:text-neutral-500">{form.name.length}/{CONTACT_NAME_MAX_LENGTH}</p>
               {fieldErrors.name ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.name}</p> : null}
             </div>
             <div>
@@ -151,10 +157,12 @@ export function ContactForm() {
                 type="text"
                 value={form.company}
                 onChange={(event) => updateField('company', event.target.value)}
+                maxLength={CONTACT_COMPANY_MAX_LENGTH}
                 className={`w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 ${fieldErrors.company ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Acme Corp"
                 autoComplete="organization"
               />
+              <p className="mt-1 text-right text-[11px] text-slate-400 dark:text-neutral-500">{form.company.length}/{CONTACT_COMPANY_MAX_LENGTH}</p>
               {fieldErrors.company ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.company}</p> : null}
             </div>
             <div>
@@ -186,10 +194,12 @@ export function ContactForm() {
               value={form.message}
               onChange={(event) => updateField('message', event.target.value)}
               required
+              maxLength={CONTACT_MESSAGE_MAX_LENGTH}
               rows={6}
               className={`w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 ${fieldErrors.message ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               placeholder="Share a few details so we can respond with the right next steps."
             />
+            <p className="mt-1 text-right text-[11px] text-slate-400 dark:text-neutral-500">{form.message.length}/{CONTACT_MESSAGE_MAX_LENGTH}</p>
             {fieldErrors.message ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.message}</p> : null}
           </div>
 

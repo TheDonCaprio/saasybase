@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { prisma } from '../../../../../lib/prisma';
 import type { Prisma } from '@/lib/prisma-client';
 import { requireAdminOrModerator, toAuthGuardErrorResponse } from '../../../../../lib/auth';
@@ -9,17 +8,12 @@ import { stripMode, isPrismaModeError, buildStringContainsFilter, sanitizeWhereF
 import { Logger } from '../../../../../lib/logger';
 import { asRecord, toError } from '../../../../../lib/runtime-guards';
 import {
-  DEFAULT_SUPPORT_TICKET_CATEGORY,
-  SUPPORT_TICKET_CATEGORIES,
   isSupportTicketCategory,
 } from '../../../../../lib/support-ticket-categories';
-
-const createTicketSchema = z.object({
-  userId: z.string().min(1),
-  subject: z.string().trim().min(1).max(200),
-  message: z.string().trim().min(1).max(5000),
-  category: z.enum(SUPPORT_TICKET_CATEGORIES).default(DEFAULT_SUPPORT_TICKET_CATEGORY)
-});
+import {
+  getSupportTicketValidationIssues,
+  parseSupportTicketCreateInput,
+} from '../../../../../lib/support-ticket-input';
 
 export async function GET(request: NextRequest) {
   try {
@@ -238,37 +232,18 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireAdminOrModerator('support');
 
-    const sanitizeSubject = (value: string) =>
-      value
-        .replace(/\0/g, '')
-        .replace(/[\r\n]+/g, ' ')
-        .trim()
-        .slice(0, 200);
+    const payload = await request.json() as unknown;
+    const payloadRecord = asRecord(payload) ?? {};
+    const userId = typeof payloadRecord.userId === 'string' ? payloadRecord.userId.trim() : '';
+    const validation = parseSupportTicketCreateInput(payload);
 
-    const sanitizeMessage = (value: string) =>
-      value
-        .replace(/\0/g, '')
-        .replace(/\r\n|\r/g, '\n')
-        .trim()
-        .slice(0, 5000);
-
-    const payload = await request.json();
-    const validation = createTicketSchema.safeParse(payload);
-
-    if (!validation.success) {
-      const issues = validation.error.errors.map((issue) => `${issue.path.join('.') || 'value'}: ${issue.message}`);
+    if (!userId || !validation.success) {
+      const issues = validation.success ? ['userId: Required'] : getSupportTicketValidationIssues(validation.error);
       Logger.warn('Invalid admin ticket payload', { issues });
       return NextResponse.json({ error: 'Invalid ticket payload', issues }, { status: 400 });
     }
 
-    const { userId } = validation.data;
-    const subject = sanitizeSubject(validation.data.subject);
-    const message = sanitizeMessage(validation.data.message);
-    const category = validation.data.category;
-
-    if (!subject || !message) {
-      return NextResponse.json({ error: 'Invalid ticket payload' }, { status: 400 });
-    }
+    const { subject, message, category } = validation.data;
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {

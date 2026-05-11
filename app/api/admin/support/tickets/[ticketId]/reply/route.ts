@@ -8,6 +8,10 @@ import { Logger } from '../../../../../../../lib/logger';
 import { isSupportEmailNotificationEnabled } from '../../../../../../../lib/notifications';
 import { buildSupportEmail } from '../../../../../../../lib/emails/support';
 import { getSiteName, getSupportEmail, sendEmail, shouldEmailUser } from '../../../../../../../lib/email';
+import {
+  getSupportTicketValidationIssues,
+  parseSupportTicketReplyInput,
+} from '../../../../../../../lib/support-ticket-input';
 
 export async function POST(
   request: NextRequest,
@@ -29,22 +33,15 @@ export async function POST(
   try {
     const params = await context.params;
 
-    const sanitizeMessage = (value: unknown) => {
-      const raw = typeof value === 'string' ? value : '';
-      const cleaned = raw
-        .replace(/\0/g, '')
-        .replace(/\r\n|\r/g, '\n')
-        .trim();
-      return cleaned.slice(0, 5000);
-    };
-
     const body: unknown = await request.json();
-    const messageRaw = typeof body === 'object' && body !== null && 'message' in body ? (body as Record<string, unknown>).message : undefined;
-    const message = sanitizeMessage(messageRaw);
+    const parsed = parseSupportTicketReplyInput(body);
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!parsed.success) {
+      const issues = getSupportTicketValidationIssues(parsed.error);
+      return NextResponse.json({ error: 'Invalid ticket reply', issues }, { status: 400 });
     }
+
+    const { message } = parsed.data;
 
     const ticket = await prisma.supportTicket.findUnique({
       where: { id: params.ticketId },

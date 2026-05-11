@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH } from '../../lib/support-ticket-input';
 
 interface SupportTicketActionsProps {
   ticketId: string;
@@ -82,10 +83,14 @@ export function SupportTicketActions({ ticketId, currentStatus }: SupportTicketA
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
                 required
+                maxLength={SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH}
                 rows={6}
                 className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"
                 placeholder="Type your reply..."
               />
+              <div className="text-right text-[11px] text-neutral-400">
+                {replyMessage.length}/{SUPPORT_TICKET_REPLY_MESSAGE_MAX_LENGTH}
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"

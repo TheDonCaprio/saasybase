@@ -12,8 +12,11 @@ import { rateLimit, getClientIP } from '../../../../lib/rateLimit';
 import {
   getSupportTicketCategoryLabel,
   isSupportTicketCategory,
-  normalizeSupportTicketCategory,
 } from '../../../../lib/support-ticket-categories';
+import {
+  getSupportTicketValidationIssues,
+  parseSupportTicketCreateInput,
+} from '../../../../lib/support-ticket-input';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -269,24 +272,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const sanitizeSubject = (value: unknown) => {
-    const raw = typeof value === 'string' ? value : '';
-    const cleaned = raw
-      .replace(/\0/g, '')
-      .replace(/[\r\n]+/g, ' ')
-      .trim();
-    return cleaned.slice(0, 200);
-  };
-
-  const sanitizeMessage = (value: unknown) => {
-    const raw = typeof value === 'string' ? value : '';
-    const cleaned = raw
-      .replace(/\0/g, '')
-      .replace(/\r\n|\r/g, '\n')
-      .trim();
-    return cleaned.slice(0, 5000);
-  };
-
   try {
     const clientIp = getClientIP(request);
     const limiterKey = `support-tickets:create:user:${userId}`;
@@ -328,14 +313,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as unknown;
-    const bodyRec = asRecord(body) ?? {};
-    const subject = sanitizeSubject(bodyRec.subject);
-    const message = sanitizeMessage(bodyRec.message);
-    const category = normalizeSupportTicketCategory(bodyRec.category);
+    const parsed = parseSupportTicketCreateInput(body);
 
-    if (!subject || !message) {
-      return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });
+    if (!parsed.success) {
+      const issues = getSupportTicketValidationIssues(parsed.error);
+      return NextResponse.json({ error: 'Invalid support ticket submission', issues }, { status: 400 });
     }
+
+    const { subject, message, category } = parsed.data;
 
     const ticket = await prisma.supportTicket.create({
       data: {

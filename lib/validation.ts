@@ -1,7 +1,10 @@
 import { z } from 'zod';
-import { SUPPORT_TICKET_CATEGORIES } from './support-ticket-categories';
 import { NextRequest, NextResponse } from 'next/server';
 import { Logger } from './logger';
+import {
+  supportTicketCreateSchema,
+  supportTicketReplySchema,
+} from './support-ticket-input';
 
 // Common validation schemas
 export const commonSchemas = {
@@ -97,17 +100,10 @@ export const apiSchemas = {
   }),
 
   // Support ticket
-  supportTicket: z.object({
-    subject: z.string().min(1).max(200),
-    message: z.string().min(10).max(5000),
-    category: z.enum(SUPPORT_TICKET_CATEGORIES).default('GENERAL'),
-    priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
-  }),
+  supportTicket: supportTicketCreateSchema,
 
   // Ticket reply
-  ticketReply: z.object({
-    message: z.string().min(1).max(5000),
-  }),
+  ticketReply: supportTicketReplySchema,
 
   // Notification creation
   notificationCreate: z.object({

@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import { SUPPORT_TICKET_CATEGORIES, SUPPORT_TICKET_CATEGORY_LABELS, type SupportTicketCategory } from '../../lib/support-ticket-categories';
+import {
+  SUPPORT_TICKET_MESSAGE_MAX_LENGTH,
+  SUPPORT_TICKET_MESSAGE_MIN_LENGTH,
+  SUPPORT_TICKET_SUBJECT_MAX_LENGTH,
+} from '../../lib/support-ticket-input';
 
 interface SupportTicketFormProps {
   userId: string;
@@ -19,10 +24,12 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
   void userId;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch('/api/support/tickets', {
@@ -31,7 +38,11 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
         body: JSON.stringify({ subject, message, category })
       });
 
-      if (!response.ok) throw new Error('Failed to submit ticket');
+      if (!response.ok) {
+        const error = await response.json().catch(() => null) as { error?: string; issues?: string[] } | null;
+        const messageToShow = error?.issues?.length ? error.issues.join(' · ') : error?.error || 'Failed to submit ticket';
+        throw new Error(messageToShow);
+      }
 
       onSubjectChange('');
       onMessageChange('');
@@ -40,6 +51,7 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('Error submitting ticket:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit ticket');
     } finally {
       setIsSubmitting(false);
     }
@@ -55,6 +67,12 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {errorMessage ? (
+        <div className="rounded border border-red-700 bg-red-900/20 p-3 text-sm text-red-300">
+          {errorMessage}
+        </div>
+      ) : null}
+
       <div>
         <label className="block text-sm font-medium mb-2">Category</label>
         <select
@@ -76,10 +94,14 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
           type="text"
           value={subject}
           onChange={(e) => onSubjectChange(e.target.value)}
+          maxLength={SUPPORT_TICKET_SUBJECT_MAX_LENGTH}
           required
           className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"
           placeholder="Brief description of the issue"
         />
+        <div className="mt-1 text-xs text-neutral-500">
+          {subject.length}/{SUPPORT_TICKET_SUBJECT_MAX_LENGTH}
+        </div>
       </div>
 
       <div>
@@ -88,10 +110,14 @@ export function SupportTicketForm({ userId, subject, message, category, onSubjec
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}
           required
+          maxLength={SUPPORT_TICKET_MESSAGE_MAX_LENGTH}
           rows={6}
           className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded text-white focus:outline-none focus:border-blue-500"
           placeholder="Describe your issue in detail..."
         />
+        <div className="mt-1 text-xs text-neutral-500">
+          Minimum {SUPPORT_TICKET_MESSAGE_MIN_LENGTH} characters. {message.length}/{SUPPORT_TICKET_MESSAGE_MAX_LENGTH}
+        </div>
       </div>
 
       <button

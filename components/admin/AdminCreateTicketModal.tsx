@@ -11,6 +11,10 @@ import {
   SUPPORT_TICKET_CATEGORY_LABELS,
   type SupportTicketCategory,
 } from '../../lib/support-ticket-categories';
+import {
+  SUPPORT_TICKET_MESSAGE_MAX_LENGTH,
+  SUPPORT_TICKET_SUBJECT_MAX_LENGTH,
+} from '../../lib/support-ticket-input';
 
 interface UserSuggestion {
   id: string;
@@ -268,9 +272,13 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
             <input
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
+              maxLength={SUPPORT_TICKET_SUBJECT_MAX_LENGTH}
               placeholder="Concise ticket subject"
               className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
             />
+            <div className="mt-1 text-right text-[11px] text-slate-500 dark:text-neutral-400">
+              {subject.length}/{SUPPORT_TICKET_SUBJECT_MAX_LENGTH}
+            </div>
           </div>
 
           <div>
@@ -293,10 +301,14 @@ export function AdminCreateTicketModal({ open, onClose, onCreated }: AdminCreate
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value)}
+              maxLength={SUPPORT_TICKET_MESSAGE_MAX_LENGTH}
               rows={4}
               placeholder="Describe the issue or request for the user"
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
             />
+            <div className="mt-1 text-right text-[11px] text-slate-500 dark:text-neutral-400">
+              {message.length}/{SUPPORT_TICKET_MESSAGE_MAX_LENGTH}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3">

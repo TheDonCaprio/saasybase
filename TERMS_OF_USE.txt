@@ -1,0 +1,57 @@
+SaaSyBase Terms of Use
+Last updated: May 2026
+
+By accessing, downloading, installing, or using SaaSyBase, you agree to these Terms of Use.
+
+1. License
+
+Your use of SaaSyBase is governed by the applicable licensing terms published on the Licensing page and by any license agreement, invoice, receipt, or other licensing document provided with your copy or purchase of SaaSyBase.
+
+If there is any conflict between these Terms of Use and a specific purchased license, the specific purchased license controls.
+
+2. Ownership
+
+SaaSyBase, including its source code, branding, design, documentation, and related content, remains the intellectual property of Adekile Adewale.
+
+SaaSyBase is licensed, not sold. All rights not expressly granted are reserved.
+
+3. Permitted and Prohibited Use
+
+You may use SaaSyBase only as permitted by the license that applies to you.
+
+Unless your license expressly allows it, you may not:
+- redistribute SaaSyBase;
+- resell or sublicense SaaSyBase;
+- use SaaSyBase for client work, third-party delivery, or agency work without the required commercial license; or
+- remove or misrepresent ownership, attribution, or licensing information.
+
+4. No Warranty
+
+SaaSyBase is provided "as is" and "as available," without warranties of any kind, whether express, implied, or statutory, including any implied warranties of merchantability, fitness for a particular purpose, title, and non-infringement.
+
+The author does not warrant that SaaSyBase will be uninterrupted, error-free, secure, or suitable for your specific use case.
+
+5. Limitation of Liability
+
+To the maximum extent permitted by law, the author will not be liable for any indirect, incidental, special, consequential, exemplary, or punitive damages, or for any loss of profits, revenue, data, business opportunity, or goodwill, arising out of or related to your use of, or inability to use, SaaSyBase.
+
+Your use of SaaSyBase is at your own risk.
+
+6. Third-Party Services
+
+SaaSyBase may integrate with third-party services, including payment providers, authentication providers, analytics tools, email providers, infrastructure vendors, and hosting platforms.
+
+The author is not responsible for the availability, accuracy, security, legality, or behavior of any third-party service.
+
+Your use of third-party services is governed by the terms and policies of those third parties.
+
+7. Changes to These Terms
+
+These Terms of Use may be updated from time to time.
+
+Continued use of SaaSyBase after an update becomes effective constitutes acceptance of the revised Terms of Use.
+
+8. Contact
+
+For licensing or legal inquiries, contact:
+caprio@capriofiles.com

@@ -793,7 +793,7 @@ function DashboardDemo() {
                         {FAKE_TRANSACTIONS.slice(0, 5).map((tx) => (
                           <div
                             key={tx.id}
-                            className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs backdrop-blur-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
+                            className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs dark:border-neutral-800/70 dark:bg-neutral-900/70"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-3">
                               <div className="min-w-0">

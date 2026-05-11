@@ -8,7 +8,7 @@ type AppShellLoadingProps = {
 export function AppShellLoading({ section, showSidebarLabel = true }: AppShellLoadingProps) {
 	return (
 		<div className="relative w-full space-y-6">
-			<div className="rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.5))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.85)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))),linear-gradient(140deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-3 shadow-sm backdrop-blur-sm sm:p-4 lg:p-6">
+			<div className="rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.5))] bg-[linear-gradient(135deg,rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.85)),rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))),linear-gradient(140deg,var(--theme-card-gradient-from),var(--theme-card-gradient-via),var(--theme-card-gradient-to))] p-3 shadow-sm sm:p-4 lg:p-6">
 				{showSidebarLabel ? (
 					<div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{section}</div>
 				) : null}
@@ -29,7 +29,7 @@ export function AppShellLoading({ section, showSidebarLabel = true }: AppShellLo
 				</div>
 			</div>
 
-			<div className="rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.5))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))] p-3 shadow-sm backdrop-blur-sm sm:p-4 lg:p-5">
+			<div className="rounded-[24px] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.5))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.78))] p-3 shadow-sm sm:p-4 lg:p-5">
 				<div className="space-y-3">
 					{Array.from({ length: 6 }).map((_, index) => (
 						<div

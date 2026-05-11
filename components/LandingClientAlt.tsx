@@ -765,10 +765,10 @@ function DashboardDemo() {
                   <div className={dashboardMutedPanelClass('flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3 sm:text-sm dark:text-neutral-300')}>
                     <span>Showing 22 of 847 payments</span>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
                         Status: All statuses
                       </span>
-                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+                      <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
                         Search: Alex
                       </span>
                     </div>
@@ -1103,7 +1103,7 @@ function DashboardDemo() {
                         {FAKE_TRANSACTIONS.slice(0, 5).map((tx) => (
                           <div
                             key={tx.id}
-                            className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs backdrop-blur-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
+                            className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs dark:border-neutral-800/70 dark:bg-neutral-900/70"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-3">
                               <div className="min-w-0">
@@ -3021,14 +3021,14 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                     <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 ) : (
                   <>
                     <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
                     <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
                     <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
                   </>
                 )}
               </div>

@@ -644,7 +644,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.FREE_PLAN_TOKEN_NAME]: '', // empty means use default token label
   [SETTING_KEYS.MODERATOR_PERMISSIONS]: '{"users":false,"transactions":false,"purchases":false,"subscriptions":false,"support":true,"notifications":false,"blog":false,"analytics":false,"traffic":false,"organizations":false}',
   [SETTING_KEYS.THEME_HEADER_LINKS]: '[{"label":"Home","href":"/"},{"label":"Dashboard","href":"/dashboard"},{"label":"Pricing","href":"/pricing"}]',
-  [SETTING_KEYS.THEME_FOOTER_LINKS]: '[{"label":"Privacy","href":"/privacy"},{"label":"Terms","href":"/terms"},{"label":"Contact","href":"/contact"}]',
+  [SETTING_KEYS.THEME_FOOTER_LINKS]: '[{"label":"Privacy","href":"/privacy"},{"label":"Terms","href":"/terms"},{"label":"Refund Policy","href":"/refund-policy"},{"label":"Contact","href":"/contact"}]',
   [SETTING_KEYS.BLOG_LISTING_STYLE]: 'grid',
   [SETTING_KEYS.BLOG_LISTING_PAGE_SIZE]: '10',
   [SETTING_KEYS.BLOG_SIDEBAR_ENABLED]: 'false',

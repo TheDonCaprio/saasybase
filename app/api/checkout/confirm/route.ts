@@ -312,7 +312,7 @@ export async function GET(req: NextRequest) {
 
       // If provider reports the session as not paid/active yet, return a pending response.
       const paymentStatus = (session.paymentStatus || '').toLowerCase();
-      const isPaidLike = paymentStatus === 'paid' || paymentStatus === 'succeeded' || paymentStatus === 'success';
+      const isPaidLike = paymentStatus === 'paid' || paymentStatus === 'succeeded' || paymentStatus === 'success' || paymentStatus === 'completed';
       const isActiveLike = paymentStatus === 'active';
       const isNoPaymentRequired = paymentStatus === 'no_payment_required';
 

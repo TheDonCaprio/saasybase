@@ -261,7 +261,7 @@ export function MagazineStyle({ posts, sidebarSettings, recentPosts, pagination 
                       <div className="absolute left-6 bottom-6 text-neutral-900 dark:text-white">
                         <div className="flex gap-2 mb-3">
                           {featuredPost.categories.slice(0, 3).map(c => (
-                            <span key={c.id} className="backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium drop-shadow-md dark:bg-black/30 dark:text-white dark:border-white/20 bg-white/80 text-neutral-900 border border-neutral-200">{c.title}</span>
+                            <span key={c.id} className="px-3 py-1 rounded-full text-sm font-medium drop-shadow-md dark:bg-black/30 dark:text-white dark:border-white/20 bg-white/80 text-neutral-900 border border-neutral-200">{c.title}</span>
                           ))}
                         </div>
                         <h2 className="text-3xl font-extrabold text-neutral-900 dark:text-white drop-shadow-xl dark:[text-shadow:_0_2px_10px_rgb(0_0_0_/_0.9)]">{featuredPost.title}</h2>

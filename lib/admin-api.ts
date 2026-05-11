@@ -3768,6 +3768,22 @@ const CURATED_CATEGORIES: AdminApiCategory[] = [
     endpoints: [
       {
         method: 'GET',
+        path: '/api/cron/demo-refresh',
+        summary: 'Refresh demo dataset timestamps and activity windows',
+        description: 'Rolls demo subscriptions, payments, notifications, visits, support activity, invites, and blog dates forward without recreating all demo users and related records.',
+        access: 'internal',
+        notes: [
+          'Authorization: requires Bearer token matching CRON_DEMO_REFRESH_TOKEN, CRON_PROCESS_EXPIRY_TOKEN, CRON_SECRET, or CRON_TOKEN in every environment.',
+          'Returns 404 instead of 401 for unauthorized production requests to reduce endpoint discovery.',
+          'Rate limit: 2 requests / minute per client IP.',
+          'If demo seed data has not been created in that environment yet, the route returns success with skipped=true instead of failing.',
+        ],
+        rateLimitTier: 'internal',
+        example: { headers: { Authorization: 'Bearer demo_refresh_token' }, query: { window: 120, visits: 45 } },
+        response: { success: true, timestamp: '2026-05-12T00:00:00.000Z', config: { windowDays: 120, visitWindowDays: 45 }, result: { users: 330, organizations: 24, subscriptions: 120, payments: 260, tickets: 110, replies: 180, notifications: 960, emailLogs: 220, visits: 1600, systemLogs: 420, adminActions: 180, invites: 36, blogPosts: 20, coupons: 12 } }
+      },
+      {
+        method: 'GET',
         path: '/api/cron/process-expiry',
         summary: 'Process subscription expiry and org cleanup',
         description: 'Expires outdated subscriptions, clears paid tokens after the natural-expiry grace window, and dismantles organizations whose owners no longer have valid team access.',

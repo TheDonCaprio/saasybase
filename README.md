@@ -1224,9 +1224,9 @@ In every environment, the route requires a matching bearer token.
 
 **Example cron command (cPanel / shell):**
 ```bash
-curl -fsS -m 60 \
-  -H 'Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>' \
-  'https://yourdomain.com/api/cron/process-expiry' \
+curl -i -m 60 \
+  -H "Authorization: Bearer $CRON_PROCESS_EXPIRY_TOKEN" \
+  "https://yourdomain.com/api/cron/process-expiry" \
   >> /home/<user>/cron-process-expiry.log 2>&1
 ```
 
@@ -1927,9 +1927,9 @@ Enable the required proxy modules (`proxy`, `proxy_http`, `headers`) and termina
 ### Linux VPS cron example
 
 ```bash
-curl -fsS -m 60 \
-  -H 'Authorization: Bearer <CRON_PROCESS_EXPIRY_TOKEN>' \
-  'https://yourdomain.com/api/cron/process-expiry'
+curl -i -m 60 \
+  -H "Authorization: Bearer $CRON_PROCESS_EXPIRY_TOKEN" \
+  "https://yourdomain.com/api/cron/process-expiry"
 ```
 
 ---

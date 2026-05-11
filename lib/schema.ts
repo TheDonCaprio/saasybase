@@ -3,6 +3,18 @@ import { getConfiguredSiteUrl, resolveSeoUrl } from './seo-shared';
 type JsonLdValue = Record<string, unknown> | Array<Record<string, unknown>>;
 
 export function serializeJsonLd(data: JsonLdValue): string {
+  if (Array.isArray(data)) {
+    const [firstEntry] = data;
+    const context = typeof firstEntry?.['@context'] === 'string'
+      ? firstEntry['@context']
+      : 'https://schema.org';
+
+    return JSON.stringify({
+      '@context': context,
+      '@graph': data,
+    }).replace(/</g, '\\u003c');
+  }
+
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 

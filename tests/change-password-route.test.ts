@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import bcrypt from 'bcryptjs';
 
 const authServiceMock = vi.hoisted(() => ({
   providerName: 'nextauth',
@@ -69,6 +70,14 @@ describe('POST /api/user/change-password', () => {
         revokeOtherSessions: false,
       },
     });
+    expect(prismaMock.user.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: { password: expect.any(String) },
+    });
+    const hashedPassword = prismaMock.user.update.mock.calls[0]?.[0]?.data?.password;
+    expect(typeof hashedPassword).toBe('string');
+    await expect(bcrypt.compare('NewPassword123!', hashedPassword)).resolves.toBe(true);
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
   });
 

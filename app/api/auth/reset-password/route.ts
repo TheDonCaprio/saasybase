@@ -18,8 +18,32 @@ function isBetterAuthProviderEnabled() {
 
 export async function POST(request: NextRequest) {
   if (isBetterAuthProviderEnabled()) {
+    const clonedRequest = request.clone();
+    const queryToken = request.nextUrl.searchParams.get('token') || undefined;
+    const resetBody = await clonedRequest.json().catch(() => null) as { token?: string; newPassword?: string } | null;
+    const resetToken = typeof resetBody?.token === 'string' && resetBody.token.length > 0 ? resetBody.token : queryToken;
+    const newPassword = typeof resetBody?.newPassword === 'string' ? resetBody.newPassword : '';
+
+    const verification = resetToken
+      ? await prisma.verification.findFirst({
+          where: { identifier: `reset-password:${resetToken}` },
+          select: { value: true },
+        })
+      : null;
+
     const { betterAuthNextJsHandler } = await import('@/lib/better-auth');
-    return betterAuthNextJsHandler.POST(request);
+    const response = await betterAuthNextJsHandler.POST(request);
+
+    if (response.ok && verification?.value && newPassword) {
+      const { hashPassword } = await import('@/lib/nextauth.config');
+      const hashed = await hashPassword(newPassword);
+      await prisma.user.update({
+        where: { id: verification.value },
+        data: { password: hashed },
+      });
+    }
+
+    return response;
   }
 
   try {

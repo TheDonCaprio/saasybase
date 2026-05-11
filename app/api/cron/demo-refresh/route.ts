@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, getClientIP } from '@/lib/rateLimit';
-import { refreshDemoData } from '@/lib/demo-refresh';
+import { DemoRefreshSeedMissingError, refreshDemoData } from '@/lib/demo-refresh';
 import { toError } from '@/lib/runtime-guards';
 import { Logger } from '@/lib/logger';
 
@@ -60,14 +60,18 @@ async function handleRequest(request: NextRequest) {
       visitWindowDays,
       result,
     });
-
-    return NextResponse.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      config: { windowDays, visitWindowDays },
-      result,
-    });
   } catch (error) {
+    if (error instanceof DemoRefreshSeedMissingError) {
+      Logger.info('Cron: demo refresh skipped', { reason: error.message });
+
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const err = toError(error);
     Logger.error('Cron: demo refresh failed', { error: err.message });
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

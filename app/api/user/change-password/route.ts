@@ -107,6 +107,15 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Better Auth updates its credential account record, but our Better Auth
+        // sign-in preflight still reads prisma.user.password for coexistence checks.
+        // Keep that field in sync so the new password works immediately.
+        const hashed = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+        await prisma.user.update({
+          where: { id: userId },
+          data: { password: hashed },
+        });
+
         return NextResponse.json({ message: 'Password changed successfully' });
       } catch (error) {
         const normalized = normalizeBetterAuthPasswordError(error);

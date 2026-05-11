@@ -15,7 +15,12 @@ vi.mock('../lib/nextauth.config', () => ({
 vi.mock('../lib/prisma', () => ({
   prisma: {
     verificationToken: {},
-    user: {},
+    verification: {
+      findFirst: vi.fn(),
+    },
+    user: {
+      update: vi.fn(),
+    },
     session: {},
   },
 }));
@@ -44,11 +49,18 @@ import { POST as authRoutePost } from '../app/api/auth/[...nextauth]/route';
 import { POST as resetPasswordPost } from '../app/api/auth/reset-password/route';
 import { GET as resetPasswordCallbackGet } from '../app/api/auth/reset-password/[token]/route';
 import { GET as magicLinkVerifyGet } from '../app/api/auth/magic-link/verify/route';
+import { prisma } from '../lib/prisma';
+
+const prismaMock = prisma as unknown as {
+  verification: { findFirst: ReturnType<typeof vi.fn> };
+  user: { update: ReturnType<typeof vi.fn> };
+};
 
 describe('Better Auth route delegation regressions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.AUTH_PROVIDER = 'betterauth';
+    prismaMock.verification.findFirst.mockResolvedValue(null);
   });
 
   it('delegates password reset requests through the auth catch-all route', async () => {
@@ -70,6 +82,7 @@ describe('Better Auth route delegation regressions', () => {
   it('delegates reset completion through the explicit reset-password route', async () => {
     const delegatedResponse = new Response(JSON.stringify({ status: true }), { status: 200 });
     postHandlerMock.mockResolvedValueOnce(delegatedResponse);
+    prismaMock.verification.findFirst.mockResolvedValueOnce({ value: 'user_123' });
 
     const request = new NextRequest('http://localhost/api/auth/reset-password', {
       method: 'POST',
@@ -81,6 +94,14 @@ describe('Better Auth route delegation regressions', () => {
 
     expect(postHandlerMock).toHaveBeenCalledWith(request);
     expect(response).toBe(delegatedResponse);
+    expect(prismaMock.verification.findFirst).toHaveBeenCalledWith({
+      where: { identifier: 'reset-password:tok_123' },
+      select: { value: true },
+    });
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_123' },
+      data: { password: 'hashed-password' },
+    });
   });
 
   it('delegates reset callbacks through the explicit reset-password token route', async () => {

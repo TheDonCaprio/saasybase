@@ -5,6 +5,13 @@ import { ensurePlansSeeded } from './plans';
 const DEMO_DOMAIN = 'demo.saasybase.test';
 const DEMO_CONTEXT = 'demo-seed';
 
+export class DemoRefreshSeedMissingError extends Error {
+  constructor(message = 'No demo users found. Run `npm run demo:seed` first.') {
+    super(message);
+    this.name = 'DemoRefreshSeedMissingError';
+  }
+}
+
 export type DemoRefreshConfig = {
   windowDays?: number;
   visitWindowDays?: number;
@@ -94,7 +101,7 @@ export async function refreshDemoData(input: DemoRefreshConfig = {}): Promise<De
   });
 
   if (demoUsers.length === 0) {
-    throw new Error('No demo users found. Run `npm run demo:seed` first.');
+    throw new DemoRefreshSeedMissingError();
   }
 
   const userIds = demoUsers.map((user) => user.id);

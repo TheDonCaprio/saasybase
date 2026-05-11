@@ -3164,7 +3164,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           {[
             { num: 180, label: 'built-in API routes',   suffix: '+' },
             { num: 4,  label: 'payment providers',      suffix: '' },
-            { num: 90, label: 'test files',             suffix: '+' },
+            { num: 500, label: 'regression tests',             suffix: '+' },
             { num: 3,  label: 'auth providers',         suffix: '' },
           ].map((m, i) => (
             <div key={i} className="lp-metric-item">

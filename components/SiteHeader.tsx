@@ -40,8 +40,6 @@ export function SiteHeader({
   layout: HeaderLayoutSettings;
 }) {
   const [isSticky, setIsSticky] = useState(false);
-  const [headerBlurPx, setHeaderBlurPx] = useState<number | null>(null);
-  const [stickyHeaderBlurPx, setStickyHeaderBlurPx] = useState<number | null>(null);
   const visibleHeaderLinks = adminOnlyPublicSiteMode
     ? headerLinks.filter((link) => link.href !== '/pricing')
     : headerLinks;
@@ -52,45 +50,19 @@ export function SiteHeader({
       ? 'translate-y-0 opacity-100'
       : '-translate-y-full opacity-0 pointer-events-none';
 
-  useEffect(() => {
-    const root = document.documentElement;
-
-    const syncBlurValues = () => {
-      const computedStyle = window.getComputedStyle(root);
-      const readBlur = (variableName: string) => {
-        const rawValue = computedStyle.getPropertyValue(variableName).trim();
-        const numericValue = Number.parseFloat(rawValue);
-        return Number.isFinite(numericValue) ? numericValue : null;
-      };
-
-      setHeaderBlurPx(readBlur('--theme-header-blur'));
-      setStickyHeaderBlurPx(readBlur('--theme-sticky-header-blur'));
-    };
-
-    syncBlurValues();
-
-    const observer = new MutationObserver(syncBlurValues);
-    observer.observe(root, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   const normalStyles = {
     backgroundColor: 'var(--theme-header-bg)',
     color: 'var(--theme-header-text)',
-    backdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
-    WebkitBackdropFilter: headerBlurPx != null ? `blur(${headerBlurPx}px)` : undefined,
+    backdropFilter: 'blur(var(--theme-header-blur))',
+    WebkitBackdropFilter: 'blur(var(--theme-header-blur))',
     borderBottom: 'var(--theme-header-border-width) solid var(--theme-header-border)',
     boxShadow: 'var(--theme-header-shadow)',
   };
   const stickyStyles = {
     backgroundColor: 'var(--theme-sticky-header-bg)',
     color: 'var(--theme-sticky-header-text)',
-    backdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
-    WebkitBackdropFilter: stickyHeaderBlurPx != null ? `blur(${stickyHeaderBlurPx}px)` : undefined,
+    backdropFilter: 'blur(var(--theme-sticky-header-blur))',
+    WebkitBackdropFilter: 'blur(var(--theme-sticky-header-blur))',
     borderBottom: 'var(--theme-sticky-header-border-width) solid var(--theme-sticky-header-border)',
     boxShadow: 'var(--theme-sticky-header-shadow)',
   };

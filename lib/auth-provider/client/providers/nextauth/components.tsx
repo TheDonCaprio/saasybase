@@ -242,7 +242,7 @@ function AuthModalShell({
   const isSignIn = mode === 'signin';
 
   return createPortal(
-    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] backdrop-blur-sm sm:pt-[9vh]" onClick={handleClose}>
+    <div data-auth-modal-root="true" className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pb-4 pt-[7vh] sm:pt-[9vh]" onClick={handleClose}>
       <div
         data-auth-modal-root="true"
         role="dialog"
@@ -251,7 +251,7 @@ function AuthModalShell({
         onClick={(event) => event.stopPropagation()}
         className="relative max-h-[86vh] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/20 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/50"
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-200 bg-white/95 px-6 pb-4 pt-5 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-200 bg-white/95 px-6 pb-4 pt-5 dark:border-neutral-800 dark:bg-neutral-950/95">
           <div className="space-y-1">
             <h2 id="auth-modal-title" className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
               {isSignIn ? 'Sign in to your account' : 'Create your account'}

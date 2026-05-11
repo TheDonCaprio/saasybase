@@ -33,7 +33,7 @@ export function getAuthProviderAppearance(isDark: boolean): ClerkAppearance {
       colorInputForeground: isDark ? '#fafafa' : '#0a0a0a',
     },
     elements: {
-      modalBackdrop: 'bg-black/60 backdrop-blur-sm',
+      modalBackdrop: 'bg-black/60',
       rootBox: 'w-full max-w-[28rem]',
       cardBox: 'w-[28rem] max-w-[calc(100vw-2rem)]',
       formButtonPrimary: 'bg-violet-600 hover:bg-violet-700 text-white',

@@ -6,6 +6,8 @@ import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/mainten
 import { addVisitTrackingHeaders, getOrCreateVisitSessionId, shouldTrackVisit, trackVisit } from '@/lib/visit-tracking';
 import { Logger } from '@/lib/logger';
 
+const REQUEST_PATH_HEADER = 'x-app-request-path';
+
 function proxyWarn(message: string, error?: unknown) {
   if (process.env.NODE_ENV !== 'development') return;
   Logger.warn(message, error);
@@ -99,8 +101,18 @@ const isProtectedRoute = createAuthRouteMatcher([
 
 const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
 
+function buildForwardedRequestHeaders(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set(REQUEST_PATH_HEADER, `${req.nextUrl.pathname}${req.nextUrl.search ?? ''}`);
+  return requestHeaders;
+}
+
 async function continueWithVisitTracking(req: NextRequest) {
-  const response = NextResponse.next();
+  const response = NextResponse.next({
+    request: {
+      headers: buildForwardedRequestHeaders(req),
+    },
+  });
 
   if (!shouldTrackVisit(req)) {
     return response;

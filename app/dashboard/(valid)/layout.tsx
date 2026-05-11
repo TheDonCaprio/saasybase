@@ -1,4 +1,5 @@
 import React from 'react';
+import { headers } from 'next/headers';
 import { SidebarNav } from '../../../components/dashboard/SidebarNav';
 import { prisma } from '../../../lib/prisma';
 import { authService } from '@/lib/auth-provider';
@@ -14,6 +15,7 @@ import { getCurrentUserWithFallback } from '../../../lib/user-helpers';
 import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
 import { Logger } from '../../../lib/logger';
 import { getOrganizationReferenceWhere } from '../../../lib/organization-reference';
+import { requireAuth } from '../../../lib/route-guards';
 
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
 import { buildDashboardSidebarItems } from '../../../lib/dashboard-nav/groups';
@@ -21,8 +23,10 @@ import type { DashboardNavCounts } from '../../../lib/dashboard-nav/types';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
-  // Middleware handles authentication protection
-  // Only authenticated users will reach this component
+  const requestHeaders = await headers();
+  const requestPath = requestHeaders.get('x-app-request-path');
+  const safeReturnPath = requestPath?.startsWith('/dashboard') ? requestPath : '/dashboard';
+  await requireAuth(safeReturnPath);
 
   // Get announcement message from settings
   const announcementMessage = await getAnnouncementMessage();

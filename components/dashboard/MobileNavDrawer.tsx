@@ -68,7 +68,7 @@ export function MobileNavDrawer({
 
   return (
     <div className={wrapperClass}>
-      <header className="flex items-center justify-between gap-4 border-b border-[color:var(--theme-header-border)] bg-[color:var(--theme-header-bg)] px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:backdrop-blur-md text-[color:var(--theme-header-text)]">
+      <header className="flex items-center justify-between gap-4 border-b border-[color:var(--theme-header-border)] bg-[color:var(--theme-header-bg)] px-4 py-3 shadow-sm text-[color:var(--theme-header-text)]">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{contextLabel}</p>
           <p className="truncate text-sm font-semibold">
@@ -92,14 +92,14 @@ export function MobileNavDrawer({
             <button
               type="button"
               onClick={close}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/40"
               aria-hidden
             />
             <div
               role="dialog"
               aria-modal="true"
               id="mobile-nav-drawer"
-              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl backdrop-blur-lg z-[60001]"
+              className="absolute inset-y-0 left-0 flex h-full w-[min(85vw,320px)] flex-col overflow-hidden border-r border-[color:rgb(var(--border-primary))] bg-[color:rgb(var(--bg-secondary))] text-neutral-100 shadow-2xl z-[60001]"
             >
               <div className="flex items-center justify-between border-b border-[color:rgb(var(--border-primary))] px-4 py-4">
                 <div>

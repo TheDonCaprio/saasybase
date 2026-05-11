@@ -381,7 +381,7 @@ export function SeoSettingsPanel({ initialSettings }: SeoSettingsPanelProps) {
       {isRobotsEditorOpen && typeof document !== 'undefined'
         ? createPortal(
         <div className={`fixed inset-0 z-[70000] flex min-h-screen items-start justify-center overflow-y-auto overflow-x-hidden p-3 pt-4 sm:items-center sm:p-4 transition-opacity duration-150 ${isRobotsModalVisible ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { if (!savingRobots) setIsRobotsEditorOpen(false); }} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => { if (!savingRobots) setIsRobotsEditorOpen(false); }} />
           <div className={`relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/40 transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/30 sm:max-h-[90vh] ${isRobotsModalVisible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'}`}>
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
               <div>

@@ -85,7 +85,7 @@ export function CouponRedeemModal({ isOpen, onClose }: CouponRedeemModalProps) {
   if (!ready || !containerRef.current || !isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 shadow-xl">
         <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
           <div className="flex items-center gap-2">

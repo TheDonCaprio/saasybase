@@ -429,7 +429,7 @@ export default function EmailTemplatesClient({ initialTemplates }: Props) {
 
       {/* Send Test Modal */}
       {testTemplate && mountPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto !mt-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto !mt-0">
           <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl max-w-2xl w-full my-8">
             <div className="flex items-center justify-between p-6 border-b border-neutral-800">
               <div>

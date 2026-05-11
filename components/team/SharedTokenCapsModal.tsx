@@ -105,7 +105,7 @@ function SharedTokenCapsModalPanel({
     const savingCaps = busyAction === 'updateCaps';
 
     return createPortal(
-        <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8">
             <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-xl">
                 <div className="flex items-center justify-between p-6 border-b border-neutral-800">
                     <div>

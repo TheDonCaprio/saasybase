@@ -25,6 +25,7 @@ vi.mock('../lib/paidTokens', () => ({
 
 vi.mock('../lib/organization-access', () => ({
   syncOrganizationEligibilityForUser: vi.fn(async () => undefined),
+  restoreSuspendedOrganizationById: vi.fn(async () => undefined),
 }));
 
 vi.mock('../lib/user-plan-context', () => ({

@@ -80,7 +80,7 @@ function SubscriptionEditModalPanel({
   if (!subscription) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-3">
       <div className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 flex flex-col dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-neutral-800">
           <div>

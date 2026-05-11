@@ -34,7 +34,7 @@ const buildToastMessage = (message: PurchaseMessage) => {
 
 const stripPurchaseParams = (params: URLSearchParams) => {
   const next = new URLSearchParams(params);
-  ['purchase', 'payment_id', 'provider', 'status', 'since', 'plan', 'session_id', 'sessionId'].forEach((key) => {
+  ['purchase', 'payment_id', 'payment_intent', 'trxref', 'reference', 'provider', 'status', 'since', 'plan', 'session_id', 'sessionId'].forEach((key) => {
     next.delete(key);
   });
   return next;
@@ -54,14 +54,14 @@ export function PurchaseNotice() {
   const purchase = (params?.get('purchase') || '').toLowerCase();
   const status = (params?.get('status') || '').toLowerCase();
   const provider = (params?.get('provider') || '').toLowerCase();
-  const paymentId = params?.get('payment_id') || null;
+  const paymentId = params?.get('payment_id') || params?.get('payment_intent') || params?.get('trxref') || params?.get('reference') || null;
   const sessionId = params?.get('session_id') || params?.get('sessionId') || null;
   const sinceParam = params?.get('since') || null;
 
   const isSuccess = purchase === 'success' || status === 'success' || status === 'paid' || status === 'completed';
   const isCancelled = purchase === 'cancelled' || purchase === 'canceled' || status === 'cancelled' || status === 'canceled';
   const isFailure = purchase === 'failed' || status === 'failed' || status === 'error';
-  const isRazorpayConfirmation = provider === 'razorpay' && isSuccess && Boolean(paymentId || sessionId || sinceParam);
+  const needsRedirectConfirmation = (provider === 'razorpay' || provider === 'paystack') && isSuccess && Boolean(paymentId || sessionId || sinceParam);
   const effectivePaymentId = confirmedPaymentId || paymentId;
 
   const shouldShow = Boolean(purchase || status);
@@ -97,7 +97,7 @@ export function PurchaseNotice() {
   }, [shouldShow, isSuccess, isCancelled, isFailure]);
 
   useEffect(() => {
-    if (!isRazorpayConfirmation) {
+    if (!needsRedirectConfirmation) {
       setIsConfirming(false);
       setConfirmStatus('idle');
       setConfirmedPaymentId(null);
@@ -159,14 +159,14 @@ export function PurchaseNotice() {
     return () => {
       cancelled = true;
     };
-  }, [isRazorpayConfirmation, paymentId, sessionId, sinceParam]);
+  }, [needsRedirectConfirmation, paymentId, sessionId, sinceParam]);
 
   useEffect(() => {
     if (!baseMessage || !shouldShow) return;
 
     let cancelled = false;
     const resolveMessage = async () => {
-      if (isRazorpayConfirmation) {
+      if (needsRedirectConfirmation) {
         if (confirmStatus === 'confirming' || confirmStatus === 'idle') {
           if (!cancelled) {
             setMessage(null);
@@ -178,7 +178,7 @@ export function PurchaseNotice() {
           if (!cancelled) {
             setMessage({
               title: 'Payment still processing.',
-              body: 'Razorpay returned successfully, but confirmation is taking longer than usual. Refresh shortly if your balance has not updated yet.',
+              body: `${provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'Your payment provider'} returned successfully, but confirmation is taking longer than usual. Refresh shortly if your balance has not updated yet.`,
               tone: 'warning',
             });
           }
@@ -229,7 +229,7 @@ export function PurchaseNotice() {
     return () => {
       cancelled = true;
     };
-  }, [baseMessage, confirmStatus, effectivePaymentId, isRazorpayConfirmation, isSuccess, provider, shouldShow]);
+  }, [baseMessage, confirmStatus, effectivePaymentId, needsRedirectConfirmation, isSuccess, provider, shouldShow]);
 
   useEffect(() => {
     if (!message || hasShownRef.current) return;

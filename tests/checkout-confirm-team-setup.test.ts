@@ -14,7 +14,7 @@ const authMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'user_1', orgId: 
 
 vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/auth-provider', () => ({ authService: { getSession: authMock } }));
-vi.mock('../lib/payment/service', () => ({ paymentService: { provider: { name: 'stripe' }, processWebhookEvent: vi.fn() } }));
+vi.mock('../lib/payment/service', () => ({ paymentService: { provider: { name: 'stripe' }, processWebhookEvent: vi.fn(), recoverPendingPaystackSubscriptionForCheckout: vi.fn() } }));
 vi.mock('../lib/payment/factory', () => ({ PaymentProviderFactory: { getProviderByName: vi.fn(() => null) } }));
 vi.mock('../lib/logger', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 

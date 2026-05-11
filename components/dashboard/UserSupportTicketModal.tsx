@@ -305,7 +305,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 bg-black/60 transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={requestCloseModal}
       />
 
@@ -504,7 +504,7 @@ export default function UserSupportTicketModal({ ticket, ticketId = null, open, 
 
       {showDraftCloseConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDraftCloseConfirm(false)} />
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowDraftCloseConfirm(false)} />
           <div className="relative w-full max-w-lg rounded-xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
             <div className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Close without sending?</div>
             <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">

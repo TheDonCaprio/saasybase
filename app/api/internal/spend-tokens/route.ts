@@ -459,12 +459,13 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const [freshUser, freshOrg] = await Promise.all([
-        tx.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
-        effectiveBucket === 'shared'
-          ? tx.organization.findUnique({ where: { id: sharedContext!.organizationId }, select: { tokenBalance: true } })
-          : Promise.resolve(null),
-      ]);
+      const freshUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: { tokenBalance: true, freeTokenBalance: true },
+      });
+      const freshOrg = effectiveBucket === 'shared'
+        ? await tx.organization.findUnique({ where: { id: sharedContext!.organizationId }, select: { tokenBalance: true } })
+        : null;
 
       return {
         status: 200,

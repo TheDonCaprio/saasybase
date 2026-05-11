@@ -37,12 +37,16 @@ export default function AccountMenu() {
   const router = useRouter();
   const { ensureProfile, loaded: profileLoadedForOrg, loading: profileLoading, profile, resetProfile } = useUserProfile();
   const [isOpen, setIsOpen] = useState(false);
+  const [hasOpenedSignedInMenu, setHasOpenedSignedInMenu] = useState(false);
+  const [hasOpenedGuestMenu, setHasOpenedGuestMenu] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const prevOrgIdRef = useRef(currentOrgId);
   const dropdownTop = '4.45rem';
   const loading = isSignedIn && isOpen && (!profileLoadedForOrg || profileLoading);
+  const shouldRenderSignedInMenu = isSignedIn && (isOpen || hasOpenedSignedInMenu);
+  const shouldRenderGuestMenu = !isSignedIn && (isOpen || hasOpenedGuestMenu);
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
@@ -172,6 +176,13 @@ export default function AccountMenu() {
             closeMenu();
             return;
           }
+
+          if (isSignedIn) {
+            setHasOpenedSignedInMenu(true);
+          } else {
+            setHasOpenedGuestMenu(true);
+          }
+
           setIsOpen(true);
         }}
         className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 relative z-50"
@@ -181,14 +192,18 @@ export default function AccountMenu() {
       </button>
 
       {/* Dropdown for logged-in users */}
-      {isSignedIn && isOpen && (
+      {shouldRenderSignedInMenu && (
         <>
           <div
             aria-hidden
             style={{ top: dropdownTop }}
-            className="fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+            className={`fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white transition-opacity duration-150 dark:border-neutral-800 dark:bg-neutral-900 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           />
-          <div style={{ top: dropdownTop }} className="fixed right-4 w-72 overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10 z-[51]">
+          <div
+            aria-hidden={!isOpen}
+            style={{ top: dropdownTop }}
+            className={`fixed right-4 z-[51] w-72 overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 transition-[opacity,transform] duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10 ${isOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none invisible -translate-y-1 opacity-0'}`}
+          >
           {loading ? (
             <div className="p-4 space-y-3">
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
@@ -362,14 +377,18 @@ export default function AccountMenu() {
       )}
 
       {/* Auth Dropdown for logged-out users */}
-      {!isSignedIn && isOpen && (
+      {shouldRenderGuestMenu && (
         <>
           <div
             aria-hidden
             style={{ top: dropdownTop }}
-            className="fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+            className={`fixed right-[1.65rem] z-[52] h-3 w-3 -translate-y-1/2 rotate-45 border-l border-t border-neutral-200 bg-white transition-opacity duration-150 dark:border-neutral-800 dark:bg-neutral-900 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           />
-          <div style={{ top: dropdownTop }} className="fixed right-4 z-[51] w-80 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10">
+          <div
+            aria-hidden={!isOpen}
+            style={{ top: dropdownTop }}
+            className={`fixed right-4 z-[51] w-80 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 transition-[opacity,transform] duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-black/40 dark:ring-white/10 ${isOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none invisible -translate-y-1 opacity-0'}`}
+          >
             <div className="px-6 pb-6 pt-7">
               <div className="space-y-5">
                 <div className="space-y-2.5 pr-2">

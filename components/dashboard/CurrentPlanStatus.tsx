@@ -123,7 +123,7 @@ export function CurrentPlanStatus({
 
 			{!isActive ? (
 				<>
-					<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.65))] p-5 text-center shadow-sm backdrop-blur-sm dark:bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.45))]">
+					<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.65))] p-5 text-center shadow-sm dark:bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.45))]">
 						{resolvedEmpty.heading ? (
 							<div className="text-lg font-semibold text-slate-800 dark:text-neutral-100">{resolvedEmpty.heading}</div>
 						) : null}
@@ -141,14 +141,14 @@ export function CurrentPlanStatus({
 			) : (
 				<div className="space-y-5">
 					{cancellationNotice ? (
-						<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary))] p-3.5 text-sm shadow-sm backdrop-blur-sm">
+						<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary))] p-3.5 text-sm shadow-sm">
 							<div className="font-semibold text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]">{cancellationNotice.heading}</div>
 							<p className="mt-1 text-[color:rgb(var(--text-secondary))]">{cancellationNotice.body}</p>
 						</div>
 					) : null}
 
 					{pendingSwitchNotice ? (
-						<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary))] p-3.5 text-sm shadow-sm backdrop-blur-sm">
+						<div className="rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-[color:rgb(var(--bg-secondary))] p-3.5 text-sm shadow-sm">
 							<div className="font-semibold text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] dark:text-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.95))]">{pendingSwitchNotice.heading}</div>
 							<p className="mt-1 text-[color:rgb(var(--text-secondary))]">{pendingSwitchNotice.body}</p>
 						</div>

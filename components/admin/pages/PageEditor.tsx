@@ -1747,7 +1747,7 @@ export default function PageEditor({
                   <div
                     ref={toolbarRef}
                     className={clsx(
-                      'max-w-full overflow-hidden border-b border-neutral-200 bg-white/95 px-2 py-2 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/95',
+                      'max-w-full overflow-hidden border-b border-neutral-200 bg-white/95 px-2 py-2 dark:border-neutral-700 dark:bg-neutral-900/95',
                       isEditorFullscreen
                         ? 'sticky top-0 z-10 shadow-sm'
                         : isToolbarPinned
@@ -2798,7 +2798,7 @@ export default function PageEditor({
 
       {/* Link Modal */}
       {isMounted && showLinkModal && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               Add Link
@@ -2853,7 +2853,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showConfirmManualRestore && createPortal(
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Restore manual draft?</h3>
             <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-300">This will overwrite your current editor content with the saved manual draft. This cannot be undone.</p>
@@ -2886,7 +2886,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showConfirmAutoRestore && createPortal(
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Restore auto draft?</h3>
             <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-300">This will overwrite your current editor content with the most recent auto-saved draft. This cannot be undone.</p>
@@ -2919,7 +2919,7 @@ export default function PageEditor({
       )}
 
       {isMounted && showCategoriesModal && CategoriesManagerComponent && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
           <div className="flex h-[min(86vh,820px)] w-[min(960px,94vw)] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700 sm:px-5">
               <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Manage blog categories</h3>
@@ -2945,7 +2945,7 @@ export default function PageEditor({
 
       {/* Embed Modal */}
       {isMounted && showEmbedModal && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
             <h3 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Insert Embed</h3>
             <div className="space-y-4">
@@ -3112,7 +3112,7 @@ export default function PageEditor({
       {/* Fullscreen backdrop portal - renders at body level to escape CSS stacking contexts */}
       {isMounted && isEditorFullscreen && createPortal(
         <div
-          className="fixed inset-0 z-[59] bg-neutral-950/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[59] bg-neutral-950/50"
           onClick={() => toggleEditorFullscreen(false)}
           aria-hidden="true"
         />,

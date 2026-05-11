@@ -549,18 +549,19 @@ export async function POST(req: NextRequest) {
 
         const resolvedSharedContext = sharedContext && sharedContext.ok ? sharedContext : null;
 
-        const [freshUser, freshOrg, freshMembership] = await Promise.all([
-          tx.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
-          effectiveBucket === 'shared' && sharedOrgId
-            ? tx.organization.findUnique({ where: { id: sharedOrgId }, select: { tokenBalance: true } })
-            : Promise.resolve(null),
-          effectiveBucket === 'shared' && resolvedSharedContext?.membershipId
-            ? tx.organizationMembership.findFirst({
-                where: { id: resolvedSharedContext.membershipId },
-                select: { sharedTokenBalance: true },
-              })
-            : Promise.resolve(null),
-        ]);
+        const freshUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: { tokenBalance: true, freeTokenBalance: true },
+        });
+        const freshOrg = effectiveBucket === 'shared' && sharedOrgId
+          ? await tx.organization.findUnique({ where: { id: sharedOrgId }, select: { tokenBalance: true } })
+          : null;
+        const freshMembership = effectiveBucket === 'shared' && resolvedSharedContext?.membershipId
+          ? await tx.organizationMembership.findFirst({
+              where: { id: resolvedSharedContext.membershipId },
+              select: { sharedTokenBalance: true },
+            })
+          : null;
 
         const sharedDisplayBalance = effectiveBucket === 'shared' && resolvedSharedContext
           ? resolvedSharedContext.tokenPoolStrategy === 'ALLOCATED_PER_MEMBER'

@@ -128,7 +128,7 @@ export function WarningsModal({
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm dark:bg-black/60">
+    <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-slate-900/50 px-4 py-8 dark:bg-black/60">
       <div className="w-full max-w-lg overflow-hidden rounded-[calc(var(--theme-surface-radius)+6px)] border border-slate-200/90 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)] dark:border-neutral-800 dark:bg-neutral-950/95 dark:shadow-[0_28px_70px_rgba(0,0,0,0.45)]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/90 px-6 py-5 dark:border-neutral-800">
           <div className="space-y-2">

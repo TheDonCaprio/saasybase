@@ -140,7 +140,7 @@ export function ColorTabContent({
       {/* Save preset modal */}
       {saveModalOpen
         ? createPortal(
-            <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[70000] flex min-h-screen items-center justify-center bg-black/60 px-4 py-8">
               <div className="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
                 <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-neutral-800">
                   <h2 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Save preset</h2>

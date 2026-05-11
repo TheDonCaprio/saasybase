@@ -38,6 +38,15 @@ function resolveActiveOrganizationId(metadata?: Record<string, unknown> | null):
   return null;
 }
 
+function isPendingSubscriptionPaymentRecord(
+  payment: {
+    status?: string | null;
+    subscriptionId?: string | null;
+  } | null | undefined,
+) {
+  return payment?.status === 'PENDING_SUBSCRIPTION' && !payment.subscriptionId;
+}
+
 async function resolveRazorpaySessionId(paymentId: string): Promise<string | null> {
   const keyId = process.env.RAZORPAY_KEY_ID || '';
   const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
@@ -141,6 +150,12 @@ export async function GET(req: NextRequest) {
           include: { plan: true, subscription: { include: { plan: true } } }
         });
         if (existing) {
+          if (isPendingSubscriptionPaymentRecord(existing)) {
+            devLog('fast-path: pending subscription payment found, continuing confirmation flow', {
+              paymentId: existing.id,
+              status: existing.status,
+            });
+          } else {
           devLog('fast-path: existing payment found in DB', { paymentId: existing.id });
           const isTokenTopupPayment = !existing.subscriptionId && existing.plan && existing.plan.autoRenew === false;
           return NextResponse.json({
@@ -152,6 +167,7 @@ export async function GET(req: NextRequest) {
             plan: existing.subscription?.plan?.name || existing.plan?.name || null,
             ...setupFieldsForPlan(existing.subscription?.plan?.supportsOrganizations ?? existing.plan?.supportsOrganizations),
           });
+          }
         }
       }
 
@@ -173,6 +189,14 @@ export async function GET(req: NextRequest) {
           });
 
           if (recentPayment) {
+            if (isPendingSubscriptionPaymentRecord(recentPayment)) {
+              devLog('fast-path: recent pending subscription payment found, waiting for confirmation', {
+                paymentId: recentPayment.id,
+                status: recentPayment.status,
+              });
+              return NextResponse.json({ ok: true, completed: false, pending: true });
+            }
+
             devLog('fast-path: recent payment fallback', { paymentId: recentPayment.id });
             const isTokenTopupPayment = !recentPayment.subscriptionId && recentPayment.plan && recentPayment.plan.autoRenew === false;
             return NextResponse.json({
@@ -189,7 +213,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (!sessionId && paymentId) {
+    if (!sessionId && paymentId && looksLikeRazorpay) {
       // Third check: attempt to resolve session from Razorpay API
       // (This often fails for subscription payments as they don't include subscription_id/payment_link_id)
       sessionId = await resolveRazorpaySessionId(paymentId);
@@ -197,6 +221,8 @@ export async function GET(req: NextRequest) {
         Logger.warn('Checkout confirm could not resolve Razorpay session from payment_id', { paymentId });
         return NextResponse.json({ ok: true, completed: false, pending: true });
       }
+    } else if (!sessionId && paymentId && !looksLikeRazorpay) {
+      sessionId = paymentId;
     }
 
     const provider = looksLikeRazorpay
@@ -378,10 +404,42 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        const paymentPlanSupportsOrganizations = payment?.subscription?.plan?.supportsOrganizations ?? payment?.plan?.supportsOrganizations;
+        const paymentIsPendingSubscription = payment?.status === 'PENDING_SUBSCRIPTION' && !payment?.subscriptionId;
+
+        if (
+          providerName === 'paystack'
+          && paymentIsPendingSubscription
+          && paymentPlanSupportsOrganizations === true
+        ) {
+          const recoveredSubscription = await paymentService.recoverPendingPaystackSubscriptionForCheckout({
+            userId,
+            customerId: session.customerId ?? null,
+            priceId: session.lineItems?.[0]?.priceId || session.metadata?.priceId || session.metadata?.planCode || null,
+            paymentId: paymentId || session.paymentIntentId || null,
+            sessionId: session.id,
+          });
+
+          if (recoveredSubscription) {
+            payment = await prisma.payment.findFirst({
+              where: { userId, OR: paymentLookupOr as Prisma.PaymentWhereInput[] },
+              orderBy: { createdAt: 'desc' },
+              include: {
+                plan: true,
+                subscription: { include: { plan: true } }
+              }
+            });
+          }
+        }
+
         if (!payment) {
           // processWebhookEvent may have been a no-op (idempotency) or still pending.
           // Return pending — the client will retry in a few seconds.
           return NextResponse.json({ ok: true, completed: false });
+        }
+
+        if (isPendingSubscriptionPaymentRecord(payment)) {
+          return NextResponse.json({ ok: true, completed: false, pending: true });
         }
 
         const isTokenTopupPayment = !payment.subscriptionId && payment.plan && payment.plan.autoRenew === false;
@@ -392,6 +450,7 @@ export async function GET(req: NextRequest) {
           paymentId: payment.id,
           createdAt: payment.createdAt,
           plan: payment.subscription?.plan?.name || payment.plan?.name || null,
+          ...setupFieldsForPlan(payment.subscription?.plan?.supportsOrganizations ?? payment.plan?.supportsOrganizations),
         });
       }
     }
@@ -456,6 +515,10 @@ export async function GET(req: NextRequest) {
       })
       : null;
     if (existingPayment) {
+      if (isPendingSubscriptionPaymentRecord(existingPayment)) {
+        return NextResponse.json({ ok: true, completed: false, pending: true });
+      }
+
       const expiresAt = existingPayment.subscription?.expiresAt;
       const active = expiresAt ? new Date(expiresAt).getTime() > Date.now() : false;
       const existingPlanName = existingPayment.subscription?.plan?.name || existingPayment.plan?.name || null;

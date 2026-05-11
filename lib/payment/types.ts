@@ -180,6 +180,7 @@ export interface StandardizedInvoice {
 export interface CheckoutSessionDetails {
     id: string;
     clientReferenceId?: string;
+    customerId?: string;
     metadata?: Record<string, string>;
     paymentIntentId?: string;
     subscriptionId?: string;

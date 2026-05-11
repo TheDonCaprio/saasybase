@@ -192,7 +192,7 @@ export default function EditOrganizationModal({ orgId, initialName, initialSlug,
     <div className="fixed inset-0 z-[60000] flex items-start justify-center overflow-y-auto px-4 py-6 sm:py-10">
       <button
         type="button"
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm dark:bg-neutral-950/80"
+        className="absolute inset-0 bg-slate-900/50 dark:bg-neutral-950/80"
         onClick={onClose}
         aria-label="Close edit organization modal"
       />

@@ -521,7 +521,7 @@ export default async function AdminHome() {
                     recentPaymentsWithFormats.map((payment: RecentPayment) => (
                       <div
                         key={payment.id}
-                        className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-neutral-700"
+                        className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800/70 dark:bg-neutral-900/70 dark:hover:border-neutral-700"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0 flex-1">

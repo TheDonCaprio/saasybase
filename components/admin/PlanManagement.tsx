@@ -539,22 +539,22 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
           Showing {formatNumber(filteredPlans.length)} of {formatNumber(totalPlans)} plans
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Status: {statusFilterLabel}
           </span>
           {trimmedSearch ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Search: “{trimmedSearch}”
             </span>
           ) : null}
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Active: {formatNumber(activeCount)}
           </span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Subscription: {formatNumber(autoRenewCount)}
           </span>
           {limitedCount > 0 ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Limited: {formatNumber(limitedCount)}
             </span>
           ) : null}
@@ -828,7 +828,7 @@ export function PlanManagement({ plans: initialPlans, currency }: { plans: Plan[
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="fixed inset-0 bg-black/60" onClick={() => setShowModal(false)} />
           <div className="relative flex max-h-[90vh] w-full max-w-3xl min-w-0 flex-col overflow-x-hidden">
             <div className="flex max-h-full min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-xl">
               <div className="flex items-center justify-between p-4 border-b border-neutral-800 flex-shrink-0">

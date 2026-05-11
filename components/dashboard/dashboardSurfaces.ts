@@ -26,7 +26,7 @@ export function dashboardCardClass(...extra: ClassValue[]) {
 
 export function dashboardMutedPanelClass(...extra: ClassValue[]) {
 	return clsx(
-		'theme-shadow-panel rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.70))] backdrop-blur-sm',
+		'theme-shadow-panel rounded-[var(--theme-surface-radius)] border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--bg-secondary-rgb)_/_calc(var(--bg-secondary-a)*0.70))]',
 		withDefaultPadding('p-6', ...extra)
 	);
 }
@@ -40,7 +40,7 @@ export function dashboardDangerPanelClass(...extra: ClassValue[]) {
 
 export function dashboardPillClass(...extra: ClassValue[]) {
 	return clsx(
-		'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] text-xs font-medium text-slate-600 backdrop-blur-sm dark:text-neutral-200',
+		'inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.60))] bg-[color:rgb(var(--surface-card-rgb)_/_calc(var(--surface-card-a)*0.70))] text-xs font-medium text-slate-600 dark:text-neutral-200',
 		withDefaultPadding('px-3 py-1', ...extra)
 	);
 }

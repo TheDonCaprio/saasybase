@@ -5,10 +5,11 @@ import {
     PaymentProvider,
     StandardizedCheckoutSession,
     StandardizedSubscription,
-    StandardizedInvoice
+    StandardizedInvoice,
+    SubscriptionDetails,
 } from './types';
 import { shouldClearPaidTokensOnRenewal as shouldClearPaidTokensOnRenewalExternal } from '../paidTokens';
-import { syncOrganizationEligibilityForUser } from '../organization-access';
+import { restoreSuspendedOrganizationById, syncOrganizationEligibilityForUser } from '../organization-access';
 import { OrganizationPlanContext } from '../user-plan-context';
 import { PLAN_DEFINITIONS } from '../plans';
 import { resetOrganizationSharedTokens } from '../teams';
@@ -104,6 +105,10 @@ import {
 } from './provider-subscription-identity';
 
 type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{ include: { plan: true } }>;
+
+type PaystackSubscriptionLookupProvider = PaymentProvider & {
+    findRecentSubscriptionByCustomerAndPriceId: (customerId: string, priceId: string) => Promise<SubscriptionDetails | null>;
+};
 
 const PAYSTACK_PENDING_SUBSCRIPTION_LOOKBACK_MS = 48 * 60 * 60 * 1000;
 
@@ -255,6 +260,119 @@ export class PaymentService {
 
     get provider(): PaymentProvider {
         return this._provider;
+    }
+
+    async recoverPendingPaystackSubscriptionForCheckout(params: {
+        userId: string;
+        customerId?: string | null;
+        priceId?: string | null;
+        paymentId?: string | null;
+        sessionId?: string | null;
+    }): Promise<SubscriptionWithPlan | null> {
+        if (this.providerKey !== 'paystack') {
+            return null;
+        }
+
+        const customerId = typeof params.customerId === 'string' ? params.customerId.trim() : '';
+        const priceId = typeof params.priceId === 'string' ? params.priceId.trim() : '';
+        if (!customerId || !priceId) {
+            Logger.info('Checkout confirm Paystack self-heal skipped (missing customer or price)', {
+                userId: params.userId,
+                customerId: customerId || null,
+                priceId: priceId || null,
+                paymentId: params.paymentId ?? null,
+                sessionId: params.sessionId ?? null,
+            });
+            return null;
+        }
+
+        const provider = this.provider as Partial<PaystackSubscriptionLookupProvider>;
+        if (typeof provider.findRecentSubscriptionByCustomerAndPriceId !== 'function') {
+            Logger.warn('Checkout confirm Paystack self-heal unavailable on current provider', {
+                userId: params.userId,
+                customerId,
+                priceId,
+                paymentId: params.paymentId ?? null,
+                sessionId: params.sessionId ?? null,
+            });
+            return null;
+        }
+
+        const providerSubscription = await provider.findRecentSubscriptionByCustomerAndPriceId(customerId, priceId);
+        if (!providerSubscription) {
+            Logger.info('Checkout confirm Paystack self-heal found no active provider subscription yet', {
+                userId: params.userId,
+                customerId,
+                priceId,
+                paymentId: params.paymentId ?? null,
+                sessionId: params.sessionId ?? null,
+            });
+            return null;
+        }
+
+        let dbSub = await this.findSubscriptionByProviderId(providerSubscription.id);
+        if (!dbSub) {
+            Logger.warn('Checkout confirm Paystack self-heal found active provider subscription without local record; attempting hydration', {
+                userId: params.userId,
+                customerId,
+                priceId,
+                providerSubscriptionId: providerSubscription.id,
+                providerSubscriptionStatus: providerSubscription.status,
+                paymentId: params.paymentId ?? null,
+                sessionId: params.sessionId ?? null,
+            });
+
+            dbSub = await this.ensureProviderBackedSubscription(
+                providerSubscription.id,
+                {
+                    subscription: {
+                        id: providerSubscription.id,
+                        status: providerSubscription.status,
+                        currentPeriodStart: providerSubscription.currentPeriodStart,
+                        currentPeriodEnd: providerSubscription.currentPeriodEnd,
+                        cancelAtPeriodEnd: providerSubscription.cancelAtPeriodEnd,
+                        canceledAt: providerSubscription.canceledAt ?? null,
+                        metadata: providerSubscription.metadata,
+                        priceId: providerSubscription.priceId,
+                        customerId: providerSubscription.customerId,
+                    },
+                },
+                { unresolvedPlanLogLevel: 'info' },
+            );
+        }
+
+        if (!dbSub) {
+            Logger.warn('Checkout confirm Paystack self-heal found provider subscription but local hydration still failed', {
+                userId: params.userId,
+                customerId,
+                priceId,
+                providerSubscriptionId: providerSubscription.id,
+                providerSubscriptionStatus: providerSubscription.status,
+                paymentId: params.paymentId ?? null,
+                sessionId: params.sessionId ?? null,
+            });
+            return null;
+        }
+
+        if (isProviderSubscriptionActiveStatusExternal(providerSubscription.status)) {
+            await this.processSubscriptionCreatedPendingPaymentLink(
+                providerSubscription.id,
+                dbSub,
+                'Checkout confirm self-healed pending Paystack subscription',
+            );
+        }
+
+        Logger.info('Checkout confirm Paystack self-heal recovered local subscription', {
+            userId: params.userId,
+            customerId,
+            priceId,
+            providerSubscriptionId: providerSubscription.id,
+            dbSubscriptionId: dbSub.id,
+            paymentId: params.paymentId ?? null,
+            sessionId: params.sessionId ?? null,
+        });
+
+        return dbSub;
     }
 
     /**
@@ -578,6 +696,7 @@ export class PaymentService {
             findRecentCancelledRecurringSubscription: this.findRecentCancelledRecurringSubscription.bind(this),
             ...this.getOrganizationResolutionDeps(activeOrganizationId),
             syncOrganizationEligibilityForUser,
+            restoreSuspendedOrganizationById,
             ...this.getSubscriptionLookupDeps(),
             getPendingSubscriptionLookbackDate: this.getPendingSubscriptionLookbackDate.bind(this),
         };
@@ -814,6 +933,14 @@ export class PaymentService {
                 Logger.info('Subscription already exists, treating as update', { subscriptionId });
                 // Fall through to update logic
             } else {
+                Logger.info('subscription.created arrived without local record; attempting hydration', {
+                    subscriptionId,
+                    provider: this.providerKey,
+                    status: subscription.status,
+                    priceId: subscription.priceId ?? null,
+                    customerId: subscription.customerId ?? null,
+                });
+
                 dbSub = await resolveSubscriptionCreatedRecordWithRetryExternal({
                     subscriptionId,
                     providerKey: this.providerKey,
@@ -826,7 +953,13 @@ export class PaymentService {
                 });
 
                 if (!dbSub) {
-                    Logger.warn('Failed to create subscription from subscription.created event', { subscriptionId });
+                    Logger.warn('subscription.created event arrived but local hydration failed', {
+                        subscriptionId,
+                        provider: this.providerKey,
+                        status: subscription.status,
+                        priceId: subscription.priceId ?? null,
+                        customerId: subscription.customerId ?? null,
+                    });
                     return;
                 }
 

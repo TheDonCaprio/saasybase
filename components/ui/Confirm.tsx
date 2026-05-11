@@ -17,7 +17,7 @@ export default function Confirm({ title = 'Confirm', description, confirmText = 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
       <div className="bg-neutral-900 border border-neutral-800 rounded p-6 z-10 max-w-md w-full">
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         {description && <div className="text-sm text-neutral-400 mb-4">{description}</div>}

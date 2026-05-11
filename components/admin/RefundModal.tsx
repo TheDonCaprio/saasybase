@@ -103,7 +103,7 @@ function RefundModalPanel({
   const selectedReasonData = REFUND_REASONS.find(r => r.value === selectedReason);
 
   const modalContent = (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-3">
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-800">

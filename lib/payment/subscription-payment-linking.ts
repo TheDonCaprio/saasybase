@@ -576,6 +576,7 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
     ) => Promise<{ id: string } | null>;
     resolveOrganizationContext: (userId: string, activeOrganizationId?: string | null) => Promise<{ role: string; organization: { id: string } } | null>;
     syncOrganizationEligibilityForUser: (userId: string) => Promise<unknown>;
+    restoreSuspendedOrganizationById: (organizationId: string, context?: { userId?: string; reason?: string }) => Promise<unknown>;
     findSubscriptionByProviderId: (subscriptionId: string) => Promise<{ id: string; userId: string; planId: string; startedAt?: Date | null; expiresAt?: Date | null } | null>;
     getPendingSubscriptionLookbackDate: () => Date;
 }): Promise<void> {
@@ -621,15 +622,16 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
         );
         const suppressNotifications = isSwitchNowFallbackFlow && Boolean(recentCancelledRecurring);
 
+        const activeOrganizationId = session.metadata?.activeOrganizationId
+            || session.metadata?.organizationId
+            || session.metadata?.activeProviderOrganizationId
+            || session.metadata?.activeClerkOrgId
+            || session.metadata?.clerkOrgId
+            || session.metadata?.orgId
+            || null;
+        const organizationContext = await params.resolveOrganizationContext(userId, activeOrganizationId);
+
         if (plan.tokenLimit && plan.tokenLimit > 0) {
-            const activeOrganizationId = session.metadata?.activeOrganizationId
-                || session.metadata?.organizationId
-                || session.metadata?.activeProviderOrganizationId
-                || session.metadata?.activeClerkOrgId
-                || session.metadata?.clerkOrgId
-                || session.metadata?.orgId
-                || null;
-            const organizationContext = await params.resolveOrganizationContext(userId, activeOrganizationId);
             if (organizationContext?.role === 'OWNER' && plan.supportsOrganizations) {
                 await creditOrganizationSharedTokens({
                     organizationId: organizationContext.organization.id,
@@ -648,7 +650,14 @@ export async function recordPendingSubscriptionPaymentFallback(params: {
             });
         }
 
-        await params.syncOrganizationEligibilityForUser(userId);
+        if (organizationContext?.role === 'OWNER' && plan.supportsOrganizations) {
+            await params.restoreSuspendedOrganizationById(organizationContext.organization.id, {
+                userId,
+                reason: 'paystackPendingSubscriptionPayment',
+            });
+        } else {
+            await params.syncOrganizationEligibilityForUser(userId);
+        }
 
         let existingSub: { id: string; userId: string; planId: string; startedAt?: Date | null; expiresAt?: Date | null } | null = null;
         const providerSubscriptionId = session.subscriptionId || session.metadata?.subscriptionId;

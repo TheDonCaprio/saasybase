@@ -92,6 +92,16 @@ function ModalPortal({ children }: { children: React.ReactNode }) {
   return createPortal(children, document.body);
 }
 
+function PersistentModalPortal({ open, mounted, children }: { open: boolean; mounted: boolean; children: React.ReactNode }) {
+  if (!mounted && !open) {
+    return null;
+  }
+
+  return <ModalPortal>{children}</ModalPortal>;
+}
+
+type PricingModalKey = 'extend' | 'replace' | 'recurringTopup' | 'planSwitch' | 'planSwitchConfirm' | 'coupon' | 'auth' | 'proration';
+
 function hasPendingProviderConfirmation(payload: unknown): boolean {
   const record = asRecord(payload);
   const pending = asRecord(record?.pending);
@@ -211,6 +221,16 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authView, setAuthView] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [authReturnPath, setAuthReturnPath] = useState('/pricing');
+  const [mountedModals, setMountedModals] = useState<Record<PricingModalKey, boolean>>({
+    extend: false,
+    replace: false,
+    recurringTopup: false,
+    planSwitch: false,
+    planSwitchConfirm: false,
+    coupon: false,
+    auth: false,
+    proration: false,
+  });
   const [showProrationModal, setShowProrationModal] = useState(false);
   const [prorationVisible, setProrationVisible] = useState(false);
   const [prorationLoading, setProrationLoading] = useState(false);
@@ -226,6 +246,10 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const mountedRef = useRef(false);
   const [oneTimeRenewalResetsTokens, setOneTimeRenewalResetsTokens] = useState<boolean>(false);
   const [recurringRenewalResetsTokens, setRecurringRenewalResetsTokens] = useState<boolean>(false);
+
+  const markModalMounted = useCallback((key: PricingModalKey) => {
+    setMountedModals((current) => (current[key] ? current : { ...current, [key]: true }));
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -360,6 +384,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
     }
     setIfMounted(setCouponOptions)(coupons);
     setIfMounted(setSelectedCouponId)(coupons[0]?.id ?? null);
+    markModalMounted('coupon');
     setIfMounted(setShowCouponModal)(true);
   }
 
@@ -663,6 +688,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         currentPeriodEnd: typeof obj.currentPeriodEnd === 'string' ? obj.currentPeriodEnd : null,
       };
       setIfMounted(setProrationPreview)(preview);
+      markModalMounted('proration');
       setIfMounted(setShowProrationModal)(true);
     } catch (error) {
       console.error('Failed to load proration preview', error);
@@ -790,11 +816,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   function openPlanSwitchConfirm(choice: 'now' | 'cycle_end') {
     setPlanSwitchConfirmChoice(choice);
     setShowPlanSwitchModal(false);
+    markModalMounted('planSwitchConfirm');
     setShowPlanSwitchConfirmModal(true);
   }
 
   function backToPlanSwitchTiming() {
     setShowPlanSwitchConfirmModal(false);
+    markModalMounted('planSwitch');
     setShowPlanSwitchModal(true);
   }
 
@@ -925,6 +953,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
             console.warn('Unable to persist auth flow flag', error);
           }
         }
+        markModalMounted('auth');
         setIfMounted(setShowAuthModal)(true);
         setIfMounted(setCheckingExisting)(false);
         return;
@@ -967,6 +996,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         if (!hasRecurring && buyingRecurring) {
           setIfMounted(setExistingExpiresAt)(matchingOwnedSubscription.expiresAt);
           setIfMounted(setExistingPlanName)(matchingOwnedSubscription.plan);
+          markModalMounted('replace');
           setIfMounted(setShowReplaceModal)(true);
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -978,6 +1008,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         if (hasRecurring && !buyingRecurring) {
           setIfMounted(setRecurringPlanName)(matchingOwnedSubscription.plan);
           setIfMounted(setRecurringRenewsAt)(matchingOwnedSubscription.expiresAt);
+          markModalMounted('recurringTopup');
           setIfMounted(setShowRecurringTopupModal)(true);
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -989,6 +1020,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
           setIfMounted(setExistingExpiresAt)(matchingOwnedSubscription.expiresAt);
           setIfMounted(setExistingPlanName)(matchingOwnedSubscription.plan);
           await loadOneTimeRenewalTokenPolicy();
+          markModalMounted('extend');
           setIfMounted(setShowExtendModal)(true);
           setIfMounted(setCheckingExisting)(false);
           return;
@@ -999,6 +1031,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         setIfMounted(setCheckingExisting)(false);
         setIfMounted(setRecurringPlanName)(matchingOwnedSubscription.plan);
         setIfMounted(setRecurringRenewsAt)(matchingOwnedSubscription.expiresAt);
+        markModalMounted('planSwitch');
         setIfMounted(setShowPlanSwitchModal)(true);
         return;
       }
@@ -1242,10 +1275,9 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
         ) : null}
 
         {/* Extend confirmation modal for one-time plans */}
-        {showExtendModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${extendVisible ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowExtendModal(false)} />
+        <PersistentModalPortal open={showExtendModal} mounted={mountedModals.extend}>
+            <div aria-hidden={!showExtendModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showExtendModal ? '' : 'pointer-events-none invisible'}`}>
+              <div className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${extendVisible ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowExtendModal(false)} />
               <div className={`relative max-w-md w-full rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700 shadow-xl transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 ${extendVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Extend existing access?</h3>
                 <p className="mt-2 text-xs">
@@ -1281,15 +1313,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Recurring subscriber buying one-time pack */}
-        {showRecurringTopupModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <PersistentModalPortal open={showRecurringTopupModal} mounted={mountedModals.recurringTopup}>
+            <div aria-hidden={!showRecurringTopupModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showRecurringTopupModal ? '' : 'pointer-events-none invisible'}`}>
               <div
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${recurringTopupVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${recurringTopupVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={() => setShowRecurringTopupModal(false)}
               />
               <div
@@ -1331,14 +1361,12 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Proration confirmation modal for recurring plan changes */}
-        {showProrationModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${prorationVisible ? 'opacity-100' : 'opacity-0'}`} onClick={closeProrationModal} />
+        <PersistentModalPortal open={showProrationModal} mounted={mountedModals.proration}>
+            <div aria-hidden={!showProrationModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showProrationModal ? '' : 'pointer-events-none invisible'}`}>
+              <div className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${prorationVisible ? 'opacity-100' : 'opacity-0'}`} onClick={closeProrationModal} />
               <div className={`relative w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700 shadow-2xl transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 ${prorationVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.98]'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -1486,15 +1514,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Plan switch timing modal (recurring -> recurring) */}
-        {showPlanSwitchModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <PersistentModalPortal open={showPlanSwitchModal} mounted={mountedModals.planSwitch}>
+            <div aria-hidden={!showPlanSwitchModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showPlanSwitchModal ? '' : 'pointer-events-none invisible'}`}>
               <div
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${planSwitchVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${planSwitchVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={() => setShowPlanSwitchModal(false)}
               />
               <div
@@ -1611,15 +1637,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Plan switch confirmation modal (extra confirmation step) */}
-        {showPlanSwitchConfirmModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <PersistentModalPortal open={showPlanSwitchConfirmModal} mounted={mountedModals.planSwitchConfirm}>
+            <div aria-hidden={!showPlanSwitchConfirmModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showPlanSwitchConfirmModal ? '' : 'pointer-events-none invisible'}`}>
               <div
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${planSwitchConfirmVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${planSwitchConfirmVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={closePlanSwitchConfirm}
               />
               <div
@@ -1707,14 +1731,12 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Replace warning modal for recurring plans replacing non-recurring */}
-        {showReplaceModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${replaceVisible ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowReplaceModal(false)} />
+        <PersistentModalPortal open={showReplaceModal} mounted={mountedModals.replace}>
+            <div aria-hidden={!showReplaceModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showReplaceModal ? '' : 'pointer-events-none invisible'}`}>
+              <div className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${replaceVisible ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowReplaceModal(false)} />
               <div className={`relative max-w-md w-full rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700 shadow-xl transition-all duration-150 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 ${replaceVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'}`}>
                 <h3 className="font-semibold text-yellow-500 dark:text-yellow-400">⚠️ Replace existing access?</h3>
                 <p className="mt-2 text-xs">
@@ -1747,15 +1769,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
         {/* Coupon selection modal */}
-        {showCouponModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <PersistentModalPortal open={showCouponModal} mounted={mountedModals.coupon}>
+            <div aria-hidden={!showCouponModal} className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${showCouponModal ? '' : 'pointer-events-none invisible'}`}>
               <div
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${couponVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${couponVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={() => {
                   setShowCouponModal(false);
                   setSelectedCouponId(null);
@@ -1827,14 +1847,12 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </div>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
 
-        {showAuthModal && (
-          <ModalPortal>
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <PersistentModalPortal open={showAuthModal} mounted={mountedModals.auth}>
+            <div aria-hidden={!showAuthModal} className={`fixed inset-0 z-[60] flex items-center justify-center p-4 ${showAuthModal ? '' : 'pointer-events-none invisible'}`}>
               <div
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150 ${authModalVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/40 transition-opacity duration-150 ${authModalVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={closeAuthModal}
               />
               <div
@@ -1903,8 +1921,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                 </p>
               </div>
             </div>
-          </ModalPortal>
-        )}
+        </PersistentModalPortal>
       </div>
     </div>
   );

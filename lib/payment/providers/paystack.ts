@@ -114,6 +114,40 @@ interface PaystackSubscriptionData {
     cron_expression: string;
 }
 
+function mapPaystackSubscriptionStatus(status: PaystackSubscriptionData['status']): string {
+    switch (status) {
+        case 'active':
+            return 'active';
+        case 'non-renewing':
+            return 'active';
+        case 'attention':
+            return 'past_due';
+        case 'completed':
+        case 'cancelled':
+            return 'canceled';
+        default:
+            return status;
+    }
+}
+
+function toSubscriptionDetails(sub: PaystackSubscriptionData): SubscriptionDetails {
+    const nextPayment = sub.next_payment_date ? new Date(sub.next_payment_date) : new Date();
+    const createdAt = new Date(sub.created_at);
+
+    return {
+        id: sub.subscription_code,
+        status: mapPaystackSubscriptionStatus(sub.status),
+        currentPeriodEnd: nextPayment,
+        currentPeriodStart: createdAt,
+        cancelAtPeriodEnd: sub.status === 'non-renewing',
+        canceledAt: sub.cancelled_at ? new Date(sub.cancelled_at) : null,
+        metadata: {},
+        priceId: sub.plan.plan_code,
+        customerId: sub.customer.customer_code,
+        latestInvoice: null,
+    };
+}
+
 interface PaystackProduct {
     id: number;
     product_code: string;
@@ -321,6 +355,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
         return {
             id: tx.reference,
             clientReferenceId: tx.metadata?.userId as string | undefined,
+            customerId: tx.customer?.customer_code,
             metadata: tx.metadata as Record<string, string> | undefined,
             paymentIntentId: tx.reference,
             subscriptionId: tx.subscription?.subscription_code,
@@ -328,6 +363,18 @@ export class PaystackPaymentProvider implements PaymentProvider {
             paymentStatus: tx.status === 'success' ? 'paid' : 'unpaid',
             lineItems: tx.plan ? [{ priceId: tx.plan.plan_code }] : undefined,
         };
+    }
+
+    async findRecentSubscriptionByCustomerAndPriceId(customerId: string, priceId: string): Promise<SubscriptionDetails | null> {
+        const response = await this.request<PaystackSubscriptionData[]>(`/subscription?perPage=100&page=1`);
+        const subscriptions = Array.isArray(response.data) ? response.data : [];
+
+        const candidate = subscriptions
+            .filter((sub) => sub.customer?.customer_code === customerId && sub.plan?.plan_code === priceId)
+            .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+            .find((sub) => sub.status === 'active' || sub.status === 'non-renewing');
+
+        return candidate ? toSubscriptionDetails(candidate) : null;
     }
 
     // ============== Customer Management ==============
@@ -483,21 +530,9 @@ export class PaystackPaymentProvider implements PaymentProvider {
             `/subscription/${encodeURIComponent(subscriptionId)}`,
         );
 
-        const sub = response.data;
-        const nextPayment = sub.next_payment_date ? new Date(sub.next_payment_date) : new Date();
-        const createdAt = new Date(sub.created_at);
-
         return {
-            id: sub.subscription_code,
-            status: this.mapSubscriptionStatus(sub.status),
-            currentPeriodEnd: nextPayment,
-            currentPeriodStart: createdAt,
-            cancelAtPeriodEnd: sub.status === 'non-renewing',
-            canceledAt: sub.cancelled_at ? new Date(sub.cancelled_at) : null,
-            metadata: {},
-            priceId: sub.plan.plan_code,
-            customerId: sub.customer.customer_code,
-            latestInvoice: null,
+            ...toSubscriptionDetails(response.data),
+            status: this.mapSubscriptionStatus(response.data.status),
         };
     }
 
@@ -566,19 +601,7 @@ export class PaystackPaymentProvider implements PaymentProvider {
     }
 
     private mapSubscriptionStatus(status: PaystackSubscriptionData['status']): string {
-        switch (status) {
-            case 'active':
-                return 'active';
-            case 'non-renewing':
-                return 'active';
-            case 'attention':
-                return 'past_due';
-            case 'completed':
-            case 'cancelled':
-                return 'canceled';
-            default:
-                return status;
-        }
+        return mapPaystackSubscriptionStatus(status);
     }
 
     private safeParseDate(value: string | null | undefined): Date | null {

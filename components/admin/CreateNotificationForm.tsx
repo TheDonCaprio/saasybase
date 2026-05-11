@@ -247,7 +247,7 @@ export function CreateNotificationForm() {
   );
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-2xl rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-neutral-800 px-6 py-4">
           <div className="flex items-center gap-2">

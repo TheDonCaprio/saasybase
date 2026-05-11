@@ -44,6 +44,8 @@ import { buildSeoTitleTemplate } from '../lib/seo-shared';
 
 fontAwesomeConfig.autoAddCss = false;
 
+const THEME_INIT_SCRIPT = `(function(){try{function s(t){document.cookie='themeResolved='+t+'; Path=/; Max-Age=31536000; SameSite=Lax';}var p=localStorage.getItem('themePreference');var r=document.documentElement;if(p==='dark'){r.classList.add('dark');r.classList.remove('light');s('dark');return;}if(p==='light'){r.classList.add('light');r.classList.remove('dark');s('light');return;}r.classList.remove('light','dark');if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){r.classList.add('dark');s('dark');}else{r.classList.add('light');s('light');}}catch(e){}})();`;
+
 export async function generateMetadata(): Promise<Metadata> {
   const fallbackSiteName = process.env.NEXT_PUBLIC_SITE_NAME || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
   const [siteName, seoSettings] = await Promise.all([
@@ -315,10 +317,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <head>
           <link rel="icon" href={faviconHref} />
           <script async src="/scripts/form-attr-sanitizer.js" />
-          {/* External scripts loaded as async <script src> — React 19 treats
-              these as hoisted resources so they never trigger the
-              "Encountered a script tag" console warning. */}
-          <script async src="/scripts/theme-init.js" />
+          <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
           <style id="theme-color-vars" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeColorVarsCss }} />
           {customCss ? <style id="custom-theme-css" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
           {customHeadSnippet ? (
@@ -328,14 +327,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </>
           ) : null}
         </head>
-        {/*
-          Inline script above runs before React hydration to set the theme class on <html>
-          It reads localStorage.themePreference (set when user changes preference) and
-          falls back to system preference. This avoids flashes between server-rendered
-          markup and client theme application.
-        */}
         <body
-          className="min-h-screen flex flex-col text-[rgb(var(--text-primary))] transition-colors duration-150"
+          className="min-h-screen flex flex-col text-[rgb(var(--text-primary))]"
           suppressHydrationWarning={true}
         >
           <AppAuthProvider publishableKey={clerkEnabled ? (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '') : ''}>

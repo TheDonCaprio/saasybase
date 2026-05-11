@@ -379,7 +379,7 @@ export default function SaaSyAppClient({ isTeamWorkspace }: { isTeamWorkspace: b
                 <p className="text-sm text-rose-600 dark:text-rose-300">{profileError}</p>
               ) : null}
 
-              <div className="flex gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 p-1 shadow-sm backdrop-blur-sm dark:bg-white/5">
+              <div className="flex gap-2 rounded-full border border-[color:rgb(var(--border-primary-rgb)_/_calc(var(--border-primary-a)*0.7))] bg-white/70 p-1 shadow-sm dark:bg-white/5">
                 {availableBuckets.map((option) => {
                   const isActive = bucket === option || (bucket === 'auto' && resolvedBucket === option);
 

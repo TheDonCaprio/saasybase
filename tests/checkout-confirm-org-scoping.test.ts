@@ -18,6 +18,7 @@ const providerMock = vi.hoisted(() => ({
 const paymentServiceMock = vi.hoisted(() => ({
   provider: providerMock,
   processWebhookEvent: vi.fn(),
+  recoverPendingPaystackSubscriptionForCheckout: vi.fn(),
 }));
 
 const authMock = vi.hoisted(() => vi.fn(async () => ({ userId: 'user_1', orgId: 'org_auth' })));

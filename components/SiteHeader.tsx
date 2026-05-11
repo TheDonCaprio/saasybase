@@ -240,13 +240,13 @@ export function SiteHeader({
   return (
     <>
       <header
-        className="relative z-40 flex items-center px-6 bg-[color:var(--theme-header-bg)] backdrop-blur transition-[background-color,border-color,box-shadow] duration-300"
+        className="relative z-40 flex items-center px-6 bg-[color:var(--theme-header-bg)] transition-[background-color,border-color,box-shadow] duration-300"
         style={{ minHeight: normalHeight, height: normalHeight, ...normalStyles }}
       >
         {renderHeaderInner(false)}
       </header>
       <header
-        className={`fixed left-0 right-0 top-0 z-50 flex items-center px-6 backdrop-blur transition-[transform,opacity,background-color,border-color,box-shadow] duration-300 ease-out ${stickyOverlayClassName}`}
+        className={`fixed left-0 right-0 top-0 z-50 flex items-center px-6 transition-[transform,opacity,background-color,border-color,box-shadow] duration-300 ease-out ${stickyOverlayClassName}`}
         style={{ minHeight: stickyHeight, height: stickyHeight, ...stickyStyles }}
         aria-hidden={!layout.stickyEnabled}
       >

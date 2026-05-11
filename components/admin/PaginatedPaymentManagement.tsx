@@ -302,15 +302,15 @@ export function PaginatedPaymentManagement({
         </span>
         <div className="flex flex-wrap items-center gap-2">
           {(datePreset && datePreset !== 'ALL') || startDate || endDate ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Date: {formatDisplayYMD(startDate)}{endDate ? ` → ${formatDisplayYMD(endDate)}` : ''}{datePreset === 'CUSTOM' ? ' (custom)' : ''}
             </span>
           ) : null}
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Status: {statusFilter === 'ALL' ? 'All statuses' : getDisplayStatus(statusFilter)}
           </span>
           {filter ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Search: “{filter}”
             </span>
           ) : null}

@@ -82,7 +82,7 @@ export function AdminActionNotificationPanel() {
   const modal = isModalOpen && typeof document !== 'undefined'
     ? createPortal(
         <div
-          className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm"
+          className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 px-4 py-8"
           role="presentation"
           onClick={() => {
             if (!saving) setIsModalOpen(false);

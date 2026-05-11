@@ -93,195 +93,156 @@ interface PaginatedSubscriptionsManagementProps {
   displayCurrency: string;
 }
 
+type PaymentInfo = {
+  id: string;
+  amount: number;
+  subtotal: number;
+  discount: number;
+  hasDiscount: boolean;
+  amountFormatted: string;
+  subtotalFormatted: string | null;
+  discountFormatted: string | null;
+  currency?: string | null;
+  couponCode?: string | null;
+  externalPaymentId?: string | null;
+  externalSessionId?: string | null;
+  status: string | null;
+  externalRefundId?: string | null;
+} | null;
+
 const numberFormatter = new Intl.NumberFormat('en-US');
 
 const formatNumber = (value: number) => numberFormatter.format(value);
 
-export function PaginatedSubscriptionsManagement({
-  initialSubs,
-  initialTotalCount,
-  initialPage,
-  statusTotals,
-  displayCurrency
-}: PaginatedSubscriptionsManagementProps) {
-  const itemsPerPage = 50;
-  const {
-    search,
-    setSearch,
-    debouncedSearch,
+const getSubscriptionStatus = (sub: SubRow): string => {
+  const isCancelled = (value?: string) => value === 'CANCELLED';
+  if (isCancelled(sub.status)) return 'CANCELLED';
+  if (sub.canceledAt) return 'SCHEDULED_CANCEL';
+  return sub.status;
+};
+
+const getLatestPaymentDetails = (sub: SubRow, displayCurrency: string) => {
+  const payment = sub.latestPayment;
+  if (!payment || typeof payment.amountCents !== 'number' || !payment.id) {
+    return null;
+  }
+
+  const subtotal = typeof payment.subtotalCents === 'number' ? payment.subtotalCents : payment.amountCents;
+  const computedDiscountCents = typeof payment.discountCents === 'number'
+    ? payment.discountCents
+    : Math.max(0, subtotal - payment.amountCents);
+  const hasDiscount = computedDiscountCents > 0.5;
+
+  const amountFormatted = payment.amountFormatted ?? formatCurrencyUtil(payment.amountCents, displayCurrency || payment.currency || '');
+  const subtotalFormatted = hasDiscount
+    ? payment.subtotalFormatted ?? formatCurrencyUtil(subtotal, displayCurrency || payment.currency || '')
+    : null;
+  const discountFormatted = hasDiscount
+    ? payment.discountFormatted ?? formatCurrencyUtil(computedDiscountCents, displayCurrency || payment.currency || '')
+    : null;
+
+  const status = typeof payment.status === 'string' ? payment.status : null;
+  return {
+    id: payment.id,
+    amount: payment.amountCents,
+    subtotal,
+    discount: computedDiscountCents,
+    hasDiscount,
+    amountFormatted,
+    subtotalFormatted,
+    discountFormatted,
+    currency: payment.currency,
+    couponCode: payment.couponCode,
+    externalPaymentId: payment.externalPaymentId,
+    externalSessionId: payment.externalSessionId,
     status,
-    setStatus,
-    datePreset,
-    setDatePreset,
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate
-  } = useListFilterState('', 'ALL');
-  // Only allow server-sortable fields here. Name/Email sorting removed — sorting is server-side.
-  const [sortBy, setSortBy] = useState<'createdAt' | 'expiresAt' | 'amount'>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    externalRefundId: payment.externalRefundId
+  };
+};
 
-  const {
-    items: rawSubs,
-    setItems: _setItems,
-    totalCount,
-    currentPage,
-    isLoading,
-    nextCursor,
-    fetchPage,
-    fetchNext: _fetchNext,
-    refresh
-  } = usePaginatedList<SubRow>({
-    basePath: '/api/admin/subscriptions',
-    initialItems: initialSubs,
-    initialTotalCount: initialTotalCount,
-    initialPage,
-    itemsPerPage,
-    itemsKey: 'subscriptions',
-    filters: {
-      search: debouncedSearch || undefined,
-      status: status === 'ALL' ? undefined : status,
-      sort: ['createdAt', 'expiresAt', 'amount'].includes(sortBy) ? sortBy : 'createdAt',
-      order: sortOrder,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }
-  });
+const formatStatusFilterLabel = (value: string) => {
+  if (value === 'ALL') return 'All statuses';
+  return value
+    .toLowerCase()
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+};
 
-  // Server provides the authoritative ordering; do not apply client-side sorts here.
-  const subs = rawSubs;
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  const [pendingAction, setPendingAction] = useState<{ sub: SubRow; action: 'force-cancel' | 'schedule-cancel' | 'undo' } | null>(null);
+const getStatusBadgeClass = (statusValue: string) => {
+  switch (statusValue) {
+    case 'ACTIVE':
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100';
+    case 'SCHEDULED_CANCEL':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-100';
+    case 'CANCELLED':
+      return 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100';
+    case 'EXPIRED':
+      return 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300';
+    default:
+      return 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300';
+  }
+};
+
+const baseActionButtonClass =
+  'inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed';
+const disabledActionButtonClass =
+  'border border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60';
+const actionButtonVariants: Record<'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', string> = {
+  'force-cancel':
+    'border border-rose-600 bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 dark:border-rose-500 dark:bg-rose-500 dark:hover:bg-rose-600',
+  'schedule-cancel':
+    'border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:border-amber-500/70 dark:bg-amber-500/80 dark:hover:bg-amber-500 dark:focus:ring-amber-400',
+  undo:
+    'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
+  refund:
+    'border border-purple-600 bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 dark:border-purple-500 dark:bg-purple-500 dark:hover:bg-purple-600',
+  edit:
+    'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400 dark:border-neutral-500 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600'
+};
+
+const getActionButtonClass = (variant: 'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', disabled: boolean) =>
+  `${baseActionButtonClass} ${disabled ? disabledActionButtonClass : actionButtonVariants[variant]}`;
+
+const renderActionButtonContent = (isLoading: boolean, icon: IconDefinition, label: string) => {
+  const busy = Boolean(isLoading);
+  return (
+    <>
+      <FontAwesomeIcon
+        icon={busy ? faSpinner : icon}
+        className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`.trim()}
+        aria-hidden="true"
+      />
+      <span className="sr-only">{busy ? `Processing ${label}` : label}</span>
+    </>
+  );
+};
+
+function SubscriptionRowActions({
+  sub,
+  paymentInfo,
+  onRefresh,
+}: {
+  sub: SubRow;
+  paymentInfo: PaymentInfo;
+  onRefresh: () => Promise<unknown> | unknown;
+}) {
+  const settings = useFormatSettings();
+  const [busyAction, setBusyAction] = useState<'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'force-cancel' | 'schedule-cancel' | 'undo' | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [pendingClearPaidTokens, setPendingClearPaidTokens] = useState(false);
-  const [refundTarget, setRefundTarget] = useState<{ sub: SubRow; payment: NonNullable<SubRow['latestPayment']> } | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
-  const [editTarget, setEditTarget] = useState<SubRow | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-
-  // underscore-prefixed setters from hook are intentionally unused here in some builds
-  void _setItems;
-  void _fetchNext;
-
-  const settings = useFormatSettings();
-
-  // Timezone-aware helpers — compute YYYY-MM-DD in target IANA timezone
-  const ymdFromDateInTZ = (date: Date, tz: string) => {
-    const formatted = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(date);
-    const [y, m, d] = formatted.split('-').map((s) => Number(s));
-    return { y, m, d };
-  };
-
-  const formatYMD = ({ y, m, d }: { y: number; m: number; d: number }) => {
-    const mm = String(m).padStart(2, '0');
-    const dd = String(d).padStart(2, '0');
-    return `${y}-${mm}-${dd}`;
-  };
-
-  const addDaysYMD = ({ y, m, d }: { y: number; m: number; d: number }, delta: number) => {
-    const dt = new Date(Date.UTC(y, m - 1, d));
-    dt.setUTCDate(dt.getUTCDate() + delta);
-    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
-  };
-
-  const addMonthsYMD = ({ y, m, d }: { y: number; m: number; d: number }, delta: number) => {
-    const dt = new Date(Date.UTC(y, m - 1, d));
-    dt.setUTCMonth(dt.getUTCMonth() + delta);
-    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
-  };
-
-  const computePresetRange = (preset: 'ALL' | 'TODAY' | 'YESTERDAY' | 'LAST_7' | 'LAST_MONTH' | 'THIS_MONTH' | 'THIS_QUARTER' | 'THIS_YEAR' | 'CUSTOM', tz: string) => {
-    const now = new Date();
-    const today = ymdFromDateInTZ(now, tz);
-
-    let startYMD: { y: number; m: number; d: number } | null = null;
-    let endYMD: { y: number; m: number; d: number } | null = null; // exclusive
-
-    switch (preset) {
-      case 'TODAY':
-        startYMD = today;
-        endYMD = addDaysYMD(today, 1);
-        break;
-      case 'YESTERDAY':
-        startYMD = addDaysYMD(today, -1);
-        endYMD = addDaysYMD(startYMD, 1);
-        break;
-      case 'LAST_7':
-        endYMD = addDaysYMD(today, 1);
-        startYMD = addDaysYMD(endYMD, -7);
-        break;
-      case 'LAST_MONTH': {
-        const firstOfThisMonth = { y: today.y, m: today.m, d: 1 };
-        const prev = addMonthsYMD(firstOfThisMonth, -1);
-        startYMD = { y: prev.y, m: prev.m, d: 1 };
-        endYMD = { y: firstOfThisMonth.y, m: firstOfThisMonth.m, d: 1 };
-        break;
-      }
-      case 'THIS_MONTH':
-        startYMD = { y: today.y, m: today.m, d: 1 };
-        endYMD = addMonthsYMD(startYMD, 1);
-        break;
-      case 'THIS_QUARTER': {
-        const qStartMonth = Math.floor((today.m - 1) / 3) * 3 + 1;
-        startYMD = { y: today.y, m: qStartMonth, d: 1 };
-        endYMD = addMonthsYMD(startYMD, 3);
-        break;
-      }
-      case 'THIS_YEAR':
-        startYMD = { y: today.y, m: 1, d: 1 };
-        endYMD = { y: today.y + 1, m: 1, d: 1 };
-        break;
-      default:
-        startYMD = null;
-        endYMD = null;
-    }
-
-    return {
-      startDate: startYMD ? formatYMD(startYMD) : null,
-      endDate: endYMD ? formatYMD(endYMD) : null
-    };
-  };
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
-
-  // Get subscription status display
-  const getSubscriptionStatus = (sub: SubRow): string => {
-    // If the subscription has already been cancelled, show CANCELLED.
-    // After DB normalization we rely on the canonical spelling 'CANCELLED'.
-    const isCancelled = (s?: string) => s === 'CANCELLED';
-    if (isCancelled(sub.status)) return 'CANCELLED';
-    if (sub.canceledAt) return 'SCHEDULED_CANCEL';
-    return sub.status;
-  };
-
-  // usePaginatedList handles fetching; use fetchPage / fetchNext / refresh
-
-  const handlePageChange = (page: number) => fetchPage(page);
-
-  const handleFilterChange = (newFilter: string) => setSearch(newFilter);
-
-  const handleStatusFilterChange = (statusVal: string) => {
-    setStatus(statusVal);
-    fetchPage(1);
-  };
-
-  const refreshSubscriptions = () => refresh();
-
-  // Handler for progressive cursor-based next (navigate with cursor)
-  const handleNextWithCursor = async (cursor: string) => {
-    if (!cursor) return;
-    await fetchPage(currentPage + 1, false, cursor);
-  };
-
-  // initialSubs are wired into hook via initialItems; no manual nextCursor derivation needed here
 
   const formatDisplayDate = (iso?: string | null) =>
     iso ? formatDate(iso, { mode: settings.mode, timezone: settings.timezone }) : 'Not set';
 
-  const getActionCopy = (sub: SubRow, action: 'force-cancel' | 'schedule-cancel' | 'undo') => {
+  const getActionCopy = (action: 'force-cancel' | 'schedule-cancel' | 'undo') => {
     const subscriber = sub.userEmail || sub.userId;
     const statusLabel = getSubscriptionStatus(sub);
     const planSummary = (
@@ -373,11 +334,42 @@ export function PaginatedSubscriptionsManagement({
     }
   };
 
-  const requestAction = (sub: SubRow, action: 'force-cancel' | 'schedule-cancel' | 'undo') => {
-    // Default the modal checkbox based on global admin settings for token reset on expiry
-    setPendingAction({ sub, action });
-    // determine which setting key to fetch (one-time vs recurring behaviour)
-    (async () => {
+  const canRefundPayment = Boolean(
+    paymentInfo && (paymentInfo.status === 'COMPLETED' || paymentInfo.status === 'SUCCEEDED')
+  );
+  const isBusy = busyAction !== null;
+  const isForceDisabled = isBusy || sub.status === 'CANCELLED';
+  const isScheduleDisabled = isBusy || sub.status === 'CANCELLED';
+  const isUndoDisabled = isBusy || sub.status === 'CANCELLED';
+  const isRefundDisabled = isBusy || !canRefundPayment;
+  const isEditDisabled = isBusy;
+
+  const busyTooltip = 'Action in progress';
+  const alreadyCancelledTooltip = 'Subscription already cancelled';
+
+  const forceTooltip = isForceDisabled ? (isBusy ? busyTooltip : alreadyCancelledTooltip) : 'Force cancel subscription';
+  const scheduleTooltip = isScheduleDisabled
+    ? (isBusy ? busyTooltip : alreadyCancelledTooltip)
+    : 'Schedule cancellation';
+  const undoTooltip = isUndoDisabled
+    ? (isBusy ? busyTooltip : 'Cannot undo a fully cancelled subscription')
+    : 'Undo scheduled cancellation';
+  const editTooltip = isEditDisabled ? busyTooltip : 'Edit subscription status and billing date';
+  const refundTooltip = isRefundDisabled
+    ? isBusy
+      ? busyTooltip
+      : paymentInfo
+        ? paymentInfo.status === 'REFUNDED'
+          ? 'Payment already refunded'
+          : 'Refund not available for this payment'
+        : 'Refund not available'
+    : 'Refund latest payment';
+
+  const pendingActionCopy = pendingAction ? getActionCopy(pendingAction) : null;
+
+  const requestAction = (action: 'force-cancel' | 'schedule-cancel' | 'undo') => {
+    setPendingAction(action);
+    void (async () => {
       try {
         const planAuto = sub.planAutoRenew === true;
         const key = planAuto ? 'TOKENS_RESET_ON_EXPIRY_RECURRING' : 'TOKENS_RESET_ON_EXPIRY_ONE_TIME';
@@ -386,66 +378,18 @@ export function PaginatedSubscriptionsManagement({
           setPendingClearPaidTokens(false);
           return;
         }
-        const j = await res.json().catch(() => null);
-        setPendingClearPaidTokens(j?.value === 'true');
+        const json = await res.json().catch(() => null);
+        setPendingClearPaidTokens(json?.value === 'true');
       } catch {
         setPendingClearPaidTokens(false);
       }
     })();
   };
 
-  const openRefundModal = (sub: SubRow) => {
-    const payment = sub.latestPayment;
-    if (!payment || !payment.id || typeof payment.amountCents !== 'number') {
-      showToast('No completed payment found to refund for this subscription.', 'error');
-      return;
-    }
-    if (actionLoading[sub.id]) return;
-    setRefundError(null);
-    setRefundTarget({ sub, payment });
-  };
-
-  async function executeRefund(
-    reason: string,
-    notes?: string,
-    cancelSubscription?: boolean,
-    cancelMode?: 'immediate' | 'period_end',
-    localCancelMode?: 'immediate' | 'period_end',
-    clearPaidTokens?: boolean
-  ) {
-    if (!refundTarget) return;
-    const { sub, payment } = refundTarget;
+  const executeAction = async (action: 'force-cancel' | 'schedule-cancel' | 'undo') => {
     try {
-      setRefundLoading(true);
-      setActionLoading(prev => ({ ...prev, [sub.id]: true }));
-      const res = await fetch(`/api/admin/payments/${payment.id}/refund`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, notes, cancelSubscription, cancelMode, localCancelMode, clearPaidTokens })
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        setRefundError(json?.error || 'Refund request failed');
-      } else {
-        showToast(`Refund processed for ${formatCurrency(payment.amountCents, payment.currency)}`, 'success');
-        refreshSubscriptions();
-        setRefundTarget(null);
-        setRefundError(null);
-      }
-    } catch (e) {
-      void e;
-      setRefundError('A network error occurred. Please check your connection and try again.');
-    } finally {
-      setActionLoading(prev => ({ ...prev, [sub.id]: false }));
-      setRefundLoading(false);
-    }
-  }
-
-  async function executeAction(target: SubRow, action: 'force-cancel' | 'schedule-cancel' | 'undo') {
-    const id = target.id;
-    try {
-      setActionLoading(prev => ({ ...prev, [id]: true }));
-      const res = await fetch(`/api/admin/subscriptions/${id}/${action}`, {
+      setBusyAction(action);
+      const res = await fetch(`/api/admin/subscriptions/${sub.id}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clearPaidTokens: pendingClearPaidTokens })
@@ -459,29 +403,62 @@ export function PaginatedSubscriptionsManagement({
           : action === 'schedule-cancel'
             ? 'Cancellation scheduled'
             : 'Scheduled cancellation removed';
-        showToast(`${actionSuccess} for ${target.planName}`, 'success');
-        refreshSubscriptions();
+        showToast(`${actionSuccess} for ${sub.planName}`, 'success');
+        await onRefresh();
       }
-    } catch (e) {
-      void e;
+    } catch {
       showToast('Request failed', 'error');
     } finally {
-      setActionLoading(prev => ({ ...prev, [id]: false }));
+      setBusyAction(null);
     }
-  }
+  };
 
-  async function executeEdit(target: SubRow, payload: {
+  const executeRefund = async (
+    reason: string,
+    notes?: string,
+    cancelSubscription?: boolean,
+    cancelMode?: 'immediate' | 'period_end',
+    localCancelMode?: 'immediate' | 'period_end',
+    clearPaidTokens?: boolean
+  ) => {
+    if (!paymentInfo) return;
+    try {
+      setRefundLoading(true);
+      setBusyAction('refund');
+      const res = await fetch(`/api/admin/payments/${paymentInfo.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, notes, cancelSubscription, cancelMode, localCancelMode, clearPaidTokens })
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setRefundError(json?.error || 'Refund request failed');
+      } else {
+        showToast(`Refund processed for ${formatCurrencyUtil(paymentInfo.amount, paymentInfo.currency ?? '')}`, 'success');
+        await onRefresh();
+        setRefundOpen(false);
+        setRefundError(null);
+      }
+    } catch {
+      setRefundError('A network error occurred. Please check your connection and try again.');
+    } finally {
+      setBusyAction(null);
+      setRefundLoading(false);
+    }
+  };
+
+  const executeEdit = async (payload: {
     status: 'ACTIVE' | 'EXPIRED';
     expiresAt: string;
     clearScheduledCancellation: boolean;
     allowLocalOverride: boolean;
-  }) {
+  }) => {
     try {
       setEditLoading(true);
       setEditError(null);
-      setActionLoading(prev => ({ ...prev, [target.id]: true }));
+      setBusyAction('edit');
 
-      const res = await fetch(`/api/admin/subscriptions/${target.id}/edit`, {
+      const res = await fetch(`/api/admin/subscriptions/${sub.id}/edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -493,180 +470,325 @@ export function PaginatedSubscriptionsManagement({
         return;
       }
 
-      showToast(`Updated ${target.planName}`, 'success');
+      showToast(`Updated ${sub.planName}`, 'success');
       if (json?.warning) {
         showToast(json.warning, 'info');
       }
-      await refreshSubscriptions();
-      setEditTarget(null);
-    } catch (e) {
-      void e;
+      await onRefresh();
+      setEditOpen(false);
+    } catch {
       setEditError('Subscription update failed');
     } finally {
+      setBusyAction(null);
       setEditLoading(false);
-      setActionLoading(prev => ({ ...prev, [target.id]: false }));
-    }
-  }
-
-  // status summary cards removed
-
-  const pendingActionCopy = pendingAction ? getActionCopy(pendingAction.sub, pendingAction.action) : null;
-
-  // Keep ListFilters mounted during loading so the search input doesn't
-  // get unmounted (which would blur the input). We'll show the loading
-  // skeleton inside the subscriptions list area below when there are no items.
-
-  const formatCurrency = (amountCents: number, currency?: string | null) =>
-    formatCurrencyUtil(amountCents, displayCurrency || currency || '');
-
-  const getLatestPaymentDetails = (sub: SubRow) => {
-    const payment = sub.latestPayment;
-    if (!payment || typeof payment.amountCents !== 'number' || !payment.id) {
-      return null;
-    }
-
-    const subtotal = typeof payment.subtotalCents === 'number' ? payment.subtotalCents : payment.amountCents;
-    const computedDiscountCents = typeof payment.discountCents === 'number'
-      ? payment.discountCents
-      : Math.max(0, subtotal - payment.amountCents);
-    const hasDiscount = computedDiscountCents > 0.5;
-
-    const amountFormatted = payment.amountFormatted ?? formatCurrency(payment.amountCents, payment.currency);
-    const subtotalFormatted = hasDiscount
-      ? payment.subtotalFormatted ?? formatCurrency(subtotal, payment.currency)
-      : null;
-    const discountFormatted = hasDiscount
-      ? payment.discountFormatted ?? formatCurrency(computedDiscountCents, payment.currency)
-      : null;
-
-    const status = typeof payment.status === 'string' ? payment.status : null;
-    return {
-      id: payment.id,
-      amount: payment.amountCents,
-      subtotal,
-      discount: computedDiscountCents,
-      hasDiscount,
-      amountFormatted,
-      subtotalFormatted,
-      discountFormatted,
-      currency: payment.currency,
-      couponCode: payment.couponCode,
-      externalPaymentId: payment.externalPaymentId,
-      externalSessionId: payment.externalSessionId,
-      status,
-      externalRefundId: payment.externalRefundId
-    };
-  };
-
-  const buildActionState = (
-    sub: SubRow,
-    paymentInfo: ReturnType<typeof getLatestPaymentDetails>
-  ) => {
-    const isBusy = Boolean(actionLoading[sub.id]);
-    const canRefundPayment = Boolean(
-      paymentInfo && (paymentInfo.status === 'COMPLETED' || paymentInfo.status === 'SUCCEEDED')
-    );
-    const isForceDisabled = isBusy || sub.status === 'CANCELLED';
-    const isScheduleDisabled = isBusy || sub.status === 'CANCELLED';
-    const isUndoDisabled = isBusy || sub.status === 'CANCELLED';
-    const isRefundDisabled = isBusy || !canRefundPayment;
-    const isEditDisabled = isBusy;
-
-    const busyTooltip = 'Action in progress';
-    const alreadyCancelledTooltip = 'Subscription already cancelled';
-
-    const forceTooltip = isForceDisabled ? (isBusy ? busyTooltip : alreadyCancelledTooltip) : 'Force cancel subscription';
-    const scheduleTooltip = isScheduleDisabled
-      ? (isBusy ? busyTooltip : alreadyCancelledTooltip)
-      : 'Schedule cancellation';
-    const undoTooltip = isUndoDisabled
-      ? (isBusy ? busyTooltip : 'Cannot undo a fully cancelled subscription')
-      : 'Undo scheduled cancellation';
-    const editTooltip = isEditDisabled ? busyTooltip : 'Edit subscription status and billing date';
-    const refundTooltip = isRefundDisabled
-      ? isBusy
-        ? busyTooltip
-        : paymentInfo
-          ? paymentInfo.status === 'REFUNDED'
-            ? 'Payment already refunded'
-            : 'Refund not available for this payment'
-          : 'Refund not available'
-      : 'Refund latest payment';
-
-    return {
-      isBusy,
-      isForceDisabled,
-      isScheduleDisabled,
-      isUndoDisabled,
-      isRefundDisabled,
-      isEditDisabled,
-      forceTooltip,
-      scheduleTooltip,
-      undoTooltip,
-      editTooltip,
-      refundTooltip
-    };
-  };
-
-
-
-  const formatStatusFilterLabel = (value: string) => {
-    if (value === 'ALL') return 'All statuses';
-    return value
-      .toLowerCase()
-      .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(' ');
-  };
-
-  const getStatusBadgeClass = (statusValue: string) => {
-    switch (statusValue) {
-      case 'ACTIVE':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-100';
-      case 'SCHEDULED_CANCEL':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-100';
-      case 'CANCELLED':
-        return 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100';
-      case 'EXPIRED':
-        return 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300';
-      default:
-        return 'bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300';
     }
   };
 
-  const baseActionButtonClass =
-    'inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-900 disabled:cursor-not-allowed';
-  const disabledActionButtonClass =
-    'border border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 focus:ring-slate-200 dark:border-neutral-700 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-800/80 dark:focus:ring-neutral-700/60';
-  const actionButtonVariants: Record<'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', string> = {
-    'force-cancel':
-      'border border-rose-600 bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 dark:border-rose-500 dark:bg-rose-500 dark:hover:bg-rose-600',
-    'schedule-cancel':
-      'border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:border-amber-500/70 dark:bg-amber-500/80 dark:hover:bg-amber-500 dark:focus:ring-amber-400',
-    undo:
-      'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
-    refund:
-      'border border-purple-600 bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 dark:border-purple-500 dark:bg-purple-500 dark:hover:bg-purple-600',
-    edit:
-      'border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400 dark:border-neutral-500 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600'
-  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setEditError(null);
+          setEditOpen(true);
+        }}
+        className={getActionButtonClass('edit', isEditDisabled)}
+        disabled={isEditDisabled}
+        title={editTooltip}
+        aria-label={editTooltip}
+      >
+        {renderActionButtonContent(isBusy, faPenToSquare, 'Edit subscription')}
+      </button>
+      <button
+        type="button"
+        onClick={() => requestAction('force-cancel')}
+        className={getActionButtonClass('force-cancel', isForceDisabled)}
+        disabled={isForceDisabled}
+        title={forceTooltip}
+        aria-label={forceTooltip}
+      >
+        {renderActionButtonContent(isBusy, faBan, 'Force cancel subscription')}
+      </button>
+      {!sub.canceledAt ? (
+        <button
+          type="button"
+          onClick={() => requestAction('schedule-cancel')}
+          className={getActionButtonClass('schedule-cancel', isScheduleDisabled)}
+          disabled={isScheduleDisabled}
+          title={scheduleTooltip}
+          aria-label={scheduleTooltip}
+        >
+          {renderActionButtonContent(isBusy, faCalendarXmark, 'Schedule cancellation')}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => requestAction('undo')}
+          className={getActionButtonClass('undo', isUndoDisabled)}
+          disabled={isUndoDisabled}
+          title={undoTooltip}
+          aria-label={undoTooltip}
+        >
+          {renderActionButtonContent(isBusy, faArrowRotateLeft, 'Undo scheduled cancellation')}
+        </button>
+      )}
+      {paymentInfo ? (
+        <button
+          type="button"
+          onClick={() => {
+            setRefundError(null);
+            setRefundOpen(true);
+          }}
+          className={getActionButtonClass('refund', isRefundDisabled)}
+          disabled={isRefundDisabled}
+          title={refundTooltip}
+          aria-label={refundTooltip}
+        >
+          {renderActionButtonContent(isBusy, faHandHoldingDollar, 'Refund latest payment')}
+        </button>
+      ) : null}
 
-  const getActionButtonClass = (variant: 'force-cancel' | 'schedule-cancel' | 'undo' | 'refund' | 'edit', disabled: boolean) =>
-    `${baseActionButtonClass} ${disabled ? disabledActionButtonClass : actionButtonVariants[variant]}`;
+      {pendingAction && pendingActionCopy && (
+        <ConfirmModal
+          isOpen={true}
+          title={pendingActionCopy.title}
+          description={pendingActionCopy.description}
+          confirmLabel={pendingActionCopy.confirmLabel}
+          cancelLabel="Cancel"
+          loading={modalLoading}
+          onClose={() => {
+            if (modalLoading) return;
+            setPendingAction(null);
+          }}
+          onConfirm={() => {
+            setModalLoading(true);
+            void executeAction(pendingAction).finally(() => {
+              setModalLoading(false);
+              setPendingAction(null);
+            });
+          }}
+        >
+          <div className="space-y-4">
+            {pendingActionCopy.body}
+            {(pendingAction === 'force-cancel' || pendingAction === 'schedule-cancel') && (
+              <div className="pt-2 border-t border-neutral-800">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pendingClearPaidTokens}
+                    onChange={(event) => setPendingClearPaidTokens(event.target.checked)}
+                    disabled={modalLoading}
+                    className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
+                  />
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-white">Also clear paid tokens</div>
+                    <div className="text-[11px] text-neutral-400 mt-0.5">When checked, this will zero the user&apos;s paid token balance as part of this cancellation action.</div>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+        </ConfirmModal>
+      )}
 
-  const renderActionButtonContent = (isLoading: boolean, icon: IconDefinition, label: string) => {
-    const busy = Boolean(isLoading);
-    return (
-      <>
-        <FontAwesomeIcon
-          icon={busy ? faSpinner : icon}
-          className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`.trim()}
-          aria-hidden="true"
+      {paymentInfo ? (
+        <RefundModal
+          isOpen={refundOpen}
+          onClose={() => {
+            if (refundLoading) return;
+            setRefundOpen(false);
+            setRefundError(null);
+          }}
+          onConfirm={executeRefund}
+          amount={paymentInfo.amount}
+          paymentId={paymentInfo.externalPaymentId || paymentInfo.externalSessionId || paymentInfo.id}
+          loading={refundLoading}
+          error={refundError}
+          hasActiveSubscription={true}
+          subscriptionPlanAutoRenew={sub.planAutoRenew ?? null}
+          subscriptionExpiresAt={sub.expiresAt ?? null}
+          hasProviderSubscription={Boolean(sub.externalSubscriptionId)}
         />
-        <span className="sr-only">{busy ? `Processing ${label}` : label}</span>
-      </>
-    );
+      ) : null}
+
+      <SubscriptionEditModal
+        isOpen={editOpen}
+        subscription={editOpen ? sub : null}
+        loading={editLoading}
+        error={editError}
+        onClose={() => {
+          if (editLoading) return;
+          setEditOpen(false);
+          setEditError(null);
+        }}
+        onConfirm={(payload) => {
+          void executeEdit(payload);
+        }}
+      />
+    </>
+  );
+}
+
+export function PaginatedSubscriptionsManagement({
+  initialSubs,
+  initialTotalCount,
+  initialPage,
+  statusTotals,
+  displayCurrency
+}: PaginatedSubscriptionsManagementProps) {
+  const itemsPerPage = 50;
+  const {
+    search,
+    setSearch,
+    debouncedSearch,
+    status,
+    setStatus,
+    datePreset,
+    setDatePreset,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate
+  } = useListFilterState('', 'ALL');
+  // Only allow server-sortable fields here. Name/Email sorting removed — sorting is server-side.
+  const [sortBy, setSortBy] = useState<'createdAt' | 'expiresAt' | 'amount'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const {
+    items: rawSubs,
+    setItems: _setItems,
+    totalCount,
+    currentPage,
+    isLoading,
+    nextCursor,
+    fetchPage,
+    fetchNext: _fetchNext,
+    refresh
+  } = usePaginatedList<SubRow>({
+    basePath: '/api/admin/subscriptions',
+    initialItems: initialSubs,
+    initialTotalCount: initialTotalCount,
+    initialPage,
+    itemsPerPage,
+    itemsKey: 'subscriptions',
+    filters: {
+      search: debouncedSearch || undefined,
+      status: status === 'ALL' ? undefined : status,
+      sort: ['createdAt', 'expiresAt', 'amount'].includes(sortBy) ? sortBy : 'createdAt',
+      order: sortOrder,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }
+  });
+
+  // Server provides the authoritative ordering; do not apply client-side sorts here.
+  const subs = rawSubs;
+
+  // underscore-prefixed setters from hook are intentionally unused here in some builds
+  void _setItems;
+  void _fetchNext;
+
+  const settings = useFormatSettings();
+
+  // Timezone-aware helpers — compute YYYY-MM-DD in target IANA timezone
+  const ymdFromDateInTZ = (date: Date, tz: string) => {
+    const formatted = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(date);
+    const [y, m, d] = formatted.split('-').map((s) => Number(s));
+    return { y, m, d };
   };
+
+  const formatYMD = ({ y, m, d }: { y: number; m: number; d: number }) => {
+    const mm = String(m).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  };
+
+  const addDaysYMD = ({ y, m, d }: { y: number; m: number; d: number }, delta: number) => {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+  };
+
+  const addMonthsYMD = ({ y, m, d }: { y: number; m: number; d: number }, delta: number) => {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCMonth(dt.getUTCMonth() + delta);
+    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+  };
+
+  const computePresetRange = (preset: 'ALL' | 'TODAY' | 'YESTERDAY' | 'LAST_7' | 'LAST_MONTH' | 'THIS_MONTH' | 'THIS_QUARTER' | 'THIS_YEAR' | 'CUSTOM', tz: string) => {
+    const now = new Date();
+    const today = ymdFromDateInTZ(now, tz);
+
+    let startYMD: { y: number; m: number; d: number } | null = null;
+    let endYMD: { y: number; m: number; d: number } | null = null; // exclusive
+
+    switch (preset) {
+      case 'TODAY':
+        startYMD = today;
+        endYMD = addDaysYMD(today, 1);
+        break;
+      case 'YESTERDAY':
+        startYMD = addDaysYMD(today, -1);
+        endYMD = addDaysYMD(startYMD, 1);
+        break;
+      case 'LAST_7':
+        endYMD = addDaysYMD(today, 1);
+        startYMD = addDaysYMD(endYMD, -7);
+        break;
+      case 'LAST_MONTH': {
+        const firstOfThisMonth = { y: today.y, m: today.m, d: 1 };
+        const prev = addMonthsYMD(firstOfThisMonth, -1);
+        startYMD = { y: prev.y, m: prev.m, d: 1 };
+        endYMD = { y: firstOfThisMonth.y, m: firstOfThisMonth.m, d: 1 };
+        break;
+      }
+      case 'THIS_MONTH':
+        startYMD = { y: today.y, m: today.m, d: 1 };
+        endYMD = addMonthsYMD(startYMD, 1);
+        break;
+      case 'THIS_QUARTER': {
+        const qStartMonth = Math.floor((today.m - 1) / 3) * 3 + 1;
+        startYMD = { y: today.y, m: qStartMonth, d: 1 };
+        endYMD = addMonthsYMD(startYMD, 3);
+        break;
+      }
+      case 'THIS_YEAR':
+        startYMD = { y: today.y, m: 1, d: 1 };
+        endYMD = { y: today.y + 1, m: 1, d: 1 };
+        break;
+      default:
+        startYMD = null;
+        endYMD = null;
+    }
+
+    return {
+      startDate: startYMD ? formatYMD(startYMD) : null,
+      endDate: endYMD ? formatYMD(endYMD) : null
+    };
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+
+  // usePaginatedList handles fetching; use fetchPage / fetchNext / refresh
+
+  const handlePageChange = (page: number) => fetchPage(page);
+
+  const handleFilterChange = (newFilter: string) => setSearch(newFilter);
+
+  const handleStatusFilterChange = (statusVal: string) => {
+    setStatus(statusVal);
+    fetchPage(1);
+  };
+
+  const refreshSubscriptions = () => refresh();
+
+  // Handler for progressive cursor-based next (navigate with cursor)
+  const handleNextWithCursor = async (cursor: string) => {
+    if (!cursor) return;
+    await fetchPage(currentPage + 1, false, cursor);
+  };
+
+  // initialSubs are wired into hook via initialItems; no manual nextCursor derivation needed here
 
   return (
     <div className="space-y-6">
@@ -725,15 +847,15 @@ export function PaginatedSubscriptionsManagement({
         </span>
         <div className="flex flex-wrap items-center gap-2">
           {(datePreset && datePreset !== 'ALL') || startDate || endDate ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Date: {formatDisplayYMD(startDate)}{endDate ? ` → ${formatDisplayYMD(endDate)}` : ''}{datePreset === 'CUSTOM' ? ' (custom)' : ''}
             </span>
           ) : null}
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Status: {formatStatusFilterLabel(status)}
           </span>
           {search ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Search: “{search}”
             </span>
           ) : null}
@@ -757,9 +879,8 @@ export function PaginatedSubscriptionsManagement({
           <>
             <div className="space-y-3 p-3 sm:p-4 md:hidden">
               {subs.map((sub) => {
-                const paymentInfo = getLatestPaymentDetails(sub);
+                const paymentInfo = getLatestPaymentDetails(sub, displayCurrency);
                 const statusLabel = getSubscriptionStatus(sub);
-                const actionState = buildActionState(sub, paymentInfo);
                 const derivedProvider = sub.paymentProvider
                   || sub.latestPayment?.paymentProvider
                   || inferProviderFromIds([
@@ -804,10 +925,10 @@ export function PaginatedSubscriptionsManagement({
                             {paymentInfo.hasDiscount ? (
                               <>
                                 <span className="line-through text-slate-400 dark:text-neutral-500">
-                                  {paymentInfo.subtotalFormatted ?? formatCurrency(paymentInfo.subtotal, paymentInfo.currency)}
+                                  {paymentInfo.subtotalFormatted ?? formatCurrencyUtil(paymentInfo.subtotal, displayCurrency || paymentInfo.currency || '')}
                                 </span>
                                 <span className="font-medium text-emerald-600 dark:text-emerald-300">
-                                  −{paymentInfo.discountFormatted ?? formatCurrency(paymentInfo.discount, paymentInfo.currency)}
+                                  −{paymentInfo.discountFormatted ?? formatCurrencyUtil(paymentInfo.discount, displayCurrency || paymentInfo.currency || '')}
                                 </span>
                               </>
                             ) : null}
@@ -850,64 +971,11 @@ export function PaginatedSubscriptionsManagement({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditError(null);
-                          setEditTarget(sub);
-                        }}
-                        className={getActionButtonClass('edit', actionState.isEditDisabled)}
-                        disabled={actionState.isEditDisabled}
-                        title={actionState.editTooltip}
-                        aria-label={actionState.editTooltip}
-                      >
-                        {renderActionButtonContent(actionState.isBusy, faPenToSquare, 'Edit subscription')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => requestAction(sub, 'force-cancel')}
-                        className={getActionButtonClass('force-cancel', actionState.isForceDisabled)}
-                        disabled={actionState.isForceDisabled}
-                        title={actionState.forceTooltip}
-                        aria-label={actionState.forceTooltip}
-                      >
-                        {renderActionButtonContent(actionState.isBusy, faBan, 'Force cancel subscription')}
-                      </button>
-                      {!sub.canceledAt ? (
-                        <button
-                          type="button"
-                          onClick={() => requestAction(sub, 'schedule-cancel')}
-                          className={getActionButtonClass('schedule-cancel', actionState.isScheduleDisabled)}
-                          disabled={actionState.isScheduleDisabled}
-                          title={actionState.scheduleTooltip}
-                          aria-label={actionState.scheduleTooltip}
-                        >
-                          {renderActionButtonContent(actionState.isBusy, faCalendarXmark, 'Schedule cancellation')}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => requestAction(sub, 'undo')}
-                          className={getActionButtonClass('undo', actionState.isUndoDisabled)}
-                          disabled={actionState.isUndoDisabled}
-                          title={actionState.undoTooltip}
-                          aria-label={actionState.undoTooltip}
-                        >
-                          {renderActionButtonContent(actionState.isBusy, faArrowRotateLeft, 'Undo scheduled cancellation')}
-                        </button>
-                      )}
-                      {paymentInfo ? (
-                        <button
-                          type="button"
-                          onClick={() => openRefundModal(sub)}
-                          className={getActionButtonClass('refund', actionState.isRefundDisabled)}
-                          disabled={actionState.isRefundDisabled}
-                          title={actionState.refundTooltip}
-                          aria-label={actionState.refundTooltip}
-                        >
-                          {renderActionButtonContent(actionState.isBusy, faHandHoldingDollar, 'Refund latest payment')}
-                        </button>
-                      ) : null}
+                      <SubscriptionRowActions
+                        sub={sub}
+                        paymentInfo={paymentInfo}
+                        onRefresh={refreshSubscriptions}
+                      />
                     </div>
                   </div>
                 );
@@ -916,8 +984,7 @@ export function PaginatedSubscriptionsManagement({
 
             <div className="hidden md:block">
               <div className="border-b border-slate-200 bg-slate-50/90 px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
-                {/* Adjusted grid template: give more space to Stripe/Txn and slightly less to Actions */}
-                <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_0.6fr_1.75fr_0.8fr] gap-3">
+                <div className="grid grid-cols-[1.55fr_1.75fr_1fr_1fr_1fr_0.6fr_1.75fr_1.35fr] gap-3">
                   <div>Plan</div>
                   <div>User</div>
                   <div>Access</div>
@@ -931,9 +998,8 @@ export function PaginatedSubscriptionsManagement({
 
               <div className="divide-y divide-slate-100/80 dark:divide-neutral-800/80">
                 {subs.map((sub) => {
-                  const paymentInfo = getLatestPaymentDetails(sub);
+                  const paymentInfo = getLatestPaymentDetails(sub, displayCurrency);
                   const statusLabel = getSubscriptionStatus(sub);
-                  const actionState = buildActionState(sub, paymentInfo);
                   const derivedProvider = sub.paymentProvider
                     || sub.latestPayment?.paymentProvider
                     || inferProviderFromIds([
@@ -944,7 +1010,7 @@ export function PaginatedSubscriptionsManagement({
                   return (
                     <div
                       key={sub.id}
-                      className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_0.6fr_1.75fr_0.8fr] items-center gap-3 px-6 py-4 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60 min-w-0"
+                      className="grid grid-cols-[1.55fr_1.75fr_1fr_1fr_1fr_0.6fr_1.75fr_1.35fr] items-center gap-3 px-6 py-4 text-sm text-slate-600 transition-colors hover:bg-slate-50/70 dark:text-neutral-300 dark:hover:bg-neutral-900/60 min-w-0"
                     >
                       {/* Plan Column */}
                       <div className="space-y-1 min-w-0">
@@ -957,10 +1023,10 @@ export function PaginatedSubscriptionsManagement({
                             {paymentInfo.hasDiscount ? (
                               <div className="flex flex-wrap gap-2 justify-end">
                                 <span className="line-through text-slate-400 dark:text-neutral-500">
-                                  {paymentInfo.subtotalFormatted ?? formatCurrency(paymentInfo.subtotal, paymentInfo.currency)}
+                                  {paymentInfo.subtotalFormatted ?? formatCurrencyUtil(paymentInfo.subtotal, displayCurrency || paymentInfo.currency || '')}
                                 </span>
                                 <span className="font-medium text-emerald-600 dark:text-emerald-300">
-                                  −{paymentInfo.discountFormatted ?? formatCurrency(paymentInfo.discount, paymentInfo.currency)}
+                                  −{paymentInfo.discountFormatted ?? formatCurrencyUtil(paymentInfo.discount, displayCurrency || paymentInfo.currency || '')}
                                 </span>
                               </div>
                             ) : null}
@@ -1059,64 +1125,11 @@ export function PaginatedSubscriptionsManagement({
 
                       {/* Actions Column */}
                       <div className="flex flex-wrap gap-2 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditError(null);
-                            setEditTarget(sub);
-                          }}
-                          className={getActionButtonClass('edit', actionState.isEditDisabled)}
-                          disabled={actionState.isEditDisabled}
-                          title={actionState.editTooltip}
-                          aria-label={actionState.editTooltip}
-                        >
-                          {renderActionButtonContent(actionState.isBusy, faPenToSquare, 'Edit subscription')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => requestAction(sub, 'force-cancel')}
-                          className={getActionButtonClass('force-cancel', actionState.isForceDisabled)}
-                          disabled={actionState.isForceDisabled}
-                          title={actionState.forceTooltip}
-                          aria-label={actionState.forceTooltip}
-                        >
-                          {renderActionButtonContent(actionState.isBusy, faBan, 'Force cancel subscription')}
-                        </button>
-                        {!sub.canceledAt ? (
-                          <button
-                            type="button"
-                            onClick={() => requestAction(sub, 'schedule-cancel')}
-                            className={getActionButtonClass('schedule-cancel', actionState.isScheduleDisabled)}
-                            disabled={actionState.isScheduleDisabled}
-                            title={actionState.scheduleTooltip}
-                            aria-label={actionState.scheduleTooltip}
-                          >
-                            {renderActionButtonContent(actionState.isBusy, faCalendarXmark, 'Schedule cancellation')}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => requestAction(sub, 'undo')}
-                            className={getActionButtonClass('undo', actionState.isUndoDisabled)}
-                            disabled={actionState.isUndoDisabled}
-                            title={actionState.undoTooltip}
-                            aria-label={actionState.undoTooltip}
-                          >
-                            {renderActionButtonContent(actionState.isBusy, faArrowRotateLeft, 'Undo scheduled cancellation')}
-                          </button>
-                        )}
-                        {paymentInfo ? (
-                          <button
-                            type="button"
-                            onClick={() => openRefundModal(sub)}
-                            className={getActionButtonClass('refund', actionState.isRefundDisabled)}
-                            disabled={actionState.isRefundDisabled}
-                            title={actionState.refundTooltip}
-                            aria-label={actionState.refundTooltip}
-                          >
-                            {renderActionButtonContent(actionState.isBusy, faHandHoldingDollar, 'Refund latest payment')}
-                          </button>
-                        ) : null}
+                        <SubscriptionRowActions
+                          sub={sub}
+                          paymentInfo={paymentInfo}
+                          onRefresh={refreshSubscriptions}
+                        />
                       </div>
                     </div>
                   );
@@ -1140,92 +1153,6 @@ export function PaginatedSubscriptionsManagement({
           />
         </div>
       )}
-
-      {pendingAction && pendingActionCopy && (
-        <ConfirmModal
-          isOpen={!!pendingAction}
-          title={pendingActionCopy.title}
-          description={pendingActionCopy.description}
-          confirmLabel={pendingActionCopy.confirmLabel}
-          cancelLabel="Cancel"
-          loading={modalLoading}
-          onClose={() => {
-            if (modalLoading) return;
-            setPendingAction(null);
-          }}
-          onConfirm={async () => {
-            if (!pendingAction) return;
-            setModalLoading(true);
-            try {
-              await executeAction(pendingAction.sub, pendingAction.action);
-            } finally {
-              setModalLoading(false);
-              setPendingAction(null);
-            }
-          }}
-        >
-          <div className="space-y-4">
-            {pendingActionCopy.body}
-            {(pendingAction.action === 'force-cancel' || pendingAction.action === 'schedule-cancel') && (
-              <div className="pt-2 border-t border-neutral-800">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={pendingClearPaidTokens}
-                    onChange={(e) => setPendingClearPaidTokens(e.target.checked)}
-                    disabled={modalLoading}
-                    className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
-                  />
-                  <div className="flex-1">
-                    <div className="text-xs font-medium text-white">Also clear paid tokens</div>
-                    <div className="text-[11px] text-neutral-400 mt-0.5">When checked, this will zero the user&apos;s paid token balance as part of this cancellation action.</div>
-                  </div>
-                </label>
-              </div>
-            )}
-          </div>
-        </ConfirmModal>
-      )}
-
-      {refundTarget && (
-        <RefundModal
-          isOpen={!!refundTarget}
-          onClose={() => {
-            if (refundLoading) return;
-            setRefundTarget(null);
-            setRefundError(null);
-          }}
-          onConfirm={executeRefund}
-          amount={refundTarget.payment.amountCents}
-          paymentId={
-            refundTarget.payment.externalPaymentId ||
-            refundTarget.payment.externalSessionId ||
-            refundTarget.payment.id
-          }
-          loading={refundLoading}
-          error={refundError}
-          hasActiveSubscription={!!refundTarget.sub}
-          subscriptionPlanAutoRenew={refundTarget.sub.planAutoRenew ?? null}
-          subscriptionExpiresAt={refundTarget.sub.expiresAt ?? null}
-          hasProviderSubscription={Boolean(refundTarget.sub.externalSubscriptionId)}
-        />
-      )}
-
-      <SubscriptionEditModal
-        isOpen={!!editTarget}
-        subscription={editTarget}
-        loading={editLoading}
-        error={editError}
-        onClose={() => {
-          if (editLoading) return;
-          setEditTarget(null);
-          setEditError(null);
-        }}
-        onConfirm={(payload) => {
-          if (!editTarget) return;
-          void executeEdit(editTarget, payload);
-        }}
-      />
     </div>
   );
 }

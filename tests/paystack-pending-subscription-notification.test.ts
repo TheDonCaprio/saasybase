@@ -83,6 +83,7 @@ describe('Paystack pending subscription activation email', () => {
 			findRecentCancelledRecurringSubscription: vi.fn(async () => null),
 			resolveOrganizationContext: vi.fn(async () => null),
 			syncOrganizationEligibilityForUser: vi.fn(async () => undefined),
+			restoreSuspendedOrganizationById: vi.fn(async () => undefined),
 			findSubscriptionByProviderId: vi.fn(async () => ({
 				id: 'sub_db_123',
 				userId: 'user_123',

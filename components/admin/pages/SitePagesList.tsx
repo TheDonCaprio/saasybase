@@ -439,20 +439,20 @@ export default function SitePagesList({
               : `Showing ${pageStart}-${pageEnd} of ${totalCount} ${pluralLabelLower}`}
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Total {statusTotals.All}
           </span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-emerald-300">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 shadow-sm dark:bg-neutral-900/60 dark:text-emerald-300">
             Published {statusTotals.Published}
           </span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-amber-300">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600 shadow-sm dark:bg-neutral-900/60 dark:text-amber-300">
             Draft {statusTotals.Draft}
           </span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-rose-300">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-600 shadow-sm dark:bg-neutral-900/60 dark:text-rose-300">
             Trashed {statusTotals.Trashed}
           </span>
           {hasSelection ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-indigo-300">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-600 shadow-sm dark:bg-neutral-900/60 dark:text-indigo-300">
               Selected {selectedCount}
             </span>
           ) : null}
@@ -466,12 +466,12 @@ export default function SitePagesList({
             </button>
           ) : null}
           {normalizedStatus !== 'all' ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-violet-300">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-600 shadow-sm dark:bg-neutral-900/60 dark:text-violet-300">
               Status: {statusLabel}
             </span>
           ) : null}
           {hasSearch ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-blue-300">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600 shadow-sm dark:bg-neutral-900/60 dark:text-blue-300">
               Search: &ldquo;{search.trim()}&rdquo;
             </span>
           ) : null}

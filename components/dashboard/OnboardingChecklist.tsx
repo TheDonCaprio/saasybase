@@ -107,7 +107,7 @@ export function OnboardingChecklist({ userId, progress }: OnboardingChecklistPro
         </div>
       ))}
 
-      <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-slate-50/70 p-5 shadow-sm backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/40">
+      <div className="rounded-[var(--theme-surface-radius)] border border-slate-200 bg-slate-50/70 p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/40">
         <h3 className="text-base font-semibold text-slate-900 dark:text-neutral-100">Quick tips</h3>
         <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-neutral-400">
           <li>• Start with the 24-hour plan to test all features.</li>

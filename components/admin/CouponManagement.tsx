@@ -793,24 +793,24 @@ export function CouponManagement({
           {formatNumber(typeof totalCount === 'number' ? totalCount : coupons.length)} coupons
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Access: {accessFilterLabel}
           </span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
             Status: {publishStatusFilterLabel}
           </span>
           {trimmedSearch ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               Search: “{trimmedSearch}”
             </span>
           ) : null}
           {limitedOnPage > 0 ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               {formatNumber(limitedOnPage)} limited codes
             </span>
           ) : null}
           {pendingOnPage > 0 ? (
-            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur-sm dark:bg-neutral-900/60 dark:text-neutral-200">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm dark:bg-neutral-900/60 dark:text-neutral-200">
               {formatNumber(pendingOnPage)} pending uses
             </span>
           ) : null}
@@ -1112,7 +1112,7 @@ export function CouponManagement({
 
         {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center py-6">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
+          <div className="fixed inset-0 bg-black/60" onClick={closeModal} />
           <div className="relative w-full max-w-2xl mx-4 max-h-[90vh]">
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-4 border-b border-neutral-800">

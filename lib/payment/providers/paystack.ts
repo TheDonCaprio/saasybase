@@ -130,9 +130,16 @@ function mapPaystackSubscriptionStatus(status: PaystackSubscriptionData['status'
     }
 }
 
+function safeParsePaystackDate(value: string | null | undefined): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function toSubscriptionDetails(sub: PaystackSubscriptionData): SubscriptionDetails {
-    const nextPayment = sub.next_payment_date ? new Date(sub.next_payment_date) : new Date();
-    const createdAt = new Date(sub.created_at);
+    const nextPayment = safeParsePaystackDate(sub.next_payment_date) ?? new Date();
+    const createdAt = safeParsePaystackDate(sub.created_at) ?? nextPayment;
+    const cancelledAt = safeParsePaystackDate(sub.cancelled_at);
 
     return {
         id: sub.subscription_code,
@@ -140,7 +147,7 @@ function toSubscriptionDetails(sub: PaystackSubscriptionData): SubscriptionDetai
         currentPeriodEnd: nextPayment,
         currentPeriodStart: createdAt,
         cancelAtPeriodEnd: sub.status === 'non-renewing',
-        canceledAt: sub.cancelled_at ? new Date(sub.cancelled_at) : null,
+        canceledAt: cancelledAt,
         metadata: {},
         priceId: sub.plan.plan_code,
         customerId: sub.customer.customer_code,
@@ -371,7 +378,11 @@ export class PaystackPaymentProvider implements PaymentProvider {
 
         const candidate = subscriptions
             .filter((sub) => sub.customer?.customer_code === customerId && sub.plan?.plan_code === priceId)
-            .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+            .sort((left, right) => {
+                const rightTs = safeParsePaystackDate(right.created_at)?.getTime() ?? 0;
+                const leftTs = safeParsePaystackDate(left.created_at)?.getTime() ?? 0;
+                return rightTs - leftTs;
+            })
             .find((sub) => sub.status === 'active' || sub.status === 'non-renewing');
 
         return candidate ? toSubscriptionDetails(candidate) : null;

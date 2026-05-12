@@ -176,7 +176,7 @@ function getOwnedActiveSubscriptions(payload: unknown): OwnedActiveSubscriptionS
   }];
 }
 
-export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency, activeOrganizationId = null, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string; activeOrganizationId?: string | null; teamPlanPurchaseDisabled?: boolean; teamPlanPurchaseDisabledMessage?: string; personalPlanPurchaseDisabled?: boolean; personalPlanPurchaseDisabledMessage?: string }) {
+export default function PricingCard({ plan, activeRecurringPlansByFamily = createEmptyActiveRecurringPlansByFamily(), scheduledPlanIdsByFamily = createEmptyScheduledPlanIdsByFamily(), currency, activeOrganizationId = null, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage, demoReadOnlyMode = false }: { plan: DBPlan; activeRecurringPlansByFamily?: ActiveRecurringPlansByFamily; scheduledPlanIdsByFamily?: ScheduledPlanIdsByFamily; currency: string; activeOrganizationId?: string | null; teamPlanPurchaseDisabled?: boolean; teamPlanPurchaseDisabledMessage?: string; personalPlanPurchaseDisabled?: boolean; personalPlanPurchaseDisabledMessage?: string; demoReadOnlyMode?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -377,6 +377,11 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   }
 
   async function beginCheckoutFlow() {
+    if (demoReadOnlyMode) {
+      showToast('Demo mode is read-only. Payments and checkout are disabled in this environment.', 'info');
+      return;
+    }
+
     const coupons = await fetchAvailableCoupons();
     if (coupons.length === 0) {
       checkout();
@@ -1060,8 +1065,13 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const teamPurchaseBlockedMessage = teamPlanPurchaseDisabledMessage ?? 'Only the workspace owner can purchase or change team plans for this workspace.';
   const personalPurchaseBlocked = isPersonalPlan && personalPlanPurchaseDisabled;
   const personalPurchaseBlockedMessage = personalPlanPurchaseDisabledMessage ?? 'Personal plans can only be purchased from your personal workspace. Switch out of this organization workspace and try again.';
-  const purchaseBlocked = teamPurchaseBlocked || personalPurchaseBlocked;
-  const purchaseBlockedMessage = teamPurchaseBlocked ? teamPurchaseBlockedMessage : personalPurchaseBlockedMessage;
+  const demoReadOnlyPurchaseBlockedMessage = 'Demo mode is read-only. Payments and checkout are disabled in this environment.';
+  const purchaseBlocked = demoReadOnlyMode || teamPurchaseBlocked || personalPurchaseBlocked;
+  const purchaseBlockedMessage = demoReadOnlyMode
+    ? demoReadOnlyPurchaseBlockedMessage
+    : teamPurchaseBlocked
+      ? teamPurchaseBlockedMessage
+      : personalPurchaseBlockedMessage;
   const purchaseBlockedTooltipId = purchaseBlocked ? `pricing-card-lock-${plan.id}` : undefined;
   const planFamily = getPricingPlanFamily(plan.supportsOrganizations);
   const normalizedSeatLimit = typeof plan.organizationSeatLimit === 'number' ? plan.organizationSeatLimit : null;
@@ -1151,7 +1161,9 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   })();
 
   let buttonLabel: string;
-  if (teamPurchaseBlocked) {
+  if (demoReadOnlyMode) {
+    buttonLabel = 'Checkout disabled in demo';
+  } else if (teamPurchaseBlocked) {
     buttonLabel = 'Workspace owner only';
   } else if (personalPurchaseBlocked) {
     buttonLabel = 'Personal workspace only';
@@ -1303,6 +1315,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                   </button>
                   <button
                     className="rounded bg-[color:rgb(var(--accent-primary))] px-3 py-1 text-sm text-white text-actual-white transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))]"
+                    disabled={demoReadOnlyMode}
                     onClick={() => {
                       setShowExtendModal(false);
                       void beginCheckoutFlow();
@@ -1351,6 +1364,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                   </button>
                   <button
                     className="rounded bg-[color:rgb(var(--accent-primary))] px-3 py-1 text-sm text-white text-actual-white transition-colors hover:bg-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.90))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:rgb(var(--accent-primary-rgb)_/_calc(var(--accent-primary-a)*0.55))]"
+                    disabled={demoReadOnlyMode}
                     onClick={() => {
                       setShowRecurringTopupModal(false);
                       void beginCheckoutFlow();
@@ -1759,6 +1773,7 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
                   </button>
                   <button
                     className="rounded bg-yellow-500 px-3 py-1 text-sm text-white transition-colors hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 dark:bg-yellow-600 dark:hover:bg-yellow-500"
+                    disabled={demoReadOnlyMode}
                     onClick={() => {
                       setShowReplaceModal(false);
                       void beginCheckoutFlow();

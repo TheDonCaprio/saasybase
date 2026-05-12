@@ -529,6 +529,7 @@ export default async function PricingPage() {
       scheduledPlanIdsByFamily={scheduledPlanIdsByFamily}
       gridClasses={gridClasses}
       currency={activeCurrency}
+      demoReadOnlyMode={process.env.DEMO_READ_ONLY_MODE === 'true'}
       teamPlanPurchaseDisabled={workspaceMemberView}
       teamPlanPurchaseDisabledMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner. Members cannot purchase or change team plans from this workspace.` : undefined}
       personalPlanPurchaseDisabled={planScope === 'WORKSPACE'}

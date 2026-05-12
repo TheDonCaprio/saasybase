@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 let providerName = 'stripe';
@@ -116,8 +116,11 @@ import { POST as checkoutPost } from '../app/api/checkout/route';
 import { GET as embeddedCheckoutGet } from '../app/api/checkout/embedded/route';
 
 describe('checkout personal one-time guard', () => {
+  const originalDemoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.DEMO_READ_ONLY_MODE = 'false';
     providerName = 'stripe';
     authMock.mockResolvedValue({ userId: 'user_1', orgId: null });
     getOrganizationPlanContextMock.mockResolvedValue(null);
@@ -148,6 +151,14 @@ describe('checkout personal one-time guard', () => {
     });
 
     prismaMock.user.update.mockResolvedValue({ id: 'user_1' });
+  });
+
+  afterAll(() => {
+    if (originalDemoReadOnlyMode == null) {
+      delete process.env.DEMO_READ_ONLY_MODE;
+    } else {
+      process.env.DEMO_READ_ONLY_MODE = originalDemoReadOnlyMode;
+    }
   });
 
   it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout when an organization workspace is active', async () => {
@@ -188,6 +199,23 @@ describe('checkout personal one-time guard', () => {
     expect(body.url).toBe('https://checkout.example.com/session_1');
   });
 
+  it('blocks /api/checkout when demo read-only mode is enabled', async () => {
+    process.env.DEMO_READ_ONLY_MODE = 'true';
+
+    const req = new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ planId: 'plan_personal_ot' }),
+    });
+
+    const res = await checkoutPost(req);
+    const body = (await res.json()) as { code?: string; error?: string };
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('DEMO_READ_ONLY_CHECKOUT_DISABLED');
+    expect(body.error).toContain('read-only');
+  });
+
   it('returns PERSONAL_PLAN_BLOCKED_IN_WORKSPACE from /api/checkout/embedded when an organization workspace is active', async () => {
     authMock.mockResolvedValue({ userId: 'user_1', orgId: 'org_team_1' });
     resolveCheckoutWorkspaceContextMock.mockResolvedValue({
@@ -221,6 +249,21 @@ describe('checkout personal one-time guard', () => {
     expect(body.code).toBeUndefined();
     expect(body.clientSecret).toBe('order_mock');
     expect(createPaymentIntentMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks /api/checkout/embedded when demo read-only mode is enabled', async () => {
+    process.env.DEMO_READ_ONLY_MODE = 'true';
+
+    const req = new NextRequest('http://localhost/api/checkout/embedded?planId=plan_personal_ot', {
+      method: 'GET',
+    });
+
+    const res = await embeddedCheckoutGet(req);
+    const body = (await res.json()) as { code?: string; error?: string };
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('DEMO_READ_ONLY_CHECKOUT_DISABLED');
+    expect(body.error).toContain('read-only');
   });
 
   it('uses dashboard cancel redirect for Razorpay embedded checkout', async () => {

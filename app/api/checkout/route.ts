@@ -24,6 +24,7 @@ import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 import { resolveCheckoutWorkspaceContext } from '../../../lib/checkout-workspace-context';
 import { workspaceService } from '../../../lib/workspace-service';
+import { isDemoReadOnlyCheckoutInitiationPath } from '../../../lib/demo-readonly';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -83,6 +84,10 @@ export async function POST(req: NextRequest) {
   let userId: string | null = null;
 
   try {
+    if (process.env.DEMO_READ_ONLY_MODE === 'true' && isDemoReadOnlyCheckoutInitiationPath(req.nextUrl.pathname)) {
+      return jsonError('Demo mode is read-only. Payments and checkout are disabled in this environment.', 403, 'DEMO_READ_ONLY_CHECKOUT_DISABLED');
+    }
+
     const clientIp = getClientIP(req);
     const userAgent = req.headers.get('user-agent');
     const { userId: clerkUserId, orgId: activeClerkOrgId } = await authService.getSession();

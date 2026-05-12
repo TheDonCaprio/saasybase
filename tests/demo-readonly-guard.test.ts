@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDemoReadOnlyExemptPath, shouldBlockDemoReadOnlyMutation } from '../lib/demo-readonly';
+import { isDemoReadOnlyCheckoutInitiationPath, isDemoReadOnlyExemptPath, shouldBlockDemoReadOnlyMutation } from '../lib/demo-readonly';
 
 describe('demo read-only guard', () => {
   it('does not block when mode is disabled', () => {
@@ -38,6 +38,20 @@ describe('demo read-only guard', () => {
         pathname: '/api/admin/settings?key=SITE_NAME',
       })
     ).toBe(false);
+  });
+
+  it('blocks checkout initiation paths even when they use GET', () => {
+    expect(isDemoReadOnlyCheckoutInitiationPath('/api/checkout')).toBe(true);
+    expect(isDemoReadOnlyCheckoutInitiationPath('/api/checkout/embedded')).toBe(true);
+    expect(isDemoReadOnlyCheckoutInitiationPath('/api/checkout/confirm')).toBe(false);
+
+    expect(
+      shouldBlockDemoReadOnlyMutation({
+        enabled: true,
+        method: 'GET',
+        pathname: '/api/checkout/embedded',
+      })
+    ).toBe(true);
   });
 
   it('allows auth and webhook write paths', () => {

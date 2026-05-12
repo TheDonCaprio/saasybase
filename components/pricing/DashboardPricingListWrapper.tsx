@@ -28,8 +28,9 @@ interface DashboardPricingListWrapperProps {
   teamPlanPurchaseDisabledMessage?: string;
   personalPlanPurchaseDisabled?: boolean;
   personalPlanPurchaseDisabledMessage?: string;
+  demoReadOnlyMode?: boolean;
 }
 
-export default function DashboardPricingListWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, gridClasses, currency, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage }: DashboardPricingListWrapperProps) {
-  return <PricingList plans={plans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} teamPlanPurchaseDisabled={teamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={teamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={personalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={personalPlanPurchaseDisabledMessage} />;
+export default function DashboardPricingListWrapper({ plans, activeRecurringPlansByFamily, scheduledPlanIdsByFamily, gridClasses, currency, teamPlanPurchaseDisabled = false, teamPlanPurchaseDisabledMessage, personalPlanPurchaseDisabled = false, personalPlanPurchaseDisabledMessage, demoReadOnlyMode = false }: DashboardPricingListWrapperProps) {
+  return <PricingList plans={plans} activeRecurringPlansByFamily={activeRecurringPlansByFamily} scheduledPlanIdsByFamily={scheduledPlanIdsByFamily} gridClasses={gridClasses} currency={currency} teamPlanPurchaseDisabled={teamPlanPurchaseDisabled} teamPlanPurchaseDisabledMessage={teamPlanPurchaseDisabledMessage} personalPlanPurchaseDisabled={personalPlanPurchaseDisabled} personalPlanPurchaseDisabledMessage={personalPlanPurchaseDisabledMessage} demoReadOnlyMode={demoReadOnlyMode} />;
 }

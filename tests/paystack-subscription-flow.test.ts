@@ -9,7 +9,7 @@
  */
 
 import crypto from 'node:crypto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PaystackPaymentProvider } from '../lib/payment/providers/paystack';
 import type { StandardizedCheckoutSession, StandardizedInvoice, StandardizedSubscription } from '../lib/payment/types';
 
@@ -20,6 +20,52 @@ describe('Paystack Subscription Flow', () => {
 
     beforeEach(() => {
         provider = new PaystackPaymentProvider(TEST_SECRET_KEY);
+    });
+
+    it('falls back to valid dates when recent subscription lookup receives malformed timestamps', async () => {
+        const fetchMock = vi.fn().mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                status: true,
+                message: 'ok',
+                data: [
+                    {
+                        id: 1,
+                        subscription_code: 'SUB_bad_dates',
+                        email_token: 'email_token',
+                        status: 'active',
+                        amount: 500000,
+                        plan: {
+                            id: 10,
+                            plan_code: 'PLN_test_plan_monthly',
+                            name: 'Monthly Plan',
+                            description: null,
+                            amount: 500000,
+                            interval: 'monthly',
+                            currency: 'NGN',
+                        },
+                        customer: {
+                            customer_code: 'CUS_xxxxx',
+                            email: 'test@example.com',
+                        },
+                        next_payment_date: '2027-05-12T10:53:00.000Z',
+                        created_at: 'not-a-date',
+                        cancelled_at: 'also-not-a-date',
+                        cron_expression: '0 0 1 * *',
+                    },
+                ],
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        const subscription = await provider.findRecentSubscriptionByCustomerAndPriceId('CUS_xxxxx', 'PLN_test_plan_monthly');
+
+        expect(subscription).not.toBeNull();
+        expect(subscription?.id).toBe('SUB_bad_dates');
+        expect(subscription?.currentPeriodEnd.toISOString()).toBe('2027-05-12T10:53:00.000Z');
+        expect(subscription?.currentPeriodStart.getTime()).toBe(subscription?.currentPeriodEnd.getTime());
+        expect(subscription?.canceledAt).toBeNull();
     });
 
     describe('charge.success webhook normalization', () => {

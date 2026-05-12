@@ -13,18 +13,19 @@ export async function buildDashboardMetadata({ page, description, audience = 'us
   const rawSiteName = await getSiteName().catch(() => FALLBACK_SITE_NAME);
   const siteName = rawSiteName?.trim() || FALLBACK_SITE_NAME;
   const middleSegment = audience === 'admin' ? 'Admin' : 'Dashboard';
-  const title = `${page} | ${middleSegment} | ${siteName}`;
+  const title = `${page} | ${middleSegment}`;
+  const shareTitle = `${title} | ${siteName}`;
   const trimmedDescription = description.trim();
 
   return {
     title,
     description: trimmedDescription,
     openGraph: {
-      title,
+      title: shareTitle,
       description: trimmedDescription,
     },
     twitter: {
-      title,
+      title: shareTitle,
       description: trimmedDescription,
     },
   } satisfies Metadata;

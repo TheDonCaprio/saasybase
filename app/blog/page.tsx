@@ -4,6 +4,7 @@ import JsonLd from '@/components/seo/JsonLd';
 import { listPublishedBlogPosts } from '@/lib/blog';
 import { getBlogListingStyle, getBlogSidebarSettings, getBlogListingPageSize, getSiteName, SETTING_DEFAULTS, SETTING_KEYS } from '@/lib/settings';
 import { getSeoSettings } from '@/lib/seo';
+import { stripTrailingSiteName } from '@/lib/seo-shared';
 import { buildBreadcrumbSchema, buildCollectionPageSchema } from '@/lib/schema';
 import {
   SimpleListStyle,
@@ -21,9 +22,10 @@ export async function generateMetadata() {
   ]);
 
   const trimmedSiteName = siteName.trim() || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
-  const title = seoSettings?.blogMetaTitle.trim() || `Blog | ${trimmedSiteName}`;
+  const title = stripTrailingSiteName(seoSettings?.blogMetaTitle.trim() || 'Blog', trimmedSiteName);
   const description = seoSettings?.blogMetaDescription.trim() || 'Latest posts and updates';
-  const ogTitle = seoSettings?.defaultOgTitle?.trim() || title;
+  const shareTitle = `${title} | ${trimmedSiteName}`;
+  const ogTitle = seoSettings?.defaultOgTitle?.trim() || shareTitle;
   const ogDescription = seoSettings?.defaultOgDescription?.trim() || description;
   const ogImage = seoSettings?.resolvedDefaultOgImageUrl;
 

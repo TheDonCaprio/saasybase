@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const canonical = seoSettings?.resolvedHomeCanonicalUrl;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: canonical ? { canonical } : undefined,
     openGraph: {

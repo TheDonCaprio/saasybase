@@ -89,6 +89,18 @@ export function buildSeoTitleTemplate(options: {
   return `%s | ${siteName}`;
 }
 
+export function stripTrailingSiteName(title: string, siteName: string): string {
+  const normalizedTitle = title.trim();
+  const normalizedSiteName = siteName.trim();
+
+  if (!normalizedTitle || !normalizedSiteName) {
+    return normalizedTitle;
+  }
+
+  const escapedSiteName = normalizedSiteName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return normalizedTitle.replace(new RegExp(`\\s*(?:\\||-|—)\\s*${escapedSiteName}$`, 'i'), '').trim();
+}
+
 export function serializeSitemapCustomUrls(entries: string[]): string {
   return JSON.stringify(uniqueStrings(entries.map((entry) => entry.trim()).filter(Boolean)));
 }

@@ -31,9 +31,10 @@ export async function generateMetadata(): Promise<Metadata> {
   ]);
 
   const trimmedSiteName = siteName.trim() || SETTING_DEFAULTS[SETTING_KEYS.SITE_NAME];
-  const title = `Pricing | ${trimmedSiteName}`;
+  const title = 'Pricing';
   const description = 'Compare plans, billing cadence, and included usage limits before checkout.';
-  const ogTitle = seoSettings?.defaultOgTitle?.trim() || title;
+  const shareTitle = `${title} | ${trimmedSiteName}`;
+  const ogTitle = seoSettings?.defaultOgTitle?.trim() || shareTitle;
   const ogDescription = seoSettings?.defaultOgDescription?.trim() || description;
   const ogImage = seoSettings?.resolvedDefaultOgImageUrl;
 

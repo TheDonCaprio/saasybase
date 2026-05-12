@@ -180,7 +180,7 @@ describe('seo runtime', () => {
     const metadata = await generateMetadata();
 
     expect(metadata).toMatchObject({
-      title: 'Blog | Example SaaS',
+      title: 'Blog',
       description: 'Latest posts and updates',
       openGraph: {
         title: 'Example SaaS',
@@ -252,7 +252,7 @@ describe('seo runtime', () => {
     const metadata = await generateMetadata();
 
     expect(metadata).toMatchObject({
-      title: 'Build faster',
+      title: { absolute: 'Build faster' },
       description: 'Everything you need to launch your SaaS.',
       alternates: { canonical: 'https://example.com/' },
       openGraph: {
@@ -293,7 +293,7 @@ describe('seo runtime', () => {
     const metadata = await generateMetadata();
 
     expect(metadata).toMatchObject({
-      title: 'Launch faster',
+      title: { absolute: 'Launch faster' },
       description: 'Public export should inherit the homepage SEO settings.',
       alternates: { canonical: 'https://example.com/' },
       openGraph: {
@@ -441,6 +441,57 @@ describe('seo runtime', () => {
       title: 'Local PostgreSQL | Docs',
       openGraph: { title: 'Local PostgreSQL | Docs | Example SaaS' },
       twitter: { title: 'Local PostgreSQL | Docs | Example SaaS' },
+    });
+  });
+
+  it('builds dashboard metadata without duplicating the site name in the browser title', async () => {
+    const dashboardMetadataModule = await importFirstAvailable<{ buildDashboardMetadata: (input: { page: string; description: string; audience?: 'user' | 'admin' }) => Promise<unknown> }> ([
+      '../lib/dashboardMetadata',
+    ]);
+
+    if (!dashboardMetadataModule) {
+      return;
+    }
+
+    const { buildDashboardMetadata } = dashboardMetadataModule;
+    const metadata = await buildDashboardMetadata({
+      page: 'Users',
+      description: 'Admin users page',
+      audience: 'admin',
+    });
+
+    expect(metadata).toMatchObject({
+      title: 'Users | Admin',
+      openGraph: { title: 'Users | Admin | Example SaaS' },
+      twitter: { title: 'Users | Admin | Example SaaS' },
+    });
+  });
+
+  it('builds the home page title as absolute when it already includes the site name', async () => {
+    getSeoSettingsMock.mockResolvedValue(null);
+
+    const homePageModule = await import('../app/page');
+    const metadata = await homePageModule.generateMetadata();
+
+    expect(metadata).toMatchObject({
+      title: { absolute: 'Example SaaS — The complete Next.js SaaS boilerplate' },
+    });
+  });
+
+  it('strips a trailing site name from the blog page title before the root template runs', async () => {
+    getSeoSettingsMock.mockResolvedValue({
+      siteUrl: 'https://example.com',
+      blogMetaTitle: 'Blog | Example SaaS',
+      blogMetaDescription: 'Latest posts',
+    });
+
+    const blogPageModule = await import('../app/blog/page');
+    const metadata = await blogPageModule.generateMetadata();
+
+    expect(metadata).toMatchObject({
+      title: 'Blog',
+      openGraph: { title: 'Blog | Example SaaS' },
+      twitter: { title: 'Blog | Example SaaS' },
     });
   });
 });

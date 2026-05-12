@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PaymentProvider, StandardizedWebhookEvent, SubscriptionDetails } from '../lib/payment/types';
+import { getOrganizationPlanContext } from '../lib/user-plan-context';
+import { creditOrganizationSharedTokens } from '../lib/teams';
 
 vi.mock('../lib/notifications', () => ({
   createBillingNotification: vi.fn(),
@@ -917,5 +919,141 @@ describe('PaymentService subscription resurrection', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('sets the org token pool to the new limit when a provisional Paystack team switch is confirmed', async () => {
+    const currentPeriodStart = new Date('2026-05-12T10:00:00.000Z');
+    const currentPeriodEnd = new Date('2026-06-12T10:00:00.000Z');
+    const pendingSince = new Date('2026-05-12T09:58:00.000Z');
+
+    vi.mocked(getOrganizationPlanContext).mockResolvedValueOnce({
+      role: 'OWNER',
+      organization: {
+        id: 'org_team_1',
+        name: 'Team Workspace',
+        tokenPoolStrategy: 'SHARED_FOR_ORG',
+      },
+    } as never);
+
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      externalCustomerId: 'CUS_team_1',
+      externalCustomerIds: JSON.stringify({ paystack: 'CUS_team_1' }),
+    });
+    prismaMock.user.update.mockResolvedValue(undefined);
+
+    prismaMock.plan.findFirst.mockResolvedValueOnce({
+      id: 'plan_team_new',
+      name: 'Team Pro',
+      autoRenew: true,
+      supportsOrganizations: true,
+      organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      tokenLimit: 250,
+      priceCents: 9000,
+      externalPriceId: 'PLN_team_new',
+      externalPriceIds: null,
+      recurringInterval: 'month',
+      recurringIntervalCount: 1,
+      durationHours: 720,
+      isLifetime: false,
+    });
+
+    prismaMock.subscription.findMany.mockResolvedValueOnce([]);
+    prismaMock.subscription.updateMany.mockResolvedValueOnce({ count: 0 });
+    prismaMock.subscription.findFirst.mockResolvedValueOnce(null);
+    prismaMock.subscription.findUnique.mockResolvedValueOnce({
+      externalSubscriptionIds: JSON.stringify({ paystack: 'SUB_team_switch_new' }),
+      organizationId: 'org_team_1',
+    });
+    prismaMock.subscription.upsert.mockResolvedValueOnce({
+      id: 'sub_db_team_switch_new',
+      userId: 'user_1',
+      planId: 'plan_team_new',
+      organizationId: 'org_team_1',
+      status: 'ACTIVE',
+      startedAt: currentPeriodStart,
+      expiresAt: currentPeriodEnd,
+      canceledAt: null,
+      cancelAtPeriodEnd: false,
+      prorationPendingSince: pendingSince,
+      paymentProvider: 'paystack',
+      externalSubscriptionId: 'SUB_team_switch_new',
+      externalSubscriptionIds: JSON.stringify({ paystack: 'SUB_team_switch_new' }),
+      plan: {
+        id: 'plan_team_new',
+        autoRenew: true,
+        priceCents: 9000,
+        tokenLimit: 250,
+        supportsOrganizations: true,
+        organizationTokenPoolStrategy: 'SHARED_FOR_ORG',
+      },
+    });
+
+    prismaMock.payment.findUnique.mockResolvedValueOnce(null);
+
+    const tx = {
+      payment: {
+        create: vi.fn(async () => ({ id: 'pay_team_switch_1' })),
+      },
+      user: {
+        update: vi.fn(async () => undefined),
+      },
+      organization: {
+        update: vi.fn(async () => undefined),
+      },
+    };
+    prismaMock.$transaction.mockImplementationOnce(async (cb: unknown) => {
+      return (cb as (client: typeof tx) => unknown)(tx);
+    });
+
+    const { PaymentService } = await import('../lib/payment/service');
+    const svc = new PaymentService(makeProvider({
+      name: 'paystack',
+      getSubscription: vi.fn(async () => createSubscriptionDetails({
+        id: 'SUB_team_switch_new',
+        status: 'active',
+        customerId: 'CUS_team_1',
+        priceId: 'PLN_team_new',
+        currentPeriodStart,
+        currentPeriodEnd,
+        canceledAt: null,
+        latestInvoice: {
+          id: 'inv_team_switch_1',
+          paymentIntentId: 'pi_team_switch_1',
+          amountPaid: 9000,
+          amountDue: 0,
+          status: 'paid',
+          total: 9000,
+          subtotal: 9000,
+          amountDiscount: 0,
+        },
+        metadata: {
+          activeOrganizationId: 'org_team_1',
+        },
+      })),
+    }));
+
+    await svc.processWebhookEvent(createWebhookEvent({
+      type: 'checkout.completed',
+      payload: {
+        id: 'cs_team_switch_1',
+        userId: 'user_1',
+        mode: 'subscription',
+        subscriptionId: 'SUB_team_switch_new',
+        paymentStatus: 'paid',
+        amountTotal: 9000,
+        currency: 'NGN',
+        metadata: {
+          userId: 'user_1',
+          activeOrganizationId: 'org_team_1',
+        },
+        paymentIntentId: 'pi_team_switch_1',
+      },
+    }));
+
+    expect(tx.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_team_1' },
+      data: { tokenBalance: 250 },
+    });
+    expect(creditOrganizationSharedTokens).not.toHaveBeenCalled();
   });
 });

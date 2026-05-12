@@ -1140,23 +1140,10 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   const isSwitchingAutoRenewPlan = Boolean(activeRecurringPlan && plan.autoRenew && !isCurrentAutoRenewPlan && !isScheduledPlan);
   const comparisonPriceCents = activeRecurringPlan?.priceCents ?? null;
 
-  // Normalize prices to daily rates for fair cross-interval comparison
-  // (e.g. $300/month vs $100/day → $10/day vs $100/day → the daily plan is an upgrade).
-  const normalizeToDailyRate = (cents: number, interval: string | null) => {
-    switch (interval) {
-      case 'day':   return cents;
-      case 'week':  return cents / 7;
-      case 'month': return cents / 30;
-      case 'year':  return cents / 365;
-      default:      return cents;
-    }
-  };
   const planSwitchKind = (() => {
     if (!isSwitchingAutoRenewPlan || typeof comparisonPriceCents !== 'number') return 'change' as const;
-    const currentDaily = normalizeToDailyRate(comparisonPriceCents, activeRecurringPlan?.recurringInterval ?? null);
-    const targetDaily = normalizeToDailyRate(plan.priceCents, plan.recurringInterval ?? null);
-    if (targetDaily > currentDaily) return 'upgrade' as const;
-    if (targetDaily < currentDaily) return 'downgrade' as const;
+    if (plan.priceCents > comparisonPriceCents) return 'upgrade' as const;
+    if (plan.priceCents < comparisonPriceCents) return 'downgrade' as const;
     return 'change' as const;
   })();
 
@@ -1176,11 +1163,11 @@ export default function PricingCard({ plan, activeRecurringPlansByFamily = creat
   } else if (isScheduledPlan) {
     buttonLabel = 'Scheduled at cycle end';
   } else if (isSwitchingAutoRenewPlan) {
-    if (typeof comparisonPriceCents === 'number') {
-      buttonLabel = plan.priceCents > comparisonPriceCents ? 'Upgrade plan' : plan.priceCents < comparisonPriceCents ? 'Downgrade plan' : 'Switch plan';
-    } else {
-      buttonLabel = 'Switch plan';
-    }
+    buttonLabel = planSwitchKind === 'upgrade'
+      ? 'Upgrade plan'
+      : planSwitchKind === 'downgrade'
+        ? 'Downgrade plan'
+        : 'Switch plan';
   } else {
     if (isTeamPlan) {
       buttonLabel = plan.autoRenew ? 'Start team subscription' : 'Unlock team access';

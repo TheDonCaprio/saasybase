@@ -22,6 +22,7 @@ export function buildSubscriptionCheckoutPaymentContext(params: {
     organizationContext: OrganizationPlanContext | null;
     replacedRecurringSubscription: unknown;
     resetTokensOnRenewal: boolean;
+    isPendingRecurringSwitchActivation?: boolean;
 }): {
     paymentId?: string | null;
     sessionId: string;
@@ -37,7 +38,10 @@ export function buildSubscriptionCheckoutPaymentContext(params: {
     shouldResetTokensOnRenewal: boolean;
 } {
     const tokensToGrant = params.desiredStatus === 'ACTIVE' && params.planToUse.tokenLimit ? params.planToUse.tokenLimit : 0;
-    const shouldResetTokensOnRenewal = Boolean(params.replacedRecurringSubscription && params.resetTokensOnRenewal);
+    const shouldResetTokensOnRenewal = Boolean(
+        (params.replacedRecurringSubscription && params.resetTokensOnRenewal)
+        || params.isPendingRecurringSwitchActivation
+    );
     const paymentId = params.session.transactionId || params.session.paymentIntentId;
     const sessionId = params.session.id;
     const checkoutCouponCode = params.session.metadata?.couponCode || null;
@@ -156,6 +160,7 @@ export async function processSubscriptionCheckout(params: {
         organizationContext: params.organizationContext,
         replacedRecurringSubscription,
         resetTokensOnRenewal,
+        isPendingRecurringSwitchActivation: dbSub.prorationPendingSince instanceof Date && planToUse.autoRenew === true,
     });
 
     await recordSubscriptionCheckoutPaymentIfNeeded({

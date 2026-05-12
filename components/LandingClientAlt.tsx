@@ -3019,16 +3019,18 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
                 {isSignedIn ? (
                   <>
                     <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
-                    <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
-                    <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
+                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
+                    <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost">API</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</Link>
                   </>
                 ) : (
                   <>
                     <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
-                    <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
-                    <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</Link>
+                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
+                    <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost">API</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</Link>
                   </>
                 )}
               </div>
@@ -3384,16 +3386,18 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
             {isSignedIn ? (
               <>
                 <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
-                <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
+                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
+                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                <Link href="/docs/api" className="lp-btn-ghost">API</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
               </>
             ) : (
               <>
                 <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
-                <Link href="/docs" className="lp-btn-ghost">Documentation</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API Reference</Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor on GitHub</a>
+                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
+                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
+                <Link href="/docs/api" className="lp-btn-ghost">API</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
               </>
             )}
           </div>

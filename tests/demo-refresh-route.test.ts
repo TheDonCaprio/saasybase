@@ -74,4 +74,71 @@ describe('GET /api/cron/demo-refresh', () => {
       reason: 'No demo users found. Run `npm run demo:seed` first.',
     });
   });
+
+  it('returns a successful payload when demo refresh completes', async () => {
+    refreshDemoDataMock.mockResolvedValueOnce({
+      users: 3,
+      organizations: 1,
+      subscriptions: 2,
+      payments: 4,
+      tickets: 1,
+      replies: 2,
+      notifications: 5,
+      emailLogs: 2,
+      visits: 8,
+      systemLogs: 2,
+      adminActions: 1,
+      invites: 1,
+      blogPosts: 2,
+      coupons: 1,
+    });
+
+    const response = expectResponse(await GET(new NextRequest('http://localhost/api/cron/demo-refresh?window=90&visits=30', {
+      headers: {
+        authorization: 'Bearer demo-refresh-token',
+      },
+    })));
+
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.config).toEqual({ windowDays: 90, visitWindowDays: 30 });
+    expect(body.result).toEqual({
+      users: 3,
+      organizations: 1,
+      subscriptions: 2,
+      payments: 4,
+      tickets: 1,
+      replies: 2,
+      notifications: 5,
+      emailLogs: 2,
+      visits: 8,
+      systemLogs: 2,
+      adminActions: 1,
+      invites: 1,
+      blogPosts: 2,
+      coupons: 1,
+    });
+    expect(loggerInfoMock).toHaveBeenCalledWith('Cron: demo refresh complete', {
+      windowDays: 90,
+      visitWindowDays: 30,
+      result: {
+        users: 3,
+        organizations: 1,
+        subscriptions: 2,
+        payments: 4,
+        tickets: 1,
+        replies: 2,
+        notifications: 5,
+        emailLogs: 2,
+        visits: 8,
+        systemLogs: 2,
+        adminActions: 1,
+        invites: 1,
+        blogPosts: 2,
+        coupons: 1,
+      },
+    });
+  });
 });

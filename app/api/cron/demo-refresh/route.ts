@@ -60,6 +60,13 @@ async function handleRequest(request: NextRequest) {
       visitWindowDays,
       result,
     });
+
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      config: { windowDays, visitWindowDays },
+      result,
+    });
   } catch (error) {
     if (error instanceof DemoRefreshSeedMissingError) {
       Logger.info('Cron: demo refresh skipped', { reason: error.message });

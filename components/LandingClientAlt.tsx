@@ -1864,7 +1864,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           margin-top:32px; animation:lpFadeUp .7s .3s ease both;
         }
         .lp-btn-primary {
-          display:inline-flex; align-items:center; justify-content:center; min-height:32px;
+          display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:32px;
           padding:5px 15px; border-radius:15px; font-weight:700; font-size:12px; line-height:1;
           white-space:nowrap; background:linear-gradient(135deg, #2d6fcd 0%, #1f59b4 100%);
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
@@ -1873,7 +1873,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
         }
         .lp-btn-primary:hover { transform:translateY(-1px); box-shadow:0 14px 30px rgba(37, 99, 235, .24); filter:saturate(1.03); color:#fff !important; }
         .lp-btn-ghost {
-          display:inline-flex; align-items:center; justify-content:center; min-height:32px;
+          display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:32px;
           padding:5px 15px; border-radius:15px; font-weight:600; font-size:12px; line-height:1;
           white-space:nowrap; background:linear-gradient(135deg, #25b6c6 0%, #19a9bd 100%);
           color:#fff !important; border:none; cursor:pointer; text-decoration:none;
@@ -1881,6 +1881,7 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           transition:box-shadow .15s, transform .15s, filter .15s;
         }
         .lp-btn-ghost:hover { box-shadow:0 14px 30px rgba(20, 184, 166, .22); transform:translateY(-1px); filter:saturate(1.03); color:#fff !important; }
+        .lp-btn-primary svg, .lp-btn-ghost svg { font-size:11px; }
 
         /* Demo */
         .lp-demo-wrap { animation:lpFadeUp .8s .5s ease both; }
@@ -3018,19 +3019,19 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
               <div className="lp-cta-row">
                 {isSignedIn ? (
                   <>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
-                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
-                    <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                    <Link href="/docs/api" className="lp-btn-ghost">API</Link>
-                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />Get for free→</Link>
+                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faEye} />Demo</Link>
+                    <Link href="/docs" className="lp-btn-ghost"><FontAwesomeIcon icon={faFileLines} />Docs</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost"><FontAwesomeIcon icon={faSitemap} />API</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faHandHoldingDollar} />Sponsor</Link>
                   </>
                 ) : (
                   <>
-                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free→</Link>
-                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
-                    <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                    <Link href="/docs/api" className="lp-btn-ghost">API</Link>
-                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</Link>
+                    <Link href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />Get for free→</Link>
+                    <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faEye} />Demo</Link>
+                    <Link href="/docs" className="lp-btn-ghost"><FontAwesomeIcon icon={faFileLines} />Docs</Link>
+                    <Link href="/docs/api" className="lp-btn-ghost"><FontAwesomeIcon icon={faSitemap} />API</Link>
+                    <Link href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faHandHoldingDollar} />Sponsor</Link>
                   </>
                 )}
               </div>
@@ -3385,19 +3386,19 @@ export default function LandingClientAlt({ isSignedIn }: { isSignedIn: boolean }
           <div className="lp-cta-row" style={{ marginTop: 0 }}>
             {isSignedIn ? (
               <>
-                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
-                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
-                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API</Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />Get for free →</a>
+                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faEye} />Demo</Link>
+                <Link href="/docs" className="lp-btn-ghost"><FontAwesomeIcon icon={faFileLines} />Docs</Link>
+                <Link href="/docs/api" className="lp-btn-ghost"><FontAwesomeIcon icon={faSitemap} />API</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faHandHoldingDollar} />Sponsor</a>
               </>
             ) : (
               <>
-                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary">Get for free →</a>
-                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost">Demo</Link>
-                <Link href="/docs" className="lp-btn-ghost">Docs</Link>
-                <Link href="/docs/api" className="lp-btn-ghost">API</Link>
-                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost">Sponsor</a>
+                <a href="https://github.com/TheDonCaprio/saasybase" target="_blank" rel="noreferrer" className="lp-btn-primary"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />Get for free →</a>
+                <Link href="https://demo.saasybase.com" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faEye} />Demo</Link>
+                <Link href="/docs" className="lp-btn-ghost"><FontAwesomeIcon icon={faFileLines} />Docs</Link>
+                <Link href="/docs/api" className="lp-btn-ghost"><FontAwesomeIcon icon={faSitemap} />API</Link>
+                <a href="https://github.com/sponsors/TheDonCaprio" target="_blank" rel="noreferrer" className="lp-btn-ghost"><FontAwesomeIcon icon={faHandHoldingDollar} />Sponsor</a>
               </>
             )}
           </div>

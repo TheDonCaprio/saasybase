@@ -40,7 +40,7 @@ export function NavigationTabContent({
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="mb-6">
           <div>
             <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-neutral-50 mb-2">
               <FontAwesomeIcon icon={faCompass} className="h-5 w-5" />
@@ -48,15 +48,6 @@ export function NavigationTabContent({
             </div>
             <p className="text-sm text-slate-600 dark:text-neutral-400">Control the primary links shown in the top navigation bar.</p>
           </div>
-          <button
-            type="button"
-            onClick={addHeaderLink}
-            disabled={!canAddHeader}
-            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40"
-          >
-            <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-            Add link
-          </button>
         </div>
         <div className="space-y-4">
           {headerLinks.map((link, index) => (
@@ -101,10 +92,21 @@ export function NavigationTabContent({
             </div>
           ))}
         </div>
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={addHeaderLink}
+            disabled={!canAddHeader}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40"
+          >
+            <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+            Add link
+          </button>
+        </div>
       </section>
 
       <section>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="mb-6">
           <div>
             <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-neutral-50 mb-2">
               <FontAwesomeIcon icon={faLink} className="h-5 w-5" />
@@ -114,15 +116,6 @@ export function NavigationTabContent({
               Configure footer links and display text. Use tokens like {'{{year}}'} and {'{{site}}'}.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={addFooterLink}
-            disabled={!canAddFooter}
-            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40"
-          >
-            <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-            Add footer link
-          </button>
         </div>
         <div className="space-y-4">
           {footerLinks.map((link, index) => (
@@ -166,6 +159,18 @@ export function NavigationTabContent({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={addFooterLink}
+            disabled={!canAddFooter}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40"
+          >
+            <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+            Add footer link
+          </button>
         </div>
 
         <div className="mt-6 space-y-2">

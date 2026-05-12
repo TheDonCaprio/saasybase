@@ -1553,6 +1553,24 @@ For Coolify and similar self-hosted platforms, set the production environment va
 
 If your team previously developed against SQLite and you are now moving to PostgreSQL, do not reuse that SQLite migration chain or local `dev.db` file in production. Start from a fresh PostgreSQL database and follow [docs/prisma-provider-migrations.md](docs/prisma-provider-migrations.md) for the supported recovery path.
 
+### Updating an existing live install
+
+SaaSyBase is stable enough now that most releases should be routine maintenance: improvements, bug fixes, security work, and polish. In plain language, most updates should not require deep code surgery.
+
+Here, “upstream” just means the newer official SaaSyBase version you are updating from.
+
+For operators, the short safe workflow is:
+
+1. Read the release summary first to see whether the update is routine or whether it specifically mentions infrastructure changes.
+2. Back up the production database and confirm the effective deployed env configuration.
+3. Merge the update in Git first, then validate it in staging with production-like providers and storage.
+4. Run production with the normal ordered flow: `npm run prisma:deploy`, then build, then start or promote the release.
+5. After deploy, verify `/api/health`, sign-in, billing, webhook delivery, cron auth, uploads, and logs before you call the release complete.
+
+Do not assume every release needs Prisma or database work. Only switch into migration-specific steps when the release actually includes schema changes. Also do not rerun `npx prisma db seed` as part of routine upgrades. Seed data is for first-time bootstrap or deliberate demo/local setup, not normal live releases.
+
+The full operator guide is in [app/docs/updates-and-upgrades/page.tsx](app/docs/updates-and-upgrades/page.tsx) for the docs page source and at `/docs/updates-and-upgrades` in the running app.
+
 ### Required environment variables
 
 ```bash

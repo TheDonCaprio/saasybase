@@ -1,6 +1,16 @@
-# CONTRIBUTING.md — How to Contribute to SaaSyBase
+# CONTRIBUTING.md — Working With SaaSyBase
 
-> Guidelines for contributing to the SaaSyBase boilerplate — whether you're fixing bugs, adding features, or extending provider support.
+> SaaSyBase is free to use, but it is not an open-source project. This file explains how to work with the codebase, how approved collaborators should make changes, and how users should report issues or request improvements.
+
+---
+
+## Scope
+
+This repository is not operated like a public open-source project.
+
+- External pull requests are not the default workflow.
+- Bug reports, feature requests, and security disclosures are still useful and welcome through the project's support or contact channels.
+- If you are an approved collaborator, contractor, or internal maintainer, use the guidance below when changing the codebase.
 
 ---
 
@@ -22,141 +32,140 @@ For database inspection, prefer `npm run prisma:studio` so Prisma uses the repo'
 
 ---
 
-## Workflow
+## Working Style For Maintainers
 
-1. **Create a branch** from `main` with a descriptive name: `feature/add-widget`, `fix/webhook-retry`
-2. **Make changes** following the patterns in [PATTERNS.md](PATTERNS.md)
-3. **Run tests** before committing:
+1. Start from `main` or from the branch assigned to the work.
+2. Make changes following the patterns in [PATTERNS.md](PATTERNS.md).
+3. Keep edits narrow and avoid opportunistic refactors unless they are required for correctness.
+4. Add tests for new business logic and regression coverage for bug fixes.
+5. Run validation before handing work off or merging:
    ```bash
-   npm test              # Unit tests
-   npm run typecheck     # Type checking
-   npm run lint          # Linting
+   npm test
+   npm run typecheck
+   npm run lint
    ```
-4. **Write tests** for any new business logic (see Testing section below)
-5. **Commit** with clear, descriptive messages
-6. **Open a PR** with a description of what changed and why
+6. Use clear, descriptive commits and document any migration, env, or deployment impact.
+
+If a change touches auth, payments, subscriptions, tokens, teams, or security-sensitive flows, default to stronger regression coverage rather than lighter coverage.
 
 ---
 
-## Code Style
+## Reporting Bugs Or Requesting Features
+
+If you are using SaaSyBase and need something fixed or improved:
+
+- Report reproducible bugs with clear steps, expected behavior, and actual behavior.
+- Include relevant environment details such as auth provider, payment provider, deployment target, and whether the issue occurs locally or in production.
+- For payment or auth issues, include sanitized logs or screenshots where helpful, but never send secrets.
+- For feature requests, describe the use case and the business constraint, not just the desired UI.
+
+Security issues should be reported privately. Do not post exploitable details publicly.
+
+---
+
+## Code Standards
 
 ### TypeScript
-- Use strict TypeScript — avoid `any` unless absolutely necessary
-- Prefer `interface` for object shapes, `type` for unions/intersections
-- Use Zod schemas for runtime validation (not just TypeScript types)
+
+- Use strict TypeScript and avoid `any` unless there is a strong reason.
+- Prefer `interface` for object shapes and `type` for unions/intersections.
+- Use Zod schemas for runtime validation, not just TypeScript types.
 
 ### File Naming
-- Components: `PascalCase.tsx` (e.g., `PricingCard.tsx`)
-- Lib modules: `kebab-case.ts` (e.g., `subscription-utils.ts`)
-- Test files: `kebab-case.test.ts` (e.g., `stripe-webhook.test.ts`)
+
+- Components: `PascalCase.tsx`
+- Lib modules: `kebab-case.ts`
+- Test files: `kebab-case.test.ts`
 - API routes: `route.ts` inside descriptive directory paths
 
 ### Imports
-- Use `@/` path alias for all imports (e.g., `import { prisma } from '@/lib/prisma'`)
-- Never import vendor-specific auth/payment modules directly — use the abstraction layers
-- Group imports: external packages → internal modules → types
+
+- Use the `@/` path alias for internal imports.
+- Never import vendor-specific auth or payment modules directly in business logic.
+- Group imports in a consistent order: external packages, internal modules, then types.
 
 ### Components
-- Server components by default — only add `'use client'` when needed (event handlers, hooks, browser APIs)
-- Reuse existing UI components from `components/ui/` before creating new ones
-- Co-locate domain-specific components in subdirectories (e.g., `components/billing/`)
+
+- Default to server components and add `'use client'` only when needed.
+- Reuse existing UI primitives from `components/ui/` before creating new ones.
+- Keep domain-specific components in their corresponding subdirectories.
 
 ---
 
 ## Testing Guidelines
 
-### What to Test
-- Business logic in `lib/` modules
-- API route handler behavior (mock auth, DB, and external services)
-- State transitions (subscription lifecycle, token spending)
-- Webhook event handling (both success and error cases)
-- Edge cases and error paths
+Test the behavior that actually carries risk:
 
-### Test Structure
-```typescript
-// tests/my-feature.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+- business logic in `lib/`
+- API route handler behavior
+- subscription and token state transitions
+- webhook success and error paths
+- auth and permission boundaries
+- edge cases and failure modes
 
-describe('myFeature', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+Common commands:
 
-  it('should handle the happy path', async () => {
-    // Arrange
-    // Act
-    // Assert
-  });
-
-  it('should handle errors gracefully', async () => {
-    // Test error cases
-  });
-});
-```
-
-### Running Tests
 ```bash
-npm test                              # All unit tests
-npm test -- --watch                   # Watch mode
-npm test -- tests/my-feature.test.ts  # Single file
+npm test
+npm test -- --watch
+npm test -- tests/my-feature.test.ts
 ```
 
 ---
 
-## Adding a New Payment Provider
+## High-Risk Change Areas
 
-See [docs/adding-payment-providers.md](docs/adding-payment-providers.md) for the complete guide.
+### Payment Providers
 
-Quick checklist:
-- [ ] Implement `PaymentProvider` interface from `lib/payment/types.ts`
-- [ ] Register in `lib/payment/registry.ts`
-- [ ] Handle webhooks in `/api/webhooks/payments` (signature auto-detection)
-- [ ] Add client scripts to `components/PaymentProviderScripts.tsx` if needed
-- [ ] Add env vars to `.env.example`
-- [ ] Write unit tests
-- [ ] Update provider feature matrix in README
+See [docs/adding-payment-providers.md](docs/adding-payment-providers.md) for the full guide.
 
----
+Minimum checklist:
 
-## Adding a New Admin Section
+- implement `PaymentProvider` from `lib/payment/types.ts`
+- register the provider in `lib/payment/registry.ts`
+- handle webhook verification and normalization correctly
+- add any required client scripts to `components/PaymentProviderScripts.tsx`
+- document env vars in `.env.example`
+- add unit or integration coverage
+- update README if the supported provider matrix changes
 
-1. Create page in `app/admin/(valid)/my-section/page.tsx`
-2. Add API routes in `app/api/admin/my-section/route.ts`
-3. Add the section to moderator permissions in `lib/moderator-shared.ts` (MODERATOR_SECTIONS)
-4. Log admin actions to `AdminActionLog` using the existing admin action helpers for that area
-5. Add navigation entry in the admin layout
+### Admin Features
 
----
+1. Create the page in `app/admin/(valid)/...`
+2. Add matching admin API routes where needed
+3. Update moderator permission mapping if the section should be assignable
+4. Log admin actions using the existing admin action helpers for that area
+5. Add the navigation entry in the admin layout
 
-## Database Schema Changes
+### Database Schema Changes
 
 1. Edit `prisma/schema.prisma`
 2. Run `npx prisma migrate dev --name describe-change`
-3. If the change requires data migration, create a script in `scripts/`
-4. Test against both SQLite (dev) and PostgreSQL (prod)
-5. Document the migration in your PR description
+3. Add a data migration script if the schema change needs one
+4. Test against both SQLite and PostgreSQL assumptions
+5. Document any rollout or compatibility impact
 
 ---
 
-## Documentation
+## Documentation Expectations
 
-- Update [README.md](README.md) for user-facing feature changes
-- Update [PATTERNS.md](PATTERNS.md) if introducing a new pattern
-- Update [TECH_STACK.md](TECH_STACK.md) if adding a new dependency
-- Update [ARCHITECTURE.md](ARCHITECTURE.md) for structural changes
-- Add inline code comments only when the "why" isn't obvious from the code
+- Update [README.md](README.md) for user-facing changes.
+- Update [PATTERNS.md](PATTERNS.md) when introducing a new pattern worth repeating.
+- Update [TECH_STACK.md](TECH_STACK.md) when adding or removing important dependencies.
+- Update [ARCHITECTURE.md](ARCHITECTURE.md) when the system structure changes.
+- Add inline comments only when they explain a non-obvious reason, not obvious mechanics.
 
 ---
 
 ## Security Checklist
 
-Before submitting a PR that touches auth, payments, or user data:
+Before merging work that touches auth, payments, or user data, verify:
 
-- [ ] Input validated with Zod schemas
-- [ ] Rate limiting applied to new endpoints
-- [ ] Appropriate auth/role check present for the route type (`authService.requireUserId()`, `requireAdmin()`, `requireAdminOrModerator()`, etc.)
-- [ ] No sensitive data in logs (use `Logger` which auto-redacts)
-- [ ] Error responses don't leak internal details in production
-- [ ] Webhook signatures verified before processing
-- [ ] SQL injection prevented (Prisma handles this, but double-check raw queries)
-- [ ] Tests cover both auth'd and unauth'd access attempts
+- [ ] input is validated with Zod
+- [ ] rate limiting is present where required
+- [ ] auth and role checks match the route type
+- [ ] logs do not expose sensitive data
+- [ ] production error responses do not leak internals
+- [ ] webhook signatures are verified before processing
+- [ ] raw queries, if any, are reviewed carefully
+- [ ] tests cover both allowed and denied access paths where relevant

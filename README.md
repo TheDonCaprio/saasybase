@@ -244,7 +244,7 @@ After running `npm run dev`, open [http://localhost:3000](http://localhost:3000)
 
 If you access local development through a custom hostname or tunnel instead of plain `localhost`, set `ALLOWED_DEV_ORIGINS` in `.env.local`. Example: `ALLOWED_DEV_ORIGINS="app.localhost.test,*.ngrok-free.dev"`. Leave it empty for normal localhost development, and restart the dev server after changing it.
 
-With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt.
+With Prisma 7, seeding only runs when you explicitly invoke `npx prisma db seed`; `prisma generate`, `prisma migrate dev`, and `prisma migrate reset` no longer trigger it automatically. When you run `npx prisma db seed` in an interactive terminal, the seed script prompts for the initial admin email and password instead of always using a hardcoded default. To skip admin creation explicitly, run `npx prisma db seed -- --skip-admin`. For CI or other non-interactive environments, set `SEED_ADMIN_PASSWORD` and optionally `SEED_ADMIN_EMAIL` to create the admin without a prompt. Do not rely on the built-in fallback seed admin credentials in any environment you care about: they are predictable bootstrap defaults and must be replaced immediately.
 
 If you want the shipped admin dashboards, user dashboard, and long lists to look populated during local development, run `npm run demo:seed` after the normal bootstrap seed. That script inserts demo-namespaced sample users, payments, organizations, tickets, notifications, and blog content so you can inspect the UI with realistic data. Treat it as a local-only sandbox helper, not as staging or production seed data.
 
@@ -446,7 +446,7 @@ Key differences from Clerk:
 
 ### Database seed
 
-For a fresh local database, run `npx prisma db seed` to create the initial admin user during setup. The seed script prompts for the admin email and password in an interactive terminal, and it also supports non-interactive creation with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`.
+For a fresh local database, run `npx prisma db seed` to create the initial admin user during setup. The seed script prompts for the admin email and password in an interactive terminal, and it also supports non-interactive creation with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`. If a non-interactive run ever falls back to the built-in default seed admin credentials, change that email and password immediately before exposing the app anywhere outside a disposable local sandbox.
 
 ### Production
 

@@ -74,6 +74,7 @@ const DEMO_VIEWS: DemoView[] = ['finance', 'users', 'overview'];
 const DEMO_HOLD_MS = [9500, 8500, 6500];
 const DEMO_MIN_VIEW_MS = [2200, 2200, 1800];
 const DEMO_ADVANCE_AFTER_SCROLL_MS = 450;
+const DEMO_SCROLL_START_DELAY_MS = 1000;
 
 type SurfaceTone = 'auth' | 'tests' | 'security' | 'meter';
 
@@ -350,7 +351,8 @@ function DashboardDemo() {
   const scrollViewRef = useRef<DemoView>('finance');
   const viewStartedAtRef = useRef(0);
   const scrollCompletedAtRef = useRef<number | null>(null);
-  const canAnimateDemo = demoInView && !pageScrollActive;
+  const canAnimateDemo = demoInView;
+  const canTiltDemo = demoInView && !pageScrollActive;
 
   useEffect(() => {
     tiltDisabledRef.current = shouldDisableLandingDemoTilt(window.navigator.userAgent);
@@ -364,10 +366,10 @@ function DashboardDemo() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setDemoInView(entry.isIntersecting && entry.intersectionRatio >= 0.2);
+        setDemoInView(entry.isIntersecting && entry.intersectionRatio >= 0.05);
       },
       {
-        threshold: [0, 0.2, 0.35],
+        threshold: [0, 0.05, 0.2],
         rootMargin: '120px 0px',
       },
     );
@@ -404,7 +406,15 @@ function DashboardDemo() {
       setTransitioning(true);
       transitionTimer = setTimeout(() => {
         viewIdxRef.current = (viewIdxRef.current + 1) % DEMO_VIEWS.length;
-        setDemoView(DEMO_VIEWS[viewIdxRef.current]);
+        const nextView = DEMO_VIEWS[viewIdxRef.current];
+        scrollViewRef.current = nextView;
+        scrollOffsetRef.current = 0;
+        viewStartedAtRef.current = performance.now();
+        scrollCompletedAtRef.current = null;
+        if (scrollTrackRef.current) {
+          scrollTrackRef.current.style.transform = 'translate3d(0, 0, 0)';
+        }
+        setDemoView(nextView);
         setTransitioning(false);
       }, 350);
     };
@@ -442,8 +452,9 @@ function DashboardDemo() {
     return () => {
       clearTimeout(timer);
       clearTimeout(transitionTimer);
+      setTransitioning(false);
     };
-  }, [canAnimateDemo]);
+  }, [canAnimateDemo, demoView]);
 
   useEffect(() => {
     if (scrollViewRef.current === demoView) {
@@ -473,6 +484,9 @@ function DashboardDemo() {
     if (!viewport || !track || transitioning || !canAnimateDemo) return;
     track.style.transform = `translate3d(0, ${-scrollOffsetRef.current}px, 0)`;
     let raf = 0;
+    const startDelayTimer = setTimeout(() => {
+      raf = requestAnimationFrame(waitForStableLayout);
+    }, DEMO_SCROLL_START_DELAY_MS);
     let stableFrameCount = 0;
     let lastMeasuredHeight = -1;
 
@@ -521,21 +535,21 @@ function DashboardDemo() {
       raf = requestAnimationFrame(waitForStableLayout);
     };
 
-    raf = requestAnimationFrame(waitForStableLayout);
     return () => {
+      clearTimeout(startDelayTimer);
       cancelAnimationFrame(raf);
     };
   }, [canAnimateDemo, demoView, transitioning]);
 
   useEffect(() => {
-    if (canAnimateDemo || !tiltInnerRef.current) return;
+    if (canTiltDemo || !tiltInnerRef.current) return;
     tiltInnerRef.current.style.transition = 'transform 180ms ease-out';
     tiltInnerRef.current.style.transform = 'perspective(450px) rotateX(0deg) rotateY(0deg) scale(1)';
-  }, [canAnimateDemo]);
+  }, [canTiltDemo]);
 
   // 3D tilt — direct DOM update to avoid per-mousemove re-renders
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (tiltDisabledRef.current || !canAnimateDemo) return;
+    if (tiltDisabledRef.current || !canTiltDemo) return;
     const rect = tiltRef.current?.getBoundingClientRect();
     if (!rect || !tiltInnerRef.current) return;
     const dxRaw = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
@@ -592,7 +606,7 @@ function DashboardDemo() {
       <div ref={tiltInnerRef} className="lp-dd-tilt" style={{
         position: 'relative', zIndex: 1,
         transition: 'transform 260ms ease-out',
-        willChange: canAnimateDemo ? 'transform' : 'auto',
+        willChange: canTiltDemo ? 'transform' : 'auto',
         transformStyle: 'preserve-3d',
         backfaceVisibility: 'hidden',
         WebkitBackfaceVisibility: 'hidden',
@@ -728,7 +742,7 @@ function DashboardDemo() {
 
             {/* ── Finance / Transactions view ── */}
             {demoView === 'finance' && (
-              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: 1, transform: transitioning ? 'translateY(4px) scale(0.998)' : 'none', transition: 'transform 0.22s ease' }}>
                 <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ display: 'flex', minHeight: '100%', flexDirection: 'column', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div style={{ margin: '12px 14px 0' }}>
                   <DashboardPageHeader
@@ -860,7 +874,7 @@ function DashboardDemo() {
 
             {/* ── Users view ── */}
             {demoView === 'users' && (
-              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: 1, transform: transitioning ? 'translateY(4px) scale(0.998)' : 'none', transition: 'transform 0.22s ease' }}>
                 <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ display: 'flex', minHeight: '100%', flexDirection: 'column', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div style={{ margin: '12px 14px 0' }}>
                   <DashboardPageHeader
@@ -984,7 +998,7 @@ function DashboardDemo() {
 
             {/* ── Overview / Dashboard view ── */}
             {demoView === 'overview' && (
-              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(6px)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
+              <div ref={scrollViewportRef} className="lp-dd-content" style={{ flex: 1, opacity: 1, transform: transitioning ? 'translateY(4px) scale(0.998)' : 'none', transition: 'transform 0.22s ease' }}>
                 <div ref={scrollTrackRef} className="lp-dd-scroll-track" style={{ minHeight: '100%', willChange: canAnimateDemo ? 'transform' : 'auto', transform: 'translate3d(0, 0, 0)' }}>
                 <div className="space-y-4 p-4">
                     <DashboardPageHeader

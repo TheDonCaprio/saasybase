@@ -31,7 +31,7 @@ import {
 } from '../../../../lib/payment/discountedSubscriptionPriceCache';
 import { resolveCheckoutWorkspaceContext } from '../../../../lib/checkout-workspace-context';
 import { workspaceService } from '../../../../lib/workspace-service';
-import { isDemoReadOnlyCheckoutInitiationPath } from '../../../../lib/demo-readonly';
+import { shouldBlockDemoReadOnlyMutation } from '../../../../lib/demo-readonly';
 
 const couponWithPlansInclude = {
     applicablePlans: {
@@ -104,13 +104,20 @@ function unwrapPaymentError(err: unknown): { messages: string[]; root: unknown }
 }
 
 async function handleEmbeddedCheckout(req: NextRequest) {
-    if (process.env.DEMO_READ_ONLY_MODE === 'true' && isDemoReadOnlyCheckoutInitiationPath(req.nextUrl.pathname)) {
-        return jsonError('Demo mode is read-only. Payments and checkout are disabled in this environment.', 403, 'DEMO_READ_ONLY_CHECKOUT_DISABLED');
-    }
-
     const { userId, orgId: activeClerkOrgId } = await authService.getSession();
     if (!userId) {
         return jsonError('Unauthorized', 401, 'UNAUTHORIZED');
+    }
+
+    const demoReadOnlyUser = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (shouldBlockDemoReadOnlyMutation({
+        enabled: process.env.DEMO_READ_ONLY_MODE === 'true',
+        method: req.method,
+        pathname: req.nextUrl.pathname,
+        userId,
+        email: demoReadOnlyUser?.email ?? null,
+    })) {
+        return jsonError('Demo mode is read-only. Payments and checkout are disabled in this environment.', 403, 'DEMO_READ_ONLY_CHECKOUT_DISABLED');
     }
 
     // Rate limiting - match main checkout route

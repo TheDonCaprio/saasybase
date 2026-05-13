@@ -5,6 +5,7 @@ import { pluralize } from '../../../../lib/pluralize';
 import ActivatePendingButton from '../../../../components/dashboard/ActivatePendingButton';
 import DashboardPricingListServerWrapper from '../../../../components/pricing/DashboardPricingListServerWrapper';
 import { DashboardPageHeader } from '../../../../components/dashboard/DashboardPageHeader';
+import { resolveDemoReadOnlyMode } from '../../../../lib/demo-readonly';
 import { dashboardPanelClass, dashboardMutedPanelClass } from '../../../../components/dashboard/dashboardSurfaces';
 import { CurrentPlanStatus } from '../../../../components/dashboard/CurrentPlanStatus';
 import { getDefaultTokenLabel, getFreePlanSettings } from '../../../../lib/settings';
@@ -89,7 +90,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
       include: { plan: true },
       orderBy: [{ status: 'asc' }, { startedAt: 'asc' }]
     }),
-    prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true, email: true } }),
     getDefaultTokenLabel(),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
     workspaceMemberView
@@ -262,6 +263,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
 
   const paidTokenBalance = typeof userRecord?.tokenBalance === 'number' ? userRecord.tokenBalance : 0;
   const freeTokenBalanceVal = typeof userRecord?.freeTokenBalance === 'number' ? userRecord.freeTokenBalance : 0;
+  const demoReadOnlyMode = resolveDemoReadOnlyMode({ enabled: process.env.DEMO_READ_ONLY_MODE === 'true', userId, email: userRecord?.email ?? null });
 
   const freePlanSettings = await getFreePlanSettings();
   const planDisplay = buildPlanDisplay({
@@ -540,7 +542,7 @@ export default async function PlanPage({ searchParams }: PageProps) {
               plans={plansForPricing}
               activeRecurringPlansByFamily={activeRecurringPlansByFamily}
               scheduledPlanIdsByFamily={scheduledPlanIdsByFamily}
-              demoReadOnlyMode={process.env.DEMO_READ_ONLY_MODE === 'true'}
+              demoReadOnlyMode={demoReadOnlyMode}
               teamPlanPurchaseDisabled={workspaceMemberView}
               teamPlanPurchaseDisabledMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner. Members cannot purchase or change team plans from this workspace.` : undefined}
               personalPlanPurchaseDisabled={planScope === 'WORKSPACE'}

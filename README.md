@@ -1,8 +1,14 @@
+![SaaSyBase](https://dxca1h3kz76b5.cloudfront.net/logo/logo-1778407425484.png)
+
 # SaaSyBase
 
 A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with a committed PostgreSQL migration baseline, and a full-featured admin dashboard.
 
 For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/seo-and-discoverability`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
+
+## Sponsor SaaSyBase
+
+Support ongoing development via [GitHub Sponsors](https://github.com/sponsors/TheDonCaprio) or [Stripe](https://donate.stripe.com/eVqeVe8Joe8p5dvgs37IY02).
 
 ## What Is SaaSyBase?
 
@@ -19,13 +25,14 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
 
 ## Table of Contents
 
-1. [Tech Stack](#tech-stack)
-2. [Project Structure](#project-structure)
-3. [Quick Start](#quick-start)
-4. [Core Scripts](#core-scripts)
-5. [Authentication](#authentication)
-6. [Admin Setup](#admin-setup)
-7. [Payment Providers](#payment-providers)
+1. [Sponsor SaaSyBase](#sponsor-saasybase)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Quick Start](#quick-start)
+5. [Core Scripts](#core-scripts)
+6. [Authentication](#authentication)
+7. [Admin Setup](#admin-setup)
+8. [Payment Providers](#payment-providers)
    - [Stripe](#stripe)
    - [Paystack](#paystack)
    - [Paddle](#paddle)
@@ -33,38 +40,38 @@ You plug in your own product logic — SaaSyBase handles the business infrastruc
    - [Provider Feature Matrix](#provider-feature-matrix)
    - [Currency System](#currency-system)
    - [Adding New Providers](#adding-new-providers)
-8. [Token System](#token-system)
-9. [Team Plans & Organizations](#team-plans--organizations)
-10. [Feature Gating](#feature-gating)
-11. [Coupon System](#coupon-system)
-12. [Blog & CMS](#blog--cms)
-13. [Site Pages](#site-pages)
-14. [SEO & Discoverability](#seo--discoverability)
-15. [Theming & Branding](#theming--branding)
-16. [Email Templates](#email-templates)
-17. [Notifications](#notifications)
-18. [Support Tickets](#support-tickets)
-19. [Contact Page](#contact-page)
-20. [Invoice & Refund Receipts](#invoice--refund-receipts)
-21. [Webhooks](#webhooks)
-22. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
-23. [File & Logo Storage (S3)](#file--logo-storage-s3)
-24. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
-25. [Visit Tracking](#visit-tracking)
-26. [Maintenance Mode](#maintenance-mode)
-27. [Session Activity](#session-activity)
-28. [Moderator Roles](#moderator-roles)
-29. [Rate Limiting](#rate-limiting)
-30. [Logging & Audit Trail](#logging--audit-trail)
-31. [Security](#security)
-32. [Dark Mode](#dark-mode)
-33. [Testing](#testing)
-34. [Admin Dashboard Overview](#admin-dashboard-overview)
-35. [User Dashboard Overview](#user-dashboard-overview)
-36. [Production Setup](#production-setup)
-37. [Self-hosted Deployments](#self-hosted-deployments)
-38. [Environment Variable Reference](#environment-variable-reference)
-39. [Demo Read-Only Mode](#demo-read-only-mode)
+9. [Token System](#token-system)
+10. [Team Plans & Organizations](#team-plans--organizations)
+11. [Feature Gating](#feature-gating)
+12. [Coupon System](#coupon-system)
+13. [Blog & CMS](#blog--cms)
+14. [Site Pages](#site-pages)
+15. [SEO & Discoverability](#seo--discoverability)
+16. [Theming & Branding](#theming--branding)
+17. [Email Templates](#email-templates)
+18. [Notifications](#notifications)
+19. [Support Tickets](#support-tickets)
+20. [Contact Page](#contact-page)
+21. [Invoice & Refund Receipts](#invoice--refund-receipts)
+22. [Webhooks](#webhooks)
+23. [Cron Jobs & Expiry Automation](#cron-jobs--expiry-automation)
+24. [File & Logo Storage (S3)](#file--logo-storage-s3)
+25. [Analytics (Google Analytics 4)](#analytics-google-analytics-4)
+26. [Visit Tracking](#visit-tracking)
+27. [Maintenance Mode](#maintenance-mode)
+28. [Session Activity](#session-activity)
+29. [Moderator Roles](#moderator-roles)
+30. [Rate Limiting](#rate-limiting)
+31. [Logging & Audit Trail](#logging--audit-trail)
+32. [Security](#security)
+33. [Dark Mode](#dark-mode)
+34. [Testing](#testing)
+35. [Admin Dashboard Overview](#admin-dashboard-overview)
+36. [User Dashboard Overview](#user-dashboard-overview)
+37. [Production Setup](#production-setup)
+38. [Self-hosted Deployments](#self-hosted-deployments)
+39. [Environment Variable Reference](#environment-variable-reference)
+40. [Demo Read-Only Mode](#demo-read-only-mode)
 
 ---
 

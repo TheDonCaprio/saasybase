@@ -23,6 +23,7 @@ import { getSeoSettings } from '../../lib/seo';
 import { adminOnlyPublicSiteMode } from '@/lib/admin-only-public-site';
 import { redirect } from 'next/navigation';
 import { buildBreadcrumbSchema, buildWebPageSchema } from '@/lib/schema';
+import { resolveDemoReadOnlyMode } from '@/lib/demo-readonly';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [siteName, seoSettings] = await Promise.all([
@@ -131,7 +132,7 @@ export default async function PricingPage() {
       }
     }),
     getDefaultTokenLabel(),
-    userId ? prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true } }) : null,
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { tokenBalance: true, freeTokenBalance: true, email: true } }) : null,
     userId ? getOrganizationPlanContext(userId, orgId) : null,
     userId
       ? prisma.subscription.findMany({
@@ -226,6 +227,7 @@ export default async function PricingPage() {
   })();
   const paidTokenBalance = typeof userRecord?.tokenBalance === 'number' ? userRecord.tokenBalance : 0;
   const freeTokenBalanceVal = typeof userRecord?.freeTokenBalance === 'number' ? userRecord.freeTokenBalance : 0;
+  const demoReadOnlyMode = resolveDemoReadOnlyMode({ enabled: process.env.DEMO_READ_ONLY_MODE === 'true', userId, email: userRecord?.email ?? null });
   const freePlanSettings = await getFreePlanSettings();
   const planDisplay = buildPlanDisplay({
     subscription: currentSubscription,
@@ -530,7 +532,7 @@ export default async function PricingPage() {
       scheduledPlanIdsByFamily={scheduledPlanIdsByFamily}
       gridClasses={gridClasses}
       currency={activeCurrency}
-      demoReadOnlyMode={process.env.DEMO_READ_ONLY_MODE === 'true'}
+      demoReadOnlyMode={demoReadOnlyMode}
       teamPlanPurchaseDisabled={workspaceMemberView}
       teamPlanPurchaseDisabledMessage={workspaceMemberView ? `${organizationPlan?.organization.name ?? 'This workspace'} billing is controlled by the workspace owner. Members cannot purchase or change team plans from this workspace.` : undefined}
       personalPlanPurchaseDisabled={planScope === 'WORKSPACE'}

@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { isDemoReadOnlyCheckoutInitiationPath, isDemoReadOnlyExemptPath, shouldBlockDemoReadOnlyMutation } from '../lib/demo-readonly';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isDemoReadOnlyCheckoutInitiationPath, isDemoReadOnlyExemptPath, isDemoReadOnlyIdentityExempt, shouldBlockDemoReadOnlyMutation } from '../lib/demo-readonly';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('demo read-only guard', () => {
   it('does not block when mode is disabled', () => {
@@ -72,6 +76,34 @@ describe('demo read-only guard', () => {
         enabled: true,
         method: 'POST',
         pathname: '/api/webhooks/payments',
+      })
+    ).toBe(false);
+  });
+
+  it('allows exact exempt user IDs to bypass demo read-only mode', () => {
+    vi.stubEnv('DEMO_READ_ONLY_EXEMPT_USER_IDS', 'user_123, user_456');
+
+    expect(isDemoReadOnlyIdentityExempt({ userId: 'user_123' })).toBe(true);
+    expect(
+      shouldBlockDemoReadOnlyMutation({
+        enabled: true,
+        method: 'POST',
+        pathname: '/api/admin/settings',
+        userId: 'user_123',
+      })
+    ).toBe(false);
+  });
+
+  it('allows exact exempt emails to bypass demo read-only mode', () => {
+    vi.stubEnv('DEMO_READ_ONLY_EXEMPT_EMAILS', 'owner@example.com');
+
+    expect(isDemoReadOnlyIdentityExempt({ email: 'OWNER@example.com' })).toBe(true);
+    expect(
+      shouldBlockDemoReadOnlyMutation({
+        enabled: true,
+        method: 'POST',
+        pathname: '/api/admin/settings',
+        email: 'owner@example.com',
       })
     ).toBe(false);
   });

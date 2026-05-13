@@ -1,6 +1,6 @@
 import { authMiddleware, createAuthRouteMatcher } from '@/lib/auth-provider/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
-import { shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
+import { hasDemoReadOnlyExemptEmailsConfigured, shouldBlockDemoReadOnlyMutation } from '@/lib/demo-readonly';
 import { prisma } from '@/lib/prisma';
 import { isMaintenanceBypassPath, isMaintenanceModeEnabled } from '@/lib/maintenance-mode';
 import { addVisitTrackingHeaders, getOrCreateVisitSessionId, shouldTrackVisit, trackVisit } from '@/lib/visit-tracking';
@@ -90,6 +90,29 @@ async function isAdminUser(userId: string | null): Promise<boolean> {
   }
 }
 
+async function resolveDemoReadOnlyIdentity(authResult: ProxyAuthResult | null): Promise<{ userId: string | null; email: string | null }> {
+  const userId = extractAuthenticatedUserId(authResult);
+  if (!userId) {
+    return { userId: null, email: null };
+  }
+
+  if (!hasDemoReadOnlyExemptEmailsConfigured()) {
+    return { userId, email: null };
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    return { userId, email: user?.email ?? null };
+  } catch (error) {
+    proxyWarn('proxy: demo read-only identity lookup failed', error);
+    return { userId, email: null };
+  }
+}
+
 const isProtectedRoute = createAuthRouteMatcher([
   // NOTE: Dashboard pages already enforce auth via server-side guards
   // (see `requireAuth()` usage under `app/dashboard/*`). Keeping dashboard
@@ -126,11 +149,17 @@ async function continueWithVisitTracking(req: NextRequest) {
 
 export default authMiddleware(async (auth: unknown, req: NextRequest) => {
   const pathname = req.nextUrl.pathname;
+  const initialAuthResult = demoReadOnlyMode ? await resolveAuthResult(auth) : null;
+  const demoReadOnlyIdentity = demoReadOnlyMode
+    ? await resolveDemoReadOnlyIdentity(initialAuthResult)
+    : { userId: null, email: null };
 
   if (shouldBlockDemoReadOnlyMutation({
     enabled: demoReadOnlyMode,
     method: req.method,
     pathname,
+    userId: demoReadOnlyIdentity.userId,
+    email: demoReadOnlyIdentity.email,
   })) {
     return NextResponse.json(
       {
@@ -145,7 +174,7 @@ export default authMiddleware(async (auth: unknown, req: NextRequest) => {
     );
   }
 
-  const authResult = await resolveAuthResult(auth);
+  const authResult = initialAuthResult ?? await resolveAuthResult(auth);
 
   if (await isMaintenanceModeEnabled()) {
     const userId = extractAuthenticatedUserId(authResult);

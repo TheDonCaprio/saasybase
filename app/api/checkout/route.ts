@@ -24,7 +24,7 @@ import { formatCurrency } from '../../../lib/utils/currency';
 import { getOrganizationPlanContext } from '../../../lib/user-plan-context';
 import { resolveCheckoutWorkspaceContext } from '../../../lib/checkout-workspace-context';
 import { workspaceService } from '../../../lib/workspace-service';
-import { isDemoReadOnlyCheckoutInitiationPath } from '../../../lib/demo-readonly';
+import { shouldBlockDemoReadOnlyMutation } from '../../../lib/demo-readonly';
 
 const couponWithPlansInclude = {
   applicablePlans: {
@@ -84,14 +84,23 @@ export async function POST(req: NextRequest) {
   let userId: string | null = null;
 
   try {
-    if (process.env.DEMO_READ_ONLY_MODE === 'true' && isDemoReadOnlyCheckoutInitiationPath(req.nextUrl.pathname)) {
-      return jsonError('Demo mode is read-only. Payments and checkout are disabled in this environment.', 403, 'DEMO_READ_ONLY_CHECKOUT_DISABLED');
-    }
-
     const clientIp = getClientIP(req);
     const userAgent = req.headers.get('user-agent');
     const { userId: clerkUserId, orgId: activeClerkOrgId } = await authService.getSession();
     userId = clerkUserId as string | null;
+    const demoReadOnlyUser = userId
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      : null;
+
+    if (shouldBlockDemoReadOnlyMutation({
+      enabled: process.env.DEMO_READ_ONLY_MODE === 'true',
+      method: req.method,
+      pathname: req.nextUrl.pathname,
+      userId,
+      email: demoReadOnlyUser?.email ?? null,
+    })) {
+      return jsonError('Demo mode is read-only. Payments and checkout are disabled in this environment.', 403, 'DEMO_READ_ONLY_CHECKOUT_DISABLED');
+    }
 
     const limiterKey = userId ? `checkout:user:${userId}` : createRateLimitKey(req, 'checkout');
     const rateLimitResult = await rateLimit(limiterKey, { limit: 10, windowMs: 60000 }, {

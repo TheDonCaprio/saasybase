@@ -64,7 +64,12 @@ export function ReactiveProfileHeader({ fallbackUser, subscription, preformatted
               {displayName}
             </div>
           </div>
-          <div className="text-slate-500 dark:text-neutral-400">{displayEmail}</div>
+          <div className="space-y-1">
+            <div className="text-slate-500 dark:text-neutral-400">{displayEmail}</div>
+            <div className="text-xs font-medium text-slate-400 dark:text-neutral-500">
+              User ID: <span className="font-mono">{fallbackUser.id}</span>
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 gap-3.5 text-sm md:grid-cols-3">
             <div>

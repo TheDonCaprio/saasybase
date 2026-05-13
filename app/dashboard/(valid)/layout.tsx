@@ -16,13 +16,14 @@ import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
 import { Logger } from '../../../lib/logger';
 import { getOrganizationReferenceWhere } from '../../../lib/organization-reference';
 import { requireAuth } from '../../../lib/route-guards';
+import { resolveDemoReadOnlyMode } from '../../../lib/demo-readonly';
 
 import { SidebarFooter } from '../../../components/dashboard/SidebarFooter';
 import { buildDashboardSidebarItems } from '../../../lib/dashboard-nav/groups';
 import type { DashboardNavCounts } from '../../../lib/dashboard-nav/types';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
+  let demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
   const requestHeaders = await headers();
   const requestPath = requestHeaders.get('x-app-request-path');
   const safeReturnPath = requestPath?.startsWith('/dashboard') ? requestPath : '/dashboard';
@@ -64,6 +65,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       // (and potentially reset) on every visit without spiking performance, as it efficiently
       // leverages caching and minimal checks.
       const viewer = await getCurrentUserWithFallback();
+      demoReadOnlyMode = resolveDemoReadOnlyMode({ enabled: demoReadOnlyMode, userId, email: viewer?.email ?? null });
 
       if (viewer?.email) {
         const pendingTeamInvites = await prisma.organizationInvite.count({

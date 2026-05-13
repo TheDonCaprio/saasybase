@@ -8,10 +8,15 @@ import { DemoReadOnlyNotice } from '../../../components/ui/DemoReadOnlyNotice';
 import { buildAdminSidebarGroups } from '../../../lib/admin-nav/groups';
 import type { AdminNavCounts } from '../../../lib/admin-nav/types';
 import { Logger } from '../../../lib/logger';
+import { resolveDemoReadOnlyMode } from '../../../lib/demo-readonly';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
+  let demoReadOnlyMode = process.env.DEMO_READ_ONLY_MODE === 'true';
   const actor = await requireAdminAreaActor();
+  const actorUser = actor.userId
+    ? await prisma.user.findUnique({ where: { id: actor.userId }, select: { email: true } })
+    : null;
+  demoReadOnlyMode = resolveDemoReadOnlyMode({ enabled: demoReadOnlyMode, userId: actor.userId, email: actorUser?.email ?? null });
   let userCount = 0; let payCount = 0; let ticketCount = 0; let unreadNotifications = 0; let purchasesCount = 0; let subscriptionsCount = 0; let couponCount = 0; let logCount = 0; let moderatorLogCount = 0;
   try {
     const [users, pays, tickets, notifications, purchases, subscriptions, coupons] = await Promise.all([

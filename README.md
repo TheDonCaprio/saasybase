@@ -451,6 +451,13 @@ For a fresh local database, run `npx prisma db seed` to create the initial admin
 ### Production
 
 **Option 1 — Direct SQL (most secure)**
+
+Run this in a PostgreSQL client such as `psql` or your database provider's SQL console. Do not paste raw SQL into a normal shell prompt.
+
+```bash
+psql "$DATABASE_URL" -c "UPDATE \"User\" SET role = 'ADMIN' WHERE id = 'user_xxxxxxxxxxxxx';"
+```
+
 ```sql
 UPDATE "User" SET role = 'ADMIN' WHERE id = 'user_xxxxxxxxxxxxx';
 ```

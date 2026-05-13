@@ -4,7 +4,7 @@
 
 A production-ready SaaS boilerplate built with **Next.js 16 App Router**, a **multi-provider auth system** (Clerk, Better Auth, or NextAuth), a **multi-payment provider architecture** (Stripe, Paystack, Paddle, Razorpay), **Prisma 7** with a committed PostgreSQL migration baseline, and a full-featured admin dashboard.
 
-For the app&apos;s built-in documentation, start with `/docs/getting-started`, `/docs/seo-and-discoverability`, `/docs/deployment`, and `/docs/secrets`. The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
+For the hosted documentation, start with [Getting Started](https://saasybase.com/docs/getting-started), [SEO & Discoverability](https://saasybase.com/docs/seo-and-discoverability), [Deployment](https://saasybase.com/docs/deployment), and [Secrets](https://saasybase.com/docs/secrets). The repository markdown files are the deeper operator notes and copy-paste examples behind those pages.
 
 ## Sponsor SaaSyBase
 

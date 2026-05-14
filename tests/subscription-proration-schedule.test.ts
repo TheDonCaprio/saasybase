@@ -5,6 +5,10 @@ const prismaMock = vi.hoisted(() => ({
 		findUnique: vi.fn(),
 		update: vi.fn(),
 	},
+	featureUsageLog: {
+		aggregate: vi.fn(),
+		create: vi.fn(),
+	},
 	subscription: {
 		findFirst: vi.fn(),
 		create: vi.fn(),
@@ -33,6 +37,7 @@ vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/auth-provider', () => ({ authService: { getSession: vi.fn(async () => ({ userId: 'user_1', orgId: null })) } }));
 vi.mock('../lib/payment/service', () => ({ paymentService: paymentServiceMock }));
 vi.mock('../lib/settings', () => ({
+	getRecurringDowngradeImmediateLimitPerCycle: vi.fn(async () => 0),
 	isRecurringProrationEnabled: vi.fn(async () => true),
 	shouldResetPaidTokensOnRenewalForPlanAutoRenew: vi.fn(async () => false),
 }));
@@ -61,7 +66,7 @@ vi.mock('../lib/utils/provider-ids', () => ({
 
 import { GET, POST } from '../app/api/subscription/proration/route';
 import { sendBillingNotification } from '../lib/notifications';
-import { shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../lib/settings';
+import { getRecurringDowngradeImmediateLimitPerCycle, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../lib/settings';
 import { resetOrganizationSharedTokens } from '../lib/teams';
 import { NextRequest } from 'next/server';
 
@@ -106,6 +111,8 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		});
 
 		prismaMock.organization.findUnique.mockResolvedValue(null);
+		prismaMock.featureUsageLog.aggregate.mockResolvedValue({ _sum: { count: 0 } });
+		prismaMock.featureUsageLog.create.mockResolvedValue({ id: 'usage_1' });
 	});
 
 	it('sets the new finite allotment when switching from unlimited to limited recurring access', async () => {
@@ -389,6 +396,103 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		expect(sendBillingNotification).not.toHaveBeenCalled();
 	});
 
+	it('GET blocks Paystack plan changes when a cycle-end switch is already scheduled', async () => {
+		prismaMock.user.findUnique.mockResolvedValueOnce({
+			id: 'user_1',
+			externalCustomerId: 'cust_ps_1',
+			externalCustomerIds: JSON.stringify({ paystack: 'cust_ps_1' }),
+		});
+
+		prismaMock.subscription.findFirst.mockResolvedValueOnce({
+			id: 'sub_db_paystack_current',
+			planId: 'plan_current',
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_ps_current',
+			externalSubscriptionIds: JSON.stringify({ paystack: 'sub_ps_current' }),
+			paymentProvider: 'paystack',
+			scheduledPlanId: 'plan_scheduled_paystack',
+			scheduledPlanDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			organizationId: null,
+			plan: { id: 'plan_current', name: 'Current', priceCents: 1000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValueOnce({
+			id: 'plan_target_paystack',
+			name: 'Target Pro',
+			priceCents: 3000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 500,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ paystack: 'plan_ps_target' }),
+		});
+
+		const req = new NextRequest('http://localhost/api/subscription/proration?planId=plan_target_paystack');
+		const res = await GET(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(409);
+		expect(body.code).toBe('PAYSTACK_PENDING_SCHEDULED_CHANGE');
+		expect(providerMock.updateSubscriptionPlan).not.toHaveBeenCalled();
+		expect(providerMock.scheduleSubscriptionPlanChange).not.toHaveBeenCalled();
+	});
+
+	it('POST blocks Paystack immediate plan changes when a cycle-end switch is already scheduled', async () => {
+		prismaMock.user.findUnique.mockResolvedValueOnce({
+			id: 'user_1',
+			externalCustomerId: 'cust_ps_1',
+			externalCustomerIds: JSON.stringify({ paystack: 'cust_ps_1' }),
+		});
+
+		prismaMock.subscription.findFirst.mockResolvedValueOnce({
+			id: 'sub_db_paystack_current',
+			planId: 'plan_current',
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_ps_current',
+			externalSubscriptionIds: JSON.stringify({ paystack: 'sub_ps_current' }),
+			paymentProvider: 'paystack',
+			scheduledPlanId: 'plan_scheduled_paystack',
+			scheduledPlanDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			organizationId: null,
+			plan: { id: 'plan_current', name: 'Current', priceCents: 1000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValueOnce({
+			id: 'plan_target_paystack',
+			name: 'Target Pro',
+			priceCents: 3000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 500,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ paystack: 'plan_ps_target' }),
+		});
+
+		const req = new Request('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ planId: 'plan_target_paystack' }),
+		});
+
+		const res = await POST(toNextRequest(req));
+		const body = await res.json();
+
+		expect(res.status).toBe(409);
+		expect(body.code).toBe('PAYSTACK_PENDING_SCHEDULED_CHANGE');
+		expect(providerMock.updateSubscriptionPlan).not.toHaveBeenCalled();
+		expect(providerMock.scheduleSubscriptionPlanChange).not.toHaveBeenCalled();
+	});
+
 	it('maps Stripe card_declined error to 402', async () => {
 		const stripeError = new Error('Failed to update subscription plan');
 		(stripeError as MutableError).originalError = { code: 'card_declined', decline_code: 'insufficient_funds' };
@@ -663,6 +767,203 @@ describe('POST /api/subscription/proration (scheduleAt=cycle_end)', () => {
 		// Should call scheduleSubscriptionPlanChange, NOT updateSubscriptionPlan
 		expect(providerMock.scheduleSubscriptionPlanChange).toHaveBeenCalled();
 		expect(providerMock.updateSubscriptionPlan).not.toHaveBeenCalled();
+	});
+
+	it('GET marks downgrade as cycle-end-only once the immediate downgrade limit is reached', async () => {
+		providerMock.supportsFeature.mockImplementation((f: string) => f === 'subscription_updates');
+		vi.mocked(getRecurringDowngradeImmediateLimitPerCycle).mockResolvedValueOnce(2);
+		prismaMock.featureUsageLog.aggregate.mockResolvedValueOnce({ _sum: { count: 2 } });
+
+		const now = Date.now();
+		const startedAt = new Date(now - 15 * 24 * 3600 * 1000);
+		const expiresAt = new Date(now + 15 * 24 * 3600 * 1000);
+
+		prismaMock.subscription.findFirst.mockResolvedValue({
+			id: 'sub_db_1',
+			planId: 'plan_current',
+			startedAt,
+			expiresAt,
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_1',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
+			paymentProvider: 'razorpay',
+			plan: { id: 'plan_current', name: 'Pro', priceCents: 2000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValue({
+			id: 'plan_target',
+			name: 'Basic',
+			priceCents: 1000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 50,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_basic' }),
+		});
+
+		const req = new NextRequest('http://localhost/api/subscription/proration?planId=plan_target');
+		const res = await GET(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.prorationEnabled).toBe(true);
+		expect(body.isDowngrade).toBe(true);
+		expect(body.downgradeScheduledAtCycleEnd).toBe(true);
+		expect(body.amountDue).toBe(0);
+		expect(body.lineItems).toEqual([]);
+	});
+
+	it('GET keeps forced scheduling in the no-preview fallback when the downgrade limit is reached', async () => {
+		providerMock.supportsFeature.mockImplementation((f: string) => f === 'subscription_updates');
+		vi.mocked(getRecurringDowngradeImmediateLimitPerCycle).mockResolvedValueOnce(2);
+		prismaMock.featureUsageLog.aggregate.mockResolvedValueOnce({ _sum: { count: 2 } });
+
+		prismaMock.subscription.findFirst.mockResolvedValue({
+			id: 'sub_db_1',
+			planId: 'plan_current',
+			startedAt: undefined,
+			expiresAt: new Date('2025-08-01T00:00:00.000Z'),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_1',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
+			paymentProvider: 'razorpay',
+			plan: { id: 'plan_current', name: 'Pro', priceCents: 2000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValue({
+			id: 'plan_target',
+			name: 'Basic',
+			priceCents: 1000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 50,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_basic' }),
+		});
+
+		const req = new NextRequest('http://localhost/api/subscription/proration?planId=plan_target');
+		const res = await GET(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.prorationEnabled).toBe(true);
+		expect(body.downgradeScheduledAtCycleEnd).toBe(true);
+		expect(body.amountDue).toBe(0);
+		expect(body.lineItems).toEqual([]);
+	});
+
+	it('POST auto-schedules downgrade when the immediate downgrade limit is reached', async () => {
+		providerMock.supportsFeature.mockReturnValue(true);
+		providerMock.scheduleSubscriptionPlanChange.mockResolvedValue({
+			success: true,
+			newPeriodEnd: new Date('2025-08-01'),
+		});
+		vi.mocked(getRecurringDowngradeImmediateLimitPerCycle).mockResolvedValueOnce(1);
+		prismaMock.featureUsageLog.aggregate.mockResolvedValueOnce({ _sum: { count: 1 } });
+
+		prismaMock.subscription.findFirst.mockResolvedValue({
+			id: 'sub_db_1',
+			planId: 'plan_current',
+			startedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+			expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_1',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
+			paymentProvider: 'razorpay',
+			plan: { id: 'plan_current', name: 'Pro', priceCents: 2000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValue({
+			id: 'plan_target',
+			name: 'Basic',
+			priceCents: 1000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 50,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_basic' }),
+		});
+
+		const req = new NextRequest('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			body: JSON.stringify({ planId: 'plan_target' }),
+			headers: { 'Content-Type': 'application/json' },
+		});
+		const res = await POST(req);
+		const body = await res.json();
+
+		expect(res.status).toBe(200);
+		expect(body.ok).toBe(true);
+		expect(body.scheduled).toBe(true);
+		expect(providerMock.scheduleSubscriptionPlanChange).toHaveBeenCalled();
+		expect(providerMock.updateSubscriptionPlan).not.toHaveBeenCalled();
+		expect(prismaMock.featureUsageLog.create).not.toHaveBeenCalled();
+	});
+
+	it('POST records immediate recurring downgrade usage after a successful inline downgrade', async () => {
+		providerMock.supportsFeature.mockReturnValue(true);
+		providerMock.updateSubscriptionPlan.mockResolvedValue({
+			success: true,
+			newPeriodEnd: new Date('2025-08-01T00:00:00.000Z'),
+		});
+		vi.mocked(getRecurringDowngradeImmediateLimitPerCycle).mockResolvedValueOnce(2);
+		prismaMock.featureUsageLog.aggregate.mockResolvedValueOnce({ _sum: { count: 0 } });
+
+		prismaMock.subscription.findFirst.mockResolvedValue({
+			id: 'sub_db_1',
+			planId: 'plan_current',
+			startedAt: new Date('2025-07-01T00:00:00.000Z'),
+			expiresAt: new Date('2025-08-01T00:00:00.000Z'),
+			status: 'ACTIVE',
+			externalSubscriptionId: 'sub_rzp_1',
+			externalSubscriptionIds: JSON.stringify({ razorpay: 'sub_rzp_1' }),
+			paymentProvider: 'razorpay',
+			plan: { id: 'plan_current', name: 'Pro', priceCents: 2000, autoRenew: true, recurringInterval: 'month', recurringIntervalCount: 1, tokenLimit: 100 },
+		});
+
+		prismaMock.plan.findUnique.mockResolvedValue({
+			id: 'plan_target',
+			name: 'Basic',
+			priceCents: 1000,
+			autoRenew: true,
+			recurringInterval: 'month',
+			recurringIntervalCount: 1,
+			tokenLimit: 50,
+			supportsOrganizations: false,
+			organizationSeatLimit: null,
+			organizationTokenPoolStrategy: null,
+			externalPriceId: null,
+			externalPriceIds: JSON.stringify({ razorpay: 'plan_rzp_basic' }),
+		});
+
+		const req = new NextRequest('http://localhost/api/subscription/proration', {
+			method: 'POST',
+			body: JSON.stringify({ planId: 'plan_target' }),
+			headers: { 'Content-Type': 'application/json' },
+		});
+		const res = await POST(req);
+
+		expect(res.status).toBe(200);
+		expect(providerMock.updateSubscriptionPlan).toHaveBeenCalled();
+		expect(prismaMock.featureUsageLog.create).toHaveBeenCalledWith(expect.objectContaining({
+			data: expect.objectContaining({
+				userId: 'user_1',
+				feature: 'subscription.immediate_downgrade',
+				count: 1,
+			}),
+		}));
 	});
 
 	it('immediate org plan switch resets org token bucket instead of user balance', async () => {

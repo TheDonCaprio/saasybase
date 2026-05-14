@@ -26,6 +26,28 @@ export class StripePaymentProvider implements PaymentProvider {
     private stripe: Stripe;
     private priceCache = new Map<string, Stripe.Price>();
 
+    private getScheduleId(value: unknown): string | null {
+        if (typeof value === 'string' && value.length > 0) return value;
+        if (value && typeof value === 'object') {
+            const rec = value as Record<string, unknown>;
+            if (typeof rec.id === 'string' && rec.id.length > 0) return rec.id;
+        }
+        return null;
+    }
+
+    private async releaseAttachedScheduleIfPresent(subscription: Stripe.Subscription): Promise<void> {
+        const scheduleId = this.getScheduleId((subscription as Stripe.Subscription & { schedule?: unknown }).schedule);
+        if (!scheduleId) return;
+
+        const schedule = await this.stripe.subscriptionSchedules.retrieve(scheduleId);
+        const status = schedule.status as string;
+        if (status === 'released' || status === 'canceled' || status === 'completed') {
+            return;
+        }
+
+        await this.stripe.subscriptionSchedules.release(scheduleId);
+    }
+
     constructor(secretKey: string) {
         if (!secretKey) {
             throw new ConfigurationError('Stripe secret key is missing');
@@ -782,6 +804,7 @@ export class StripePaymentProvider implements PaymentProvider {
         void userId;
         try {
             const sub = await this.stripe.subscriptions.retrieve(subscriptionId);
+            await this.releaseAttachedScheduleIfPresent(sub);
             const items = sub.items.data;
             const primaryItem = items.find(item => item.price.recurring) || items[0];
 
@@ -826,12 +849,6 @@ export class StripePaymentProvider implements PaymentProvider {
     async scheduleSubscriptionPlanChange(subscriptionId: string, newPriceId: string, userId: string): Promise<SubscriptionUpdateResult> {
         void userId;
         try {
-            const hasStringId = (value: unknown): value is { id: string } => {
-                if (!value || typeof value !== 'object') return false;
-                const rec = value as Record<string, unknown>;
-                return typeof rec.id === 'string' && rec.id.length > 0;
-            };
-
             // Retrieve subscription and determine the primary recurring item.
             const sub = await this.stripe.subscriptions.retrieve(subscriptionId);
             const items = sub.items.data;
@@ -865,10 +882,7 @@ export class StripePaymentProvider implements PaymentProvider {
             }
 
             // Get or create a subscription schedule attached to this subscription.
-            const scheduleRef: unknown = (sub as unknown as { schedule?: unknown }).schedule;
-            const existingScheduleId = typeof scheduleRef === 'string'
-                ? scheduleRef
-                : (hasStringId(scheduleRef) ? scheduleRef.id : null);
+            const existingScheduleId = this.getScheduleId((sub as { schedule?: unknown }).schedule);
 
             let scheduleId = existingScheduleId;
             if (scheduleId) {

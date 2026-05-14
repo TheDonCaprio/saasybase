@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 type StripeMockState = {
 	prices: { retrieve: ReturnType<typeof vi.fn> };
 	subscriptions: { retrieve: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
-	subscriptionSchedules: { create: ReturnType<typeof vi.fn>; retrieve: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+	subscriptionSchedules: { create: ReturnType<typeof vi.fn>; retrieve: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
 	checkout: { sessions: { create: ReturnType<typeof vi.fn>; retrieve: ReturnType<typeof vi.fn> } };
 	customers: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 	billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
@@ -33,6 +33,7 @@ vi.mock('stripe', () => {
 			create: vi.fn(),
 			retrieve: vi.fn(),
 			update: vi.fn(),
+			release: vi.fn(),
 		},
 		checkout: {
 			sessions: {
@@ -290,5 +291,45 @@ describe('Stripe scheduled plan change', () => {
 		// Update should use the fresh schedule, not the stale one
 		const [scheduleId] = m.subscriptionSchedules.update.mock.calls[0];
 		expect(scheduleId).toBe('sub_sched_fresh');
+	});
+
+	it('releases an attached schedule before an immediate subscription update', async () => {
+		const m = getStripeMock();
+
+		m.subscriptions.retrieve.mockResolvedValue({
+			id: 'sub_123',
+			items: {
+				data: [
+					{
+						id: 'si_123',
+						quantity: 1,
+						price: {
+							id: 'price_old',
+							recurring: { interval: 'month', interval_count: 1 },
+						},
+					},
+				],
+			},
+			schedule: 'sub_sched_1',
+		});
+
+		m.subscriptionSchedules.retrieve.mockResolvedValue({ id: 'sub_sched_1', status: 'active' });
+		m.subscriptionSchedules.release.mockResolvedValue({ id: 'sub_sched_1', status: 'released' });
+		m.subscriptions.update.mockResolvedValue({
+			id: 'sub_123',
+			current_period_end: 1702592000,
+			latest_invoice: null,
+		});
+
+		const provider = new StripePaymentProvider('sk_test_dummy');
+		const res = await provider.updateSubscriptionPlan('sub_123', 'price_new', 'user_1');
+
+		expect(res.success).toBe(true);
+		expect(m.subscriptionSchedules.retrieve).toHaveBeenCalledWith('sub_sched_1');
+		expect(m.subscriptionSchedules.release).toHaveBeenCalledWith('sub_sched_1');
+		expect(m.subscriptions.update).toHaveBeenCalledWith('sub_123', expect.objectContaining({
+			cancel_at_period_end: false,
+			proration_behavior: 'always_invoice',
+		}));
 	});
 });

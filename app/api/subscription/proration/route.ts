@@ -8,7 +8,11 @@ import { getActiveCurrencyAsync } from '../../../../lib/payment/registry';
 import { Logger } from '../../../../lib/logger';
 import { PLAN_DEFINITIONS, resolveSeededPlanPriceForProvider, syncPlanExternalPriceIds } from '../../../../lib/plans';
 import { syncOrganizationBillingMetadata } from '../../../../lib/organization-billing-metadata';
-import { isRecurringProrationEnabled, shouldResetPaidTokensOnRenewalForPlanAutoRenew } from '../../../../lib/settings';
+import {
+  getRecurringDowngradeImmediateLimitPerCycle,
+  isRecurringProrationEnabled,
+  shouldResetPaidTokensOnRenewalForPlanAutoRenew,
+} from '../../../../lib/settings';
 import { sendBillingNotification, sendAdminNotificationEmail } from '../../../../lib/notifications';
 import type { Prisma } from '@/lib/prisma-client';
 import { toError, asRecord } from '../../../../lib/runtime-guards';
@@ -75,6 +79,132 @@ function normalizePriceToDailyRate(priceCents: number, interval: string | null, 
     case 'year':  return totalPerCycle / (365 * count);
     default:      return totalPerCycle; // non-recurring or unknown
   }
+}
+
+const IMMEDIATE_RECURRING_DOWNGRADE_FEATURE = 'subscription.immediate_downgrade';
+const CYCLE_END_MATCH_SLOP_MS = 60 * 1000;
+
+type DowngradeGuardState = {
+  isDowngrade: boolean;
+  downgradeScheduledAtCycleEnd: boolean;
+  immediateDowngradeLimit: number;
+  immediateDowngradeCount: number;
+};
+
+function isRecurringDowngrade(currentPlan: SubscriptionWithPlan['plan'], targetPlan: PlanRecord): boolean {
+  const currentDailyRate = normalizePriceToDailyRate(
+    currentPlan.priceCents,
+    currentPlan.recurringInterval,
+    currentPlan.recurringIntervalCount,
+  );
+  const targetDailyRate = normalizePriceToDailyRate(
+    targetPlan.priceCents,
+    targetPlan.recurringInterval,
+    targetPlan.recurringIntervalCount,
+  );
+
+  return targetDailyRate < currentDailyRate;
+}
+
+async function countImmediateRecurringDowngradesForCycle(userId: string, cycleEndAt: Date): Promise<number> {
+  const aggregate = await prisma.featureUsageLog.aggregate({
+    where: {
+      userId,
+      feature: IMMEDIATE_RECURRING_DOWNGRADE_FEATURE,
+      periodEnd: {
+        gte: new Date(cycleEndAt.getTime() - CYCLE_END_MATCH_SLOP_MS),
+        lte: new Date(cycleEndAt.getTime() + CYCLE_END_MATCH_SLOP_MS),
+      },
+    },
+    _sum: { count: true },
+  });
+
+  return Math.max(0, Number(aggregate._sum.count ?? 0));
+}
+
+async function getDowngradeGuardState(ctx: ProrationContext): Promise<DowngradeGuardState> {
+  const isDowngrade = isRecurringDowngrade(ctx.currentSubscription.plan, ctx.targetPlan);
+  if (!isDowngrade || !ctx.currentSubscription.expiresAt) {
+    return {
+      isDowngrade,
+      downgradeScheduledAtCycleEnd: false,
+      immediateDowngradeLimit: 0,
+      immediateDowngradeCount: 0,
+    };
+  }
+
+  const immediateDowngradeLimit = await getRecurringDowngradeImmediateLimitPerCycle();
+  if (immediateDowngradeLimit <= 0) {
+    return {
+      isDowngrade,
+      downgradeScheduledAtCycleEnd: false,
+      immediateDowngradeLimit,
+      immediateDowngradeCount: 0,
+    };
+  }
+
+  const immediateDowngradeCount = await countImmediateRecurringDowngradesForCycle(
+    ctx.userId,
+    ctx.currentSubscription.expiresAt,
+  );
+
+  return {
+    isDowngrade,
+    downgradeScheduledAtCycleEnd: immediateDowngradeCount >= immediateDowngradeLimit,
+    immediateDowngradeLimit,
+    immediateDowngradeCount,
+  };
+}
+
+async function buildScheduledDowngradePreview(ctx: ProrationContext, state: DowngradeGuardState) {
+  const currency = await getActiveCurrencyAsync();
+
+  return NextResponse.json({
+    prorationEnabled: true,
+    supportsInlineSwitch: true,
+    providerKey: ctx.providerKey,
+    isEstimate: false,
+    isDowngrade: true,
+    downgradeScheduledAtCycleEnd: true,
+    amountDue: 0,
+    currency,
+    lineItems: [],
+    currentPlan: {
+      id: ctx.currentSubscription.plan.id,
+      name: ctx.currentSubscription.plan.name,
+      priceCents: ctx.currentSubscription.plan.priceCents,
+    },
+    targetPlan: {
+      id: ctx.targetPlan.id,
+      name: ctx.targetPlan.name,
+      priceCents: ctx.targetPlan.priceCents,
+    },
+    currentPeriodEnd: ctx.currentSubscription.expiresAt ? ctx.currentSubscription.expiresAt.toISOString() : null,
+    immediateDowngradeLimit: state.immediateDowngradeLimit,
+    immediateDowngradeCount: state.immediateDowngradeCount,
+    reason: 'DOWNGRADE_LIMIT_REACHED',
+    code: 'DOWNGRADE_LIMIT_REACHED',
+  });
+}
+
+function getPaystackScheduledChangeConflictResponse(ctx: ProrationContext): NextResponse | null {
+  if (ctx.providerKey !== 'paystack' || !ctx.currentSubscription.scheduledPlanId) {
+    return null;
+  }
+
+  if (ctx.currentSubscription.scheduledPlanId === ctx.targetPlan.id) {
+    return jsonError(
+      'This Paystack plan change is already scheduled for the end of your current billing cycle.',
+      409,
+      'PAYSTACK_PLAN_CHANGE_ALREADY_SCHEDULED',
+    );
+  }
+
+  return jsonError(
+    'You already have a Paystack plan change scheduled for the end of your current billing cycle. Let that change complete before making another plan switch.',
+    409,
+    'PAYSTACK_PENDING_SCHEDULED_CHANGE',
+  );
 }
 
 async function fetchCurrentSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
@@ -261,6 +391,9 @@ export async function GET(req: NextRequest) {
     if (!planId) return badRequest('Missing planId');
 
     const ctx = await resolveContext(planId, actorUserId);
+    const paystackScheduledChangeConflict = getPaystackScheduledChangeConflictResponse(ctx);
+    if (paystackScheduledChangeConflict) return paystackScheduledChangeConflict;
+    const downgradeGuard = await getDowngradeGuardState(ctx);
 
     // If a previous immediate proration switch is still being processed (invoice
     // not yet captured), tell the frontend so it can show a processing state.
@@ -295,27 +428,17 @@ export async function GET(req: NextRequest) {
         // Don't show an estimated proration breakdown — just allow the switch with
         // plan info and upgrade/downgrade detection.
         if (ctx.providerKey === 'paystack') {
-          const { expiresAt } = ctx.currentSubscription;
-          const currentPriceCents = ctx.currentSubscription.plan.priceCents;
-          const targetPriceCents = ctx.targetPlan.priceCents;
+          if (downgradeGuard.downgradeScheduledAtCycleEnd) {
+            return buildScheduledDowngradePreview(ctx, downgradeGuard);
+          }
 
-          const currentDailyRate = normalizePriceToDailyRate(
-            currentPriceCents,
-            ctx.currentSubscription.plan.recurringInterval,
-            ctx.currentSubscription.plan.recurringIntervalCount,
-          );
-          const targetDailyRate = normalizePriceToDailyRate(
-            targetPriceCents,
-            ctx.targetPlan.recurringInterval,
-            ctx.targetPlan.recurringIntervalCount,
-          );
-          const isDowngrade = targetDailyRate < currentDailyRate;
+          const { expiresAt } = ctx.currentSubscription;
 
           return NextResponse.json({
             prorationEnabled: false,
             supportsInlineSwitch: true,
             providerKey: ctx.providerKey,
-            isDowngrade,
+            isDowngrade: downgradeGuard.isDowngrade,
             downgradeScheduledAtCycleEnd: false,
             reason: 'PROVIDER_PRORATION_UNSUPPORTED',
             code: 'PROVIDER_PRORATION_UNSUPPORTED',
@@ -351,26 +474,16 @@ export async function GET(req: NextRequest) {
 
           const currency = await getActiveCurrencyAsync();
 
-          // Detect downgrades using normalized daily rates so that cross-interval
-          // switches are compared fairly (e.g. $300/month vs $100/day).
-          const currentDailyRate = normalizePriceToDailyRate(
-            currentPriceCents,
-            ctx.currentSubscription.plan.recurringInterval,
-            ctx.currentSubscription.plan.recurringIntervalCount,
-          );
-          const targetDailyRate = normalizePriceToDailyRate(
-            targetPriceCents,
-            ctx.targetPlan.recurringInterval,
-            ctx.targetPlan.recurringIntervalCount,
-          );
-          const isDowngrade = targetDailyRate < currentDailyRate;
+          if (downgradeGuard.downgradeScheduledAtCycleEnd) {
+            return buildScheduledDowngradePreview(ctx, downgradeGuard);
+          }
 
           return NextResponse.json({
             prorationEnabled: true,
             isEstimate: true,
             supportsInlineSwitch: true,
             providerKey: ctx.providerKey,
-            isDowngrade,
+            isDowngrade: downgradeGuard.isDowngrade,
             downgradeScheduledAtCycleEnd: false,
             amountDue,
             currency,
@@ -394,10 +507,16 @@ export async function GET(req: NextRequest) {
         }
 
         // Fallback when dates are unavailable — allow switch without preview.
+        if (downgradeGuard.downgradeScheduledAtCycleEnd) {
+          return buildScheduledDowngradePreview(ctx, downgradeGuard);
+        }
+
         return NextResponse.json({
           prorationEnabled: false,
           supportsInlineSwitch: true,
           providerKey: ctx.providerKey,
+          isDowngrade: downgradeGuard.isDowngrade,
+          downgradeScheduledAtCycleEnd: false,
           reason: 'PROVIDER_PRORATION_UNSUPPORTED',
           code: 'PROVIDER_PRORATION_UNSUPPORTED',
           currentPlan: {
@@ -414,6 +533,11 @@ export async function GET(req: NextRequest) {
       }
       return prorationDisabledResponse('PROVIDER_PRORATION_UNSUPPORTED');
     }
+
+    if (downgradeGuard.downgradeScheduledAtCycleEnd) {
+      return buildScheduledDowngradePreview(ctx, downgradeGuard);
+    }
+
     const preview = await provider.getProrationPreview(
       ctx.currentSubscription.externalSubscriptionId!,
       ctx.targetExternalPriceId,
@@ -433,7 +557,11 @@ export async function GET(req: NextRequest) {
         name: ctx.targetPlan.name,
         priceCents: ctx.targetPlan.priceCents,
       },
-      currentPeriodEnd: null // Provider preview might not return this easily without extra call, or we can add it to result
+      currentPeriodEnd: ctx.currentSubscription.expiresAt ? ctx.currentSubscription.expiresAt.toISOString() : null,
+      isDowngrade: downgradeGuard.isDowngrade,
+      downgradeScheduledAtCycleEnd: false,
+      immediateDowngradeLimit: downgradeGuard.immediateDowngradeLimit,
+      immediateDowngradeCount: downgradeGuard.immediateDowngradeCount,
     });
   } catch (err) {
     const error = toError(err);
@@ -503,13 +631,16 @@ export async function POST(req: NextRequest) {
     const directDowngradeSchedule = body['downgradeScheduledAtCycleEnd'] === true;
 
     const ctx = await resolveContext(planId, actorUserId);
+    const paystackScheduledChangeConflict = getPaystackScheduledChangeConflictResponse(ctx);
+    if (paystackScheduledChangeConflict) return paystackScheduledChangeConflict;
+    const downgradeGuard = await getDowngradeGuardState(ctx);
 
     // Use the subscription's originating provider to update subscription
     const provider = paymentService.getProviderForRecord(ctx.providerKey);
 
     // Schedule a cycle-end plan change when the provider supports it.
     // This is used by providers like Razorpay that can update plan_id at renewal.
-    if (scheduleAt === 'cycle_end' || directDowngradeSchedule) {
+    if (scheduleAt === 'cycle_end' || directDowngradeSchedule || downgradeGuard.downgradeScheduledAtCycleEnd) {
       if (typeof provider.scheduleSubscriptionPlanChange !== 'function') {
         return prorationDisabledResponse('PROVIDER_SCHEDULED_PLAN_CHANGE_UNSUPPORTED');
       }
@@ -853,6 +984,24 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       const e = toError(err);
       Logger.warn('Failed to apply paid-token operation after proration', { error: e.message, userId: ctx.userId });
+    }
+
+    try {
+      if (downgradeGuard.isDowngrade) {
+        const cycleEndAt = expiresAtValue ?? ctx.currentSubscription.expiresAt ?? now;
+        await prisma.featureUsageLog.create({
+          data: {
+            userId: ctx.userId,
+            feature: IMMEDIATE_RECURRING_DOWNGRADE_FEATURE,
+            count: 1,
+            periodStart: now,
+            periodEnd: cycleEndAt,
+          },
+        });
+      }
+    } catch (err) {
+      const e = toError(err);
+      Logger.warn('Failed to record immediate recurring downgrade usage log', { error: e.message, userId: ctx.userId });
     }
 
     // Notify user about the plan change (upgrade/downgrade) on recurring swaps.

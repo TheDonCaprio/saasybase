@@ -141,6 +141,7 @@ export const SETTING_KEYS = {
   DEFAULT_TOKEN_LABEL: 'DEFAULT_TOKEN_LABEL',
   SUPPORT_AUTO_SET_IN_PROGRESS: 'SUPPORT_AUTO_SET_IN_PROGRESS',
   ENABLE_RECURRING_PRORATION: 'ENABLE_RECURRING_PRORATION',
+  RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE: 'RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE',
   FORMAT_MODE: 'format.mode',
   FORMAT_TIMEZONE: 'format.timezone',
   DEFAULT_CURRENCY: 'DEFAULT_CURRENCY',
@@ -635,6 +636,7 @@ export const SETTING_DEFAULTS = {
   // When true, admin replies will automatically set an OPEN ticket to IN_PROGRESS
   [SETTING_KEYS.SUPPORT_AUTO_SET_IN_PROGRESS]: 'true',
   [SETTING_KEYS.ENABLE_RECURRING_PRORATION]: 'true',
+  [SETTING_KEYS.RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE]: '2',
   [SETTING_KEYS.FORMAT_MODE]: 'numeric-dmy-24',
   [SETTING_KEYS.FORMAT_TIMEZONE]: '',
   [SETTING_KEYS.ANNOUNCEMENT_MESSAGE]: '',
@@ -1089,6 +1091,23 @@ export async function isRecurringProrationEnabled(): Promise<boolean> {
     SETTING_DEFAULTS[SETTING_KEYS.ENABLE_RECURRING_PRORATION]
   );
   return raw !== 'false';
+}
+
+export async function getRecurringDowngradeImmediateLimitPerCycle(): Promise<number> {
+  const raw = await getSetting(
+    SETTING_KEYS.RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE,
+    SETTING_DEFAULTS[SETTING_KEYS.RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE]
+  );
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
+    return Number.parseInt(
+      SETTING_DEFAULTS[SETTING_KEYS.RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE],
+      10,
+    ) || 0;
+  }
+
+  return parsed;
 }
 
 export function isRecurringPlan(plan?: { autoRenew?: boolean | null }): boolean {

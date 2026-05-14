@@ -118,7 +118,7 @@ function formatLoadAverage(values: number[]) {
   const [oneMinute = 0, fiveMinute = 0, fifteenMinute = 0] = values;
   return [oneMinute, fiveMinute, fifteenMinute]
     .map((value) => value.toFixed(2))
-    .join('/');
+    .join(' / ');
 }
 
 function resolveNodeEnvironmentLabel() {

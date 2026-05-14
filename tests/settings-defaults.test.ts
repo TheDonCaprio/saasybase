@@ -9,6 +9,7 @@ describe('fresh install setting defaults', () => {
     expect(SETTING_DEFAULTS[SETTING_KEYS.TOKENS_RESET_ON_EXPIRY_RECURRING]).toBe('true');
     expect(SETTING_DEFAULTS[SETTING_KEYS.TOKENS_RESET_ON_RENEWAL_RECURRING]).toBe('true');
     expect(SETTING_DEFAULTS[SETTING_KEYS.ENABLE_RECURRING_PRORATION]).toBe('true');
+    expect(SETTING_DEFAULTS[SETTING_KEYS.RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE]).toBe('2');
   });
 
   it('matches the expected notification defaults', () => {

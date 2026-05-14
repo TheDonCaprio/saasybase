@@ -5,6 +5,7 @@ import { getSetting, setSetting, clearSettingsCache, SETTING_DEFAULTS } from '..
 import { prisma } from '../../../../lib/prisma';
 import { Logger } from '../../../../lib/logger';
 import { asRecord, toError } from '../../../../lib/runtime-guards';
+import { normalizeAdminSettingValue, validateAdminSettingValue } from '../../../../lib/admin-settings-validation';
 import { adminRateLimit } from '../../../../lib/rateLimit';
 import { PAYMENT_PROVIDERS, getActivePaymentProvider } from '../../../../lib/payment/provider-config';
 import { recordAdminAction } from '../../../../lib/admin-actions';
@@ -106,6 +107,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: lengthError }, { status: 400 });
     }
 
+    const normalizedValue = normalizeAdminSettingValue(key, String(value ?? ''));
+    const valueError = validateAdminSettingValue(key, normalizedValue);
+    if (valueError) {
+      return NextResponse.json({ error: valueError }, { status: 400 });
+    }
+
     // Server-side validation for provider-restricted currency selection.
     if (key === 'DEFAULT_CURRENCY') {
       const desired = normalizeCurrencyCode(value);
@@ -127,7 +134,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = await setSetting(key, String(value ?? ''));
+    const result = await setSetting(key, normalizedValue);
     clearSettingsCache();
     revalidatePath('/', 'layout');
     await recordAdminAction({
@@ -191,10 +198,16 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: lengthError }, { status: 400 });
       }
 
+      const normalizedValue = normalizeAdminSettingValue(key, String(value ?? ''));
+      const valueError = validateAdminSettingValue(key, normalizedValue);
+      if (valueError) {
+        return NextResponse.json({ error: valueError }, { status: 400 });
+      }
+
       const setting = await prisma.setting.upsert({
         where: { key },
-        update: { value: String(value ?? '') },
-        create: { key, value: String(value ?? '') },
+        update: { value: normalizedValue },
+        create: { key, value: normalizedValue },
         select: { key: true, value: true }
       });
 
@@ -229,7 +242,12 @@ export async function PATCH(req: NextRequest) {
       if (lengthError) {
         return NextResponse.json({ error: lengthError }, { status: 400 });
       }
-      updates.push({ key, value });
+      const normalizedValue = normalizeAdminSettingValue(key, value);
+      const valueError = validateAdminSettingValue(key, normalizedValue);
+      if (valueError) {
+        return NextResponse.json({ error: valueError }, { status: 400 });
+      }
+      updates.push({ key, value: normalizedValue });
       if (updates.length >= 50) break;
     }
     if (updates.length === 0) return NextResponse.json({ error: 'missing updates' }, { status: 400 });

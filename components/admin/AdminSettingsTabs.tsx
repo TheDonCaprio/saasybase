@@ -295,7 +295,8 @@ export function AdminSettingsTabs({ databaseSettings, moderatorPermissions, traf
                 'FREE_PLAN_RENEWAL_TYPE',
                 'FREE_PLAN_TOKEN_NAME',
                 'DEFAULT_TOKEN_LABEL',
-                'ENABLE_RECURRING_PRORATION'
+                'ENABLE_RECURRING_PRORATION',
+                'RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE'
               ]}
               showHeading={false}
               showEnvironment={false}

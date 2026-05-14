@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { isNonNegativeIntegerAdminSetting, normalizeAdminSettingValue, validateAdminSettingValue } from '@/lib/admin-settings-validation';
 import { showToast } from '../ui/Toast';
 import { ImagePickerModal } from '../ui/ImagePickerModal';
 
@@ -19,6 +20,7 @@ function formatSettingLabel(key: string) {
     FREE_PLAN_TOKEN_NAME: 'Free token name',
   DEFAULT_TOKEN_LABEL: 'Default token label',
   ENABLE_RECURRING_PRORATION: 'Enable recurring proration',
+  RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE: 'Immediate recurring downgrades per cycle',
     MAINTENANCE_MODE: 'Maintenance mode',
     PRICING_MAX_COLUMNS: 'Pricing columns',
     PRICING_CENTER_UNEVEN: 'Pricing center uneven'
@@ -49,6 +51,7 @@ export const DEFAULT_EDITABLE_SETTING_KEYS = [
   'FREE_PLAN_TOKEN_NAME',
   'DEFAULT_TOKEN_LABEL',
   'ENABLE_RECURRING_PRORATION',
+  'RECURRING_DOWNGRADE_IMMEDIATE_LIMIT_PER_CYCLE',
   'SUPPORT_EMAIL',
   'ANNOUNCEMENT_MESSAGE',
   'SITE_NAME',
@@ -121,10 +124,18 @@ export function EditableSettings({
 
   const saveEdit = async (key: string) => {
     if (loading) return;
+
+    const normalizedValue = normalizeAdminSettingValue(key, editValue);
+    const validationError = validateAdminSettingValue(key, normalizedValue);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await saveSettingValue(key, editValue);
+      await saveSettingValue(key, normalizedValue);
       cancelEdit();
     } catch (err: unknown) {
       const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e));
@@ -342,6 +353,18 @@ export function EditableSettings({
                               <option value="false">Disabled</option>
                               <option value="true">Enabled</option>
                             </select>
+                          ) : isNonNegativeIntegerAdminSetting(key) ? (
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              inputMode="numeric"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-indigo-400"
+                              placeholder="Number of immediate downgrades allowed per cycle"
+                              autoFocus
+                            />
                           ) : key === 'DEFAULT_TOKEN_LABEL' ? (
                             <input
                               type="text"
@@ -361,6 +384,11 @@ export function EditableSettings({
                               rows={key.includes('ANNOUNCEMENT') || key.includes('MESSAGE') ? 3 : 1}
                               autoFocus
                             />
+                          )}
+                          {isNonNegativeIntegerAdminSetting(key) && (
+                            <p className="text-xs text-slate-500 dark:text-neutral-400">
+                              Use a non-negative whole number. `0` disables the limit.
+                            </p>
                           )}
                         </div>
                       ) : (

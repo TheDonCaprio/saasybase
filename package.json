@@ -6,21 +6,18 @@
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
   },
   "scripts": {
-    "predev": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
-    "predev:turbo": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
-    "prebuild": "node ./scripts/validate-env.js && npm run prisma:diagnose-provider && npm run generate:docs-search",
+    "predev": "npm run prisma:diagnose-provider && node ./scripts/validate-env.js",
+    "predev:turbo": "npm run prisma:diagnose-provider && node ./scripts/validate-env.js",
+    "prebuild": "npm run prisma:diagnose-provider && node ./scripts/validate-env.js",
     "prestart": "node ./scripts/validate-env.js",
     "dev": "node ./scripts/run-with-secrets.js next dev --webpack",
     "dev:turbo": "node ./scripts/run-with-secrets.js next dev --turbopack",
     "dev:full": "npx concurrently \"npm run dev -- -p 3000\" \"stripe listen --forward-to localhost:3000/api/stripe/webhook\"",
     "build": "node ./scripts/run-with-secrets.js prisma generate && node ./scripts/run-with-secrets.js next build --webpack",
     "deploy:build": "npm run prisma:deploy && npm run build",
-    "generate:docs-search": "node scripts/generate-docs-search-index.mjs",
     "compile-lib": "npx tsc -p tsconfig.lib.json",
     "start": "node ./scripts/run-with-secrets.js next start",
     "lint": "eslint .",
-    "public:history:dry-run": "bash scripts/public-history/rewrite-history.sh",
-    "public:history:validate": "node scripts/public-history/validate-public-history.mjs",
     "prisma:generate": "node ./scripts/run-with-secrets.js prisma generate --config prisma.config.ts",
     "prisma:validate": "node ./scripts/run-with-secrets.js prisma validate --config prisma.config.ts",
     "prisma:format": "node ./scripts/run-with-secrets.js prisma format --config prisma.config.ts",
@@ -31,17 +28,12 @@
     "prisma:pull": "node ./scripts/run-with-secrets.js prisma db pull --config prisma.config.ts",
     "prisma:seed": "node ./scripts/run-with-secrets.js prisma db seed --config prisma.config.ts",
     "demo:seed": "node ./scripts/run-with-secrets.js tsx scripts/seed-demo.ts",
-    "demo:refresh": "node ./scripts/run-with-secrets.js tsx scripts/refresh-demo.ts",
     "prisma:studio": "node ./scripts/run-with-secrets.js prisma studio --config prisma.config.ts",
-    "prisma:diagnose-provider": "node ./scripts/print-prisma-provider-diagnostics.js",
+    "prisma:diagnose-provider": "node ./scripts/public-prisma-provider-diagnostics.js",
     "secrets:doctor": "node ./scripts/secrets-doctor.js",
     "secrets:smoke": "node ./scripts/secrets-smoke-test.js",
     "typecheck": "tsc --noEmit",
-    "public:export": "node scripts/public-export.mjs",
-    "public:publish": "bash scripts/publish-public-export.sh",
-    "test": "vitest",
-    "backfill:team-subscription-org-links": "tsx scripts/backfill-team-subscription-org-links.ts",
-    "backfill:better-auth-coexistence": "tsx scripts/backfill-better-auth-coexistence.ts"
+    "test": "vitest"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -89,7 +81,8 @@
     "resend": "^6.12.2",
     "stripe": "^16.0.0",
     "tailwind-merge": "^2.3.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "tsx": "^4.21.0"
   },
   "optionalDependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
